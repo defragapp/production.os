@@ -5,7 +5,7 @@
 const JWT_SECRET_ENV_KEY = "JWT_SECRET";
 const SESSION_COOKIE_NAME = "sovereign_session";
 
-/** Encode a string as an ArrayBuffer for WebCrypto calls (avoids Uint8Array<ArrayBufferLike> typing issues). */
+/** Encode a string as an ArrayBuffer for WebCrypto calls. */
 function toArrayBuffer(s: string): ArrayBuffer {
   return new TextEncoder().encode(s).buffer as ArrayBuffer;
 }
@@ -19,18 +19,8 @@ export function generateSalt(): string {
 
 /** Hash a password with a salt using PBKDF2 (100k iterations, SHA-256). */
 export async function hashPassword(password: string, salt: string): Promise<string> {
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    toArrayBuffer(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const derived = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: toArrayBuffer(salt), iterations: 100_000, hash: "SHA-256" },
-    keyMaterial,
-    256,
-  );
+  const keyMaterial = await crypto.subtle.importKey("raw", toArrayBuffer(password), "PBKDF2", false, ["deriveBits"]);
+  const derived = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: toArrayBuffer(salt), iterations: 100_000, hash: "SHA-256" }, keyMaterial, 256);
   return Array.from(new Uint8Array(derived), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
@@ -55,7 +45,7 @@ export function generateUUID(): string {
 // ── JWT ──────────────────────────────────────────────────────────────
 
 interface JWTPayload {
-  sub: string; // user id
+  sub: string;
   email: string;
   iat: number;
   exp: number;
@@ -79,13 +69,7 @@ function base64UrlDecode(str: string): Uint8Array<ArrayBuffer> {
 }
 
 async function getJwtKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    "raw",
-    toArrayBuffer(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"],
-  );
+  return crypto.subtle.importKey("raw", toArrayBuffer(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
 
 /** Create a signed JWT. Expires in 7 days. */
@@ -116,8 +100,6 @@ export async function verifyJWT(token: string, secret: string): Promise<JWTPaylo
   return payload;
 }
 
-export { SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY };
-
 // ── Password reset tokens ────────────────────────────────────────────
 
 /** Generate a cryptographically random reset token (hex). */
@@ -134,14 +116,4 @@ export async function hashResetToken(token: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ── Password reset tokens ────────────────────────────────────────────
-export function generateResetToken(): string {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
-}
-export async function hashResetToken(token: string): Promise<string> {
-  const data = new TextEncoder().encode(token);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-}
+export { SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY };
