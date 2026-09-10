@@ -19,6 +19,7 @@ export interface AppEnv {
   STRIPE_SECRET_KEY: string;
 }
 
+/** Helper to get the typed env from OpenNext context. */
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export function getEnv(): AppEnv {

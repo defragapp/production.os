@@ -4,8 +4,6 @@ import { computeNatalPositions, buildAstrologyBaseline } from "@/lib/nasa-jpl";
 import { getEnv } from "@/lib/env";
 import type { Baseline } from "@/lib/types";
 
-export const runtime = "edge";
-
 export async function GET(request: NextRequest) {
   const env = getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];

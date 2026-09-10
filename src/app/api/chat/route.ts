@@ -3,8 +3,6 @@ import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from
 import { getEnv } from "@/lib/env";
 import type { Baseline, ChatMessage, Thread } from "@/lib/types";
 
-export const runtime = "edge";
-
 const MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const SYSTEM_PROMPT_PREFIX = "You are the Sovereign OS — a Pattern Interruption tool. You read the user's baseline (Astrology, Human Design, Gene Keys, Numerology) to synthesize their emotional expression, identify toxic and historical family patterns, and present grounded choices. Use simple, grounded language. Do not mystify. When you detect a recurring pattern, name it directly and offer a specific, actionable interruption the user can practice today.";
 
@@ -33,7 +31,7 @@ export async function POST(request: NextRequest) {
   const messagesForModel: ChatMessage[] = [{ role: "system", content: systemPrompt }, ...contextMessages];
   const gatewayId = env.AI_GATEWAY_ID || "sovereign-ai-gateway";
   const aiResponse = await env.AI.run(MODEL, { messages: messagesForModel, stream: true }, { gateway: { id: gatewayId } });
-  const aiStream = aiResponse as ReadableStream<Uint8Array>;
+  const aiStream = aiResponse as unknown as ReadableStream<Uint8Array>;
   const encoder = new TextEncoder();
   if (!threadId) {
     threadId = generateUUID();

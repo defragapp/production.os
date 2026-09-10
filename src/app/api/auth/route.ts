@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createJWT, generateSalt, generateUUID, hashPassword, verifyJWT, verifyPassword, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
+import {
+  createJWT, generateSalt, generateUUID, hashPassword,
+  verifyJWT, verifyPassword, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
+} from "@/lib/auth";
 import { sendTransactionalEmail } from "@/lib/email";
 import { getEnv } from "@/lib/env";
 import type { User } from "@/lib/types";
-
-export const runtime = "edge";
 
 export async function GET(request: NextRequest) {
   const env = getEnv();

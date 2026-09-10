@@ -5,22 +5,36 @@
 const JWT_SECRET_ENV_KEY = "JWT_SECRET";
 const SESSION_COOKIE_NAME = "sovereign_session";
 
+/** Encode a string as an ArrayBuffer for WebCrypto calls (avoids Uint8Array<ArrayBufferLike> typing issues). */
 function toArrayBuffer(s: string): ArrayBuffer {
   return new TextEncoder().encode(s).buffer as ArrayBuffer;
 }
 
+/** Generate a cryptographically random salt as hex. */
 export function generateSalt(): string {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Hash a password with a salt using PBKDF2 (100k iterations, SHA-256). */
 export async function hashPassword(password: string, salt: string): Promise<string> {
-  const keyMaterial = await crypto.subtle.importKey("raw", toArrayBuffer(password), "PBKDF2", false, ["deriveBits"]);
-  const derived = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: toArrayBuffer(salt), iterations: 100_000, hash: "SHA-256" }, keyMaterial, 256);
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    toArrayBuffer(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const derived = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: toArrayBuffer(salt), iterations: 100_000, hash: "SHA-256" },
+    keyMaterial,
+    256,
+  );
   return Array.from(new Uint8Array(derived), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Verify a password against a stored hash + salt. */
 export async function verifyPassword(password: string, salt: string, storedHash: string): Promise<boolean> {
   const hash = await hashPassword(password, salt);
   return timingSafeEqual(hash, storedHash);
@@ -33,9 +47,19 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export function generateUUID(): string { return crypto.randomUUID(); }
+/** Generate a UUID v4. */
+export function generateUUID(): string {
+  return crypto.randomUUID();
+}
 
-interface JWTPayload { sub: string; email: string; iat: number; exp: number; }
+// ── JWT ──────────────────────────────────────────────────────────────
+
+interface JWTPayload {
+  sub: string; // user id
+  email: string;
+  iat: number;
+  exp: number;
+}
 
 function base64UrlEncode(data: ArrayBuffer | Uint8Array): string {
   const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
@@ -55,9 +79,16 @@ function base64UrlDecode(str: string): Uint8Array<ArrayBuffer> {
 }
 
 async function getJwtKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", toArrayBuffer(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+  return crypto.subtle.importKey(
+    "raw",
+    toArrayBuffer(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
 }
 
+/** Create a signed JWT. Expires in 7 days. */
 export async function createJWT(userId: string, email: string, secret: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: JWTPayload = { sub: userId, email, iat: now, exp: now + 7 * 24 * 60 * 60 };
@@ -70,6 +101,7 @@ export async function createJWT(userId: string, email: string, secret: string): 
   return `${signingInput}.${base64UrlEncode(sig)}`;
 }
 
+/** Verify a JWT and return its payload, or null if invalid/expired. */
 export async function verifyJWT(token: string, secret: string): Promise<JWTPayload | null> {
   const parts = token.split(".");
   if (parts.length !== 3) return null;

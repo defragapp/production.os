@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyStripeSignature, priceToSubscription, tierFromSubscriptionStatus, SUBSCRIPTION_EVENTS, type PlanTier } from "@/lib/stripe";
 import { getEnv } from "@/lib/env";
 
-export const runtime = "edge";
-
 interface StripeEvent {
   id: string;
   type: string;

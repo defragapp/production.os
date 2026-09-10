@@ -3,8 +3,6 @@ import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from
 import { getEnv } from "@/lib/env";
 import type { Thread, ChatMessage } from "@/lib/types";
 
-export const runtime = "edge";
-
 async function getAuthPayload(request: NextRequest) {
   const env = getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
