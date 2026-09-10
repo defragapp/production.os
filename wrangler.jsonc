@@ -34,7 +34,7 @@
     "BASELINE_HORIZONS_URL": "https://ssd.jpl.nasa.gov/api/horizons.api",
     "STRIPE_PRICE_SOVEREIGN_PLUS_MONTHLY": "price_1Te0g9Bk78yJ8Hww8fFZCqhm",
     "STRIPE_PRICE_SOVEREIGN_PLUS_ANNUAL": "price_1Tq6nPBk78yJ8Hwwm0pxg4hH",
-    "STRIPE_SUCCESS_URL": "https://app.defrag.app/app?billing=success",
-    "STRIPE_CANCEL_URL": "https://app.defrag.app/app?billing=cancelled"
+    "STRIPE_SUCCESS_URL": "https://app.defrag.app/chat?billing=success",
+    "STRIPE_CANCEL_URL": "https://app.defrag.app/chat?billing=cancelled"
   }
 }
