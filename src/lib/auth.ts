@@ -1,0 +1,87 @@
+/**
+ * Auth utilities — WebCrypto-based password hashing and JWT session tokens.
+ */
+
+const JWT_SECRET_ENV_KEY = "JWT_SECRET";
+const SESSION_COOKIE_NAME = "sovereign_session";
+
+function toArrayBuffer(s: string): ArrayBuffer {
+  return new TextEncoder().encode(s).buffer as ArrayBuffer;
+}
+
+export function generateSalt(): string {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function hashPassword(password: string, salt: string): Promise<string> {
+  const keyMaterial = await crypto.subtle.importKey("raw", toArrayBuffer(password), "PBKDF2", false, ["deriveBits"]);
+  const derived = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: toArrayBuffer(salt), iterations: 100_000, hash: "SHA-256" }, keyMaterial, 256);
+  return Array.from(new Uint8Array(derived), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function verifyPassword(password: string, salt: string, storedHash: string): Promise<boolean> {
+  const hash = await hashPassword(password, salt);
+  return timingSafeEqual(hash, storedHash);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+export function generateUUID(): string { return crypto.randomUUID(); }
+
+interface JWTPayload { sub: string; email: string; iat: number; exp: number; }
+
+function base64UrlEncode(data: ArrayBuffer | Uint8Array): string {
+  const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlDecode(str: string): Uint8Array<ArrayBuffer> {
+  const pad = str.length % 4 === 0 ? "" : "=".repeat(4 - (str.length % 4));
+  const b64 = str.replace(/-/g, "+").replace(/_/g, "/") + pad;
+  const bin = atob(b64);
+  const buf = new ArrayBuffer(bin.length);
+  const arr = new Uint8Array(buf);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+async function getJwtKey(secret: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey("raw", toArrayBuffer(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+}
+
+export async function createJWT(userId: string, email: string, secret: string): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const payload: JWTPayload = { sub: userId, email, iat: now, exp: now + 7 * 24 * 60 * 60 };
+  const header = { alg: "HS256", typ: "JWT" };
+  const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const signingInput = `${headerB64}.${payloadB64}`;
+  const key = await getJwtKey(secret);
+  const sig = await crypto.subtle.sign("HMAC", key, toArrayBuffer(signingInput));
+  return `${signingInput}.${base64UrlEncode(sig)}`;
+}
+
+export async function verifyJWT(token: string, secret: string): Promise<JWTPayload | null> {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const [headerB64, payloadB64, sigB64] = parts;
+  const signingInput = `${headerB64}.${payloadB64}`;
+  const key = await getJwtKey(secret);
+  const sigBytes = base64UrlDecode(sigB64);
+  const valid = await crypto.subtle.verify("HMAC", key, sigBytes, toArrayBuffer(signingInput));
+  if (!valid) return null;
+  const payload: JWTPayload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64)));
+  if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+  return payload;
+}
+
+export { SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY };
