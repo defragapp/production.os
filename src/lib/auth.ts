@@ -117,3 +117,19 @@ export async function verifyJWT(token: string, secret: string): Promise<JWTPaylo
 }
 
 export { SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY };
+
+// ── Password reset tokens ────────────────────────────────────────────
+
+/** Generate a cryptographically random reset token (hex). */
+export function generateResetToken(): string {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Hash a reset token for storage (so a leaked DB doesn't expose usable tokens). */
+export async function hashResetToken(token: string): Promise<string> {
+  const data = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
