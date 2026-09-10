@@ -1,30 +1,25 @@
 /**
- * Minimal email helper — uses the Cloudflare Workers `send_email` binding
- * if configured, otherwise falls back to a no-op log.
- * All transactional emails are sent from info@sovereign.os.
+ * Transactional email via Resend (api.resend.com).
+ * Branded from Sovereign OS (info@sovereign.os).
+ * Falls back to console log if RESEND_API_KEY is not set.
  */
 import type { AppEnv } from "./env";
 
-interface SendEmailOptions {
-  to: string;
-  subject: string;
-  html: string;
-}
+interface SendEmailOptions { to: string; subject: string; html: string; }
 
 export async function sendTransactionalEmail(env: AppEnv, opts: SendEmailOptions): Promise<void> {
   const fromEmail = env.FROM_EMAIL || "info@sovereign.os";
-  if ("EMAIL" in env && env.EMAIL) {
+  const apiKey = env.RESEND_API_KEY;
+  if (apiKey) {
     try {
-      await (env as unknown as { EMAIL: { send: (msg: unknown) => Promise<void> } }).EMAIL.send({
-        from: fromEmail,
-        to: opts.to,
-        subject: opts.subject,
-        html: opts.html,
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: `Sovereign OS <${fromEmail}>`, to: [opts.to], subject: opts.subject, html: opts.html }),
       });
+      if (!response.ok) { const err = await response.json() as { message?: string }; throw new Error(`Resend error: ${err.message || response.statusText}`); }
       return;
-    } catch (err) {
-      console.error("[email] Send Email binding failed, falling back to log:", err);
-    }
+    } catch (err) { console.error("[email] Resend failed, falling back to log:", err); }
   }
   console.log(`[email] From: ${fromEmail} → ${opts.to} | Subject: ${opts.subject}`);
   console.log(`[email] Body: ${opts.html.slice(0, 200)}...`);

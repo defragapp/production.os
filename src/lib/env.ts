@@ -1,7 +1,3 @@
-/**
- * App environment type — self-contained so routes don't depend on
- * wrangler-generated global types (which vary by tooling version).
- */
 export interface AppEnv {
   DB: D1Database;
   SESSION_KV: KVNamespace;
@@ -17,11 +13,9 @@ export interface AppEnv {
   JWT_SECRET: string;
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_SECRET_KEY: string;
+  RESEND_API_KEY: string;
 }
-
-/** Helper to get the typed env from OpenNext context. */
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-
 export function getEnv(): AppEnv {
   return getCloudflareContext().env as unknown as AppEnv;
 }

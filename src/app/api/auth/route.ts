@@ -34,9 +34,7 @@ export async function POST(request: NextRequest) {
   const emailForRl = body.email?.trim().toLowerCase() || "unknown";
   const rlKey = `login-rl:${ip}:${emailForRl}`;
   const rlCount = parseInt((await env.SESSION_KV.get(rlKey)) || "0", 10);
-  if (rlCount >= LOGIN_RATE_LIMIT_MAX) {
-    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
-  }
+  if (rlCount >= LOGIN_RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
   await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: LOGIN_RATE_LIMIT_TTL });
 
   const email = body.email?.trim().toLowerCase();
@@ -57,7 +55,7 @@ export async function POST(request: NextRequest) {
     await sendTransactionalEmail(env, {
       to: email,
       subject: "Welcome to Sovereign OS",
-      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="color:#1e293b">Welcome to Sovereign OS</h2><p>Your account is ready. Complete your baseline (TOB/POB/DOB) to begin.</p><p><a href="https://app.defrag.app/onboard" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Set Your Baseline</a></p><p style="color:#64748b;font-size:14px">Sovereign OS reads your baseline to surface patterns and offer grounded interruptions.</p></div>`,
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="color:#1e293b">Welcome to Sovereign OS</h2><p>Your account is ready. Complete your baseline to begin.</p><p><a href="https://app.defrag.app/onboard" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Set Your Baseline</a></p></div>`,
     });
   }
   const token = await createJWT(userId, email, secret);
