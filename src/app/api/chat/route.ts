@@ -83,16 +83,38 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       const reader = (aiStream as ReadableStream<Uint8Array>).getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
       let fullResponse = "";
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ threadId: currentThreadId })}\n\n`));
+      const emitToken = (token: string) => {
+        if (!token) return;
+        fullResponse += token;
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: token })}\n\n`));
+      };
+      const handleLine = (line: string) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        if (trimmed.startsWith("data:")) {
+          const payload = trimmed.slice(5).trim();
+          if (payload === "[DONE]") return;
+          try {
+            const parsed = JSON.parse(payload) as { response?: unknown };
+            if (typeof parsed.response === "string") emitToken(parsed.response);
+          } catch {}
+          return;
+        }
+        emitToken(line);
+      };
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          fullResponse += text;
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: text })}\n\n`));
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) handleLine(line);
         }
+        if (buffer.trim()) handleLine(buffer);
       } catch (err) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Stream interrupted" })}\n\n`));
         console.error("[chat] Stream error:", err);
