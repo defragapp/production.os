@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 
-export default function OnboardPage() {
+function OnboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resetToken = searchParams.get("reset");
@@ -313,34 +313,15 @@ export default function OnboardPage() {
                     <div className="border-t pt-4" />
                     <div className="space-y-2">
                       <Label htmlFor="dob">Date of Birth</Label>
-                      <Input
-                        id="dob"
-                        type="date"
-                        required
-                        value={dob}
-                        onChange={(e) => setDob(e.target.value)}
-                      />
+                      <Input id="dob" type="date" required value={dob} onChange={(e) => setDob(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tob">Time of Birth (24h)</Label>
-                      <Input
-                        id="tob"
-                        type="time"
-                        required
-                        value={tob}
-                        onChange={(e) => setTob(e.target.value)}
-                      />
+                      <Input id="tob" type="time" required value={tob} onChange={(e) => setTob(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pob">Place of Birth</Label>
-                      <Input
-                        id="pob"
-                        type="text"
-                        required
-                        value={pob}
-                        onChange={(e) => setPob(e.target.value)}
-                        placeholder="City, Country"
-                      />
+                      <Input id="pob" type="text" required value={pob} onChange={(e) => setPob(e.target.value)} placeholder="City, Country" />
                     </div>
 
                     <div className="flex items-start gap-2 pt-2">
@@ -372,11 +353,7 @@ export default function OnboardPage() {
                 {error && <p className="text-sm text-destructive">{error}</p>}
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading
-                    ? "Computing baseline..."
-                    : existingUser
-                      ? "Sign In"
-                      : "Create Baseline"}
+                  {loading ? "Computing baseline..." : existingUser ? "Sign In" : "Create Baseline"}
                 </Button>
               </form>
             </CardContent>
@@ -384,5 +361,13 @@ export default function OnboardPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function OnboardPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+      <OnboardContent />
+    </Suspense>
   );
 }
