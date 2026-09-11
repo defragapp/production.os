@@ -1,15 +1,10 @@
 "use client";
-
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Nav } from "@/components/nav";
 import type { ChatMessage, BaselineData } from "@/lib/types";
 
 interface MessageWithBaseline extends ChatMessage {
@@ -24,6 +19,7 @@ export default function ChatPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [baselineData, setBaselineData] = useState<BaselineData | undefined>();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,7 +31,6 @@ export default function ChatPage() {
           router.push("/onboard");
           return;
         }
-
         const baselineRes = await fetch("/api/baseline");
         if (baselineRes.ok) {
           const bd = await baselineRes.json() as { baseline?: { nasa_jpl_json_data?: string } };
@@ -45,26 +40,19 @@ export default function ChatPage() {
           }
           try {
             setBaselineData(JSON.parse(bd.baseline.nasa_jpl_json_data));
-          } catch {
-            // Keep undefined if parse fails.
-          }
+          } catch {}
         }
-
         const threadsRes = await fetch("/api/threads");
         if (threadsRes.ok) {
           const threadsData = await threadsRes.json() as { threads?: { id: string }[] };
           const threads = threadsData.threads || [];
           if (threads.length > 0) {
-            const latestThread = threads[0];
-            const threadRes = await fetch(`/api/threads?id=${latestThread.id}`);
+            const threadRes = await fetch(`/api/threads?id=${threads[0].id}`);
             if (threadRes.ok) {
               const threadData = await threadRes.json() as { thread?: { messages?: ChatMessage[] } };
               if (threadData.thread?.messages) {
-                const restoredMessages: MessageWithBaseline[] = threadData.thread.messages.map(
-                  (m: ChatMessage) => ({ ...m }),
-                );
-                setMessages(restoredMessages);
-                setThreadId(latestThread.id);
+                setMessages(threadData.thread.messages.map((m: ChatMessage) => ({ ...m })));
+                setThreadId(threads[0].id);
               }
             }
           }
@@ -88,16 +76,12 @@ export default function ChatPage() {
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
-
     const userMessage: MessageWithBaseline = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
     setIsStreaming(true);
-
-    const assistantMessage: MessageWithBaseline = { role: "assistant", content: "" };
-    setMessages((prev) => [...prev, assistantMessage]);
-
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -107,74 +91,65 @@ export default function ChatPage() {
           threadId: threadId || undefined,
         }),
       });
-
       if (!response.ok) {
-        const err = await response.json() as { error?: string };
+        const err = await response.json() as { error?: string; upgradeRequired?: boolean };
+        if (response.status === 402 && err.upgradeRequired) {
+          setShowUpgrade(true);
+          setMessages((prev) => {
+            const u = [...prev];
+            u[u.length - 1] = { role: "assistant", content: err.error || "Free tier limit reached." };
+            return u;
+          });
+          return;
+        }
         setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            role: "assistant",
-            content: `Error: ${err.error || "Something went wrong."}`,
-          };
-          return updated;
+          const u = [...prev];
+          u[u.length - 1] = { role: "assistant", content: `Error: ${err.error || "Something went wrong."}` };
+          return u;
         });
         return;
       }
-
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-
       if (!reader) return;
-
       let buffer = "";
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
-
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);
             if (data === "[DONE]") continue;
-
             try {
               const parsed = JSON.parse(data);
-
               if (parsed.threadId) {
                 setThreadId(parsed.threadId);
                 continue;
               }
-
               if (parsed.content) {
                 setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
+                  const u = [...prev];
+                  u[u.length - 1] = {
                     role: "assistant",
-                    content: updated[updated.length - 1].content + parsed.content,
+                    content: u[u.length - 1].content + parsed.content,
                     baselineData,
                   };
-                  return updated;
+                  return u;
                 });
               }
-            } catch {
-              // Skip malformed chunks.
-            }
+            } catch {}
           }
         }
       }
     } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          role: "assistant",
-          content: "Error: Could not connect to the server.",
-        };
-        return updated;
+        const u = [...prev];
+        u[u.length - 1] = { role: "assistant", content: "Error: Could not connect to the server." };
+        return u;
       });
     } finally {
       setIsStreaming(false);
@@ -183,20 +158,31 @@ export default function ChatPage() {
 
   if (!authChecked) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </main>
+      <>
+        <Nav />
+        <main className="flex min-h-screen items-center justify-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
     );
   }
 
   return (
     <main className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b px-6 py-4">
-        <h1 className="text-xl font-semibold">Sovereign OS</h1>
-        <Button variant="ghost" size="sm" onClick={handleSignOut}>
-          Sign out
-        </Button>
-      </header>
+      <Nav />
+
+      {showUpgrade && (
+        <div className="border-b bg-amber-50 px-6 py-4 dark:bg-amber-950/30">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              You have reached the free tier limit. Upgrade to Sovereign+ for unlimited access.
+            </p>
+            <Button size="sm" onClick={() => router.push("/upgrade")}>
+              Upgrade
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-3xl space-y-4">
@@ -212,7 +198,6 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-
           {messages.map((msg, idx) => (
             <div
               key={idx}
@@ -226,7 +211,6 @@ export default function ChatPage() {
                 }`}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
-
                 {msg.role === "assistant" && msg.baselineData && msg.content && (
                   <Accordion type="single" collapsible className="mt-3 border-t pt-2">
                     <AccordionItem value="baseline" className="border-b-0">
