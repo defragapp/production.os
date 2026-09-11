@@ -28,14 +28,14 @@ export default function ChatPage() {
         const authRes = await fetch("/api/auth");
         const authData = await authRes.json() as { user?: unknown };
         if (!authData.user) {
-          router.push("/onboard");
+          router.push("/onboard?mode=login");
           return;
         }
         const baselineRes = await fetch("/api/baseline");
         if (baselineRes.ok) {
           const bd = await baselineRes.json() as { baseline?: { nasa_jpl_json_data?: string } };
           if (!bd.baseline || !bd.baseline.nasa_jpl_json_data) {
-            router.push("/onboard");
+            router.push("/baseline");
             return;
           }
           try {
