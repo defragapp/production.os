@@ -4,7 +4,7 @@ import { getEnv } from "@/lib/env";
 import { deriveBaseline, buildSystemPrompt } from "@/lib/sovereign-prompt";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
 
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 
 /** Free-tier message limit per day. */
 const FREE_TIER_DAILY_LIMIT = 5;

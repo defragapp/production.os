@@ -12,7 +12,7 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 | Runtime | Cloudflare Workers (edge) |
 | Database | Cloudflare D1 (SQLite) |
 | Sessions | Cloudflare KV (`SESSION_KV`) |
-| AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct`) |
+| AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`) |
 | AI Routing | AI Gateway (ID: `sovereign-ai-gateway`) |
 | Baseline Engine | NASA/JPL Horizons API (planetary positions) |
 | Auth | Email/Password + WebCrypto PBKDF2 + JWT |
