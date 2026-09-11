@@ -12,7 +12,10 @@ export function Nav() {
     setMounted(true);
     fetch("/api/auth")
       .then((r) => r.json())
-      .then((d: { user?: unknown }) => setAuthed(!!d.user))
+      .then((d) => {
+        const data = d as { user?: unknown };
+        setAuthed(!!data.user);
+      })
       .catch(() => setAuthed(false));
   }, []);
 

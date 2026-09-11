@@ -38,10 +38,11 @@ export default function OnboardPage() {
   useEffect(() => {
     fetch("/api/auth")
       .then((r) => r.json())
-      .then((d: { user?: { email?: string } }) => {
-        if (d.user) {
+      .then((d) => {
+        const data = d as { user?: { email?: string } };
+        if (data.user) {
           setExistingUser(true);
-          setEmail(d.user.email || "");
+          setEmail(data.user.email || "");
         }
       })
       .catch(() => {});
