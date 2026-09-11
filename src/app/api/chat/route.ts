@@ -1,10 +1,13 @@
 import { NextRequest } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
-import type { Baseline, ChatMessage, Thread } from "@/lib/types";
+import { deriveBaseline, buildSystemPrompt } from "@/lib/sovereign-prompt";
+import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
 
 const MODEL = "@cf/meta/llama-3.1-8b-instruct";
-const SYSTEM_PROMPT_PREFIX = "You are the Sovereign OS — a Pattern Interruption tool. You read the user's baseline (Astrology, Human Design, Gene Keys, Numerology) to synthesize their emotional expression, identify toxic and historical family patterns, and present grounded choices. Use simple, grounded language. Do not mystify. When you detect a recurring pattern, name it directly and offer a specific, actionable interruption the user can practice today.";
+
+/** Free-tier message limit per day. */
+const FREE_TIER_DAILY_LIMIT = 5;
 
 export async function POST(request: NextRequest) {
   const env = getEnv();
@@ -14,14 +17,36 @@ export async function POST(request: NextRequest) {
   if (!token) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
   const payload = await verifyJWT(token, secret);
   if (!payload) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+
+  const user = await env.DB.prepare("SELECT subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+
+  if (user.subscription_tier === "free") {
+    const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
+    const count = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10);
+    if (count >= FREE_TIER_DAILY_LIMIT) {
+      return new Response(JSON.stringify({
+        error: "You've reached your free tier limit of " + FREE_TIER_DAILY_LIMIT + " messages per day. Upgrade to Sovereign+ for unlimited access.",
+        upgradeRequired: true,
+        limit: FREE_TIER_DAILY_LIMIT,
+        used: count,
+      }), { status: 402, headers: { "Content-Type": "application/json" } });
+    }
+    await env.SESSION_KV.put(todayKey, String(count + 1), { expirationTtl: 86400 });
+  }
+
   let body: { messages: ChatMessage[]; threadId?: string };
   try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { "Content-Type": "application/json" } }); }
   if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) return new Response(JSON.stringify({ error: "messages array is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+
   const baseline = await env.DB.prepare("SELECT tob, pob, dob, nasa_jpl_json_data FROM baselines WHERE user_id = ?").bind(payload.sub).first<Baseline>();
   if (!baseline || !baseline.nasa_jpl_json_data) return new Response(JSON.stringify({ error: "Baseline not found. Please complete onboarding first." }), { status: 403, headers: { "Content-Type": "application/json" } });
-  let baselineData: Record<string, unknown> = {};
-  try { baselineData = JSON.parse(baseline.nasa_jpl_json_data) as Record<string, unknown>; } catch { baselineData = { raw: baseline.nasa_jpl_json_data }; }
-  const systemPrompt = `${SYSTEM_PROMPT_PREFIX}\n\nBaseline data:\n${JSON.stringify(baselineData, null, 2)}`;
+
+  let rawBaselineData: Record<string, unknown> = {};
+  try { rawBaselineData = JSON.parse(baseline.nasa_jpl_json_data) as Record<string, unknown>; } catch { rawBaselineData = {}; }
+  const derived = deriveBaseline(rawBaselineData);
+  const systemPrompt = buildSystemPrompt(derived);
+
   let contextMessages: ChatMessage[] = body.messages;
   let threadId = body.threadId;
   if (threadId) {
@@ -29,8 +54,21 @@ export async function POST(request: NextRequest) {
     if (thread) { try { contextMessages = JSON.parse(thread.message_history) as ChatMessage[]; } catch {} }
   }
   const messagesForModel: ChatMessage[] = [{ role: "system", content: systemPrompt }, ...contextMessages];
+
   const gatewayId = env.AI_GATEWAY_ID || "sovereign-ai-gateway";
-  const aiResponse = await env.AI.run(MODEL, { messages: messagesForModel, stream: true }, { gateway: { id: gatewayId } });
+  let aiResponse: unknown;
+  try {
+    aiResponse = await env.AI.run(MODEL, { messages: messagesForModel, stream: true }, { gateway: { id: gatewayId } });
+  } catch (aiErr) {
+    console.error("[chat] AI.run() failed:", aiErr);
+    try {
+      aiResponse = await env.AI.run(MODEL, { messages: messagesForModel, stream: true });
+    } catch (aiErr2) {
+      console.error("[chat] AI.run() fallback also failed:", aiErr2);
+      return new Response(JSON.stringify({ error: "AI service is temporarily unavailable. Please try again." }), { status: 503, headers: { "Content-Type": "application/json" } });
+    }
+  }
+
   const aiStream = aiResponse as unknown as ReadableStream<Uint8Array>;
   const encoder = new TextEncoder();
   if (!threadId) {
@@ -43,7 +81,7 @@ export async function POST(request: NextRequest) {
   const userId = payload.sub;
   const sseStream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const reader = aiStream.getReader();
+      const reader = (aiStream as ReadableStream<Uint8Array>).getReader();
       const decoder = new TextDecoder();
       let fullResponse = "";
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ threadId: currentThreadId })}\n\n`));

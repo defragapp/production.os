@@ -30,9 +30,7 @@ export function Nav() {
             <Link href="/chat"><Button variant="ghost" size="sm">Chat</Button></Link>
             <Link href="/upgrade"><Button variant="ghost" size="sm">Upgrade</Button></Link>
             <Link href="/account"><Button variant="ghost" size="sm">Account</Button></Link>
-            <Link href="/onboard">
-              <Button variant="ghost" size="sm" onClick={async () => { await fetch("/api/auth", { method: "DELETE" }); }}>Sign out</Button>
-            </Link>
+            <Link href="/onboard"><Button variant="ghost" size="sm" onClick={async () => { await fetch("/api/auth", { method: "DELETE" }); }}>Sign out</Button></Link>
           </nav>
         ) : (
           <nav className="flex items-center gap-1 sm:gap-2">
