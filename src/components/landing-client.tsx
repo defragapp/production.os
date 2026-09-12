@@ -75,7 +75,7 @@ function BgBackdrop() {
       ref={ref}
       className="pointer-events-none fixed inset-0 z-0 opacity-30 mix-blend-screen"
       style={{
-        background: "radial-gradient(circle at 50% 0%, rgba(30,30,40,1) 0%, rgba(9,12,22,1) 70%)",
+        background: "radial-gradient(circle at 50% 0%, rgba(26,26,30,1) 0%, rgba(7,7,9,1) 70%)",
       }}
     />
   );
