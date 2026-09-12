@@ -1,19 +1,40 @@
 import { NextRequest } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
-import { deriveBaseline, buildSystemPrompt } from "@/lib/sovereign-prompt";
+import { deriveBaseline } from "@/lib/sovereign-prompt";
+import type { DerivedBaseline } from "@/lib/sovereign-prompt";
+import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereign-reasoning";
+import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
-
-const MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 
 /** Free-tier message limit per day. */
 const FREE_TIER_DAILY_LIMIT = 5;
 
-/** Max messages sent to the model as context (rolling window). */
-const MAX_CONTEXT_MESSAGES = 20;
+/** Max content length per message accepted from the client. */
+const MAX_MESSAGE_LENGTH = 5000;
 
-function windowMessages(messages: ChatMessage[]): ChatMessage[] {
-  return messages.slice(-MAX_CONTEXT_MESSAGES);
+const encoder = new TextEncoder();
+
+/**
+ * Merge a stored thread history with the client's cumulative message list.
+ * The client resends the full conversation, so entries already present at the
+ * tail of the stored history are skipped — only genuinely new ones append.
+ */
+function mergeChatHistories(base: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const merged: ChatMessage[] = [...base];
+  for (const msg of incoming) {
+    const last = merged[merged.length - 1];
+    if (last && last.role === msg.role && last.content === msg.content) continue;
+    merged.push(msg);
+  }
+  return merged;
+}
+
+function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
+  return messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role as "user" | "assistant", content: String(m.content).slice(0, MAX_MESSAGE_LENGTH) }))
+    .filter((m) => m.content.trim().length > 0);
 }
 
 export async function POST(request: NextRequest) {
@@ -28,8 +49,9 @@ export async function POST(request: NextRequest) {
   const user = await env.DB.prepare("SELECT subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
   if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
 
+  const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
+
   if (user.subscription_tier === "free") {
-    const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
     const count = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10);
     if (count >= FREE_TIER_DAILY_LIMIT) {
       return new Response(JSON.stringify({
@@ -39,110 +61,80 @@ export async function POST(request: NextRequest) {
         used: count,
       }), { status: 402, headers: { "Content-Type": "application/json" } });
     }
-    await env.SESSION_KV.put(todayKey, String(count + 1), { expirationTtl: 86400 });
   }
 
   let body: { messages: ChatMessage[]; threadId?: string };
   try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { "Content-Type": "application/json" } }); }
   if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) return new Response(JSON.stringify({ error: "messages array is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
+  const incoming = sanitizeMessages(body.messages);
+  if (incoming.length === 0) return new Response(JSON.stringify({ error: "No readable messages provided" }), { status: 400, headers: { "Content-Type": "application/json" } });
+
   const baseline = await env.DB.prepare("SELECT tob, pob, dob, nasa_jpl_json_data FROM baselines WHERE user_id = ?").bind(payload.sub).first<Baseline>();
   if (!baseline || !baseline.nasa_jpl_json_data) return new Response(JSON.stringify({ error: "Baseline not found. Please complete onboarding first." }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   let rawBaselineData: Record<string, unknown> = {};
   try { rawBaselineData = JSON.parse(baseline.nasa_jpl_json_data) as Record<string, unknown>; } catch { rawBaselineData = {}; }
-  const derived = deriveBaseline(rawBaselineData);
-  const systemPrompt = buildSystemPrompt(derived);
+  const derived: DerivedBaseline = deriveBaseline(rawBaselineData);
 
-  let contextMessages: ChatMessage[] = body.messages;
   let threadId = body.threadId;
+  let conversation: ChatMessage[] = incoming;
   if (threadId) {
     const thread = await env.DB.prepare("SELECT message_history FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).first<Thread>();
-    if (thread) { try { contextMessages = JSON.parse(thread.message_history) as ChatMessage[]; } catch {} }
-  }
-  const messagesForModel: ChatMessage[] = [{ role: "system", content: systemPrompt }, ...windowMessages(contextMessages)];
-
-  const gatewayId = env.AI_GATEWAY_ID || "sovereign-ai-gateway";
-  let aiResponse: unknown;
-  try {
-    aiResponse = await env.AI.run(MODEL, { messages: messagesForModel, stream: true }, { gateway: { id: gatewayId } });
-  } catch (aiErr) {
-    console.error("[chat] AI.run() failed:", aiErr);
-    try {
-      aiResponse = await env.AI.run(MODEL, { messages: messagesForModel, stream: true });
-    } catch (aiErr2) {
-      console.error("[chat] AI.run() fallback also failed:", aiErr2);
-      return new Response(JSON.stringify({ error: "AI service is temporarily unavailable. Please try again." }), { status: 503, headers: { "Content-Type": "application/json" } });
+    if (thread) {
+      let stored: ChatMessage[] = [];
+      try { stored = JSON.parse(thread.message_history) as ChatMessage[]; } catch {}
+      conversation = mergeChatHistories(stored, incoming);
+    } else {
+      threadId = undefined;
     }
   }
 
-  const aiStream = aiResponse as unknown as ReadableStream<Uint8Array>;
-  const encoder = new TextEncoder();
-  if (!threadId) {
-    threadId = generateUUID();
-    const userMessages = body.messages.filter((m) => m.role !== "system");
-    await env.DB.prepare("INSERT INTO threads (id, user_id, message_history) VALUES (?, ?, ?)").bind(threadId, payload.sub, JSON.stringify(userMessages)).run();
+  const model = createCloudflareModel(env);
+  let result;
+  try {
+    const context = buildReasoningContext({ history: conversation, baseline: derived });
+    result = await generateSovereignResponse(context, conversation, derived, model);
+  } catch (err) {
+    if (err instanceof ModelError) {
+      return new Response(JSON.stringify({ error: err.message }), { status: 503, headers: { "Content-Type": "application/json" } });
+    }
+    console.error("[chat] sovereign generation failed:", err);
+    return new Response(JSON.stringify({ error: "Something went wrong while generating a response. Please try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
-  const currentThreadId = threadId;
-  const userMessages = body.messages.filter((m) => m.role !== "system");
+
+  const currentThreadId = threadId ?? generateUUID();
   const userId = payload.sub;
+  const messagesToStore: ChatMessage[] = [...conversation, { role: "assistant", content: result.text }];
+
+  try {
+    if (threadId) {
+      await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?").bind(JSON.stringify(messagesToStore), currentThreadId, userId).run();
+    } else {
+      await env.DB.prepare("INSERT INTO threads (id, user_id, message_history) VALUES (?, ?, ?)").bind(currentThreadId, userId, JSON.stringify(messagesToStore)).run();
+    }
+  } catch (persistErr) {
+    console.error("[chat] Failed to persist thread:", persistErr);
+  }
+
+  if (user.subscription_tier === "free") {
+    // Consumption is counted only after a successful generation + persistence.
+    // KV has no compare-and-swap, so concurrent requests on free tier may each
+    // pass the pre-check; the limit remains enforced per day per user in practice.
+    try {
+      const current = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10);
+      await env.SESSION_KV.put(todayKey, String(current + 1), { expirationTtl: 86400 });
+    } catch (kvErr) {
+      console.error("[chat] Failed to record free tier usage:", kvErr);
+    }
+  }
+
   const sseStream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const reader = (aiStream as ReadableStream<Uint8Array>).getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullResponse = "";
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ threadId: currentThreadId })}\n\n`));
-      const emitToken = (token: string) => {
-        if (!token) return;
-        fullResponse += token;
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: token })}\n\n`));
-      };
-      const handleLine = (line: string) => {
-        const trimmed = line.trim();
-        if (!trimmed) return;
-        if (trimmed.startsWith("data:")) {
-          const payload = trimmed.slice(5).trim();
-          if (payload === "[DONE]") return;
-          try {
-            const parsed = JSON.parse(payload) as { response?: unknown };
-            if (typeof parsed.response === "string") emitToken(parsed.response);
-          } catch {}
-          return;
-        }
-        emitToken(line);
-      };
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-          for (const line of lines) handleLine(line);
-        }
-        if (buffer.trim()) handleLine(buffer);
-      } catch (err) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Stream interrupted" })}\n\n`));
-        console.error("[chat] Stream error:", err);
-      } finally {
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
-        if (currentThreadId && fullResponse) {
-          try {
-            const updatedMessages = [...userMessages, { role: "assistant" as const, content: fullResponse }];
-            const existing = await env.DB.prepare("SELECT message_history FROM threads WHERE id = ? AND user_id = ?").bind(currentThreadId, userId).first<Thread>();
-            let merged: ChatMessage[] = [];
-            if (existing) { try { merged = JSON.parse(existing.message_history) as ChatMessage[]; } catch {} }
-            for (const msg of updatedMessages) {
-              const last = merged[merged.length - 1];
-              if (last && last.role === msg.role && last.content === msg.content) continue;
-              merged.push(msg);
-            }
-            await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ?").bind(JSON.stringify(merged), currentThreadId).run();
-          } catch (persistErr) { console.error("[chat] Failed to persist thread:", persistErr); }
-        }
-      }
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: result.text })}\n\n`));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
     },
   });
   return new Response(sseStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
