@@ -5,9 +5,11 @@ import { getEnv } from "@/lib/env";
 /**
  * Server-side auth gate.
  *
- * - Public routes: /, /onboard, /api/auth (login/signup/logout/reset)
- * - Everything else requires a valid JWT session cookie.
- * - API routes return 401 JSON; page routes redirect to /onboard.
+ * - Public pages: /, /onboard, /terms, /privacy (anything else renders
+ *   naturally — e.g. the branded 404 for unknown paths).
+ * - Authed pages: /chat, /baseline, /upgrade, /account.
+ * - API: locked by default — only /api/auth* and the signature-verified
+ *   Stripe webhook are public. Everything under /api/* requires a valid JWT.
  *
  * This ensures the /chat UI and /api/chat, /api/threads, /api/baseline
  * endpoints can never be accessed without authentication.
@@ -15,36 +17,35 @@ import { getEnv } from "@/lib/env";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ── Public routes ────────────────────────────────────────────────
-  const publicRoutes = ["/", "/onboard", "/terms", "/privacy"];
-  const publicApiRoutes = ["/api/auth"];
-
-  // Allow exact public pages
-  if (publicRoutes.includes(pathname)) {
+  // ── Public pages + Next.js metadata routes (icons, og images) ────
+  const publicPages = ["/", "/onboard", "/terms", "/privacy"];
+  if (
+    publicPages.includes(pathname) ||
+    pathname.startsWith("/apple-icon") ||
+    pathname.startsWith("/icon") ||
+    pathname.startsWith("/opengraph-image") ||
+    pathname.startsWith("/twitter-image")
+  ) {
     return NextResponse.next();
   }
 
-  // Allow /api/auth and /api/auth/reset (login, signup, logout, password reset)
-  if (publicApiRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
+  // ── Public API: auth endpoints + Stripe webhook ──────────────────
+  if (
+    pathname === "/api/auth" ||
+    pathname.startsWith("/api/auth/") ||
+    pathname === "/api/webhooks/stripe"
+  ) {
     return NextResponse.next();
   }
 
-  // ── Social/share images (public, no auth) ──────────────────────
-  if (pathname.startsWith("/opengraph-image") || pathname.startsWith("/twitter-image")) {
-    return NextResponse.next();
-  }
+  // ── Everything else requires a valid session ─────────────────────
+  const isApi = pathname.startsWith("/api/");
 
-  // ── Stripe webhook: verified via signature, not JWT ─────────────
-  if (pathname === "/api/webhooks/stripe") {
-    return NextResponse.next();
-  }
-
-  // ── Auth check ────────────────────────────────────────────────────
   const env = getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) {
     // If JWT_SECRET isn't configured, fail closed
-    if (pathname.startsWith("/api/")) {
+    if (isApi) {
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
     }
     return NextResponse.redirect(new URL("/onboard", request.url));
@@ -52,7 +53,7 @@ export async function middleware(request: NextRequest) {
 
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
-    if (pathname.startsWith("/api/")) {
+    if (isApi) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.redirect(new URL("/onboard", request.url));
@@ -60,7 +61,7 @@ export async function middleware(request: NextRequest) {
 
   const payload = await verifyJWT(token, secret);
   if (!payload) {
-    if (pathname.startsWith("/api/")) {
+    if (isApi) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.redirect(new URL("/onboard", request.url));
