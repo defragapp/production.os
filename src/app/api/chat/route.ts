@@ -117,10 +117,10 @@ export async function POST(request: NextRequest) {
     const context = buildReasoningContext({ history: conversation, baseline: derived });
     result = await generateSovereignResponse(context, conversation, derived, model);
   } catch (err) {
+    console.error("[chat] generation failed:", err instanceof Error ? `${err.name}: ${err.message}` : err);
     if (err instanceof ModelError) {
       return new Response(JSON.stringify({ error: err.message }), { status: 503, headers: { "Content-Type": "application/json" } });
     }
-    console.error("[chat] sovereign generation failed:", err);
     return new Response(JSON.stringify({ error: "Something went wrong while generating a response. Please try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
