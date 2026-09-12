@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createJWT, generateSalt, generateUUID, hashPassword,
-  verifyJWT, verifyPassword, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
+  verifyJWT, verifyPassword, passwordNeedsRehash, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
 } from "@/lib/auth";
 import { sendTransactionalEmail } from "@/lib/email";
 import { getEnv } from "@/lib/env";
@@ -54,6 +54,17 @@ export async function POST(request: NextRequest) {
     const valid = await verifyPassword(password, existing.password_salt, existing.password_hash);
     if (!valid) return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     userId = existing.id;
+    // Upgrade-on-login: silently move legacy (100k-iteration) hashes to the
+    // current target (600k) so existing users are re-hashed without an outage.
+    if (passwordNeedsRehash(existing.password_hash)) {
+      const newSalt = generateSalt();
+      const newHash = await hashPassword(password, newSalt);
+      try {
+        await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, updated_at = datetime('now') WHERE id = ?").bind(newHash, newSalt, existing.id).run();
+      } catch (e) {
+        console.error("[auth] failed to upgrade password hash:", e);
+      }
+    }
   } else {
     const salt = generateSalt();
     const passwordHash = await hashPassword(password, salt);

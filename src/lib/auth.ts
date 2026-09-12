@@ -5,6 +5,13 @@
 const JWT_SECRET_ENV_KEY = "JWT_SECRET";
 const SESSION_COOKIE_NAME = "sovereign_session";
 
+/** PBKDF2-HMAC-SHA256 iterations for NEW hashes (OWASP recommended >= 600k). */
+export const PBKDF2_ITERATIONS = 600_000;
+/** Legacy iterations still used to verify plus parse pre-versioning hashes. */
+const PBKDF2_ITERATIONS_LEGACY = 100_000;
+/** Prefix marking a versioned hash as `pbkdf2$<iterations>$<hex>`. */
+const HASH_PREFIX = "pbkdf2$";
+
 /** Encode a string as an ArrayBuffer for WebCrypto calls. */
 function toArrayBuffer(s: string): ArrayBuffer {
   return new TextEncoder().encode(s).buffer as ArrayBuffer;
@@ -17,17 +24,43 @@ export function generateSalt(): string {
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Hash a password with a salt using PBKDF2 (100k iterations, SHA-256). */
-export async function hashPassword(password: string, salt: string): Promise<string> {
+/** PBKDF2-HMAC-SHA256 over a raw password + salt, returning hex. */
+async function computeHash(password: string, salt: string, iterations: number): Promise<string> {
   const keyMaterial = await crypto.subtle.importKey("raw", toArrayBuffer(password), "PBKDF2", false, ["deriveBits"]);
-  const derived = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: toArrayBuffer(salt), iterations: 100_000, hash: "SHA-256" }, keyMaterial, 256);
+  const derived = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: toArrayBuffer(salt), iterations, hash: "SHA-256" }, keyMaterial, 256);
   return Array.from(new Uint8Array(derived), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Verify a password against a stored hash + salt. */
+/** Hash a password with a salt, storing a versioned `pbkdf2$<iterations>$<hex>` string. */
+export async function hashPassword(password: string, salt: string, iterations: number = PBKDF2_ITERATIONS): Promise<string> {
+  const hex = await computeHash(password, salt, iterations);
+  return `${HASH_PREFIX}${iterations}$${hex}`;
+}
+
+/**
+ * Parse a stored hash, tolerating BOTH the new versioned format and the
+ * legacy raw 64-hex format (which hashes were created at 100k iterations).
+ */
+export function parseStoredHash(storedHash: string): { iterations: number; hex: string } {
+  if (storedHash && storedHash.startsWith(HASH_PREFIX)) {
+    const [, iterStr, hex] = storedHash.split("$");
+    const iterations = parseInt(iterStr, 10);
+    return { iterations: Number.isFinite(iterations) && iterations > 0 ? iterations : PBKDF2_ITERATIONS_LEGACY, hex: hex ?? "" };
+  }
+  return { iterations: PBKDF2_ITERATIONS_LEGACY, hex: storedHash ?? "" };
+}
+
+/** True when the stored hash was created with fewer iterations than the target. */
+export function passwordNeedsRehash(storedHash: string): boolean {
+  return parseStoredHash(storedHash).iterations < PBKDF2_ITERATIONS;
+}
+
+/** Verify a password against a stored hash + salt (supports legacy and versioned). */
 export async function verifyPassword(password: string, salt: string, storedHash: string): Promise<boolean> {
-  const hash = await hashPassword(password, salt);
-  return timingSafeEqual(hash, storedHash);
+  const { iterations, hex } = parseStoredHash(storedHash);
+  if (!hex) return false;
+  const computed = await computeHash(password, salt, iterations);
+  return timingSafeEqual(computed, hex);
 }
 
 function timingSafeEqual(a: string, b: string): boolean {

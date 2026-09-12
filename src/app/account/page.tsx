@@ -18,6 +18,7 @@ export default function AccountPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth")
@@ -37,6 +38,23 @@ export default function AccountPage() {
   const handleSignOut = async () => {
     await fetch("/api/auth", { method: "DELETE" });
     router.push("/");
+  };
+
+  const handleDelete = async () => {
+    if (
+      !window.confirm(
+        "Delete your account permanently? This removes your baseline, chat history, and subscription. This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await fetch("/api/auth/account", { method: "DELETE" });
+      router.push("/");
+    } catch {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -120,6 +138,14 @@ export default function AccountPage() {
               <Button variant="outline" className="w-full" onClick={() => router.push("/chat")}>Back to Chat</Button>
               <Button variant="outline" className="w-full" onClick={() => router.push("/")}>Home</Button>
               <Button variant="ghost" className="w-full text-destructive" onClick={handleSignOut}>Sign Out</Button>
+              <Button
+                variant="outline"
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete Account"}
+              </Button>
             </div>
           </div>
         </div>

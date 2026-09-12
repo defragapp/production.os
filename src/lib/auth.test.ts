@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateSalt, hashPassword, verifyPassword, createJWT, verifyJWT } from "./auth";
+import { generateSalt, hashPassword, verifyPassword, createJWT, verifyJWT, passwordNeedsRehash, PBKDF2_ITERATIONS } from "./auth";
 
 describe("password hashing", () => {
   it("generates unique 32-char hex salts", () => {
@@ -14,7 +14,7 @@ describe("password hashing", () => {
     const h1 = await hashPassword("correct horse battery staple", salt);
     const h2 = await hashPassword("correct horse battery staple", salt);
     expect(h1).toBe(h2);
-    expect(h1).toMatch(/^[0-9a-f]{64}$/);
+    expect(h1).toMatch(/^pbkdf2\$600000\$[0-9a-f]{64}$/);
   });
 
   it("verifies a correct password and rejects a wrong one", async () => {
@@ -27,6 +27,23 @@ describe("password hashing", () => {
   it("rejects a different salt", async () => {
     const hash = await hashPassword("supersecret", generateSalt());
     await expect(verifyPassword("supersecret", generateSalt(), hash)).resolves.toBe(false);
+  });
+
+  it("accepts legacy unprefixed hashes at the legacy iteration count", async () => {
+    const salt = generateSalt();
+    const modern = await hashPassword("legacypw", salt, 100_000);
+    const legacyHex = modern.split("$")[2]; // strip the prefix, as old rows stored only hex
+    await expect(verifyPassword("legacypw", salt, legacyHex)).resolves.toBe(true);
+    await expect(verifyPassword("wrongpw", salt, legacyHex)).resolves.toBe(false);
+  });
+
+  it("flags legacy hashes for rehashing but not fresh ones", async () => {
+    const salt = generateSalt();
+    const fresh = await hashPassword("pw", salt, PBKDF2_ITERATIONS);
+    const legacy = await hashPassword("pw", salt, 100_000);
+    expect(passwordNeedsRehash(fresh)).toBe(false);
+    expect(passwordNeedsRehash(legacy.split("$")[2])).toBe(true); // legacy raw hex
+    expect(passwordNeedsRehash(legacy)).toBe(true); // versioned-but-old-hash too
   });
 });
 

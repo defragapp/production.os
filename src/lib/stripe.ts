@@ -140,6 +140,30 @@ export async function createCheckoutSession(
   return { url: session.url };
 }
 
+/**
+ * Best-effort cancel all active Stripe subscriptions for a customer.
+ * Used on account deletion so billing stops without requiring a dashboard step.
+ * Swallows failures (local account erasure proceeds regardless).
+ */
+export async function cancelActiveSubscriptions(env: AppEnv, customerId: string | null | undefined): Promise<void> {
+  if (!env.STRIPE_SECRET_KEY || !customerId) return;
+  try {
+    const listRes = await fetch(`https://api.stripe.com/v1/subscriptions?customer=${encodeURIComponent(customerId)}&status=active&limit=100`, {
+      headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": STRIPE_API_VERSION },
+    });
+    if (!listRes.ok) return;
+    const data = await listRes.json() as { data?: Array<{ id: string }> };
+    for (const sub of data.data ?? []) {
+      await fetch(`https://api.stripe.com/v1/subscriptions/${sub.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": STRIPE_API_VERSION },
+      });
+    }
+  } catch (err) {
+    console.error("[stripe] failed to cancel subscriptions on account deletion:", err);
+  }
+}
+
 export {
   STRIPE_API_VERSION,
   ACTIVE_SUBSCRIPTION_STATUSES,

@@ -19,6 +19,16 @@ export async function POST(request: NextRequest) {
   if (!valid) return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   let event: StripeEvent;
   try { event = JSON.parse(rawBody) as StripeEvent; } catch { return NextResponse.json({ error: "Invalid payload" }, { status: 400 }); }
+
+  // Idempotency: Stripe may re-deliver webhooks. Record the event ID in KV and
+  // skip any already-processed event so subscription updates are never applied twice.
+  const eventKey = `stripe-event:${event.id}`;
+  const alreadyProcessed = await env.SESSION_KV.get(eventKey);
+  if (alreadyProcessed) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+  await env.SESSION_KV.put(eventKey, "1", { expirationTtl: 60 * 60 * 24 * 7 });
+
   const obj = event.data.object;
   const customerId = obj.customer;
   const accountId = obj.metadata?.account_id;
