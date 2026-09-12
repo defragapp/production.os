@@ -9,6 +9,7 @@ export interface User {
   email: string;
   stripe_customer_id: string | null;
   subscription_tier: SubscriptionTier;
+  email_verified?: number;
   created_at: string;
   updated_at: string;
 }

@@ -12,6 +12,15 @@ export async function POST(request: NextRequest) {
   const payload = await verifyJWT(token, secret);
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Rate-limit checkout to discourage automated abuse of Stripe sessions.
+  const rlKey = `rl:checkout:${payload.sub}`;
+  const rlRaw = await env.SESSION_KV.get(rlKey);
+  const rlCount = parseInt(rlRaw || "0", 10);
+  if (rlCount >= 10) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+  await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: 3600 });
+
   if (!stripeConfigured(env)) {
     return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 });
   }

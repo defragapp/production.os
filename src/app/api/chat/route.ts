@@ -13,6 +13,10 @@ const FREE_TIER_DAILY_LIMIT = 5;
 /** Max content length per message accepted from the client. */
 const MAX_MESSAGE_LENGTH = 5000;
 
+/** Burst rate limit: max requests per user per window to protect the LLM endpoint. */
+const CHAT_RATE_LIMIT_MAX = 20;
+const CHAT_RATE_LIMIT_WINDOW_MS = 60_000;
+
 const encoder = new TextEncoder();
 
 /**
@@ -45,6 +49,17 @@ export async function POST(request: NextRequest) {
   if (!token) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
   const payload = await verifyJWT(token, secret);
   if (!payload) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+
+  // Burst rate limit to protect the LLM endpoint from automated abuse.
+  const rlNow = Date.now();
+  let rlStamps: number[] = [];
+  const rlRaw = await env.SESSION_KV.get(`rl:chat:${payload.sub}`);
+  if (rlRaw) { try { rlStamps = JSON.parse(rlRaw) as number[]; } catch {} }
+  rlStamps = rlStamps.filter((t) => rlNow - t < CHAT_RATE_LIMIT_WINDOW_MS);
+  if (rlStamps.length >= CHAT_RATE_LIMIT_MAX) {
+    return new Response(JSON.stringify({ error: "Too many requests. Please wait a moment and try again." }), { status: 429, headers: { "Content-Type": "application/json" } });
+  }
+  await env.SESSION_KV.put(`rl:chat:${payload.sub}`, JSON.stringify([...rlStamps, rlNow]), { expirationTtl: 60 });
 
   const user = await env.DB.prepare("SELECT subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
   if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { "Content-Type": "application/json" } });

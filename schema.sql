@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
   email               TEXT UNIQUE NOT NULL,
   password_hash       TEXT NOT NULL,
   password_salt       TEXT NOT NULL,
+  email_verified      INTEGER NOT NULL DEFAULT 1,
+  verification_token  TEXT,
   stripe_customer_id  TEXT,
   subscription_tier    TEXT NOT NULL DEFAULT 'free',
   created_at          TEXT NOT NULL DEFAULT (datetime('now')),
