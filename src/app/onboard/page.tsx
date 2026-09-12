@@ -5,17 +5,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { TurnstileWidget } from "@/components/turnstile";
+import { Stepper } from "@/components/stepper";
+
+const STEPS = ["Account", "Baseline", "Plan"];
 
 function OnboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resetToken = searchParams.get("reset");
+  const mode = searchParams.get("mode");
+  const isLogin = mode === "login";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,6 +74,7 @@ function OnboardContent() {
         throw new Error(err.error || "Authentication failed");
       }
 
+      // New signups also capture their baseline in this step.
       if (dob && tob && pob) {
         const baselineRes = await fetch("/api/baseline", {
           method: "POST",
@@ -85,7 +88,9 @@ function OnboardContent() {
         }
       }
 
-      router.push("/chat");
+      // Returning users go straight to their workspace. New signups land on
+      // the plan choice so they see the free vs Sovereign+ tier after baseline.
+      router.push(existingUser ? "/chat" : "/upgrade?from=baseline");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setTurnstileToken(null);
@@ -137,7 +142,7 @@ function OnboardContent() {
       }
 
       setNotice("Password reset successfully. You can now sign in.");
-      router.push("/onboard");
+      router.push("/onboard?mode=login");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -145,16 +150,16 @@ function OnboardContent() {
     }
   };
 
+  // ── Password reset (token) screen ─────────────────────────────
   if (resetToken) {
     return (
       <>
         <Nav />
         <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
           <div className="w-full max-w-md">
+            <Stepper steps={STEPS} current={0} />
             <div className="mb-8 text-center">
-              <p className="mb-1 text-sm font-medium uppercase tracking-widest text-muted-foreground">
-                Sovereign OS
-              </p>
+              <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
               <h1 className="text-2xl font-bold">Set a New Password</h1>
             </div>
             <Card>
@@ -173,7 +178,7 @@ function OnboardContent() {
                     />
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
-                  {notice && <p className="text-sm text-green-600">{notice}</p>}
+                  {notice && <p className="text-sm text-emerald-500">{notice}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Resetting..." : "Reset Password"}
                   </Button>
@@ -186,6 +191,7 @@ function OnboardContent() {
     );
   }
 
+  // ── Forgot password flow ──────────────────────────────────────
   if (showForgot) {
     if (resetSent) {
       return (
@@ -193,16 +199,14 @@ function OnboardContent() {
           <Nav />
           <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
             <div className="w-full max-w-md text-center">
-              <p className="mb-1 text-sm font-medium uppercase tracking-widest text-muted-foreground">
-                Sovereign OS
-              </p>
+              <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
               <h1 className="mb-4 text-2xl font-bold">Check your email</h1>
-              <p className="text-muted-foreground">
-                If an account exists for <strong>{resetEmail}</strong>, we&apos;ve sent a password reset link.
-                It expires in 30 minutes.
+              <p className="text-sm text-muted-foreground">
+                If an account exists for <span className="font-medium text-foreground">{resetEmail}</span>, we&apos;ve
+                sent a link to reset your password.
               </p>
-              <Button variant="outline" className="mt-6" onClick={() => { setShowForgot(false); setResetSent(false); setError(null); }}>
-                Back
+              <Button variant="ghost" className="mt-6 w-full" onClick={() => { setShowForgot(false); setError(null); }}>
+                Back to Sign In
               </Button>
             </div>
           </main>
@@ -215,10 +219,9 @@ function OnboardContent() {
         <Nav />
         <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
           <div className="w-full max-w-md">
+            <Stepper steps={STEPS} current={0} />
             <div className="mb-8 text-center">
-              <p className="mb-1 text-sm font-medium uppercase tracking-widest text-muted-foreground">
-                Sovereign OS
-              </p>
+              <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
               <h1 className="text-2xl font-bold">Reset Password</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 Enter your email and we&apos;ll send you a link to reset your password.
@@ -254,23 +257,26 @@ function OnboardContent() {
     );
   }
 
+  // ── Main Sign In / Create Baseline ────────────────────────────
+  const title = existingUser ? "Welcome Back" : isLogin ? "Sign In" : "Create Your Baseline";
+  const description = existingUser
+    ? "Sign in to continue to your AI workspace."
+    : isLogin
+      ? "Welcome back. Sign in to continue where you left off."
+      : "Create your account and baseline to make sense of the patterns in your life.";
+  const currentStep = existingUser || isLogin ? 0 : 1;
+
   return (
     <>
       <Nav />
-      <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+      <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-md">
+          <Stepper steps={STEPS} current={currentStep} />
           <div className="mb-8 text-center">
-            <p className="mb-1 text-sm font-medium uppercase tracking-widest text-muted-foreground">
-              Sovereign OS
-            </p>
-            <h1 className="text-2xl font-bold">
-              {existingUser ? "Welcome Back" : "Set Your Baseline"}
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {existingUser
-                ? "Sign in to continue to your AI workspace."
-                : "Enter your birth data to generate your baseline. Computed using the NASA/JPL Horizons API. Your data is never sent to third parties."}
-            </p>
+            <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
+            <h1 className="text-2xl font-bold">{title}</h1>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
           </div>
 
           <Card>
@@ -285,6 +291,7 @@ function OnboardContent() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -297,6 +304,7 @@ function OnboardContent() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete={existingUser || isLogin ? "current-password" : "new-password"}
                   />
                 </div>
 
@@ -310,7 +318,7 @@ function OnboardContent() {
                   </button>
                 </div>
 
-                {!existingUser && (
+                {!(existingUser || isLogin) && (
                   <>
                     <div className="border-t pt-4" />
                     <div className="space-y-2">
@@ -352,7 +360,7 @@ function OnboardContent() {
                   </p>
                 )}
 
-                {!existingUser && turnstileSiteKey && (
+                {!(existingUser || isLogin) && turnstileSiteKey && (
                   <div className="space-y-2 border-t pt-4">
                     <TurnstileWidget
                       siteKey={turnstileSiteKey}
@@ -365,9 +373,33 @@ function OnboardContent() {
                 {error && <p className="text-sm text-destructive">{error}</p>}
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Computing baseline..." : existingUser ? "Sign In" : "Create Baseline"}
+                  {loading
+                    ? "Computing baseline..."
+                    : existingUser
+                      ? "Sign In"
+                      : isLogin
+                        ? "Sign In"
+                        : "Create My Baseline"}
                 </Button>
               </form>
+
+              <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">
+                {isLogin ? (
+                  <>
+                    New to Sovereign?{" "}
+                    <a href="/onboard?mode=signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+                      Create your baseline
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    Have an account?{" "}
+                    <a href="/onboard?mode=login" className="font-medium text-foreground underline-offset-4 hover:underline">
+                      Sign in
+                    </a>
+                  </>
+                )}
+              </p>
             </CardContent>
           </Card>
         </div>

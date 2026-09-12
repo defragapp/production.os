@@ -82,7 +82,7 @@ function LandingNav() {
             href="/onboard?mode=login"
             className="text-sm text-neutral-400 transition-colors duration-[240ms] hover:text-white"
           >
-            Sign in
+            Sign In
           </Link>
           <Link
             href="/onboard?mode=signup"

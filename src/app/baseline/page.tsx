@@ -13,6 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
+import { Stepper } from "@/components/stepper";
+import { PageHeader } from "@/components/page-header";
+
+const STEPS = ["Account", "Baseline", "Plan"];
 
 function BaselineContent() {
   const router = useRouter();
@@ -89,18 +93,14 @@ function BaselineContent() {
   return (
     <>
       <Nav />
-      <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+      <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-md">
-          <div className="mb-8 text-center">
-            <p className="mb-1 text-sm font-medium uppercase tracking-widest text-muted-foreground">
-              Sovereign OS
-            </p>
-            <h1 className="text-2xl font-bold">Set Your Baseline</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Enter your birth data to generate your baseline. Computed using the NASA/JPL Horizons API.
-              Your data is never sent to third parties.
-            </p>
-          </div>
+          <Stepper steps={STEPS} current={1} />
+          <PageHeader
+            title="Set Your Baseline"
+            description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. Your data is never shared with third parties."
+          />
 
           <Card>
             <CardHeader>
@@ -153,7 +153,7 @@ function BaselineContent() {
           </Card>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            We use your exact birth time and location to compute planetary positions via NASA/JPL.
+            We use your exact birth time and location to compute planetary positions via NASA data.
             This data is stored securely and never shared.
           </p>
         </div>

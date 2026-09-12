@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
+import { PageHeader } from "@/components/page-header";
 
 interface UserData {
   email: string;
@@ -61,14 +62,10 @@ export default function AccountPage() {
   return (
     <>
       <Nav />
-      <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+      <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-lg">
-          <div className="mb-8 text-center">
-            <p className="mb-1 text-sm font-medium uppercase tracking-widest text-muted-foreground">
-              Sovereign OS
-            </p>
-            <h1 className="text-2xl font-bold">Account</h1>
-          </div>
+          <PageHeader title="Account" description="Your plan, profile, and account preferences." />
           <div className="space-y-4">
             <Card>
               <CardHeader>

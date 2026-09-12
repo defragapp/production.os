@@ -1,12 +1,12 @@
 import { Nav } from "@/components/nav";
+import { PageHeader } from "@/components/page-header";
 
 export default function PrivacyPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-3xl px-6 py-12">
-        <h1 className="mb-2 text-3xl font-bold">Privacy Policy</h1>
-        <p className="mb-8 text-sm text-muted-foreground">Last updated: September 11, 2026</p>
+      <main className="mx-auto max-w-3xl px-6 py-14">
+        <PageHeader title="Privacy Policy" description="Last updated: September 11, 2026" center={false} />
         <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
           <section><h2 className="mb-2 text-lg font-semibold text-foreground">1. Information We Collect</h2><p>When you create an account, we collect your email address and a password (stored as a salted hash). To compute your baseline, we collect your date, time, and place of birth. We also store your chat threads and subscription status.</p></section>
           <section><h2 className="mb-2 text-lg font-semibold text-foreground">2. How We Use Your Information</h2><p>Your birth data is used solely to compute your baseline via the NASA/JPL Horizons API. Your chat history maintains your conversation threads. Your email is used for account verification, password resets, and transactional notifications.</p></section>

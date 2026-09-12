@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Nav } from "@/components/nav";
+import { BaselineSummary } from "@/components/baseline-summary";
 import type { ChatMessage, BaselineData } from "@/lib/types";
 
 interface MessageWithBaseline extends ChatMessage {
@@ -285,36 +285,41 @@ export function ChatClient() {
               </div>
             </div>
           )}
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+          {messages.map((msg, idx) => {
+            const isLast = idx === messages.length - 1;
+            const streamingEmpty =
+              msg.role === "assistant" && isLast && isStreaming && !msg.content;
+            return (
               <div
-                className={`max-w-[85%] rounded-lg px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-foreground"
-                }`}
+                key={idx}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <p className="whitespace-pre-wrap">{msg.content}</p>
-                {msg.role === "assistant" && msg.baselineData && msg.content && (
-                  <Accordion type="single" collapsible className="mt-3 border-t pt-2">
-                    <AccordionItem value="baseline" className="border-b-0">
-                      <AccordionTrigger className="text-xs opacity-70 hover:opacity-100">
-                        View Baseline Data
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <pre className="max-h-64 overflow-auto rounded-md bg-background/50 p-3 text-xs">
-                          {JSON.stringify(msg.baselineData, null, 2)}
-                        </pre>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                )}
+                <div
+                  className={`max-w-[92%] rounded-xl px-4 py-3 sm:max-w-[85%] ${
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  }`}
+                >
+                  {streamingEmpty ? (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-current" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
+                      <span className="ml-1">Thinking…</span>
+                    </span>
+                  ) : (
+                    <>
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      {msg.role === "assistant" && msg.baselineData && msg.content && (
+                        <BaselineSummary data={msg.baselineData} />
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
       </div>

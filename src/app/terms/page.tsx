@@ -1,12 +1,12 @@
 import { Nav } from "@/components/nav";
+import { PageHeader } from "@/components/page-header";
 
 export default function TermsPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-3xl px-6 py-12">
-        <h1 className="mb-2 text-3xl font-bold">Terms of Service</h1>
-        <p className="mb-8 text-sm text-muted-foreground">Last updated: September 11, 2026</p>
+      <main className="mx-auto max-w-3xl px-6 py-14">
+        <PageHeader title="Terms of Service" description="Last updated: September 11, 2026" center={false} />
         <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
           <section><h2 className="mb-2 text-lg font-semibold text-foreground">1. Acceptance of Terms</h2><p>By creating an account or using Sovereign OS (&quot;the Service&quot;), you agree to these Terms of Service. If you do not agree, please do not use the Service.</p></section>
           <section><h2 className="mb-2 text-lg font-semibold text-foreground">2. The Service</h2><p>Sovereign OS provides AI-assisted pattern analysis based on your baseline — computed from your date, time, and place of birth using NASA/JPL planetary data. The Service synthesizes emotional expression and offers pattern interruptions for personal reflection.</p></section>
