@@ -42,7 +42,7 @@ function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
     .filter((m) => m.content.trim().length > 0);
 }
 
-export async function POST(request: NextRequest) {
+async function handleChat(request: NextRequest) {
   const env = getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return new Response(JSON.stringify({ error: "JWT_SECRET is not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
@@ -159,4 +159,30 @@ export async function POST(request: NextRequest) {
     },
   });
   return new Response(sseStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
+}
+
+/** Outer debug hook: catches uncaught throws in the pre-generation path and
+ *  logs the error plus binding inventory so an empty-500 becomes diagnosable. */
+export async function POST(request: NextRequest) {
+  const url = request.url;
+  try {
+    return await handleChat(request);
+  } catch (err) {
+    const name = err instanceof Error ? err.name : typeof err;
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack ?? "(no stack)" : "(non-error throw)";
+    console.error(`[chat] uncaught: ${name}: ${message}\n${stack}`);
+    console.error(`[chat] uncaught url: ${url}`);
+    try {
+      const env = getEnv() as unknown as Record<string, unknown>;
+      const sub = request.cookies.get(SESSION_COOKIE_NAME)?.value?.slice(-8) ?? "(no cookie)";
+      console.error(
+        `[chat] bindings: hasDB=${Boolean(env.DB)} hasKV=${Boolean(env.SESSION_KV)} hasAI=${Boolean(env.AI)} ` +
+        `gatewayId=${typeof env.AI_GATEWAY_ID === "string" ? env.AI_GATEWAY_ID : "(missing)"} cookieTail=${sub}`,
+      );
+    } catch (envErr) {
+      console.error("[chat] bindings unavailable:", envErr instanceof Error ? `${envErr.name}: ${envErr.message}` : envErr);
+    }
+    return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
+  }
 }
