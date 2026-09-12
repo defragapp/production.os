@@ -1,6 +1,6 @@
 /**
  * Transactional email via Resend (api.resend.com).
- * Branded from Sovereign OS (info@sovereign.os).
+ * Branded from Sovereign OS (sovereign@defrag.app).
  * Falls back to console log if RESEND_API_KEY is not set.
  */
 import type { AppEnv } from "./env";

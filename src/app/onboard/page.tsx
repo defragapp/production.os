@@ -31,6 +31,8 @@ function OnboardContent() {
   const [existingUser, setExistingUser] = useState(false);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [tsFailed, setTsFailed] = useState(false);
+  const [tsKey, setTsKey] = useState(0);
 
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -360,15 +362,33 @@ function OnboardContent() {
                   </p>
                 )}
 
-                {!(existingUser || isLogin) && turnstileSiteKey && (
+                {!(existingUser || isLogin) && turnstileSiteKey && !tsFailed && (
                   <div className="space-y-2 border-t pt-4">
                     <TurnstileWidget
+                      key={tsKey}
                       siteKey={turnstileSiteKey}
                       onToken={setTurnstileToken}
-                      onError={() =>
-                        setError("Security check couldn't load. Check your connection and refresh the page to try again.")
-                      }
+                      onError={() => {
+                        setTurnstileToken(null);
+                        setTsFailed(true);
+                      }}
                     />
+                  </div>
+                )}
+
+                {tsFailed && (
+                  <div className="flex items-center justify-between gap-2 border-t pt-4 text-sm text-destructive">
+                    <span>Security check couldn&apos;t load. Check your connection.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTsFailed(false);
+                        setTsKey((k) => k + 1);
+                      }}
+                      className="shrink-0 underline underline-offset-4 hover:text-foreground"
+                    >
+                      Retry
+                    </button>
                   </div>
                 )}
 

@@ -308,7 +308,61 @@ export function LandingClient() {
           </div>
         </section>
 
-        {/* ── Section 6 · Final CTA ────────────────────────── */}
+        {/* ── Section 6 · FAQ ───────────────────────────────── */}
+        <section className="border-t border-white/10 px-6 py-24">
+          <Reveal className="mx-auto max-w-3xl">
+            <h2 className="mb-10 text-center text-3xl font-medium text-foreground md:text-4xl">
+              Questions, answered.
+            </h2>
+            <div className="space-y-3">
+              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                  Is this therapy or medical advice?
+                  <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  No. Sovereign OS is a tool for self-reflection and pattern awareness. It does not
+                  diagnose, treat, or replace professional mental health, medical, or financial
+                  advice. If you are struggling, please reach out to a qualified professional.
+                </p>
+              </details>
+              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                  What do you do with my birth data?
+                  <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  Your date, time, and place of birth are used for one thing only: computing your
+                  baseline from NASA/JPL planetary data. It is never sold or shared, and you can
+                  delete your entire account — data included — in one click from your Account page.
+                </p>
+              </details>
+              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                  What&apos;s the difference between Free and Sovereign+?
+                  <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  Free includes your full baseline and 5 AI messages per day. Sovereign+ removes the
+                  daily cap, keeps your complete conversation history, and adds advanced pattern
+                  analysis — monthly at $9, or annually at $79 (save 27%).
+                </p>
+              </details>
+              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                  Can I cancel anytime?
+                  <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  Yes. Subscriptions are managed through Stripe — cancel in two clicks from your
+                  Account page, and your access continues through the end of the paid period.
+                </p>
+              </details>
+            </div>
+          </Reveal>
+        </section>
+
+        {/* ── Section 7 · Final CTA ────────────────────────── */}
         <section className="border-t border-white/10 px-6 py-32 text-center">
           <Reveal className="mx-auto max-w-2xl">
             <h2 className="mb-4 text-4xl font-medium text-foreground md:text-5xl">
