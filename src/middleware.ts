@@ -29,6 +29,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── Social/share images (public, no auth) ──────────────────────
+  if (pathname.startsWith("/opengraph-image") || pathname.startsWith("/twitter-image")) {
+    return NextResponse.next();
+  }
+
   // ── Stripe webhook: verified via signature, not JWT ─────────────
   if (pathname === "/api/webhooks/stripe") {
     return NextResponse.next();

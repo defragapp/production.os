@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sovereign.defrag.app"),
   title: {
     default: "Sovereign OS — Understand the patterns in your life",
     template: "%s · Sovereign OS",
