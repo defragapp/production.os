@@ -44,6 +44,110 @@ export function emailLink(href: string, label: string): string {
   return `<a href="${href}" style="color:#18181b;font-weight:600">${label}</a>`;
 }
 
+/**
+ * Email templates registry (Option A — in-code, editable via git).
+ * Each template renders full HTML using shared emailShell/emailButton primitives.
+ */
+const EMAIL_TEMPLATES = {
+  welcome: {
+    subject: "Welcome to Sovereign OS",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string };
+      return emailShell(
+        "Welcome to Sovereign OS",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your account is ready. Complete your baseline to begin.</p>` +
+        emailButton(`${v.origin}/onboard`, "Set Your Baseline")
+      );
+    },
+  },
+
+  verify: {
+    subject: "Verify your email",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; token: string };
+      return emailShell(
+        "Verify your email",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Welcome to Sovereign OS. Confirm your email address to unlock your baseline and personal AI chat.</p>` +
+        emailButton(`${v.origin}/api/auth/verify?token=${v.token}`, "Verify Email") +
+        `<p style="color:#a1a1aa;font-size:13px;margin:16px 0 0">This link expires in 48 hours. If you didn't create an account, you can safely ignore this email.</p>`
+      );
+    },
+  },
+
+  "password-reset": {
+    subject: "Reset your password",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; token: string };
+      return emailShell(
+        "Reset your password",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">You requested a password reset. This link is valid for 15 minutes.</p>` +
+        emailButton(`${v.origin}/reset?token=${v.token}`, "Reset Password")
+      );
+    },
+  },
+
+  "billing-success": {
+    subject: "Payment successful",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; amount: string; date: string; next: string };
+      return emailShell(
+        "Payment successful",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your payment of <strong>$${v.amount}</strong> was processed on ${v.date}.</p>` +
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Next billing date: ${v.next}</p>` +
+        emailLink(`${v.origin}/account?tab=billing`, "View billing history")
+      );
+    },
+  },
+
+  "trial-ending": {
+    subject: "Your trial ends soon",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; days: number };
+      return emailShell(
+        "Your trial ends soon",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your free trial expires in ${v.days} day${v.days === 1 ? "" : "s"}. Upgrade now to keep your data and continue using Sovereign OS.</p>` +
+        emailButton(`${v.origin}/upgrade`, "Upgrade now")
+      );
+    },
+  },
+} as const;
+
+type TemplateName = keyof typeof EMAIL_TEMPLATES;
+type TemplateVars<T extends TemplateName> = Parameters<typeof EMAIL_TEMPLATES[T]["render"]>[0];
+
+/**
+ * Send a templated email through Resend.
+ * Falls into console.log if no API key configured (log-only mode).
+ */
+export async function sendTemplate<T extends TemplateName>(
+  env: AppEnv,
+  template: T,
+  to: string,
+  vars: TemplateVars<T>
+): Promise<void> {
+  const tmpl = EMAIL_TEMPLATES[template];
+  if (!tmpl) throw new Error(`Unknown email template: ${template}`);
+
+  const html = tmpl.render(vars as Record<string, unknown>);
+  const opts: SendEmailOptions = { to, subject: tmpl.subject, html };
+
+  const fromEmail = env.FROM_EMAIL || "sovereign@defrag.app";
+  const apiKey = env.RESEND_API_KEY;
+  if (apiKey) {
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: `Sovereign OS <${fromEmail}>`, to: [opts.to], subject: opts.subject, html: opts.html }),
+      });
+      if (!response.ok) { const err = await response.json() as { message?: string }; throw new Error(`Resend error: ${err.message || response.statusText}`); }
+      return;
+    } catch (err) { console.error("[email] Resend failed, falling back to log:", err); }
+  }
+  console.log(`[email] From: ${fromEmail} → ${opts.to} | Subject: ${opts.subject}`);
+  console.log(`[email] Body: ${opts.html.slice(0, 200)}...`);
+}
+
 export async function sendTransactionalEmail(env: AppEnv, opts: SendEmailOptions): Promise<void> {
   const fromEmail = env.FROM_EMAIL || "sovereign@defrag.app";
   const apiKey = env.RESEND_API_KEY;
