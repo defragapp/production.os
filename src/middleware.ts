@@ -38,8 +38,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Everything else requires a valid session ─────────────────────
+  // ── Auth check ────────────────────────────────────────────────────
+  // API: locked by default (anything not exempted above).
+  // Pages: only the app pages require auth — unknown paths fall through
+  // so Next.js can render the branded 404.
   const isApi = pathname.startsWith("/api/");
+  const PROTECTED_PAGES = ["/chat", "/baseline", "/upgrade", "/account"];
+  const isProtectedPage = PROTECTED_PAGES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+  if (!isApi && !isProtectedPage) {
+    return NextResponse.next();
+  }
 
   const env = getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
