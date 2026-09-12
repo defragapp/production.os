@@ -365,7 +365,9 @@ function OnboardContent() {
                     <TurnstileWidget
                       siteKey={turnstileSiteKey}
                       onToken={setTurnstileToken}
-                      onError={() => setError("Could not load the security check.")}
+                      onError={() =>
+                        setError("Security check couldn't load. Check your connection and refresh the page to try again.")
+                      }
                     />
                   </div>
                 )}

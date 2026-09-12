@@ -344,10 +344,10 @@ export function LandingClient() {
               Privacy
             </Link>
             <a
-              href="mailto:info@sovereign.os"
+              href="mailto:sovereign@defrag.app"
               className="transition-colors duration-[240ms] hover:text-foreground"
             >
-              info@sovereign.os
+              sovereign@defrag.app
             </a>
           </div>
         </div>

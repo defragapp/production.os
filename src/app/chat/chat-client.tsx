@@ -153,6 +153,16 @@ export function ChatClient() {
           });
           return;
         }
+        if (response.status === 401) {
+          // Session expired or invalid — send the user to sign-in.
+          setMessages((prev) => {
+            const u = [...prev];
+            u[u.length - 1] = { role: "assistant", content: "Your session has expired. Redirecting you to sign in…" };
+            return u;
+          });
+          setTimeout(() => router.push("/onboard?mode=login"), 1200);
+          return;
+        }
         setMessages((prev) => {
           const u = [...prev];
           u[u.length - 1] = { role: "assistant", content: `Error: ${err.error || "Something went wrong."}` };
@@ -214,7 +224,7 @@ export function ChatClient() {
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, messages, threadId, baselineData, refreshThreads]);
+  }, [input, isStreaming, messages, threadId, baselineData, refreshThreads, router]);
 
   if (!authChecked) {
     return (

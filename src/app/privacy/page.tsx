@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy — Sovereign OS",
+  description: "How Sovereign OS collects, uses, and protects your data.",
+};
 
 export default function PrivacyPage() {
   return (
@@ -15,7 +21,7 @@ export default function PrivacyPage() {
           <section><h2 className="mb-2 text-lg font-semibold text-foreground">5. Your Rights</h2><p>You may request access to, correction of, or deletion of your personal data at any time by contacting us.</p></section>
           <section><h2 className="mb-2 text-lg font-semibold text-foreground">6. Cookies</h2><p>We use a single session cookie to keep you signed in. It is httpOnly, SameSite=Lax, and expires after 7 days. We do not use third-party tracking cookies.</p></section>
           <section><h2 className="mb-2 text-lg font-semibold text-foreground">7. Children&apos;s Privacy</h2><p>The Service is not directed to individuals under 18. We do not knowingly collect personal information from minors.</p></section>
-          <section><h2 className="mb-2 text-lg font-semibold text-foreground">8. Contact</h2><p>Questions about this policy can be directed to <a href="mailto:info@sovereign.os" className="underline hover:text-foreground">info@sovereign.os</a>.</p></section>
+          <section><h2 className="mb-2 text-lg font-semibold text-foreground">8. Contact</h2><p>Questions about this policy can be directed to <a href="mailto:sovereign@defrag.app" className="underline hover:text-foreground">sovereign@defrag.app</a>.</p></section>
         </div>
       </main>
     </>

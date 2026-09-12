@@ -83,16 +83,17 @@ function UpgradeContent() {
             <Card className="border border-primary/60">
               <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>For deep pattern work</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
-                <div className="mb-4 flex items-baseline gap-2"><span className="text-3xl font-bold">$9</span><span className="text-sm text-muted-foreground">/month</span></div>
+                <div className="mb-4 flex items-baseline gap-2"><span className="text-3xl font-bold">$79</span><span className="text-sm text-muted-foreground">/year</span></div>
+                <p className="mb-4 inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">Save 27% — best value</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <li>Unlimited AI messages</li><li>Full chat history &amp; threads</li><li>Advanced pattern analysis</li><li>Priority AI inference</li>
                 </ul>
                 <div className="mt-6 space-y-2">
-                  <Button className="w-full" onClick={() => handleUpgrade("monthly")} disabled={loading !== null}>
-                    {loading === "monthly" ? "Redirecting..." : "Monthly — $9/mo"}
-                  </Button>
-                  <Button variant="outline" className="w-full" onClick={() => handleUpgrade("annual")} disabled={loading !== null}>
+                  <Button className="w-full" onClick={() => handleUpgrade("annual")} disabled={loading !== null}>
                     {loading === "annual" ? "Redirecting..." : "Annual — $79/yr (Save 27%)"}
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => handleUpgrade("monthly")} disabled={loading !== null}>
+                    {loading === "monthly" ? "Redirecting..." : "Monthly — $9/mo"}
                   </Button>
                 </div>
               </CardContent>
