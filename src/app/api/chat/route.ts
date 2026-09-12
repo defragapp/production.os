@@ -62,7 +62,16 @@ async function handleChat(request: NextRequest) {
   }
   await env.SESSION_KV.put(`rl:chat:${payload.sub}`, JSON.stringify([...rlStamps, rlNow]), { expirationTtl: 60 });
 
-  const user = await env.DB.prepare("SELECT subscription_tier, email_verified FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  // Defensive user lookup: older D1 snapshots may lack the email_verified
+  // column (added after initial schema). Fall back to the pre-verification
+  // shape and treat the user as verified rather than crashing the route.
+  let user: User | null;
+  try {
+    user = await env.DB.prepare("SELECT subscription_tier, email_verified FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  } catch {
+    console.error("[chat] email_verified column missing, falling back to legacy user lookup");
+    user = await env.DB.prepare("SELECT subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  }
   if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
 
   // Email verification gate — active only when email delivery is configured.
