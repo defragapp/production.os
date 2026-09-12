@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -11,6 +12,25 @@ interface MessageWithBaseline extends ChatMessage {
   baselineData?: BaselineData;
 }
 
+interface ThreadSummary {
+  id: string;
+  updated_at: string;
+  label?: string;
+}
+
+function threadLabel(messages: ChatMessage[]): string {
+  const first = messages.find((m) => m.role === "user")?.content;
+  return first ? (first.length > 36 ? `${first.slice(0, 36)}…` : first) : "Untitled thread";
+}
+
+function formatThreadDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  } catch {
+    return iso;
+  }
+}
+
 export function ChatClient() {
   const router = useRouter();
   const [messages, setMessages] = useState<MessageWithBaseline[]>([]);
@@ -18,9 +38,44 @@ export function ChatClient() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [baselineData, setBaselineData] = useState<BaselineData | undefined>();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const refreshThreads = useCallback(async (): Promise<ThreadSummary[]> => {
+    try {
+      const res = await fetch("/api/threads");
+      if (!res.ok) return [];
+      const data = await res.json() as { threads?: ThreadSummary[] };
+      const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at }));
+      setThreads((prev) => {
+        const merged = items.map((item) => ({ ...item, label: prev.find((p) => p.id === item.id)?.label }));
+        return merged;
+      });
+      return items;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const openThread = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/threads?id=${id}`);
+      if (!res.ok) return;
+      const data = await res.json() as { thread?: { messages?: ChatMessage[] } };
+      const msgs = data.thread?.messages || [];
+      setMessages(msgs.map((m) => ({ ...m })));
+      setThreadId(id);
+      const label = threadLabel(msgs);
+      setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, label } : t)));
+    } catch {}
+  }, []);
+
+  const startNewThread = useCallback(() => {
+    setMessages([]);
+    setThreadId(null);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -42,20 +97,9 @@ export function ChatClient() {
             setBaselineData(JSON.parse(bd.baseline.nasa_jpl_json_data));
           } catch {}
         }
-        const threadsRes = await fetch("/api/threads");
-        if (threadsRes.ok) {
-          const threadsData = await threadsRes.json() as { threads?: { id: string }[] };
-          const threads = threadsData.threads || [];
-          if (threads.length > 0) {
-            const threadRes = await fetch(`/api/threads?id=${threads[0].id}`);
-            if (threadRes.ok) {
-              const threadData = await threadRes.json() as { thread?: { messages?: ChatMessage[] } };
-              if (threadData.thread?.messages) {
-                setMessages(threadData.thread.messages.map((m: ChatMessage) => ({ ...m })));
-                setThreadId(threads[0].id);
-              }
-            }
-          }
+        const items = await refreshThreads();
+        if (items.length > 0) {
+          await openThread(items[0].id);
         }
       } catch {
         router.push("/onboard");
@@ -63,7 +107,7 @@ export function ChatClient() {
         setAuthChecked(true);
       }
     })();
-  }, [router]);
+  }, [router, refreshThreads, openThread]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,6 +121,8 @@ export function ChatClient() {
     setInput("");
     setIsStreaming(true);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+    const startedNewThread = threadId === null;
+    let createdThreadId: string | null = null;
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -121,6 +167,7 @@ export function ChatClient() {
             try {
               const parsed = JSON.parse(data);
               if (parsed.threadId) {
+                createdThreadId = parsed.threadId as string;
                 setThreadId(parsed.threadId);
                 continue;
               }
@@ -139,6 +186,14 @@ export function ChatClient() {
           }
         }
       }
+      if (createdThreadId) {
+        const final = await refreshThreads();
+        const stored = final.find((t) => t.id === createdThreadId);
+        if (stored && (startedNewThread || !stored.label)) {
+          const label = threadLabel([...newMessages, { role: "assistant", content: "" }]);
+          setThreads((prev) => prev.map((t) => (t.id === createdThreadId ? { ...t, label } : t)));
+        }
+      }
     } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => {
@@ -149,7 +204,7 @@ export function ChatClient() {
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, messages, threadId, baselineData]);
+  }, [input, isStreaming, messages, threadId, baselineData, refreshThreads]);
 
   if (!authChecked) {
     return (
@@ -178,6 +233,43 @@ export function ChatClient() {
           </div>
         </div>
       )}
+
+      {threads.length > 0 || threadId ? (
+        <div className="border-b bg-background px-4 py-2">
+          <div className="mx-auto flex max-w-3xl items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startNewThread}
+              disabled={isStreaming}
+              className="shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              New thread
+            </Button>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {threads.map((t) => {
+                const active = t.id === threadId;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => openThread(t.id)}
+                    disabled={isStreaming}
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {t.label || formatThreadDate(t.updated_at)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-3xl space-y-4">

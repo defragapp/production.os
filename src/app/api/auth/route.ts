@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
 
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
+  if (email && !isValidEmail(email)) return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
   if (!email || !password) return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   const existing = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<User & { password_hash: string; password_salt: string }>();
@@ -75,4 +76,16 @@ export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.cookies.set(SESSION_COOKIE_NAME, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
   return response;
+}
+
+function isValidEmail(email: string): boolean {
+  if (email.length < 3 || email.length > 254) return false;
+  const at = email.indexOf("@");
+  if (at < 1 || at !== email.lastIndexOf("@")) return false;
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  if (local.length > 64 || !/[a-z0-9.!#$%&'*+/=?^_`{|}~-]/.test(local)) return false;
+  const labels = domain.split(".");
+  if (labels.length < 2 || labels.some((l) => l.length < 1 || l.length > 63 || /^-|-$/.test(l) || /[^a-z0-9-]/.test(l))) return false;
+  return true;
 }

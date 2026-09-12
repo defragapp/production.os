@@ -267,12 +267,49 @@ function flagged(
   return violations;
 }
 
+const LEAK_MARKERS: RegExp[] = [
+  /\bAPPLICATION REASONING CONTEXT\b/i,
+  /\bBASELINE CONTEXT \(derived signals/i,
+  /\bMEANING TARGETS \(loaded concepts/i,
+  /\bUNKNOWNS \(do not resolve/i,
+  /\bREJECTED HYPOTHESES \(do NOT re-assert/i,
+  /\bQUESTION LEVEL\b/i,
+  /\bUSER DEFINITIONS\b/i,
+  /\breasoning context\b/i,
+  /\bepistemic status\b/i,
+];
+
+function detectLeakage(text: string): { index: number; length: number } | null {
+  const lower = text.toLowerCase();
+  for (const re of LEAK_MARKERS) {
+    const match = lower.match(re);
+    if (match && match.index !== undefined) {
+      return { index: match.index, length: match[0].length };
+    }
+  }
+  return null;
+}
+
 export function validateSovereignText(
   text: string,
   ctx?: Pick<ReasoningContext, "correctionState">,
 ): SafetyValidation {
   if (!text || text.trim().length === 0) {
     return { allowed: false, violations: [{ type: "unsupported-claim", severity: "low", matchedText: "", note: "Empty response is not allowed." }] };
+  }
+
+  // Never expose the reasoning system's internal context in user-visible text.
+  const leak = detectLeakage(text);
+  if (leak) {
+    return {
+      allowed: false,
+      violations: [{
+        type: "unsupported-claim",
+        severity: "high",
+        matchedText: text.slice(leak.index, leak.index + leak.length).trim(),
+        note: "The response leaks the reasoning system's internal context; rewrite wholly without that structure.",
+      }],
+    };
   }
 
   const violations: SafetyViolation[] = [];

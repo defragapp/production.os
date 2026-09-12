@@ -77,6 +77,25 @@ describe("validateSovereignText (Layer 1 lexicon)", () => {
   it("rejects empty responses", () => {
     expect(validateSovereignText("   ").allowed).toBe(false);
   });
+
+  it("blocks leaking the internal reasoning context", () => {
+    const v = validateSovereignText(
+      "APPLICATION REASONING CONTEXT\n- QUESTION LEVEL: 3\n- MEANING TARGETS: helping\nHere is my response...",
+    );
+    expect(v.allowed).toBe(false);
+    expect(v.violations.some((x) => x.note.includes("leaks"))).toBe(true);
+  });
+
+  it("blocks 'epistemic status' internal jargon", () => {
+    const v = validateSovereignText("One possibility worth examining, epistemic status: conceptual.");
+    expect(v.allowed).toBe(false);
+    expect(v.violations.some((x) => x.note.includes("leaks"))).toBe(true);
+  });
+
+  it("does not over-flag ordinary language about reasoning", () => {
+    const v = validateSovereignText("Let's reason through what happened together, one step at a time.");
+    expect(v.allowed).toBe(true);
+  });
 });
 
 describe("fallback and safety responses stay safe", () => {

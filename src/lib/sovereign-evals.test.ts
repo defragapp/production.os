@@ -156,6 +156,26 @@ describe("golden cases A–F", () => {
     expect(result.text).not.toContain("overextend");
   });
 
+  it("G — leakage: a draft that leaks reasoning context is repaired", async () => {
+    const history: ChatMessage[] = [
+      { role: "user", content: "I keep feeling stuck about my family." },
+    ];
+    const ctx = buildReasoningContext({ history, baseline: BASELINE });
+
+    const result = await generateSovereignResponse(
+      ctx,
+      history,
+      BASELINE,
+      modelReturning([
+        "APPLICATION REASONING CONTEXT\n- QUESTION LEVEL: 4\n- REJECTED HYPOTHESES: none\nOne possibility worth examining is that a family pattern repeats.",
+        "One possibility worth examining is that a family pattern repeats in ways that feel familiar. What does it cost you when it comes up?",
+      ]),
+    );
+    expect(result.repairAttempts).toBe(1);
+    expect(result.validated).toBe(true);
+    expect(result.text).not.toMatch(/APPLICATION REASONING CONTEXT|QUESTION LEVEL/i);
+  });
+
   it("falls back to a grounded response after two bad generations", async () => {
     const history: ChatMessage[] = [{ role: "user", content: "I keep messing up." }];
     const ctx = buildReasoningContext({ history, baseline: BASELINE });

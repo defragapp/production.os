@@ -85,7 +85,7 @@ npm run cf-typegen
 npm run dev        # Next.js dev server (local)
 npm run typecheck  # tsc --noEmit (TypeScript)
 npm run lint       # ESLint (next/core-web-vitals + next/typescript)
-npm run test       # Vitest unit tests (auth, stripe, sovereign-prompt)
+npm run test       # Vitest unit tests (78: auth, stripe, sovereign safety/reasoning/evals/model)
 npm run build      # Plain Next.js build (OpenNext runs this internally)
 npx opennextjs-cloudflare build   # OpenNext compiler → .open-next/ (what CI runs)
 npm run preview    # OpenNext build + preview in Workers runtime (workerd)
@@ -111,13 +111,13 @@ src/
 │   │   ├── auth/route.ts              # POST login/signup, GET session, DELETE logout (Turnstile)
 │   │   ├── auth/reset/route.ts        # POST password reset (email via Resend)
 │   │   ├── baseline/route.ts          # GET/POST natal baseline (NASA/JPL Horizons)
-│   │   ├── chat/route.ts              # SSE streaming chat via Workers AI + AI Gateway
+│   │   ├── chat/route.ts              # Sovereign chat: SSE streaming via Workers AI + AI Gateway
 │   │   ├── checkout/route.ts          # POST → Stripe Checkout session (JWT-guarded)
 │   │   ├── threads/route.ts           # Chat history CRUD (D1) — paginated GET
 │   │   └── webhooks/stripe/route.ts   # Stripe webhook → subscription_tier
 │   ├── account/page.tsx               # Account management
 │   ├── baseline/page.tsx              # Baselines list
-│   ├── chat/chat-client.tsx           # Chat client component (streaming, threads)
+│   ├── chat/chat-client.tsx           # Chat client (SSE streaming, thread switcher)
 │   ├── chat/page.tsx                  # Chat page (server wrapper around ChatClient)
 │   ├── onboard/page.tsx               # Birth data intake form + login/signup (Turnstile)
 │   ├── upgrade/checkout-client.tsx    # Upgrade client → POST /api/checkout
@@ -137,13 +137,49 @@ src/
 │   ├── env.ts                         # AppEnv type + getEnv() helper
 │   ├── nasa-jpl.ts                    # NASA/JPL Horizons API → natal positions
 │   ├── sovereign-prompt.ts            # Baseline derivation + system prompt
+│   ├── sovereign-types.ts             # Reasoning contracts (ReasoningContext, SafetyValidation, …)
+│   ├── sovereign-baseline.ts          # Provenance-aware BaselineSignal derivation
+│   ├── sovereign-reasoning.ts         # Classification, meaning detection, corrections, context, generation pipeline
+│   ├── sovereign-safety.ts            # Layer-1 deterministic validation, negation-aware, leakage guard, high-risk routing
+│   ├── sovereign-model.ts             # Non-streaming model adapter (gateway-first + direct fallback)
 │   ├── stripe.ts                      # Stripe pricing tiers + webhook verification
 │   ├── turnstile.ts                   # verifyTurnstileToken (env-gated)
 │   ├── types.ts                       # Shared TypeScript types
 │   ├── utils.ts                       # cn() class merger
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-prompt)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
+
+## Sovereign Reasoning Engine
+
+`/api/chat` runs a full-response → deterministic-validate → bounded-repair pipeline
+(`generateSovereignResponse` in `sovereign-reasoning.ts`):
+
+1. **Input safety routing** (`detectSafetyMode`): self-harm disclosures short-circuit
+   to a non-clinical escalation response and abuse disclosures to a grounded
+   resource response — no model call, raw content never returned.
+2. **Context building** (`buildReasoningContext`): phrase-level question
+   classification (Levels 1–4, 11 domains), meaning-target detection with
+   user-definition extraction, pattern/correction/unknown/authorization scanning,
+   and windowed history that preserves corrections.
+3. **Non-streaming generation** (`createCloudflareModel`): full text via
+   `@cf/meta/llama-3.1-8b-instruct-fp8`, routed through AI Gateway
+   `sovereign-ai-gateway` with direct Workers AI fallback.
+4. **Layer 1 validation** (`validateSovereignText`): a negation-aware lexicon over
+   11 prohibited categories (diagnosis, identity-verdict, motive-certainty,
+   hidden-emotion-certainty, relationship-verdict, system-blame,
+   baseline-determinism, destiny, overvalidation, prescriptive-authority,
+   unsupported-claim), plus rejected-hypothesis re-assertion blocking and an
+   internal-context leakage guard.
+5. **Bounded repair**: one regeneration with `buildRepairInstruction`; if the
+   repaired draft still fails, a deterministic grounded fallback is returned.
+6. **SSE shipment + persistence**: only validated text is streamed
+   (`data: {"content":…}`), then the thread is persisted to D1; the free-tier
+   daily counter increments only after successful generation + persistence.
+
+Golden-case evals (helping, manipulation, family patterns, failure, baseline,
+correction, leakage) and §53 regressions are covered in
+`sovereign-evals.test.ts` / `sovereign-safety.test.ts`.
 
 ## Notes
 
@@ -155,8 +191,8 @@ src/
 - The `GET /api/threads` list is paginated (`page`/`limit`, default 50, max 50) and returns `{ threads, total, page, pageSize }`; the `?id=` detail lookup is unchanged.
 - All routes set security headers (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy) plus a CSP in `next.config.ts`.
 - The baseline is computed server-side against the NASA/JPL Horizons API; raw data and derived astrology/numerology/Human Design fields are stored in D1.
-- The AI's system prompt is a "Pattern Interruption" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry.
+- The AI's system prompt is a "Pattern Interruption" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry. Baseline is context, never a fixed identity or verdict.
 - Transactional emails are sent from `info@sovereign.os` via Resend (console-log fallback if `RESEND_API_KEY` is unset).
 - Observability is enabled in `wrangler.jsonc` with head sampling at rate 0.1 (10% of traces).
-- `npm audit` reports 1 high + 1 moderate advisory from the `postcss` bundled inside `next` (build-time only). They can only be cleared by upgrading to Next 16 (breaking); the app currently stays pinned on Next 15.5.x.
+- `npm audit` is clean (0 vulnerabilities). The `postcss` advisory previously inherited via `next@15` is resolved by a root `overrides` pinning `postcss@^8.5.28`; no Next 16 upgrade is required.
 - This project intentionally has no `open-next.config.ts` `buildCommand`: OpenNext runs `npm run build` internally, and overriding it causes infinite build recursion.
