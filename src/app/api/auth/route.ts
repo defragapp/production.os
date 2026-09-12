@@ -52,10 +52,11 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(password, salt);
     userId = generateUUID();
     await env.DB.prepare("INSERT INTO users (id, email, password_hash, password_salt, subscription_tier) VALUES (?, ?, ?, ?, 'free')").bind(userId, email, passwordHash, salt).run();
+    const origin = new URL(request.url).origin;
     await sendTransactionalEmail(env, {
       to: email,
       subject: "Welcome to Sovereign OS",
-      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="color:#1e293b">Welcome to Sovereign OS</h2><p>Your account is ready. Complete your baseline to begin.</p><p><a href="https://app.defrag.app/onboard" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Set Your Baseline</a></p></div>`,
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="color:#1e293b">Welcome to Sovereign OS</h2><p>Your account is ready. Complete your baseline to begin.</p><p><a href="${origin}/onboard" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Set Your Baseline</a></p></div>`,
     });
   }
   const token = await createJWT(userId, email, secret);

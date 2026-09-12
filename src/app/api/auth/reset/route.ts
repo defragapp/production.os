@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
       const token = generateResetToken();
       const tokenHash = await hashResetToken(token);
       await env.SESSION_KV.put(`reset-token:${tokenHash}`, user.id, { expirationTtl: RESET_TOKEN_TTL });
-      const resetUrl = `https://app.defrag.app/onboard?reset=${token}`;
+      const origin = new URL(request.url).origin;
+      const resetUrl = `${origin}/onboard?reset=${token}`;
       await sendTransactionalEmail(env, { to: email, subject: "Reset your Sovereign OS password", html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="color:#1e293b">Sovereign OS</h2><p>We received a request to reset your password.</p><p><a href="${resetUrl}" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Reset Password</a></p><p style="color:#64748b;font-size:14px">This link expires in 30 minutes. If you didn't request this, you can safely ignore this email.</p></div>` });
     }
     return NextResponse.json({ ok: true, message: "If an account exists, a reset email has been sent." });

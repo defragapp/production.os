@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ── Public routes ────────────────────────────────────────────────
-  const publicRoutes = ["/", "/onboard"];
+  const publicRoutes = ["/", "/onboard", "/terms", "/privacy"];
   const publicApiRoutes = ["/api/auth"];
 
   // Allow exact public pages

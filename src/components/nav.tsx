@@ -1,12 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export function Nav() {
+  const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const handleSignOut = async () => {
+    setAuthed(false);
+    await fetch("/api/auth", { method: "DELETE" });
+    router.refresh();
+    router.push("/");
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -30,7 +39,7 @@ export function Nav() {
             <Link href="/chat"><Button variant="ghost" size="sm">Chat</Button></Link>
             <Link href="/upgrade"><Button variant="ghost" size="sm">Upgrade</Button></Link>
             <Link href="/account"><Button variant="ghost" size="sm">Account</Button></Link>
-            <Link href="/onboard"><Button variant="ghost" size="sm" onClick={async () => { await fetch("/api/auth", { method: "DELETE" }); }}>Sign out</Button></Link>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>Sign out</Button>
           </nav>
         ) : (
           <nav className="flex items-center gap-1 sm:gap-2">
