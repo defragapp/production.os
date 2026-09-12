@@ -14,6 +14,8 @@ export interface AppEnv {
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_SECRET_KEY: string;
   RESEND_API_KEY: string;
+  TURNSTILE_SITE_KEY: string;
+  TURNSTILE_SECRET_KEY: string;
 }
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 export function getEnv(): AppEnv {

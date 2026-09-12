@@ -8,11 +8,9 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
+import { TurnstileWidget } from "@/components/turnstile";
 
 function OnboardContent() {
   const router = useRouter();
@@ -29,6 +27,8 @@ function OnboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [existingUser, setExistingUser] = useState(false);
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -39,11 +39,12 @@ function OnboardContent() {
     fetch("/api/auth")
       .then((r) => r.json())
       .then((d) => {
-        const data = d as { user?: { email?: string } };
+        const data = d as { user?: { email?: string }; turnstileSiteKey?: string | null };
         if (data.user) {
           setExistingUser(true);
           setEmail(data.user.email || "");
         }
+        setTurnstileSiteKey(data.turnstileSiteKey || null);
       })
       .catch(() => {});
   }, []);
@@ -63,7 +64,7 @@ function OnboardContent() {
       const authRes = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
       });
 
       if (!authRes.ok) {
@@ -87,6 +88,7 @@ function OnboardContent() {
       router.push("/chat");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+      setTurnstileToken(null);
     } finally {
       setLoading(false);
     }
@@ -348,6 +350,16 @@ function OnboardContent() {
                   <p className="text-sm text-muted-foreground">
                     Already have a baseline? You can update it later from your account.
                   </p>
+                )}
+
+                {!existingUser && turnstileSiteKey && (
+                  <div className="space-y-2 border-t pt-4">
+                    <TurnstileWidget
+                      siteKey={turnstileSiteKey}
+                      onToken={setTurnstileToken}
+                      onError={() => setError("Could not load the security check.")}
+                    />
+                  </div>
                 )}
 
                 {error && <p className="text-sm text-destructive">{error}</p>}

@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth";
 import { sendTransactionalEmail } from "@/lib/email";
 import { getEnv } from "@/lib/env";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 import type { User } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -12,12 +13,12 @@ export async function GET(request: NextRequest) {
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return NextResponse.json({ user: null }, { status: 200 });
+  if (!token) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
   const payload = await verifyJWT(token, secret);
-  if (!payload) return NextResponse.json({ user: null }, { status: 200 });
+  if (!payload) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
   const user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
-  if (!user) return NextResponse.json({ user: null }, { status: 200 });
-  return NextResponse.json({ user });
+  if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
+  return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null });
 }
 
 const LOGIN_RATE_LIMIT_TTL = 300;
@@ -27,8 +28,13 @@ export async function POST(request: NextRequest) {
   const env = getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
-  let body: { email?: string; password?: string };
+  let body: { email?: string; password?: string; turnstileToken?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
+
+  const turnstileValid = await verifyTurnstileToken(env, body.turnstileToken);
+  if (!turnstileValid) {
+    return NextResponse.json({ error: "Security verification failed. Please try again." }, { status: 400 });
+  }
 
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
   const emailForRl = body.email?.trim().toLowerCase() || "unknown";

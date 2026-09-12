@@ -69,11 +69,6 @@ export function ChatClient() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSignOut = async () => {
-    await fetch("/api/auth", { method: "DELETE" });
-    router.push("/");
-  };
-
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
     const userMessage: MessageWithBaseline = { role: "user", content: input.trim() };

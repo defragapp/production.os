@@ -9,6 +9,13 @@ const MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 /** Free-tier message limit per day. */
 const FREE_TIER_DAILY_LIMIT = 5;
 
+/** Max messages sent to the model as context (rolling window). */
+const MAX_CONTEXT_MESSAGES = 20;
+
+function windowMessages(messages: ChatMessage[]): ChatMessage[] {
+  return messages.slice(-MAX_CONTEXT_MESSAGES);
+}
+
 export async function POST(request: NextRequest) {
   const env = getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
@@ -53,7 +60,7 @@ export async function POST(request: NextRequest) {
     const thread = await env.DB.prepare("SELECT message_history FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).first<Thread>();
     if (thread) { try { contextMessages = JSON.parse(thread.message_history) as ChatMessage[]; } catch {} }
   }
-  const messagesForModel: ChatMessage[] = [{ role: "system", content: systemPrompt }, ...contextMessages];
+  const messagesForModel: ChatMessage[] = [{ role: "system", content: systemPrompt }, ...windowMessages(contextMessages)];
 
   const gatewayId = env.AI_GATEWAY_ID || "sovereign-ai-gateway";
   let aiResponse: unknown;

@@ -5,7 +5,7 @@
   "compatibility_date": "2026-09-10",
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 },
   "d1_databases": [
     { "binding": "DB", "database_name": "production-os-db", "database_id": "f4274cce-4444-4501-85a9-58c28bff27ac" }
   ],
@@ -20,6 +20,7 @@
     "STRIPE_PRICE_SOVEREIGN_PLUS_MONTHLY": "price_1Te0g9Bk78yJ8Hww8fFZCqhm",
     "STRIPE_PRICE_SOVEREIGN_PLUS_ANNUAL": "price_1Tq6nPBk78yJ8Hwwm0pxg4hH",
     "STRIPE_SUCCESS_URL": "https://sovereign.defrag.app/chat?billing=success",
-    "STRIPE_CANCEL_URL": "https://sovereign.defrag.app/upgrade?billing=cancelled"
+    "STRIPE_CANCEL_URL": "https://sovereign.defrag.app/upgrade?billing=cancelled",
+    "TURNSTILE_SITE_KEY": ""
   }
 }

@@ -16,6 +16,7 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 | AI Routing | AI Gateway (ID: `sovereign-ai-gateway`) + direct fallback |
 | Baseline Engine | NASA/JPL Horizons API (planetary positions) |
 | Auth | Email/Password + WebCrypto PBKDF2 + JWT (HS256) |
+| Bot Protection | Cloudflare Turnstile (opt-in, env-gated) |
 | Email | Resend (`info@sovereign.os`, logs to console when unset) |
 | Payments | Stripe (Free vs Sovereign+ monthly/annual) |
 
@@ -53,6 +54,10 @@ npm run db:migrate         # local
 npm run db:migrate:remote  # production
 ```
 
+> Schema changes should be applied through a versioned migration going forward
+> (`wrangler d1 migrations create production-os-db <name>`); `schema.sql`
+> remains the canonical baseline for the current tables.
+
 ### 4. Set secrets
 
 ```bash
@@ -60,7 +65,13 @@ npx wrangler secret put JWT_SECRET
 npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
+
+Turnstile is opt-in and degrades gracefully: until `TURNSTILE_SITE_KEY`
+(is a plain var in `wrangler.jsonc`) **and** `TURNSTILE_SECRET_KEY` are both
+set to real values, the widget is hidden and the API accepts signup without a
+token. Set both to enforce bot protection on `/onboard`.
 
 ### 5. Generate Cloudflare types
 
@@ -72,11 +83,17 @@ npm run cf-typegen
 
 ```bash
 npm run dev        # Next.js dev server (local)
+npm run typecheck  # tsc --noEmit (TypeScript)
+npm run lint       # ESLint (next/core-web-vitals + next/typescript)
+npm run test       # Vitest unit tests (auth, stripe, sovereign-prompt)
 npm run build      # Plain Next.js build (OpenNext runs this internally)
 npx opennextjs-cloudflare build   # OpenNext compiler → .open-next/ (what CI runs)
 npm run preview    # OpenNext build + preview in Workers runtime (workerd)
 npm run deploy     # OpenNext build + deploy to Cloudflare edge
 ```
+
+Run `npm run typecheck && npm run lint && npm test && npx opennextjs-cloudflare build`
+locally before pushing to verify the exact CI pipeline output.
 
 > Note: `next build` alone does NOT produce `.open-next/`. To build the
 > Workers bundle locally, always use `npx opennextjs-cloudflare build`
@@ -91,17 +108,19 @@ schema.sql                     # D1 schema (users, baselines, threads)
 src/
 ├── app/
 │   ├── api/
-│   │   ├── auth/route.ts              # POST login/signup, GET session, DELETE logout
+│   │   ├── auth/route.ts              # POST login/signup, GET session, DELETE logout (Turnstile)
 │   │   ├── auth/reset/route.ts        # POST password reset (email via Resend)
 │   │   ├── baseline/route.ts          # GET/POST natal baseline (NASA/JPL Horizons)
 │   │   ├── chat/route.ts              # SSE streaming chat via Workers AI + AI Gateway
-│   │   ├── threads/route.ts           # Chat history CRUD (persist to D1)
+│   │   ├── checkout/route.ts          # POST → Stripe Checkout session (JWT-guarded)
+│   │   ├── threads/route.ts           # Chat history CRUD (D1) — paginated GET
 │   │   └── webhooks/stripe/route.ts   # Stripe webhook → subscription_tier
 │   ├── account/page.tsx               # Account management
 │   ├── baseline/page.tsx              # Baselines list
 │   ├── chat/chat-client.tsx           # Chat client component (streaming, threads)
 │   ├── chat/page.tsx                  # Chat page (server wrapper around ChatClient)
-│   ├── onboard/page.tsx               # Birth data intake form + login/signup
+│   ├── onboard/page.tsx               # Birth data intake form + login/signup (Turnstile)
+│   ├── upgrade/checkout-client.tsx    # Upgrade client → POST /api/checkout
 │   ├── upgrade/page.tsx               # Paywall → Stripe Checkout
 │   ├── terms/page.tsx                 # Terms of service
 │   ├── privacy/page.tsx               # Privacy policy
@@ -110,6 +129,7 @@ src/
 │   └── page.tsx                       # Landing page
 ├── components/
 │   ├── nav.tsx                        # Nav + sign-out (DELETE /api/auth)
+│   ├── turnstile.tsx                  # Turnstile widget (client, env-gated)
 │   └── ui/                            # shadcn/ui (accordion, button, card, input, label)
 ├── lib/
 │   ├── auth.ts                        # WebCrypto PBKDF2 + JWT (HS256), reset tokens
@@ -118,8 +138,10 @@ src/
 │   ├── nasa-jpl.ts                    # NASA/JPL Horizons API → natal positions
 │   ├── sovereign-prompt.ts            # Baseline derivation + system prompt
 │   ├── stripe.ts                      # Stripe pricing tiers + webhook verification
+│   ├── turnstile.ts                   # verifyTurnstileToken (env-gated)
 │   ├── types.ts                       # Shared TypeScript types
-│   └── utils.ts                       # cn() class merger
+│   ├── utils.ts                       # cn() class merger
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-prompt)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
 
@@ -129,7 +151,12 @@ src/
 - Passwords are hashed with PBKDF2 (100k iterations, SHA-256) via the WebCrypto API; login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed).
 - JWT session tokens are stored in an httpOnly, Secure, SameSite=Lax cookie (7-day expiry) and verified on every API call via middleware + route guards.
 - The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Responses stream as Server-Sent Events (SSE) and persist to D1 threads.
+- The chat route windows conversation context to the most recent 20 messages (`MAX_CONTEXT_MESSAGES`) before inference, capping token spend while full history remains stored in D1.
+- The `GET /api/threads` list is paginated (`page`/`limit`, default 50, max 50) and returns `{ threads, total, page, pageSize }`; the `?id=` detail lookup is unchanged.
+- All routes set security headers (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy) plus a CSP in `next.config.ts`.
 - The baseline is computed server-side against the NASA/JPL Horizons API; raw data and derived astrology/numerology/Human Design fields are stored in D1.
 - The AI's system prompt is a "Pattern Interruption" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry.
 - Transactional emails are sent from `info@sovereign.os` via Resend (console-log fallback if `RESEND_API_KEY` is unset).
-- Observability is enabled in `wrangler.jsonc` (traces at head sampling rate 1.0).
+- Observability is enabled in `wrangler.jsonc` with head sampling at rate 0.1 (10% of traces).
+- `npm audit` reports 1 high + 1 moderate advisory from the `postcss` bundled inside `next` (build-time only). They can only be cleared by upgrading to Next 16 (breaking); the app currently stays pinned on Next 15.5.x.
+- This project intentionally has no `open-next.config.ts` `buildCommand`: OpenNext runs `npm run build` internally, and overriding it causes infinite build recursion.
