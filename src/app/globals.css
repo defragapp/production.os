@@ -53,3 +53,54 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Landing reveals — content is visible by default; only when JS successfully
+   adds `.js-ok` does the hidden pre-state activate and animate in on view.
+   Motion guardrails (per design spec): strict 240ms with easeOut — no spring
+   physics mixed with a hard duration. */
+@layer utilities {
+  .ease-spring {
+    transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+}
+
+.reveal {
+  transition:
+    opacity 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: opacity, transform;
+}
+.reveal.js-ok.reveal-from-up:not(.in) {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.reveal.js-ok.reveal-from-left:not(.in) {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.js-ok:not(.in) {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes float-down {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(7px);
+  }
+}
+.scroll-cue {
+  animation: float-down 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue {
+    animation: none;
+  }
+}

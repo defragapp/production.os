@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sovereign OS — Pattern Interruption",
+  title: "Sovereign — Understand the patterns in your life",
   description:
-    "Sovereign OS reads your baseline — astrology, human design, gene keys, and numerology — to synthesize your emotional expression and interrupt recurring patterns.",
+    "Sovereign helps you make sense of the patterns in your life — starting with you, then looking at what happens between you and other people.",
 };
 
 export default function RootLayout({

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 
 export function Nav() {
   const router = useRouter();
@@ -29,22 +28,43 @@ export function Nav() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-sm font-bold uppercase tracking-widest">Sovereign OS</span>
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-neutral-950/70 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <Link href="/" className="text-sm font-medium uppercase tracking-widest text-white">
+          Sovereign OS
         </Link>
         {mounted && authed ? (
-          <nav className="flex items-center gap-1 sm:gap-2">
-            <Link href="/chat"><Button variant="ghost" size="sm">Chat</Button></Link>
-            <Link href="/upgrade"><Button variant="ghost" size="sm">Upgrade</Button></Link>
-            <Link href="/account"><Button variant="ghost" size="sm">Account</Button></Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>Sign out</Button>
+          <nav className="flex items-center gap-4">
+            <Link href="/chat" className="text-sm text-neutral-300 transition-colors hover:text-white">
+              Chat
+            </Link>
+            <Link href="/upgrade" className="text-sm text-neutral-300 transition-colors hover:text-white">
+              Upgrade
+            </Link>
+            <Link href="/account" className="text-sm text-neutral-300 transition-colors hover:text-white">
+              Account
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className="text-sm text-neutral-300 transition-colors hover:text-white"
+            >
+              Sign out
+            </button>
           </nav>
         ) : (
-          <nav className="flex items-center gap-1 sm:gap-2">
-            <Link href="/onboard?mode=login"><Button variant="ghost" size="sm">Sign in</Button></Link>
-            <Link href="/onboard?mode=signup"><Button size="sm">Get Started</Button></Link>
+          <nav className="flex items-center gap-4">
+            <Link
+              href="/onboard?mode=login"
+              className="text-sm text-neutral-400 transition-colors hover:text-white"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/onboard?mode=signup"
+              className="rounded-md bg-white/10 px-4 py-1.5 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-sm transition-all duration-[240ms] ease-spring hover:-translate-y-[2px] hover:bg-white/20"
+            >
+              Get Started
+            </Link>
           </nav>
         )}
       </div>
