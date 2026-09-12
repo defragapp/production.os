@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
+import { emailVerificationEnabled } from "@/lib/email";
 import { getEnv } from "@/lib/env";
 import { deriveBaseline } from "@/lib/sovereign-prompt";
 import type { DerivedBaseline } from "@/lib/sovereign-prompt";
@@ -61,8 +62,13 @@ export async function POST(request: NextRequest) {
   }
   await env.SESSION_KV.put(`rl:chat:${payload.sub}`, JSON.stringify([...rlStamps, rlNow]), { expirationTtl: 60 });
 
-  const user = await env.DB.prepare("SELECT subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  const user = await env.DB.prepare("SELECT subscription_tier, email_verified FROM users WHERE id = ?").bind(payload.sub).first<User>();
   if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+
+  // Email verification gate — active only when email delivery is configured.
+  if (emailVerificationEnabled(env) && !user.email_verified) {
+    return new Response(JSON.stringify({ error: "Please verify your email address to use AI chat.", code: "email_unverified" }), { status: 403, headers: { "Content-Type": "application/json" } });
+  }
 
   const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
 

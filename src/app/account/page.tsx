@@ -12,15 +12,19 @@ interface UserData {
   subscription_tier: string;
   stripe_customer_id: string | null;
   created_at: string;
+  email_verified?: number;
 }
 
 export default function AccountPage() {
   const router = useRouter();
+  const [verifyStatus, setVerifyStatus] = useState<string | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [resent, setResent] = useState<string | null>(null);
 
   useEffect(() => {
+    setVerifyStatus(new URLSearchParams(window.location.search).get("verify"));
     fetch("/api/auth")
       .then((r) => r.json())
       .then((d) => {
@@ -71,6 +75,14 @@ export default function AccountPage() {
   if (!user) return null;
 
   const isPlus = user.subscription_tier === "sovereign+";
+  const emailVerified = Boolean(user.email_verified);
+  const unverifiedNotice =
+    verifyStatus === "ok" ? "Email verified — thank you."
+    : verifyStatus === "invalid" ? "That verification link is invalid."
+    : verifyStatus === "expired" ? "That verification link has expired. Request a new one below."
+    : verifyStatus === "missing" ? "No verification token was provided."
+    : null;
+
   const memberSince = new Date(user.created_at).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -84,6 +96,11 @@ export default function AccountPage() {
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-lg">
           <PageHeader title="Account" description="Your plan, profile, and account preferences." />
+          {unverifiedNotice && (
+            <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+              {unverifiedNotice}
+            </div>
+          )}
           <div className="space-y-4">
             <Card>
               <CardHeader>
@@ -128,6 +145,36 @@ export default function AccountPage() {
                   <span className="text-sm text-muted-foreground">Email</span>
                   <span className="text-sm font-medium">{user.email}</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Email status</span>
+                  <span className={`text-sm font-medium ${emailVerified ? "text-emerald-400" : "text-amber-400"}`}>
+                    {emailVerified ? "✓ Verified" : "Unverified"}
+                  </span>
+                </div>
+                {!emailVerified && (
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      disabled={resent === "sending" || resent === "sent"}
+                      onClick={async () => {
+                        setResent("sending");
+                        try {
+                          const r = await fetch("/api/auth/resend", { method: "POST" });
+                          const d = await r.json() as { ok?: boolean; error?: string };
+                          setResent(d.ok ? "sent" : `error: ${d.error || "Could not send verification email."}`);
+                        } catch {
+                          setResent("error: Could not send verification email.");
+                        }
+                      }}
+                    >
+                      {resent === "sending" ? "Sending..." : resent === "sent" ? "Verification email sent ✓" : "Resend verification email"}
+                    </Button>
+                    {resent?.startsWith("error:") && (
+                      <p className="text-xs text-destructive">{resent.slice(7)}</p>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Member since</span>
                   <span className="text-sm font-medium">{memberSince}</span>

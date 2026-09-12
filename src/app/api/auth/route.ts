@@ -3,7 +3,8 @@ import {
   createJWT, generateSalt, generateUUID, hashPassword,
   verifyJWT, verifyPassword, passwordNeedsRehash, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
 } from "@/lib/auth";
-import { sendTransactionalEmail } from "@/lib/email";
+import { sendTransactionalEmail, emailVerificationEnabled, emailShell } from "@/lib/email";
+import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import type { User } from "@/lib/types";
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   if (!token) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
   const payload = await verifyJWT(token, secret);
   if (!payload) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
-  const user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  const user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(payload.sub).first<User>();
   if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
   return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null });
 }
@@ -71,11 +72,33 @@ export async function POST(request: NextRequest) {
     userId = generateUUID();
     await env.DB.prepare("INSERT INTO users (id, email, password_hash, password_salt, subscription_tier) VALUES (?, ?, ?, ?, 'free')").bind(userId, email, passwordHash, salt).run();
     const origin = new URL(request.url).origin;
-    await sendTransactionalEmail(env, {
-      to: email,
-      subject: "Welcome to Sovereign OS",
-      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px"><h2 style="color:#1e293b">Welcome to Sovereign OS</h2><p>Your account is ready. Complete your baseline to begin.</p><p><a href="${origin}/onboard" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Set Your Baseline</a></p></div>`,
-    });
+    // Verification email (only when mail delivery is actually configured —
+    // otherwise the flow is disabled and nothing is gated).
+    if (emailVerificationEnabled(env)) {
+      try {
+        const token = generateResetToken();
+        const tokenHash = await hashResetToken(token);
+        const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+        await env.DB.prepare("UPDATE users SET verification_token = ?, verification_expires = ? WHERE id = ?").bind(tokenHash, expires, userId).run();
+        const link = `${origin}/api/auth/verify?token=${token}`;
+        await sendTransactionalEmail(env, {
+          to: email,
+          subject: "Verify your Sovereign OS email",
+          html: emailShell(
+            "Verify your email",
+            `<p>Confirm your email address to unlock your Sovereign OS baseline and AI chat.</p><p><a href="${link}" style="display:inline-block;background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Verify Email</a></p><p style="color:#71717a;font-size:13px">This link expires in 48 hours.</p>`,
+          ),
+        });
+      } catch (e) {
+        console.error("[auth] verification email failed:", e);
+      }
+    } else {
+      await sendTransactionalEmail(env, {
+        to: email,
+        subject: "Welcome to Sovereign OS",
+        html: emailShell("Welcome to Sovereign OS", `<p>Your account is ready. Complete your baseline to begin.</p><p><a href="${origin}/onboard" style="display:inline-block;background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Set Your Baseline</a></p>`),
+      });
+    }
   }
   const token = await createJWT(userId, email, secret);
   const response = NextResponse.json({ user: { id: userId, email } });

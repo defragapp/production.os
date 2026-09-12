@@ -41,6 +41,7 @@ export function ChatClient() {
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [baselineData, setBaselineData] = useState<BaselineData | undefined>();
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showVerify, setShowVerify] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const refreshThreads = useCallback(async (): Promise<ThreadSummary[]> => {
@@ -133,12 +134,21 @@ export function ChatClient() {
         }),
       });
       if (!response.ok) {
-        const err = await response.json() as { error?: string; upgradeRequired?: boolean };
+        const err = await response.json() as { error?: string; upgradeRequired?: boolean; code?: string };
         if (response.status === 402 && err.upgradeRequired) {
           setShowUpgrade(true);
           setMessages((prev) => {
             const u = [...prev];
             u[u.length - 1] = { role: "assistant", content: err.error || "Free tier limit reached." };
+            return u;
+          });
+          return;
+        }
+        if (response.status === 403 && err.code === "email_unverified") {
+          setShowVerify(true);
+          setMessages((prev) => {
+            const u = [...prev];
+            u[u.length - 1] = { role: "assistant", content: "Please verify your email address to use AI chat. Check your inbox for the verification link." };
             return u;
           });
           return;
@@ -220,6 +230,31 @@ export function ChatClient() {
   return (
     <main className="flex min-h-screen flex-col">
       <Nav />
+
+      {showVerify && (
+        <div className="border-b bg-background px-6 py-4">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Verify your email address to unlock AI chat. Check your inbox for the verification link.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const r = await fetch("/api/auth/resend", { method: "POST" });
+                  const d = await r.json() as { ok?: boolean; error?: string };
+                  alert(d.ok ? "Verification email sent. Please check your inbox." : d.error || "Could not send verification email.");
+                } catch {
+                  alert("Could not send verification email.");
+                }
+              }}
+            >
+              Resend verification email
+            </Button>
+          </div>
+        </div>
+      )}
 
       {showUpgrade && (
         <div className="border-b bg-amber-50 px-6 py-4 dark:bg-amber-950/30">
