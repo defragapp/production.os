@@ -23,9 +23,10 @@ export const metadata: Metadata = {
       "An AI platform for making sense of the patterns in your life and relationships.",
     type: "website",
     locale: "en_US",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Sovereign OS" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Sovereign OS",
     description:
       "Make sense of the patterns in your life and relationships.",

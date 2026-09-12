@@ -75,6 +75,10 @@ export async function POST(request: NextRequest) {
     // Verification email (only when mail delivery is actually configured —
     // otherwise the flow is disabled and nothing is gated).
     if (emailVerificationEnabled(env)) {
+      // Retention: opportunistically purge expired verification tokens.
+      try {
+        await env.DB.prepare("UPDATE users SET verification_token = NULL, verification_expires = NULL WHERE verification_expires IS NOT NULL AND verification_expires < ?").bind(new Date().toISOString()).run();
+      } catch {}
       try {
         const token = generateResetToken();
         const tokenHash = await hashResetToken(token);
