@@ -52,7 +52,7 @@ interface HorizonsRow {
   latitude: number;
 }
 
-function longitudeToSign(longitude: number): { sign: string; degree: number } {
+export function longitudeToSign(longitude: number): { sign: string; degree: number } {
   const normalized = ((longitude % 360) + 360) % 360;
   const signIndex = Math.floor(normalized / 30);
   const degree = normalized % 30;
@@ -76,11 +76,8 @@ function horizonsDate(date: Date): string {
   return `${y}-${m}-${d} ${h}:${min}`;
 }
 
-function parseCsvLine(line: string): string[] {
-  return line.split(",").map((f) => f.trim());
-}
-
-function parseHorizonsJson(payload: {
+/** Parse a Horizons JSON payload into ephemeris rows. Exported for tests. */
+export function parseHorizonsJson(payload: {
   error?: string;
   message?: string;
   signature?: { source?: string; version?: string };
@@ -103,16 +100,17 @@ function parseHorizonsJson(payload: {
   const rows: HorizonsRow[] = [];
   for (const rawLine of block.split("\n")) {
     const line = rawLine.trim();
-    if (!line) continue;
-    const fields = parseCsvLine(line);
-    const numeric = fields.map((f) => f.trim()).filter((f) => f !== "");
-    if (numeric.length < 4) continue;
-
-    const longitude = parseFloat(numeric[2]);
-    const latitude = parseFloat(numeric[3]);
-    if (!isNaN(longitude) && !isNaN(latitude)) {
-      rows.push({ longitude, latitude });
-    }
+    if (!line || line.startsWith("$$")) continue;
+    const fields = line.split(",").map((f) => f.trim());
+    // CSV format: "<UT date tag>, <blank>, <blank>, <lon>, <lat>, <trailing>"
+    // fields[0] is the date tag; remaining non-empty fields are quantities.
+    const values = fields
+      .slice(1)
+      .filter((f) => f !== "")
+      .map((f) => parseFloat(f))
+      .filter((n) => !isNaN(n));
+    if (values.length < 2) continue;
+    rows.push({ longitude: values[0], latitude: values[1] });
   }
 
   return rows;
