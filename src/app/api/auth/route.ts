@@ -17,7 +17,14 @@ export async function GET(request: NextRequest) {
   if (!token) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
   const payload = await verifyJWT(token, secret);
   if (!payload) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
-  const user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  // Same defensive lookup as /api/chat: stale D1 snapshots may lack the
+  // email_verified column. Fall back rather than 500ing the session check.
+  let user: User | null;
+  try {
+    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  } catch {
+    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
+  }
   if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
   return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null });
 }
