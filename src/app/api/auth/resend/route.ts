@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateResetToken, hashResetToken } from "@/lib/auth";
-import { emailVerificationEnabled, emailShell, sendTransactionalEmail } from "@/lib/email";
+import { emailVerificationEnabled, emailShell, emailButton, sendTransactionalEmail } from "@/lib/email";
 import { getEnv } from "@/lib/env";
 
 /** Resend cooldown per user (seconds). */
@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
   const link = `${origin}/api/auth/verify?token=${token}`;
   await sendTransactionalEmail(env, {
     to: payload.email,
-    subject: "Verify your Sovereign OS email",
+    subject: "Verify your email — Sovereign OS",
     html: emailShell(
       "Verify your email",
-      `<p>Confirm your email address to unlock your Sovereign OS baseline and AI chat.</p><p><a href="${link}" style="display:inline-block;background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Verify Email</a></p><p style="color:#71717a;font-size:13px">This link expires in 48 hours. If you didn't create an account, you can ignore this email.</p>`,
+      `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Confirm your email address to unlock your Sovereign OS baseline and AI chat.</p>${emailButton(link, "Verify Email")}<p style="color:#a1a1aa;font-size:13px;margin:12px 0 0">This link expires in 48 hours. If you didn't request this, you can safely ignore this email.</p>`,
     ),
   });
 

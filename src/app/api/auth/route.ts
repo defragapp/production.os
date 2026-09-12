@@ -3,7 +3,7 @@ import {
   createJWT, generateSalt, generateUUID, hashPassword,
   verifyJWT, verifyPassword, passwordNeedsRehash, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
 } from "@/lib/auth";
-import { sendTransactionalEmail, emailVerificationEnabled, emailShell } from "@/lib/email";
+import { sendTransactionalEmail, emailVerificationEnabled, emailShell, emailButton } from "@/lib/email";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
@@ -83,10 +83,10 @@ export async function POST(request: NextRequest) {
         const link = `${origin}/api/auth/verify?token=${token}`;
         await sendTransactionalEmail(env, {
           to: email,
-          subject: "Verify your Sovereign OS email",
+          subject: "Verify your email — Sovereign OS",
           html: emailShell(
             "Verify your email",
-            `<p>Confirm your email address to unlock your Sovereign OS baseline and AI chat.</p><p><a href="${link}" style="display:inline-block;background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Verify Email</a></p><p style="color:#71717a;font-size:13px">This link expires in 48 hours.</p>`,
+            `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Welcome to Sovereign OS. Confirm your email address to unlock your baseline and personal AI chat.</p>${emailButton(link, "Verify Email")}<p style="color:#a1a1aa;font-size:13px;margin:12px 0 0">This link expires in 48 hours. If you didn't create an account, you can safely ignore this email.</p>`,
           ),
         });
       } catch (e) {
@@ -96,7 +96,10 @@ export async function POST(request: NextRequest) {
       await sendTransactionalEmail(env, {
         to: email,
         subject: "Welcome to Sovereign OS",
-        html: emailShell("Welcome to Sovereign OS", `<p>Your account is ready. Complete your baseline to begin.</p><p><a href="${origin}/onboard" style="display:inline-block;background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Set Your Baseline</a></p>`),
+        html: emailShell(
+          "Welcome to Sovereign OS",
+          `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your account is ready. Complete your baseline to begin.</p>${emailButton(`${origin}/onboard`, "Set Your Baseline")}`,
+        ),
       });
     }
   }
