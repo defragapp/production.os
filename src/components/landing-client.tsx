@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Nav } from "@/components/nav";
 
 /**
@@ -63,7 +61,7 @@ function BgBackdrop() {
     const el = ref.current;
     if (!el) return;
     const onScroll = () => {
-      el.style.transform = `translate3d(0, ${window.scrollY * 0.2}px, 0)`;
+      el.style.transform = `translate3d(0, ${window.scrollY * 0.15}px, 0)`;
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -73,9 +71,9 @@ function BgBackdrop() {
   return (
     <div
       ref={ref}
-      className="pointer-events-none fixed inset-0 z-0 opacity-30 mix-blend-screen"
+      className="pointer-events-none fixed inset-0 z-0 opacity-40 mix-blend-screen"
       style={{
-        background: "radial-gradient(circle at 50% 0%, rgba(26,26,30,1) 0%, rgba(7,7,9,1) 70%)",
+        background: "radial-gradient(ellipse at 50% 0%, rgba(20,20,26,1) 0%, rgba(5,5,7,1) 70%)",
       }}
     />
   );
@@ -84,17 +82,67 @@ function BgBackdrop() {
 // Buttons and overlines share the app's semantic tokens (primary = white,
 // primary-foreground = near-black) so the landing matches the rest of Sovereign.
 const BTN_PRIMARY =
-  "bg-primary text-primary-foreground rounded-md px-8 py-3 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_0_20px_rgba(255,255,255,0.10)] hover:-translate-y-[2px] hover:bg-neutral-200 transition-all duration-[240ms] ease-spring";
+  "bg-primary text-primary-foreground rounded-full px-8 py-3.5 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_24px_rgba(255,255,255,0.08)] hover:-translate-y-[2px] hover:bg-neutral-100 transition-all duration-[240ms] ease-spring";
 const BTN_GHOST =
-  "bg-white/10 border border-white/10 border-t-white/20 text-foreground rounded-md px-8 py-3 font-medium backdrop-blur-md hover:bg-white/20 transition-all duration-[240ms] ease-spring";
+  "bg-white/[0.06] border border-white/[0.08] border-t-white/[0.15] text-foreground rounded-full px-8 py-3.5 font-medium backdrop-blur-md hover:bg-white/[0.12] transition-all duration-[240ms] ease-spring";
 
 const OVERLINE =
-  "mb-6 block font-mono text-xs uppercase tracking-widest text-muted-foreground";
+  "mb-5 block font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground";
 
 const QUESTIONS = [
   "Why do I keep taking responsibility for everyone?",
   "Why does this relationship keep going in circles?",
   "Why does setting one boundary create so much conflict?",
+];
+
+function RotatingQuestions() {
+  const [idx, setIdx] = useState(0);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setIdx((i) => (i + 1) % QUESTIONS.length);
+        setFade(true);
+      }, 300);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span
+      className={`inline-block transition-all duration-[300ms] ease-spring ${
+        fade ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+      }`}
+    >
+      {QUESTIONS[idx]}
+    </span>
+  );
+}
+
+const BASELINE_EXAMPLES = [
+  {
+    range: "Nov 2026 – Feb 2027",
+    title: "A season of relational friction",
+    blurb:
+      "You may find yourself re-evaluating who you trust. Old patterns around responsibility could surface — not as problems to fix, but as signals worth noticing.",
+    tone: "challenging" as const,
+  },
+  {
+    range: "Dec 2026 – Jan 2027",
+    title: "Boundaries that hold",
+    blurb:
+      "Setting one clear limit might create unexpected space — for you, and for the people around you. The friction is the signal.",
+    tone: "challenging" as const,
+  },
+  {
+    range: "Jan 2027 – Apr 2027",
+    title: "Depth through a quiet season",
+    blurb:
+      "With fewer external demands, you may find more room to notice what you actually want — not what you've been trained to want.",
+    tone: "supportive" as const,
+  },
 ];
 
 const LENSES = [
@@ -144,6 +192,11 @@ export function LandingClient() {
                 Sovereign helps you make sense of the patterns in your life — starting with you,
                 then looking at what happens between you and other people.
               </p>
+            </Reveal>
+            <Reveal delay={90}>
+              <div className="mx-auto mt-6 flex h-[1.6rem] items-center justify-center">
+                <RotatingQuestions />
+              </div>
             </Reveal>
             <Reveal delay={120}>
               <div className="flex flex-col items-center gap-3 pt-8">
@@ -256,6 +309,23 @@ export function LandingClient() {
                 Sovereign creates a personal Baseline from your birth information. It provides
                 additional context for exploring your tendencies.
               </p>
+            </Reveal>
+
+            <Reveal delay={90}>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {BASELINE_EXAMPLES.map((ex) => (
+                  <div
+                    key={ex.range}
+                    className="rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md"
+                  >
+                    <span className="mb-2 block font-mono text-xs tracking-widest text-muted-foreground">
+                      {ex.range}
+                    </span>
+                    <h3 className="mb-1 text-sm font-medium text-foreground">{ex.title}</h3>
+                    <p className="text-xs leading-relaxed text-muted-foreground">{ex.blurb}</p>
+                  </div>
+                ))}
+              </div>
             </Reveal>
 
             <Reveal delay={120}>

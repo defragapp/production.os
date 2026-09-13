@@ -17,7 +17,7 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 | Baseline Engine | NASA/JPL Horizons API (planetary positions) |
 | Auth | Email/Password + WebCrypto PBKDF2 + JWT (HS256) |
 | Bot Protection | Cloudflare Turnstile (opt-in, env-gated) |
-| Email | Resend (`info@sovereign.os`, logs to console when unset) |
+| Email | Resend (`sovereign@defrag.app`, verified domain, click/open tracking) |
 | Payments | Stripe (Free vs Sovereign+ monthly/annual) |
 
 ## CI/CD
@@ -68,6 +68,11 @@ npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
 
+The `FROM_EMAIL` binding is set in `wrangler.jsonc` (default: `sovereign@defrag.app`). Resend domain verification requires:
+- SPF TXT record at apex (`v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all`)
+- DKIM TXT record at `resend._domainkey.defrag.app`
+- Click-tracking CNAME at `click.defrag.app` → `links1.resend-dns.com`
+
 Turnstile is opt-in and degrades gracefully: until `TURNSTILE_SITE_KEY`
 (is a plain var in `wrangler.jsonc`) **and** `TURNSTILE_SECRET_KEY` are both
 set to real values, the widget is hidden and the API accepts signup without a
@@ -85,7 +90,7 @@ npm run cf-typegen
 npm run dev        # Next.js dev server (local)
 npm run typecheck  # tsc --noEmit (TypeScript)
 npm run lint       # ESLint (next/core-web-vitals + next/typescript)
-npm run test       # Vitest unit tests (78: auth, stripe, sovereign safety/reasoning/evals/model)
+npm run test       # Vitest unit tests (87: auth, stripe, sovereign safety/reasoning/evals/model, prompt)
 npm run build      # Plain Next.js build (OpenNext runs this internally)
 npx opennextjs-cloudflare build   # OpenNext compiler → .open-next/ (what CI runs)
 npm run preview    # OpenNext build + preview in Workers runtime (workerd)
@@ -184,7 +189,7 @@ correction, leakage) and §53 regressions are covered in
 ## Notes
 
 - Routes run in the Cloudflare Workers runtime via the OpenNext adapter (compatibility flag `nodejs_compat`; no explicit `runtime = "edge"` exports).
-- Passwords are hashed with PBKDF2 (100k iterations, SHA-256) via the WebCrypto API; login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed).
+- Passwords are hashed with PBKDF2 (600k iterations, SHA-256) via the WebCrypto API; login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed).
 - JWT session tokens are stored in an httpOnly, Secure, SameSite=Lax cookie (7-day expiry) and verified on every API call via middleware + route guards.
 - The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Responses stream as Server-Sent Events (SSE) and persist to D1 threads.
 - The chat route windows conversation context to the most recent 20 messages (`MAX_CONTEXT_MESSAGES`) before inference, capping token spend while full history remains stored in D1.
@@ -192,7 +197,8 @@ correction, leakage) and §53 regressions are covered in
 - All routes set security headers (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy) plus a CSP in `next.config.ts`.
 - The baseline is computed server-side against the NASA/JPL Horizons API; raw data and derived astrology/numerology/Human Design fields are stored in D1.
 - The AI's system prompt is a "Pattern Interruption" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry. Baseline is context, never a fixed identity or verdict.
-- Transactional emails are sent from `info@sovereign.os` via Resend (console-log fallback if `RESEND_API_KEY` is unset).
+- Transactional emails are sent from `sovereign@defrag.app` via Resend (verified domain with DKIM/SPF, click and open tracking enabled). Fallback to console-log when `RESEND_API_KEY` is unset.
+- Five email templates ship in `src/lib/email.ts` (welcome, verify, password-reset, billing-success, trial-ending), each using the branded `emailShell`/`emailButton` design system.
 - Observability is enabled in `wrangler.jsonc` with head sampling at rate 0.1 (10% of traces).
 - `npm audit` is clean (0 vulnerabilities). The `postcss` advisory previously inherited via `next@15` is resolved by a root `overrides` pinning `postcss@^8.5.28`; no Next 16 upgrade is required.
 - This project intentionally has no `open-next.config.ts` `buildCommand`: OpenNext runs `npm run build` internally, and overriding it causes infinite build recursion.

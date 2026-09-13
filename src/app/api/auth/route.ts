@@ -3,7 +3,7 @@ import {
   createJWT, generateSalt, generateUUID, hashPassword,
   verifyJWT, verifyPassword, passwordNeedsRehash, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
 } from "@/lib/auth";
-import { sendTransactionalEmail, emailVerificationEnabled, emailShell, emailButton } from "@/lib/email";
+import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
@@ -91,27 +91,12 @@ export async function POST(request: NextRequest) {
         const tokenHash = await hashResetToken(token);
         const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
         await env.DB.prepare("UPDATE users SET verification_token = ?, verification_expires = ? WHERE id = ?").bind(tokenHash, expires, userId).run();
-        const link = `${origin}/api/auth/verify?token=${token}`;
-        await sendTransactionalEmail(env, {
-          to: email,
-          subject: "Verify your email — Sovereign OS",
-          html: emailShell(
-            "Verify your email",
-            `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Welcome to Sovereign OS. Confirm your email address to unlock your baseline and personal AI chat.</p>${emailButton(link, "Verify Email")}<p style="color:#a1a1aa;font-size:13px;margin:12px 0 0">This link expires in 48 hours. If you didn't create an account, you can safely ignore this email.</p>`,
-          ),
-        });
+        await sendTemplate(env, "verify", email, { origin, token });
       } catch (e) {
         console.error("[auth] verification email failed:", e);
       }
     } else {
-      await sendTransactionalEmail(env, {
-        to: email,
-        subject: "Welcome to Sovereign OS",
-        html: emailShell(
-          "Welcome to Sovereign OS",
-          `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your account is ready. Complete your baseline to begin.</p>${emailButton(`${origin}/onboard`, "Set Your Baseline")}`,
-        ),
-      });
+      await sendTemplate(env, "welcome", email, { origin });
     }
   }
   const token = await createJWT(userId, email, secret);
