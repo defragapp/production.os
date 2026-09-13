@@ -38,6 +38,7 @@ function OnboardContent() {
   const [newPassword, setNewPassword] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth")
@@ -57,27 +58,42 @@ function OnboardContent() {
     e.preventDefault();
     setError(null);
 
-    if (!consent && !existingUser) {
-      setError("Please agree to the Terms and Privacy Policy to continue.");
+    // Phase 1: Account creation (no baseline yet)
+    if (!accountCreated && !existingUser) {
+      if (!consent) {
+        setError("Please agree to the Terms and Privacy Policy to continue.");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const authRes = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
+        });
+
+        if (!authRes.ok) {
+          const err = await authRes.json() as { error?: string };
+          throw new Error(err.error || "Authentication failed");
+        }
+
+        // Account created — show baseline fields (phase 2)
+        setAccountCreated(true);
+        setTurnstileToken(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+        setTurnstileToken(null);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const authRes = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
-      });
-
-      if (!authRes.ok) {
-        const err = await authRes.json() as { error?: string };
-        throw new Error(err.error || "Authentication failed");
-      }
-
-      // New signups also capture their baseline in this step.
-      if (dob && tob && pob) {
+    // Phase 2: Baseline submission (account exists or returning user)
+    if (dob && tob && pob) {
+      setLoading(true);
+      try {
         const baselineRes = await fetch("/api/baseline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -88,16 +104,13 @@ function OnboardContent() {
           const err = await baselineRes.json() as { error?: string };
           throw new Error(err.error || "Failed to save baseline");
         }
-      }
 
-      // Returning users go straight to their workspace. New signups land on
-      // the plan choice so they see the free vs Sovereign+ tier after baseline.
-      router.push(existingUser ? "/chat" : "/upgrade?from=baseline");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-      setTurnstileToken(null);
-    } finally {
-      setLoading(false);
+        router.push(existingUser ? "/chat" : "/upgrade?from=baseline");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -320,22 +333,10 @@ function OnboardContent() {
                   </button>
                 </div>
 
-                {!(existingUser || isLogin) && (
+                {/* Consent + Turnstile — only during initial signup, before account exists */}
+                {!(existingUser || isLogin) && !accountCreated && (
                   <>
                     <div className="border-t pt-4" />
-                    <div className="space-y-2">
-                      <Label htmlFor="dob">Date of Birth</Label>
-                      <Input id="dob" type="date" required value={dob} onChange={(e) => setDob(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tob">Time of Birth (24h)</Label>
-                      <Input id="tob" type="time" required value={tob} onChange={(e) => setTob(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pob">Place of Birth</Label>
-                      <Input id="pob" type="text" required value={pob} onChange={(e) => setPob(e.target.value)} placeholder="City, Country" />
-                    </div>
-
                     <div className="flex items-start gap-2 pt-2">
                       <input
                         id="consent"
@@ -353,27 +354,40 @@ function OnboardContent() {
                         I understand my birth data is used to compute my baseline and is never shared with third parties.
                       </Label>
                     </div>
+
+                    {turnstileSiteKey && !tsFailed && (
+                      <div className="space-y-2">
+                        <TurnstileWidget
+                          key={tsKey}
+                          siteKey={turnstileSiteKey}
+                          onToken={setTurnstileToken}
+                          onError={() => {
+                            setTurnstileToken(null);
+                            setTsFailed(true);
+                          }}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
 
-                {existingUser && (
-                  <p className="text-sm text-muted-foreground">
-                    Already have a baseline? You can update it later from your account.
-                  </p>
-                )}
-
-                {!(existingUser || isLogin) && turnstileSiteKey && !tsFailed && (
-                  <div className="space-y-2 border-t pt-4">
-                    <TurnstileWidget
-                      key={tsKey}
-                      siteKey={turnstileSiteKey}
-                      onToken={setTurnstileToken}
-                      onError={() => {
-                        setTurnstileToken(null);
-                        setTsFailed(true);
-                      }}
-                    />
-                  </div>
+                {/* Baseline fields — only after account created or returning user */}
+                {!isLogin && (existingUser || accountCreated) && (
+                  <>
+                    <div className="border-t pt-4" />
+                    <div className="space-y-2">
+                      <Label htmlFor="dob">Date of Birth</Label>
+                      <Input id="dob" type="date" required value={dob} onChange={(e) => setDob(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tob">Time of Birth (24h)</Label>
+                      <Input id="tob" type="time" required value={tob} onChange={(e) => setTob(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pob">Place of Birth</Label>
+                      <Input id="pob" type="text" required value={pob} onChange={(e) => setPob(e.target.value)} placeholder="City, Country" />
+                    </div>
+                  </>
                 )}
 
                 {tsFailed && (
@@ -396,12 +410,14 @@ function OnboardContent() {
 
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading
-                    ? "Computing baseline..."
+                    ? "Please wait..."
                     : existingUser
                       ? "Sign In"
                       : isLogin
                         ? "Sign In"
-                        : "Create My Baseline"}
+                        : accountCreated
+                          ? "Save Baseline & Continue"
+                          : "Create Account"}
                 </Button>
               </form>
 
@@ -430,7 +446,26 @@ function OnboardContent() {
   );
 }
 
-export default function OnboardPage() {
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
+import { getEnv } from "@/lib/env";
+
+export default async function OnboardPage() {
+  const env = getEnv();
+  const secret = env[JWT_SECRET_ENV_KEY];
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+
+  if (secret && token) {
+    const payload = await verifyJWT(token, secret);
+    if (payload) {
+      const baseline = await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?")
+        .bind(payload.sub)
+        .first<{ user_id: string }>();
+      if (baseline) redirect("/chat");
+    }
+  }
+
   return (
     <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
       <OnboardContent />
