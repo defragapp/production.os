@@ -79,6 +79,13 @@ async function handleChat(request: NextRequest) {
     return new Response(JSON.stringify({ error: "Please verify your email address to use AI chat.", code: "email_unverified" }), { status: 403, headers: { "Content-Type": "application/json" } });
   }
 
+  // Gate: must have completed baseline (onboarding) — required for API access too.
+  const userBaseline = await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(payload.sub).first<{ user_id: string }>();
+  if (!userBaseline) return new Response(JSON.stringify({ error: "Please complete your baseline before using AI chat.", code: "baseline_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+
+  // Gate: must have chosen a subscription tier (free or sovereign+).
+  if (!user.subscription_tier) return new Response(JSON.stringify({ error: "Please choose a subscription plan before using AI chat.", code: "subscription_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+
   const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
 
   if (user.subscription_tier === "free") {

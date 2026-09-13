@@ -16,22 +16,37 @@ export function emailVerificationEnabled(env: AppEnv): boolean {
   return Boolean(env.RESEND_API_KEY);
 }
 
-/** Branded Sovereign OS email shell: dark wordmark header, body, quiet footer. */
+/** Branded Sovereign OS email shell: dark wordmark header, centered body, quiet footer. */
 export function emailShell(title: string, bodyHtml: string): string {
-  return `<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;background:#f4f4f5;padding:32px 16px">
-  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7">
-    <div style="background:#0d0d0d;padding:20px 28px">
-      <span style="color:#fafafa;font-size:15px;font-weight:600;letter-spacing:0.22em">SOVEREIGN<span style="color:#a1a1aa">.OS</span></span>
-    </div>
-    <div style="padding:28px">
-      <h2 style="color:#18181b;font-size:20px;margin:0 0 12px">${title}</h2>
-      ${bodyHtml}
-    </div>
-    <div style="padding:16px 28px;border-top:1px solid #e4e4e7">
-      <p style="color:#a1a1aa;font-size:12px;margin:0">© Sovereign OS — Your personal intelligence layer.</p>
-    </div>
-  </div>
-</div>`;
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:32px 16px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e4e4e7;border-collapse:separate;">
+<tr>
+<td style="background:#0d0d0d;padding:20px 28px;text-align:center;">
+<span style="color:#fafafa;font-size:15px;font-weight:600;letter-spacing:0.22em;">
+SOVEREIGN<span style="color:#a1a1aa">.OS</span>
+</span>
+</td>
+</tr>
+<tr>
+<td style="padding:28px;text-align:center;">
+<h2 style="color:#18181b;font-size:20px;margin:0 0 16px;text-align:center;">${title}</h2>
+<div style="text-align:center;">${bodyHtml}</div>
+</td>
+</tr>
+<tr>
+<td style="padding:16px 28px;border-top:1px solid #e4e4e7;text-align:center;">
+<p style="color:#a1a1aa;font-size:12px;margin:0;">&copy; Sovereign OS &mdash; Your personal intelligence layer.</p>
+</td>
+</tr>
+</table>
+</body>
+</html>`;
 }
 
 /** Styled primary action button for email bodies. */
@@ -55,8 +70,8 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string };
       return emailShell(
         "Welcome to Sovereign OS",
-        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your account is ready. Complete your baseline to begin.</p>` +
-        emailButton(`${v.origin}/onboard`, "Set Your Baseline")
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Your account is ready. Complete your baseline to begin.</p>` +
+        `<div style="text-align:center">${emailButton(`${v.origin}/onboard`, "Set Your Baseline")}</div>`
       );
     },
   },
@@ -67,9 +82,9 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string; token: string };
       return emailShell(
         "Verify your email",
-        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Welcome to Sovereign OS. Confirm your email address to unlock your baseline and personal AI chat.</p>` +
-        emailButton(`${v.origin}/api/auth/verify?token=${v.token}`, "Verify Email") +
-        `<p style="color:#a1a1aa;font-size:13px;margin:16px 0 0">This link expires in 48 hours. If you didn't create an account, you can safely ignore this email.</p>`
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Welcome to Sovereign OS. Confirm your email address to unlock your baseline and personal AI chat.</p>` +
+        `<div style="text-align:center">${emailButton(`${v.origin}/api/auth/verify?token=${v.token}`, "Verify Email")}</div>` +
+        `<p style="color:#a1a1aa;font-size:13px;margin:16px 0 0;text-align:center">This link expires in 48 hours. If you didn't create an account, you can safely ignore this email.</p>`
       );
     },
   },
@@ -80,8 +95,8 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string; token: string };
       return emailShell(
         "Reset your password",
-        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">You requested a password reset. This link is valid for 15 minutes.</p>` +
-        emailButton(`${v.origin}/reset?token=${v.token}`, "Reset Password")
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">You requested a password reset. This link is valid for 15 minutes.</p>` +
+        `<div style="text-align:center">${emailButton(`${v.origin}/reset?token=${v.token}`, "Reset Password")}</div>`
       );
     },
   },
@@ -92,9 +107,9 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string; amount: string; date: string; next: string };
       return emailShell(
         "Payment successful",
-        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your payment of <strong>$${v.amount}</strong> was processed on ${v.date}.</p>` +
-        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Next billing date: ${v.next}</p>` +
-        emailLink(`${v.origin}/account?tab=billing`, "View billing history")
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px;text-align:center">Your payment of <strong>$${v.amount}</strong> was processed on ${v.date}.</p>` +
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Next billing date: ${v.next}</p>` +
+        `<div style="text-align:center">${emailLink(`${v.origin}/account?tab=billing`, "View billing history")}</div>`
       );
     },
   },
@@ -105,8 +120,8 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string; days: number };
       return emailShell(
         "Your trial ends soon",
-        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px">Your free trial expires in ${v.days} day${v.days === 1 ? "" : "s"}. Upgrade now to keep your data and continue using Sovereign OS.</p>` +
-        emailButton(`${v.origin}/upgrade`, "Upgrade now")
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Your free trial expires in ${v.days} day${v.days === 1 ? "" : "s"}. Upgrade now to keep your data and continue using Sovereign OS.</p>` +
+        `<div style="text-align:center">${emailButton(`${v.origin}/upgrade`, "Upgrade now")}</div>`
       );
     },
   },
