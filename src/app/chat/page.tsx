@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  * 3. Subscription tier chosen (free or sovereign+)
  */
 export default async function ChatPage() {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) redirect("/onboard?mode=login");
 

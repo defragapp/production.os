@@ -10,7 +10,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile";
 import type { User } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -33,7 +33,7 @@ const LOGIN_RATE_LIMIT_TTL = 300;
 const LOGIN_RATE_LIMIT_MAX = 10;
 
 export async function POST(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   let body: { email?: string; password?: string; turnstileToken?: string };

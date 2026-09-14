@@ -10,7 +10,7 @@ import type { User } from "@/lib/types";
  * accepted for the account it was issued to.
  */
 export async function GET(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   const token = request.nextUrl.searchParams.get("token") || "";

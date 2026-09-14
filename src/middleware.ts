@@ -51,7 +51,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) {
     // If JWT_SECRET isn't configured, fail closed

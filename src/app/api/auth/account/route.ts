@@ -10,7 +10,7 @@ import type { User } from "@/lib/types";
  * baselines and threads are removed via ON DELETE CASCADE.
  */
 export async function DELETE(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;

@@ -9,7 +9,7 @@ interface StripeEvent {
 }
 
 export async function POST(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env.STRIPE_WEBHOOK_SECRET;
   if (!secret) return NextResponse.json({ error: "STRIPE_WEBHOOK_SECRET is not configured" }, { status: 500 });
   const signature = request.headers.get("stripe-signature");

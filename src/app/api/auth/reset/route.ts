@@ -9,7 +9,7 @@ const RATE_LIMIT_TTL = 3600;
 const RATE_LIMIT_MAX = 5;
 
 export async function POST(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   let body: { email?: string; token?: string; newPassword?: string };

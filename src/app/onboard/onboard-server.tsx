@@ -5,12 +5,14 @@ import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import { OnboardContent } from "./onboard-content";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Server-side redirect for authenticated users who already have a baseline.
  * If the user is logged in and has completed onboarding, send them to /chat.
  */
 export default async function OnboardPage() {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
 

@@ -4,7 +4,7 @@ import { createCheckoutSession, stripeConfigured } from "@/lib/stripe";
 import { getEnv } from "@/lib/env";
 
 export async function POST(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;

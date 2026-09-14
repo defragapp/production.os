@@ -43,7 +43,7 @@ function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
 }
 
 async function handleChat(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return new Response(JSON.stringify({ error: "JWT_SECRET is not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;

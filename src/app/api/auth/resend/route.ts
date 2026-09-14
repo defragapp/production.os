@@ -11,7 +11,7 @@ const RESEND_COOLDOWN = 600;
  * user. Rate-limited to one email per 10 minutes per user.
  */
 export async function POST(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   if (!emailVerificationEnabled(env)) {

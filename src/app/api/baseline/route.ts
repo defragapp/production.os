@@ -4,8 +4,10 @@ import { computeNatalPositions, buildAstrologyBaseline } from "@/lib/nasa-jpl";
 import { getEnv } from "@/lib/env";
 import type { Baseline } from "@/lib/types";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const env = getEnv();
+  const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;

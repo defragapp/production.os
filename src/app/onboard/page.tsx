@@ -1,1 +1,1 @@
-export { default } from "./onboard-server";
+export { default, dynamic } from "./onboard-server";
