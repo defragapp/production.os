@@ -124,14 +124,16 @@ src/
 │   ├── baseline/page.tsx              # Baselines list
 │   ├── chat/chat-client.tsx           # Chat client (SSE streaming, thread switcher)
 │   ├── chat/page.tsx                  # Chat page (server wrapper around ChatClient)
-│   ├── onboard/page.tsx               # Birth data intake form + login/signup (Turnstile)
+│   ├── onboard/page.tsx               # Server wrapper (force-dynamic) — redirects authed users with a baseline to /chat
+│   ├── onboard/onboard-server.tsx     # Onboard server gate (legacy re-export; superseded by page.tsx)
+│   ├── onboard/onboard-content.tsx    # Client two-phase flow: account → baseline → plan (Turnstile-gated)
 │   ├── upgrade/checkout-client.tsx    # Upgrade client → POST /api/checkout
 │   ├── upgrade/page.tsx               # Paywall → Stripe Checkout
 │   ├── terms/page.tsx                 # Terms of service
 │   ├── privacy/page.tsx               # Privacy policy
 │   ├── globals.css                    # Tailwind + shadcn theme tokens
 │   ├── layout.tsx                     # Root layout
-│   └── page.tsx                       # Landing page
+│   └── page.tsx                       # Landing page (server shell + JSON-LD; renders LandingClient)
 ├── components/
 │   ├── nav.tsx                        # Nav + sign-out (DELETE /api/auth)
 │   ├── turnstile.tsx                  # Turnstile widget (client, env-gated)
