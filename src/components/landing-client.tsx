@@ -170,6 +170,21 @@ const PROCESS = [
   { step: "04", title: "Choose", desc: "See what is yours to examine, change, or decide." },
 ];
 
+const HOW_IT_WORKS = [
+  {
+    title: "Share your baseline once",
+    desc: "A few details about your birth — date, time, place. That's all Sovereign needs to personalize everything after.",
+  },
+  {
+    title: "Sovereign builds your context",
+    desc: "NASA/JPL planetary data is computed into a personal Baseline that every conversation reads — so the AI knows your context on every turn.",
+  },
+  {
+    title: "Ask anything, choose for yourself",
+    desc: "Each answer is grounded in your Baseline and your own words. You remain the authority — Sovereign surfaces patterns, you decide.",
+  },
+];
+
 export function LandingClient() {
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
@@ -311,6 +326,23 @@ export function LandingClient() {
                 Sovereign creates a personal Baseline from your birth information. It provides
                 additional context for exploring your tendencies.
               </p>
+            </Reveal>
+
+            <Reveal delay={80}>
+              <div className="mt-20 grid gap-5 text-left sm:grid-cols-3">
+                {HOW_IT_WORKS.map((item, i) => (
+                  <div
+                    key={item.title}
+                    className="group rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-[240ms] ease-spring hover:-translate-y-1 hover:border-white/20"
+                  >
+                    <span className="mb-4 block font-mono text-xs tracking-widest text-muted-foreground">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <h3 className="mb-2 text-base font-medium text-foreground">{item.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
             </Reveal>
 
             <Reveal delay={90}>
