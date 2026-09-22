@@ -141,6 +141,36 @@ export async function createCheckoutSession(
 }
 
 /**
+ * Create a Stripe Billing Portal session so customers can self-serve manage
+ * or cancel their subscription (upgrade/downgrade handled by Stripe itself).
+ */
+export async function createPortalSession(env: AppEnv, customerId: string): Promise<{ url: string }> {
+  if (!env.STRIPE_PORTAL_RETURN_URL) throw new Error("Stripe portal return URL is not configured");
+
+  const body = new URLSearchParams();
+  body.set("customer", customerId);
+  body.set("return_url", env.STRIPE_PORTAL_RETURN_URL);
+
+  const response = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Stripe-Version": STRIPE_API_VERSION,
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const err = await response.json() as { error?: { message?: string } };
+    throw new Error(`Stripe portal failed: ${err.error?.message || response.statusText}`);
+  }
+
+  const session = await response.json() as { url: string };
+  return { url: session.url };
+}
+
+/**
  * Best-effort cancel all active Stripe subscriptions for a customer.
  * Used on account deletion so billing stops without requiring a dashboard step.
  * Swallows failures (local account erasure proceeds regardless).

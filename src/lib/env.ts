@@ -10,6 +10,7 @@ export interface AppEnv {
   STRIPE_PRICE_SOVEREIGN_PLUS_ANNUAL: string;
   STRIPE_SUCCESS_URL: string;
   STRIPE_CANCEL_URL: string;
+  STRIPE_PORTAL_RETURN_URL: string;
   JWT_SECRET: string;
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_SECRET_KEY: string;

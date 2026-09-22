@@ -22,6 +22,8 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [resent, setResent] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   useEffect(() => {
     setVerifyStatus(new URLSearchParams(window.location.search).get("verify"));
@@ -58,6 +60,20 @@ export default function AccountPage() {
       router.push("/");
     } catch {
       setDeleting(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    setPortalError(null);
+    try {
+      const res = await fetch("/api/billing-portal");
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error || "Failed to open billing");
+      window.location.href = data.url;
+    } catch (err) {
+      setPortalError(err instanceof Error ? err.message : "Something went wrong");
+      setPortalLoading(false);
     }
   };
 
@@ -115,12 +131,22 @@ export default function AccountPage() {
                   </span>
                 </div>
                 {isPlus ? (
-                  <ul className="space-y-1 text-sm text-muted-foreground">
-                    <li>✓ Unlimited AI messages</li>
-                    <li>✓ Full chat history & threads</li>
-                    <li>✓ Advanced pattern analysis</li>
-                    <li>✓ Priority AI inference</li>
-                  </ul>
+                  <>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>✓ Unlimited AI messages</li>
+                      <li>✓ Full chat history & threads</li>
+                      <li>✓ Advanced pattern analysis</li>
+                      <li>✓ Priority AI inference</li>
+                    </ul>
+                    <Button
+                      className="w-full"
+                      onClick={handleManageBilling}
+                      disabled={portalLoading}
+                    >
+                      {portalLoading ? "Opening billing..." : "Manage subscription (cancel in two clicks)"}
+                    </Button>
+                    {portalError && <p className="text-xs text-destructive">{portalError}</p>}
+                  </>
                 ) : (
                   <>
                     <ul className="space-y-1 text-sm text-muted-foreground">

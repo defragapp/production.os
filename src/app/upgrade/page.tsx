@@ -18,17 +18,35 @@ function UpgradeContent() {
   const [loading, setLoading] = useState<"monthly" | "annual" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isPlus, setIsPlus] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch("/api/auth");
-        const data = await res.json() as { user?: unknown };
+        const data = await res.json() as { user?: { subscription_tier?: string } | null };
         if (!data.user) { router.push("/onboard?mode=login"); return; }
+        setIsPlus(data.user.subscription_tier === "sovereign+");
       } catch { router.push("/onboard?mode=login"); }
       finally { setAuthChecked(true); }
     })();
   }, [router]);
+
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    setPortalError(null);
+    try {
+      const res = await fetch("/api/billing-portal");
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error || "Failed to open billing");
+      window.location.href = data.url;
+    } catch (err) {
+      setPortalError(err instanceof Error ? err.message : "Something went wrong");
+      setPortalLoading(false);
+    }
+  };
 
   const handleUpgrade = async (interval: "monthly" | "annual") => {
     setLoading(interval);
@@ -64,9 +82,33 @@ function UpgradeContent() {
             </p>
           )}
           <PageHeader
-            title="Choose Your Plan"
-            description="Start free, then unlock unlimited AI conversations, full chat history, and advanced pattern analysis with Sovereign+."
+            title={isPlus ? "You're on Sovereign+" : "Choose Your Plan"}
+            description={
+              isPlus
+                ? "Manage your subscription, update your payment method, or cancel anytime."
+                : "Start free, then unlock unlimited AI conversations, full chat history, and advanced pattern analysis with Sovereign+."
+            }
           />
+          {isPlus ? (
+            <Card className="border border-primary/60">
+              <CardHeader>
+                <CardTitle className="text-base">Sovereign+ subscription</CardTitle>
+                <CardDescription>Manage billing in the Stripe portal</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li>✓ Unlimited AI messages</li>
+                  <li>✓ Full chat history &amp; threads</li>
+                  <li>✓ Advanced pattern analysis</li>
+                  <li>✓ Priority AI inference</li>
+                </ul>
+                <Button className="w-full" onClick={handleManageBilling} disabled={portalLoading}>
+                  {portalLoading ? "Opening billing..." : "Manage subscription (cancel in two clicks)"}
+                </Button>
+                {portalError && <p className="text-xs text-destructive">{portalError}</p>}
+              </CardContent>
+            </Card>
+          ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="flex flex-col">
               <CardHeader><CardTitle className="text-base">Free</CardTitle><CardDescription>For trying out Sovereign OS</CardDescription></CardHeader>
@@ -99,6 +141,7 @@ function UpgradeContent() {
               </CardContent>
             </Card>
           </div>
+          )}
           {error && <p className="mt-4 text-center text-sm text-destructive">{error}</p>}
           <div className="mt-6 flex justify-center gap-2">
             <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>
