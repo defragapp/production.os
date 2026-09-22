@@ -45,7 +45,6 @@ export async function getEnv(): Promise<AppEnv> {
  * Still uses async context internally — callers must await the result.
  */
 export function getEnvSync(): AppEnv {
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  getEnv(); // kick off async init if not already running
+  void getEnv(); // kick off async init if not already running
   throw new Error("getEnvSync is not supported — use await getEnv() instead");
 }
