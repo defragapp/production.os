@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession } from "./stripe";
+import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, verifyStripeSignature } from "./stripe";
+import { createHmac } from "node:crypto";
 import type { AppEnv } from "./env";
 
 const env = {
@@ -49,6 +50,39 @@ describe("stripeConfigured", () => {
 
   it("is false when the secret is missing", () => {
     expect(stripeConfigured({ ...env, STRIPE_SECRET_KEY: "" } as unknown as AppEnv)).toBe(false);
+  });
+});
+
+describe("verifyStripeSignature", () => {
+  const secret = "whsec_test_secret";
+  const payload = JSON.stringify({ id: "evt_1", type: "checkout.session.completed", data: { object: {} } });
+  const sign = (message: string, key: string) => createHmac("sha256", key).update(message).digest("hex");
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  it("accepts a valid signature", async () => {
+    const sig = sign(`${timestamp}.${payload}`, secret);
+    await expect(verifyStripeSignature(payload, `t=${timestamp},v1=${sig}`, secret)).resolves.toBe(true);
+  });
+
+  it("rejects a tampered payload", async () => {
+    const sig = sign(`${timestamp}.${payload}`, secret);
+    const tampered = payload.replace('"id":"evt_1"', '"id":"evt_2"');
+    await expect(verifyStripeSignature(tampered, `t=${timestamp},v1=${sig}`, secret)).resolves.toBe(false);
+  });
+
+  it("rejects a signature from a different secret", async () => {
+    const sig = sign(`${timestamp}.${payload}`, "whsec_other");
+    await expect(verifyStripeSignature(payload, `t=${timestamp},v1=${sig}`, secret)).resolves.toBe(false);
+  });
+
+  it("rejects a stale timestamp", async () => {
+    const old = Math.floor(Date.now() / 1000) - 400;
+    const sig = sign(`${old}.${payload}`, secret);
+    await expect(verifyStripeSignature(payload, `t=${old},v1=${sig}`, secret)).resolves.toBe(false);
+  });
+
+  it("rejects a malformed header", async () => {
+    await expect(verifyStripeSignature(payload, "nope", secret)).resolves.toBe(false);
   });
 });
 

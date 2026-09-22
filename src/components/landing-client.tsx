@@ -449,7 +449,7 @@ export function LandingClient() {
                 <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                   Free includes your full baseline and 5 AI messages per day. Sovereign+ removes the
                   daily cap, keeps your complete conversation history, and adds advanced pattern
-                  analysis — monthly at $9, or annually at $79 (save 27%).
+                  analysis — monthly at $20, or annually at $99 (save 59%).
                 </p>
               </details>
               <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">

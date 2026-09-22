@@ -59,7 +59,14 @@ export async function verifyStripeSignature(
 
   if (!timestamp || !v1) return false;
 
-  const signedPayload = `${timestamp}.${payload}`;
+  const eventTime = parseInt(timestamp, 10);
+  if (Number.isNaN(eventTime) || Math.abs(Date.now() / 1000 - eventTime) > 300) {
+    return false;
+  }
+
+  const expected = hexToBytes(v1);
+  if (expected.byteLength !== 32) return false;
+
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -68,27 +75,16 @@ export async function verifyStripeSignature(
     ["verify"],
   );
 
-  const expected = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(signedPayload),
-  );
-  const expectedHex = Array.from(new Uint8Array(expected), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
+  const signedPayload = `${timestamp}.${payload}`;
+  return crypto.subtle.verify("HMAC", key, expected, new TextEncoder().encode(signedPayload));
+}
 
-  if (expectedHex.length !== v1.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expectedHex.length; i++) {
-    diff |= expectedHex.charCodeAt(i) ^ v1.charCodeAt(i);
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   }
-
-  const eventTime = parseInt(timestamp, 10);
-  if (Number.isNaN(eventTime) || Math.abs(Date.now() / 1000 - eventTime) > 300) {
-    return false;
-  }
-
-  return diff === 0;
+  return bytes;
 }
 
 /** Determine the plan tier from a subscription status. */

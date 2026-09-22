@@ -11,8 +11,8 @@ const jsonLd = {
     "Your personal intelligence layer. Sovereign OS computes a personal baseline from NASA/JPL planetary data and uses AI to surface the patterns shaping how you think, feel, and relate.",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Sovereign+ Monthly", price: "9", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Sovereign+ Annual", price: "79", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Sovereign+ Monthly", price: "20", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Sovereign+ Annual", price: "99", priceCurrency: "USD" },
   ],
 };
 
@@ -41,7 +41,7 @@ const faqJsonLd = {
       name: "What's the difference between Free and Sovereign+?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Free includes your full baseline and 5 AI messages per day. Sovereign+ removes the daily cap, keeps your complete conversation history, and adds advanced pattern analysis — monthly at $9, or annually at $79 (save 27%).",
+        text: "Free includes your full baseline and 5 AI messages per day. Sovereign+ removes the daily cap, keeps your complete conversation history, and adds advanced pattern analysis — monthly at $20, or annually at $99 (save 59%).",
       },
     },
     {
