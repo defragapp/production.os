@@ -15,10 +15,10 @@ export function PageHeader({
 }) {
   return (
     <div className={`mb-8 ${center ? "text-center" : ""}`}>
-      <p className="mb-1.5 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="mb-1.5 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
         {eyebrow}
       </p>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+      <h1 className="font-display text-3xl font-normal tracking-tight text-foreground md:text-4xl">
         {title}
       </h1>
       {description && (

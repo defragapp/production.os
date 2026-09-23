@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
+import { LoadingScreen } from "@/components/ui/loading";
 
 interface UserData {
   email: string;
@@ -81,9 +82,7 @@ export default function AccountPage() {
     return (
       <>
         <Nav />
-        <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </main>
+        <LoadingScreen className="min-h-[calc(100vh-3.5rem)]" label="Loading your account" />
       </>
     );
   }
@@ -113,7 +112,7 @@ export default function AccountPage() {
         <div className="w-full max-w-lg">
           <PageHeader title="Account" description="Your plan, profile, and account preferences." />
           {unverifiedNotice && (
-            <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+            <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-border bg-muted/30 text-foreground" : "border-border/80 bg-muted/40 text-foreground"}`}>
               {unverifiedNotice}
             </div>
           )}
@@ -173,7 +172,7 @@ export default function AccountPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Email status</span>
-                  <span className={`text-sm font-medium ${emailVerified ? "text-emerald-400" : "text-amber-400"}`}>
+                  <span className={`text-sm font-medium ${emailVerified ? "text-foreground" : "text-muted-foreground"}`}>
                     {emailVerified ? "✓ Verified" : "Unverified"}
                   </span>
                 </div>

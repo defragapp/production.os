@@ -11,7 +11,7 @@ const navLink =
 const navLinkActive = "text-foreground";
 
 const PLUS_BADGE =
-  "ml-1 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary";
+  "ml-1 inline-flex items-center gap-1 rounded-full border border-foreground/25 bg-foreground/[0.06] px-2.5 py-0.5 text-xs font-medium text-foreground";
 
 export function Nav() {
   const router = useRouter();
@@ -122,7 +122,7 @@ export function Nav() {
                 Baseline
               </Link>
               {tier === "sovereign+" ? (
-                <span className="px-3 py-3 text-sm font-semibold text-primary">Sovereign+</span>
+                <span className="px-3 py-3 text-sm font-medium text-foreground">Sovereign+</span>
               ) : (
                 <Link
                   href="/upgrade"

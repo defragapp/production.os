@@ -22,13 +22,13 @@ export function Logo({
     >
       <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/5 backdrop-blur-sm transition-colors duration-[240ms] group-hover:border-white/30">
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.4" className="text-white" />
-          <circle cx="12" cy="12" r="3" fill="currentColor" className="text-white" />
-          <line x1="6" y1="12" x2="2" y2="12" stroke="currentColor" strokeWidth="1.4" opacity="0.5" className="text-white" />
+          <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.4" className="text-foreground" />
+          <circle cx="12" cy="12" r="3" fill="currentColor" className="text-foreground" />
+          <line x1="6" y1="12" x2="2" y2="12" stroke="currentColor" strokeWidth="1.4" opacity="0.5" className="text-foreground" />
         </svg>
       </span>
       {showWordmark && (
-        <span className="text-sm font-medium uppercase tracking-[0.2em] text-white">
+        <span className="font-display text-sm uppercase tracking-[0.18em] text-foreground">
           Sovereign
         </span>
       )}

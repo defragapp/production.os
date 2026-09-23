@@ -29,7 +29,7 @@ export function BaselineSummary({ data }: { data: BaselineData }) {
 
   return (
     <div className="mt-3 rounded-lg border border-border/60 bg-background/40 p-3 text-left">
-      <p className="mb-2 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="mb-2 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Your Baseline
       </p>
       {chips.length > 0 ? (
@@ -48,10 +48,10 @@ export function BaselineSummary({ data }: { data: BaselineData }) {
         <p className="text-xs text-muted-foreground">Baseline loaded.</p>
       )}
       <details className="mt-2">
-        <summary className="cursor-pointer select-none text-[11px] text-muted-foreground transition-colors hover:text-foreground">
+        <summary className="cursor-pointer select-none text-xs text-muted-foreground transition-colors hover:text-foreground">
           View reference data
         </summary>
-        <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-background/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-background/50 p-3 text-xs leading-relaxed text-muted-foreground">
           {JSON.stringify(data, null, 2)}
         </pre>
       </details>

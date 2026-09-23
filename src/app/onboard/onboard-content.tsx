@@ -174,8 +174,8 @@ export function OnboardContent() {
           <div className="w-full max-w-md">
             <Stepper steps={STEPS} current={0} />
             <div className="mb-8 text-center">
-              <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
-              <h1 className="text-2xl font-bold">Set a New Password</h1>
+              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
+              <h1 className="font-display text-3xl font-normal tracking-tight">Set a New Password</h1>
             </div>
             <Card>
               <CardContent className="pt-6">
@@ -193,7 +193,7 @@ export function OnboardContent() {
                     />
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
-                  {notice && <p className="text-sm text-emerald-500">{notice}</p>}
+                  {notice && <p className="text-sm text-foreground">{notice}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Resetting..." : "Reset Password"}
                   </Button>
@@ -214,8 +214,8 @@ export function OnboardContent() {
           <Nav />
           <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
             <div className="w-full max-w-md text-center">
-              <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
-              <h1 className="mb-4 text-2xl font-bold">Check your email</h1>
+              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
+              <h1 className="mb-4 font-display text-3xl font-normal tracking-tight">Check your email</h1>
               <p className="text-sm text-muted-foreground">
                 If an account exists for <span className="font-medium text-foreground">{resetEmail}</span>, we&apos;ve
                 sent a link to reset your password.
@@ -236,8 +236,8 @@ export function OnboardContent() {
           <div className="w-full max-w-md">
             <Stepper steps={STEPS} current={0} />
             <div className="mb-8 text-center">
-              <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
-              <h1 className="text-2xl font-bold">Reset Password</h1>
+              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
+              <h1 className="font-display text-3xl font-normal tracking-tight">Reset Password</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 Enter your email and we&apos;ll send you a link to reset your password.
               </p>
@@ -289,8 +289,8 @@ export function OnboardContent() {
         <div className="w-full max-w-md">
           <Stepper steps={STEPS} current={currentStep} />
           <div className="mb-8 text-center">
-            <p className="mb-1 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">Sovereign OS</p>
-            <h1 className="text-2xl font-bold">{title}</h1>
+            <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
+            <h1 className="font-display text-3xl font-normal tracking-tight">{title}</h1>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
           </div>
 

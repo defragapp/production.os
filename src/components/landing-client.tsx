@@ -89,7 +89,7 @@ const BTN_GHOST =
   "bg-white/[0.06] border border-white/[0.08] border-t-white/[0.15] text-foreground rounded-full px-8 py-3.5 font-medium backdrop-blur-md hover:bg-white/[0.12] transition-all duration-[240ms] ease-spring";
 
 const OVERLINE =
-  "mb-5 block font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground";
+  "mb-5 block font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground";
 
 const QUESTIONS = [
   "Why do I keep taking responsibility for everyone?",
@@ -196,7 +196,7 @@ export function LandingClient() {
         <section className="flex min-h-screen flex-col items-center justify-center px-6 pt-20 text-center">
           <div className="max-w-4xl space-y-8">
             <Reveal>
-              <h1 className="text-5xl font-medium leading-tight tracking-tight text-foreground md:text-7xl">
+              <h1 className="font-display text-5xl font-normal leading-tight tracking-tight text-foreground md:text-7xl">
                 Understand yourself.
                 <br />
                 <span className="text-muted-foreground">Understand your relationships.</span>
@@ -211,7 +211,7 @@ export function LandingClient() {
               </p>
             </Reveal>
             <Reveal delay={90}>
-              <div className="mx-auto mt-6 flex h-[1.6rem] items-center justify-center">
+              <div className="mx-auto mt-6 flex min-h-[3rem] items-center justify-center px-4">
                 <RotatingQuestions />
               </div>
             </Reveal>
@@ -233,7 +233,7 @@ export function LandingClient() {
           <div className="mx-auto max-w-4xl">
             <Reveal className="mb-16">
               <span className={OVERLINE}>01 · The Experience</span>
-              <h2 className="mb-4 text-3xl font-medium text-foreground">Start with what&apos;s happening.</h2>
+              <h2 className="mb-4 font-display text-3xl font-normal text-foreground">Start with what&apos;s happening.</h2>
               <p className="text-lg text-muted-foreground">
                 You don&apos;t need the right words. Just tell Sovereign what&apos;s going on.
               </p>
@@ -265,7 +265,7 @@ export function LandingClient() {
           <div className="mx-auto max-w-6xl">
             <Reveal className="mb-16 max-w-2xl">
               <span className={OVERLINE}>02 · The Translation</span>
-              <h2 className="mb-4 text-3xl font-medium text-foreground">
+              <h2 className="mb-4 font-display text-3xl font-normal text-foreground">
                 One experience. More than one way to understand it.
               </h2>
               <p className="text-lg text-muted-foreground">
@@ -317,7 +317,7 @@ export function LandingClient() {
           <div className="relative z-10 mx-auto max-w-4xl space-y-12 text-center">
             <Reveal>
               <span className={OVERLINE}>03 · The Baseline</span>
-              <h2 className="mb-4 text-5xl font-medium text-foreground">Your Baseline</h2>
+              <h2 className="mb-4 font-display text-5xl font-normal text-foreground">Your Baseline</h2>
               <p className="text-xl text-muted-foreground">A personal starting point.</p>
             </Reveal>
 
@@ -380,7 +380,7 @@ export function LandingClient() {
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-2">
             <Reveal className="flex flex-col justify-center">
               <span className={OVERLINE}>04 · The Systems</span>
-              <h2 className="mb-6 text-4xl font-medium leading-tight text-foreground">
+              <h2 className="mb-6 font-display text-4xl font-normal leading-tight text-foreground">
                 You are embedded in systems.
               </h2>
               <p className="mb-6 text-lg leading-relaxed text-muted-foreground">
@@ -400,7 +400,7 @@ export function LandingClient() {
 
             <Reveal delay={80} className="flex flex-col justify-center">
               <div className="rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-10 backdrop-blur-md">
-                <p className="mb-4 text-3xl font-medium text-foreground">You remain the authority.</p>
+                <p className="mb-4 font-display text-3xl font-normal text-foreground">You remain the authority.</p>
                 <p className="text-xl leading-relaxed text-muted-foreground">
                   Sovereign does not diagnose you. It helps distinguish{" "}
                   <strong className="font-medium text-foreground">what we know</strong>,{" "}
@@ -415,7 +415,7 @@ export function LandingClient() {
         {/* ── Section 6 · FAQ ───────────────────────────────── */}
         <section className="border-t border-white/10 px-6 py-24">
           <Reveal className="mx-auto max-w-3xl">
-            <h2 className="mb-10 text-center text-3xl font-medium text-foreground md:text-4xl">
+            <h2 className="mb-10 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
               Questions, answered.
             </h2>
             <div className="space-y-3">
@@ -469,7 +469,7 @@ export function LandingClient() {
         {/* ── Section 7 · Final CTA ────────────────────────── */}
         <section className="border-t border-white/10 px-6 py-32 text-center">
           <Reveal className="mx-auto max-w-2xl">
-            <h2 className="mb-4 text-4xl font-medium text-foreground md:text-5xl">
+            <h2 className="mb-4 font-display text-4xl font-normal text-foreground md:text-5xl">
               Start with yourself.
             </h2>
             <p className="mb-12 text-xl text-muted-foreground">

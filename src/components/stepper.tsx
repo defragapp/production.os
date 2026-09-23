@@ -30,7 +30,7 @@ export function Stepper({
                     : "border border-border text-muted-foreground"
                 }`}
               >
-                <span className="font-mono text-[11px]">
+                <span className="font-mono text-xs">
                   {done ? "✓" : i + 1}
                 </span>
                 <span className={active ? "font-medium" : ""}>{label}</span>

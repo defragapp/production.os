@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Nav } from "@/components/nav";
 import { Stepper } from "@/components/stepper";
 import { PageHeader } from "@/components/page-header";
+import { LoadingScreen } from "@/components/ui/loading";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
@@ -66,7 +67,7 @@ function UpgradeContent() {
   };
 
   if (!authChecked) {
-    return (<><Nav /><main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center"><p className="text-muted-foreground">Loading...</p></main></>);
+    return (<><Nav /><LoadingScreen className="min-h-[calc(100vh-3.5rem)]" label="Checking your plan" /></>);
   }
 
   return (
@@ -77,7 +78,7 @@ function UpgradeContent() {
         <div className="w-full max-w-3xl">
           <Stepper steps={STEPS} current={2} />
           {fromBaseline && (
-            <p className="mb-4 text-center text-sm font-medium text-emerald-400">
+            <p className="mb-4 text-center text-sm font-medium text-foreground">
               ✓ Your baseline is ready. Choose how you&apos;d like to continue.
             </p>
           )}
@@ -90,7 +91,7 @@ function UpgradeContent() {
             }
           />
           {isPlus ? (
-            <Card className="border border-primary/60">
+            <Card className="border border-foreground/25">
               <CardHeader>
                 <CardTitle className="text-base">Sovereign+ subscription</CardTitle>
                 <CardDescription>Manage billing in the Stripe portal</CardDescription>
@@ -113,7 +114,7 @@ function UpgradeContent() {
             <Card className="flex flex-col">
               <CardHeader><CardTitle className="text-base">Free</CardTitle><CardDescription>For trying out Sovereign OS</CardDescription></CardHeader>
               <CardContent className="flex flex-1 flex-col">
-                <p className="mb-4 text-3xl font-bold">$0</p>
+                <p className="mb-4 font-display text-3xl font-normal">$0</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <li>5 AI messages per day</li><li>Baseline computation</li><li>Basic chat history</li>
                 </ul>
@@ -122,11 +123,11 @@ function UpgradeContent() {
                 </Button>
               </CardContent>
             </Card>
-            <Card className="border border-primary/60">
+            <Card className="border border-foreground/25">
               <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>For deep pattern work</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
-                <div className="mb-4 flex items-baseline gap-2"><span className="text-3xl font-bold">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
-                <p className="mb-4 inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">Save 59% — best value</p>
+                <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
+                <p className="mb-4 inline-flex w-fit items-center rounded-full border border-foreground/20 bg-foreground/[0.06] px-3 py-1 text-xs font-medium text-foreground">Save 59% — best value</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <li>Unlimited AI messages</li><li>Full chat history &amp; threads</li><li>Advanced pattern analysis</li><li>Priority AI inference</li>
                 </ul>
@@ -155,7 +156,7 @@ function UpgradeContent() {
 
 export default function UpgradePage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+    <Suspense fallback={<LoadingScreen label="Checking your plan" />}>
       <UpgradeContent />
     </Suspense>
   );

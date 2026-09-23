@@ -15,6 +15,7 @@ import {
 import { Nav } from "@/components/nav";
 import { Stepper } from "@/components/stepper";
 import { PageHeader } from "@/components/page-header";
+import { LoadingScreen } from "@/components/ui/loading";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
@@ -83,9 +84,7 @@ function BaselineContent() {
     return (
       <>
         <Nav />
-        <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </main>
+        <LoadingScreen className="min-h-[calc(100vh-3.5rem)]" label="Checking your account" />
       </>
     );
   }
@@ -164,7 +163,7 @@ function BaselineContent() {
 
 export default function BaselinePage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+    <Suspense fallback={<LoadingScreen label="Checking your account" />}>
       <BaselineContent />
     </Suspense>
   );

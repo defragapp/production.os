@@ -5,6 +5,8 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Nav } from "@/components/nav";
+import { Logo } from "@/components/ui/logo";
+import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineSummary } from "@/components/baseline-summary";
 import type { ChatMessage, BaselineData } from "@/lib/types";
 
@@ -264,7 +266,7 @@ export function ChatClient() {
       <>
         <Nav />
         <main className="flex min-h-screen items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
+          <LoadingScreen label="Loading your threads" />
         </main>
       </>
     );
@@ -275,9 +277,9 @@ export function ChatClient() {
       <Nav />
 
       {billingSuccess && (
-        <div className="border-b bg-emerald-50 px-6 py-4 dark:bg-emerald-950/30">
+        <div className="border-b border-border bg-background px-6 py-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-            <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+            <p className="text-sm font-medium text-foreground">
               Welcome to Sovereign+ — your plan is active and your baseline is now fully unlocked.
             </p>
             <Button
@@ -319,9 +321,9 @@ export function ChatClient() {
       )}
 
       {showUpgrade && (
-        <div className="border-b bg-amber-50 px-6 py-4 dark:bg-amber-950/30">
+        <div className="border-b border-border bg-background px-6 py-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+            <p className="text-sm font-medium text-foreground">
               You have reached the free tier limit. Upgrade to Sovereign+ for unlimited access.
             </p>
             <div className="flex shrink-0 items-center gap-2">
@@ -334,9 +336,9 @@ export function ChatClient() {
       )}
 
       {(usage.limit !== null && usage.used >= usage.limit && !showUpgrade && !usageBannerDismissed) && (
-        <div className="border-b bg-amber-50 px-6 py-4 dark:bg-amber-950/30">
+        <div className="border-b border-border bg-background px-6 py-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+            <p className="text-sm font-medium text-foreground">
               You&apos;ve used all {usage.limit} free messages today. Upgrade to Sovereign+ for unlimited access.
             </p>
             <div className="flex shrink-0 items-center gap-2">
@@ -398,11 +400,17 @@ export function ChatClient() {
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center pt-20">
               <div className="text-center">
-                <p className="text-muted-foreground">
+                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-muted/40">
+                  <Logo showWordmark={false} href="#" />
+                </div>
+                <p className="font-display text-2xl font-normal tracking-tight text-foreground">
+                  Ask anything.
+                </p>
+                <p className="mt-2 text-muted-foreground">
                   Start a conversation to synthesize your emotional expression.
                 </p>
-                <p className="mt-2 text-sm text-muted-foreground/60">
-                  Your baseline is loaded. The AI will reference it as you chat.
+                <p className="mt-1 text-sm text-muted-foreground/60">
+                  Your baseline is loaded — the AI will reference it as you chat.
                 </p>
               </div>
             </div>
@@ -417,7 +425,7 @@ export function ChatClient() {
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[92%] rounded-xl px-4 py-3 sm:max-w-[85%] ${
+                  className={`max-w-[92%] rounded-2xl px-4 py-3 sm:max-w-[85%] ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-foreground"
@@ -432,7 +440,7 @@ export function ChatClient() {
                     </span>
                   ) : (
                     <>
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
                       {msg.role === "assistant" && msg.baselineData && msg.content && (
                         <BaselineSummary data={msg.baselineData} />
                       )}
@@ -449,10 +457,18 @@ export function ChatClient() {
       <div className="border-t px-4 py-4">
         <div className="mx-auto max-w-3xl">
           {usage.limit !== null && (
-            <div className="mb-1 text-right text-xs text-muted-foreground/70">
-              {usage.used >= usage.limit
-                ? `${usage.limit} of ${usage.limit} free messages used today`
-                : `${usage.used} of ${usage.limit} free messages used today`}
+            <div className="mb-1 flex items-center justify-end gap-2.5">
+              <span className="text-xs text-muted-foreground/70">
+                {usage.used >= usage.limit
+                  ? `${usage.limit} of ${usage.limit} free messages used today`
+                  : `${usage.used} of ${usage.limit} free messages used today`}
+              </span>
+              <div className="h-[3px] w-24 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-foreground/50 transition-[width] duration-500 ease-out"
+                  style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }}
+                />
+              </div>
             </div>
           )}
           <div className="flex gap-2">
