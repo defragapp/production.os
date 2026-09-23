@@ -109,6 +109,31 @@ export interface ReasoningContext {
   safetyMode: SafetyMode;
   correctionState: CorrectionState;
   hypotheses: Hypothesis[];
+  /** Consent-gated context about connected people. Never contains birth data. */
+  consented?: ConsentedPeer[];
+}
+
+/**
+ * A person the user is connected to, whose consent-gated derivation is present
+ * in this reasoning turn. Deliberately a summary — no raw chart, no coordinates.
+ */
+export interface ConsentedPeer {
+  id: string;
+  name: string;
+  role: string;
+  derived: {
+    sunSign: string;
+    moonSign: string;
+    qualities: string[];
+    humanDesignType: string;
+    humanDesignStrategy: string;
+    humanDesignAuthority: string;
+    humanDesignCenters: string[];
+    humanDesignChannels: string[];
+    geneKeysLabels: string[];
+  };
+  /** Between-design notes derived from comparing both users' computations. */
+  betweenDesign: string[];
 }
 
 export interface ReasoningClassification {

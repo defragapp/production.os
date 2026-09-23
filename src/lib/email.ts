@@ -125,6 +125,32 @@ const EMAIL_TEMPLATES = {
       );
     },
   },
+
+  invite: {
+    subject: "You've been invited to connect",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; inviterName: string; role: string; token: string };
+      return emailShell(
+        "Connection invitation",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 12px;text-align:center"><strong>${v.inviterName}</strong> invited you to connect on Sovereign OS as their <strong>${v.role}</strong>.</p>` +
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Accepting lets you both explore what happens between you — your charts are never shared, only consented interpretations.</p>` +
+        `<div style="text-align:center">${emailButton(`${v.origin}/invite?token=${v.token}`, "Accept Invitation")}</div>` +
+        `<p style="color:#a1a1aa;font-size:13px;margin:16px 0 0;text-align:center">This link expires in 7 days and only works for this email address.</p>`
+      );
+    },
+  },
+
+  "invite-accepted": {
+    subject: "Your connection was accepted",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; inviteeName: string; role: string };
+      return emailShell(
+        "Connection accepted",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center"><strong>${v.inviteeName}</strong> accepted your invitation. You're now connected as ${v.role}.</p>` +
+        `<div style="text-align:center">${emailLink(`${v.origin}/settings?tab=connections`, "View your connections")}</div>`
+      );
+    },
+  },
 } as const;
 
 type TemplateName = keyof typeof EMAIL_TEMPLATES;

@@ -22,6 +22,7 @@ import type { ChatMessage } from "./types";
 import type {
   AuthorizationContext,
   BaselineSignal,
+  ConsentedPeer,
   CorrectionState,
   Domain,
   ExpressionCandidate,
@@ -544,8 +545,9 @@ function determineScope(history: ChatMessage[]): RelationshipScope {
 export function buildReasoningContext(opts: {
   history: ChatMessage[];
   baseline: DerivedBaseline;
+  consented?: ConsentedPeer[];
 }): ReasoningContext {
-  const { history, baseline } = opts;
+  const { history, baseline, consented = [] } = opts;
   const latestUser = [...history].reverse().find((m) => m.role === "user");
   const latestText = latestUser?.content ?? "";
   const classification = classifyQuestion(latestText);
@@ -588,10 +590,24 @@ export function buildReasoningContext(opts: {
     safetyMode,
     correctionState: correlation,
     hypotheses,
+    consented,
   };
 
-  // Harden: if no user turns exist, mark authorization accordingly.
-  if (conversations === 0) {
+  if (consented.length > 0) {
+    context.authorization.systemContext = "consented";
+    for (const p of consented) {
+      context.authorization.people.push({
+        id: p.id,
+        label: `${p.name} (${p.role})`,
+        scope: "relationship",
+        consentStatus: "consented",
+      });
+    }
+  }
+
+  // Harden: if no user turns exist, mark authorization accordingly
+  // (unless consent-gated context is present — that survives regardless).
+  if (conversations === 0 && context.authorization.systemContext !== "consented") {
     context.authorization.systemContext = "none";
   }
 
@@ -654,7 +670,27 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
     lines.push("LIMITATIONS:");
     for (const l of limitations) lines.push(`- ${l}`);
   }
-  lines.push("AUTHORIZATION: only what the user described. No consented third-party data exists.");
+  if (ctx.consented && ctx.consented.length > 0) {
+    lines.push("CONSENTED CONTEXT (both sides authorized this to be present):");
+    for (const p of ctx.consented) {
+      const q = p.derived.qualities.slice(0, 4);
+      lines.push(`- ${p.name} (${p.role}) — derived baseline: ${p.derived.sunSign} Sun / ${p.derived.moonSign} Moon. ${q.length ? `Qualities: ${q.join("; ")}.` : ""} Human Design: ${p.derived.humanDesignType}${p.derived.humanDesignCenters.length ? `, defined centers ${p.derived.humanDesignCenters.join(", ")}` : ""}. Strategy ${p.derived.humanDesignStrategy}, authority ${p.derived.humanDesignAuthority}.`);
+      if (p.betweenDesign.length) {
+        lines.push(`  Between-design notes (${p.name} & the user):`);
+        for (const note of p.betweenDesign) lines.push(`  - ${note}`);
+      }
+      if (p.derived.geneKeysLabels.length) {
+        lines.push(`  Their active Gene Keys: ${p.derived.geneKeysLabels.slice(0, 4).join("; ")}.`);
+      }
+    }
+    lines.push("  Use consented context to explore what happens BETWEEN people — never to claim certainty about the other person's inner world, and never as a verdict on them.");
+  }
+  const consentedNames = ctx.consented?.map((p) => p.name).join(", ");
+  lines.push(
+    consentedNames
+      ? `AUTHORIZATION: what the user described PLUS consented baseline derivations for: ${consentedNames}. No birth data, coordinates, or raw chart data is present — only derived summaries and between-design comparisons.`
+      : "AUTHORIZATION: only what the user described. No consented third-party data exists.",
+  );
   return lines.join("\n");
 }
 

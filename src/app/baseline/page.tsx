@@ -27,6 +27,16 @@ function BaselineContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [invite, setInvite] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = new URLSearchParams(window.location.search).get("invite");
+      setInvite(token && token.trim() ? token : null);
+    }
+  }, []);
+
+  const nextHref = (token: string | null) => (token ? `/invite?token=${encodeURIComponent(token)}` : "/chat");
 
   useEffect(() => {
     (async () => {
@@ -43,7 +53,8 @@ function BaselineContent() {
         if (baselineRes.ok) {
           const bd = await baselineRes.json() as { baseline?: { nasa_jpl_json_data?: string } };
           if (bd.baseline?.nasa_jpl_json_data) {
-            router.push("/chat");
+            const token = new URLSearchParams(window.location.search).get("invite");
+            router.push(nextHref(token));
             return;
           }
         }
@@ -72,7 +83,7 @@ function BaselineContent() {
         throw new Error(err.error || "Failed to compute baseline");
       }
 
-      router.push("/chat");
+      router.push(nextHref(invite));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

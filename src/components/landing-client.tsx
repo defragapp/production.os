@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
+import { BaselineDrawer } from "@/components/baseline-drawer";
+import type { BaselineData } from "@/lib/types";
 
 /**
  * Scroll reveal that can NEVER blank the page:
@@ -51,7 +53,41 @@ function Reveal({
   );
 }
 
-const BASELINE_CHIPS = ["Sun · Virgo", "Moon · Cancer", "Life Path · 7"];
+const DEMO_BASELINE: BaselineData = {
+  astrology: {
+    sunSign: "Cancer",
+    moonSign: "Cancer",
+    risingSign: "Pisces",
+    planets: {
+      sun: { sign: "Cancer", theme: "Holding and protecting what matters" },
+      moon: { sign: "Cancer", theme: "Sensitivity, and the reflex to guard what it loves" },
+      venus: { sign: "Gemini", theme: "Restlessness in closeness — words over weight" },
+      mars: { sign: "Libra", theme: "Deciding through other people's angles" },
+      mercury: { sign: "Cancer", theme: "Reasoning through feeling" },
+      jupiter: { sign: "Pisces", theme: "Generosity without doors" },
+      saturn: { sign: "Aries", theme: "Discipline that starts itself" },
+      neptune: { sign: "Sagittarius", theme: "Idealism dressed as certainty" },
+      pluto: { sign: "Scorpio", theme: "Depth as power" },
+    },
+  },
+  humanDesign: {
+    type: "Projector",
+    strategy: "Wait for the Invitation",
+    authority: "Splenic",
+    profile: "4/6",
+    definedCenters: ["Head", "Spleen"],
+    definedChannels: [
+      { gates: [63, 4], name: "Logic" },
+      { gates: [18, 58], name: "Judgment" },
+    ],
+  },
+  geneKeys: {
+    keys: [
+      { gate: 51, line: 1, frequency: "Shadow", theme: "Shock taken inside" },
+      { gate: 3, line: 4, frequency: "Gift", theme: "Renewal through disorder" },
+    ],
+  },
+};
 
 const TRUST_NOTES = ["Private by design", "NASA/JPL data", "Free to start"];
 
@@ -144,21 +180,6 @@ function ProductDemo() {
                 <p key={p}>{p}</p>
               ))}
             </div>
-            <div className="mt-3 rounded-lg border border-border/60 bg-background/40 p-3">
-              <p className="mb-2 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Your Baseline
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {BASELINE_CHIPS.map((c) => (
-                  <span
-                    key={c}
-                    className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1"
-                  >
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{c}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -169,7 +190,11 @@ function ProductDemo() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+        <div className="mt-3">
+          <BaselineDrawer data={DEMO_BASELINE} />
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
           <span className="flex-1 text-[12px] text-muted-foreground">Type your message...</span>
           <span className="flex h-7 items-center justify-center rounded-md bg-foreground px-3 font-mono text-[11px] uppercase tracking-[0.1em] text-background">
             Send

@@ -1,17 +1,24 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import Link from "next/link";
+import { Plus, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { LoadingScreen } from "@/components/ui/loading";
-import { BaselineSummary } from "@/components/baseline-summary";
-import type { ChatMessage, BaselineData } from "@/lib/types";
+import { BaselineDrawer } from "@/components/baseline-drawer";
+import type { ChatMessage, BaselineData, RelationshipView } from "@/lib/types";
 
-interface MessageWithBaseline extends ChatMessage {
-  baselineData?: BaselineData;
+interface InviteView {
+  id: string;
+  emailMasked: string;
+  role: string;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
 }
 
 interface ThreadSummary {
@@ -35,7 +42,7 @@ function formatThreadDate(iso: string): string {
 
 export function ChatClient() {
   const router = useRouter();
-  const [messages, setMessages] = useState<MessageWithBaseline[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -47,6 +54,8 @@ export function ChatClient() {
   const [usage, setUsage] = useState<{ used: number; limit: number | null }>({ used: 0, limit: null });
   const [billingSuccess, setBillingSuccess] = useState(false);
   const [showVerify, setShowVerify] = useState(false);
+  const [tier, setTier] = useState<"free" | "sovereign+" | null>(null);
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const refreshUsage = useCallback(async () => {
@@ -96,11 +105,12 @@ export function ChatClient() {
     (async () => {
       try {
         const authRes = await fetch("/api/auth");
-        const authData = await authRes.json() as { user?: unknown; usage?: { used: number; limit: number | null } };
+        const authData = await authRes.json() as { user?: { subscription_tier?: string | null } | null; usage?: { used: number; limit: number | null } };
         if (!authData.user) {
           router.push("/onboard?mode=login");
           return;
         }
+        setTier(authData.user.subscription_tier === "sovereign+" ? "sovereign+" : "free");
         if (authData.usage) setUsage(authData.usage);
         const baselineRes = await fetch("/api/baseline");
         if (baselineRes.ok) {
@@ -142,7 +152,7 @@ export function ChatClient() {
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
-    const userMessage: MessageWithBaseline = { role: "user", content: input.trim() };
+    const userMessage: ChatMessage = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
@@ -231,7 +241,6 @@ export function ChatClient() {
                   u[u.length - 1] = {
                     role: "assistant",
                     content: u[u.length - 1].content + parsed.content,
-                    baselineData,
                   };
                   return u;
                 });
@@ -259,7 +268,7 @@ export function ChatClient() {
       refreshUsage();
       setIsStreaming(false);
     }
-  }, [input, isStreaming, messages, threadId, baselineData, refreshThreads, refreshUsage, router]);
+  }, [input, isStreaming, messages, threadId, refreshThreads, refreshUsage, router]);
 
   if (!authChecked) {
     return (
@@ -358,19 +367,19 @@ export function ChatClient() {
         </div>
       )}
 
-      {threads.length > 0 || threadId ? (
-        <div className="border-b border-border bg-background px-4 pt-3">
-          <div className="mx-auto flex max-w-3xl items-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={startNewThread}
-              disabled={isStreaming}
-              className="mb-[1px] shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-              New thread
-            </Button>
+      <div className="border-b border-border bg-background px-4 pt-3">
+        <div className="mx-auto flex max-w-3xl items-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={startNewThread}
+            disabled={isStreaming}
+            className="mb-[1px] shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            New thread
+          </Button>
+          {threads.length > 0 && (
             <div className="flex items-end gap-1 overflow-x-auto">
               {threads.map((t) => {
                 const active = t.id === threadId;
@@ -391,9 +400,22 @@ export function ChatClient() {
                 );
               })}
             </div>
-          </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPeopleOpen((v) => !v)}
+            disabled={isStreaming}
+            aria-expanded={peopleOpen}
+            className="mb-[1px] ml-auto shrink-0"
+          >
+            <Users className="h-4 w-4" />
+            People
+          </Button>
         </div>
-      ) : null}
+      </div>
+
+      {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-3xl space-y-4">
@@ -441,9 +463,6 @@ export function ChatClient() {
                   ) : (
                     <>
                       <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
-                      {msg.role === "assistant" && msg.baselineData && msg.content && (
-                        <BaselineSummary data={msg.baselineData} />
-                      )}
                     </>
                   )}
                 </div>
@@ -456,6 +475,8 @@ export function ChatClient() {
 
       <div className="border-t px-4 py-4">
         <div className="mx-auto max-w-3xl">
+          <BaselineDrawer data={baselineData} />
+          <div className="mt-2">
           {usage.limit !== null && (
             <div className="mb-1 flex items-center justify-end gap-2.5">
               <span className="text-xs text-muted-foreground/70">
@@ -492,8 +513,141 @@ export function ChatClient() {
               {isStreaming ? "..." : "Send"}
             </Button>
           </div>
+          </div>
         </div>
       </div>
     </main>
+  );
+}
+
+/**
+ * The People strip in chat: who you're connected to and who you've invited.
+ * Read-only summary — full label/consent control lives in /settings.
+ */
+function PeoplePanel({
+  tier,
+  onClose,
+}: {
+  tier: "free" | "sovereign+" | null;
+  onClose: () => void;
+}) {
+  const [connections, setConnections] = useState<RelationshipView[] | null>(null);
+  const [invites, setInvites] = useState<InviteView[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [relRes, invRes] = await Promise.all([
+          fetch("/api/relationships"),
+          fetch("/api/invites"),
+        ]);
+        if (cancelled) return;
+        if (relRes.ok) {
+          const rd = await relRes.json() as { relationships?: RelationshipView[] };
+          setConnections(rd.relationships ?? []);
+        } else {
+          setConnections([]);
+        }
+        if (invRes.ok) {
+          const id = await invRes.json() as { invites?: InviteView[] };
+          setInvites(id.invites ?? []);
+        } else {
+          setInvites([]);
+        }
+      } catch {
+        if (!cancelled) {
+          setConnections([]);
+          setInvites([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="border-b border-border bg-background px-4 py-4">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            People
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close people panel"
+            className="text-muted-foreground transition-colors duration-[240ms] hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {connections === null || invites === null ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : (
+          <>
+            {connections.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No connections yet. Connections only appear here once someone you invited has joined.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {connections.map((c) => (
+                  <li key={c.relationId} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span className="font-medium text-foreground">{c.personName}</span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {c.myLabel}
+                    </span>
+                    <span className="text-xs text-muted-foreground/70">
+                      {c.peerSharesBaseline
+                        ? "shares their baseline with you"
+                        : "hasn't shared their baseline with you"}
+                      {!c.shareBaseline ? " · you're not sharing yours" : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {invites.length > 0 && (
+              <ul className="mt-3 space-y-1.5">
+                {invites.map((i) => (
+                  <li key={i.id} className="flex items-center gap-3 text-sm">
+                    <span className="text-muted-foreground">{i.emailMasked}</span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {i.role}
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/60">
+                      {i.acceptedAt ? "accepted" : i.status === "revoked" ? "revoked" : "invited"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {tier !== "sovereign+" && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Inviting people is part of Sovereign+.{" "}
+                <Link href="/upgrade" className="font-medium text-foreground underline underline-offset-2">
+                  Upgrade
+                </Link>{" "}
+                to invite someone.
+              </p>
+            )}
+
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground/60">
+              Someone you invited sees only your name and role — never your birth data. You stay in
+              control of sharing in{" "}
+              <Link href="/settings" className="font-medium text-foreground/80 underline underline-offset-2">
+                Settings
+              </Link>
+              .
+            </p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   scanCorrections,
   windowHistoryPreservingCorrections,
   buildReasoningContext,
+  buildReasoningPrompt,
 } from "./sovereign-reasoning";
 import { deriveBaseline } from "./sovereign-prompt";
 import type { ChatMessage } from "./types";
@@ -149,5 +150,63 @@ describe("buildReasoningContext", () => {
       baseline: BASELINE,
     });
     expect(corrected.correctionState.rejectedHypotheses.length).toBeGreaterThan(0);
+  });
+  it("records consented peers and flips authorization when present", () => {
+    const initWithPerson = buildReasoningContext({
+      history,
+      baseline: BASELINE,
+      consented: [{
+        id: "peer-1",
+        name: "Sara",
+        role: "best friend",
+        derived: {
+          sunSign: "Leo",
+          moonSign: "Cancer",
+          qualities: ["visible expression, authorship, and creative direction (Sun — core expression)"],
+          humanDesignType: "Generator",
+          humanDesignStrategy: "To Respond",
+          humanDesignAuthority: "Sacral",
+          humanDesignCenters: ["Sacral"],
+          humanDesignChannels: [],
+          geneKeysLabels: [],
+        },
+        betweenDesign: ["The 15–16 channel draws shared rhythm together in the pair — activation, not a verdict."],
+      }],
+    });
+    expect(initWithPerson.authorization.systemContext).toBe("consented");
+    expect(initWithPerson.authorization.people.some((p) => p.consentStatus === "consented")).toBe(true);
+
+    const orphan = buildReasoningPrompt(buildReasoningContext({ history, baseline: BASELINE }), history, BASELINE);
+    // The renderer must only claim consented data exists when it actually does.
+    expect(orphan[0].content).toContain("No consented third-party data exists");
+
+    const withConsent = buildReasoningPrompt(
+      buildReasoningContext({
+        history,
+        baseline: BASELINE,
+        consented: [{
+          id: "peer-2",
+          name: "Alex",
+          role: "brother",
+          derived: {
+            sunSign: "Virgo",
+            moonSign: "Gemini",
+            qualities: ["discernment, usefulness, and careful refinement (Sun — core expression)"],
+            humanDesignType: "Projector",
+            humanDesignStrategy: "Wait for the Invitation",
+            humanDesignAuthority: "Splenic (the spleen)",
+            humanDesignCenters: ["Spleen"],
+            humanDesignChannels: [],
+            geneKeysLabels: [],
+          },
+          betweenDesign: [],
+        }],
+      }),
+      history,
+      BASELINE,
+    );
+    expect(withConsent[0].content).toContain("CONSENTED CONTEXT");
+    expect(withConsent[0].content).toContain("Alex (brother)");
+    expect(withConsent[0].content).toContain("No birth data, coordinates, or raw chart data is present");
   });
 });

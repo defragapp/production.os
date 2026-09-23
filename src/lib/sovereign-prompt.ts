@@ -10,6 +10,10 @@ export interface DerivedBaseline {
   humanDesignType: string;
   humanDesignStrategy: string;
   humanDesignAuthority: string;
+  humanDesignProfile: string;
+  humanDesignCenters: string[];
+  humanDesignChannels: string[];
+  geneKeysLabels: string[];
 }
 
 export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
@@ -22,6 +26,18 @@ export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
   const moonSign = (astrology.moonSign as string) ?? "Unknown";
   const sunTheme = (planets.sun?.theme as string) ?? "unknown";
   const moonTheme = (planets.moon?.theme as string) ?? "unknown";
+
+  const humanDesignCenters = Array.isArray(humanDesign.definedCenters) ? (humanDesign.definedCenters as string[]) : [];
+  const humanDesignChannels = Array.isArray(humanDesign.definedChannels)
+    ? (humanDesign.definedChannels as Array<{ gates?: number[]; name?: string }>)
+        .map((c) => (c.gates ? `${c.gates.join("–")} ${c.name ?? ""}` : (c.name ?? "")).trim())
+        .filter(Boolean)
+    : [];
+  const geneKeysRaw = (raw.geneKeys as { keys?: unknown } | undefined)?.keys;
+  const geneKeysLabels = Array.isArray(geneKeysRaw)
+    ? (geneKeysRaw as Array<{ gate?: number; line?: number; frequency?: string; theme?: string; body?: string }>)
+        .map((k) => `Gate ${k.gate ?? "?"} line ${k.line ?? "?"} · ${k.frequency ?? "?"} · ${k.theme ?? "?"} (${k.body ?? "?"})`)
+    : [];
 
   const qualities: string[] = [];
   if (sunTheme !== "unknown") qualities.push(`${sunTheme} (Sun — core expression)`);
@@ -44,6 +60,10 @@ export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
     humanDesignType: (humanDesign.type as string) ?? "Unknown",
     humanDesignStrategy: (humanDesign.strategy as string) ?? "Unknown",
     humanDesignAuthority: (humanDesign.authority as string) ?? "Unknown",
+    humanDesignProfile: (humanDesign.profile as string) ?? "Unknown",
+    humanDesignCenters,
+    humanDesignChannels,
+    geneKeysLabels,
   };
 }
 
@@ -226,7 +246,15 @@ Potentially underused capacities:
 ${baseline.underusedCapacities.map((c) => `- ${c}`).join("\n")}
 
 Numerology life path: ${baseline.numerologyLifePath || "Unknown"}
-Human Design type: ${baseline.humanDesignType} — strategy: ${baseline.humanDesignStrategy} — authority: ${baseline.humanDesignAuthority}
+
+Human Design — type: ${baseline.humanDesignType} — strategy: ${baseline.humanDesignStrategy} — authority: ${baseline.humanDesignAuthority} — profile: ${baseline.humanDesignProfile}
+Defined centers: ${baseline.humanDesignCenters.join(", ") || "Unknown"}
+Active channels: ${baseline.humanDesignChannels.join("; ") || "Unknown"}
+
+Gene Keys (active):
+${baseline.geneKeysLabels.map((g) => `- ${g}`).join("\n")}
+
+Baseline roots are computed from the ten natal bodies via NASA/JPL coordinates through a Sovereign derivation engine. They are a computational reflection for examination, not doctrine — present them as tendencies that express differently under different conditions, never as fixed identity.
 
 ## Remember
 

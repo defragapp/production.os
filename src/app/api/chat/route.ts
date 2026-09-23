@@ -5,6 +5,7 @@ import { getEnv } from "@/lib/env";
 import { deriveBaseline } from "@/lib/sovereign-prompt";
 import type { DerivedBaseline } from "@/lib/sovereign-prompt";
 import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereign-reasoning";
+import { buildConsentedPeers } from "@/lib/sovereign-connections";
 import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
 import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
@@ -112,6 +113,17 @@ async function handleChat(request: NextRequest) {
   try { rawBaselineData = JSON.parse(baseline.nasa_jpl_json_data) as Record<string, unknown>; } catch { rawBaselineData = {}; }
   const derived: DerivedBaseline = deriveBaseline(rawBaselineData);
 
+  // Consent-gated connections: each person controls their own sharing flag.
+  // Allowed-to-share peers contribute a derived summary + between-design notes
+  // (never their raw chart or birth data).
+  let consented: Awaited<ReturnType<typeof buildConsentedPeers>>;
+  try {
+    consented = await buildConsentedPeers(env, payload.sub, rawBaselineData);
+  } catch (consentErr) {
+    console.error("[chat] building consented peers failed:", consentErr);
+    consented = [];
+  }
+
   let threadId = body.threadId;
   let conversation: ChatMessage[] = incoming;
   if (threadId) {
@@ -128,7 +140,7 @@ async function handleChat(request: NextRequest) {
   const model = createCloudflareModel(env);
   let result;
   try {
-    const context = buildReasoningContext({ history: conversation, baseline: derived });
+    const context = buildReasoningContext({ history: conversation, baseline: derived, consented });
     result = await generateSovereignResponse(context, conversation, derived, model);
   } catch (err) {
     console.error("[chat] generation failed:", err instanceof Error ? `${err.name}: ${err.message}` : err);

@@ -62,6 +62,7 @@ export function Nav() {
                 <Link href="/upgrade" className={linkClass("/upgrade")}>Upgrade</Link>
               )}
               <Link href="/account" className={linkClass("/account")}>Account</Link>
+              <Link href="/settings" className={linkClass("/settings")}>Settings</Link>
               <button onClick={handleSignOut} className={navLink}>
                 Sign out
               </button>
@@ -143,6 +144,15 @@ export function Nav() {
                 }`}
               >
                 Account
+              </Link>
+              <Link
+                href="/settings"
+                onClick={() => setOpen(false)}
+                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
+                  pathname === "/settings" ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                Settings
               </Link>
               <button
                 onClick={handleSignOut}

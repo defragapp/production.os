@@ -5,14 +5,17 @@ import { getEnv } from "@/lib/env";
 /**
  * Server-side auth gate.
  *
- * - Public pages: /, /onboard, /terms, /privacy (anything else renders
- *   naturally — e.g. the branded 404 for unknown paths).
- * - Authed pages: /chat, /baseline, /upgrade, /account.
- * - API: locked by default — only /api/auth* and the signature-verified
- *   Stripe webhook are public. Everything under /api/* requires a valid JWT.
+ * - Public pages: /, /onboard, /terms, /privacy, /invite (anything else
+ *   renders naturally — e.g. the branded 404 for unknown paths).
+ * - Authed pages: /chat, /baseline, /upgrade, /account, /settings.
+ * - API: locked by default — only /api/auth*, /api/invites/info, and the
+ *   signature-verified Stripe webhook are public. Everything under /api/*
+ *   requires a valid JWT.
  *
  * This ensures the /chat UI and /api/chat, /api/threads, /api/baseline
- * endpoints can never be accessed without authentication.
+ * endpoints can never be accessed without authentication. /api/invites/info
+ * stays public so the /invite accept page can render status for people who
+ * aren't signed in yet.
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -37,10 +40,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Public API: auth endpoints + Stripe webhook ──────────────────
+  // ── Public API: auth endpoints, invite status, Stripe webhook ──────
   if (
     pathname === "/api/auth" ||
     pathname.startsWith("/api/auth/") ||
+    pathname === "/api/invites/info" ||
     pathname === "/api/webhooks/stripe"
   ) {
     return NextResponse.next();
@@ -51,7 +55,7 @@ export async function middleware(request: NextRequest) {
   // Pages: only the app pages require auth — unknown paths fall through
   // so Next.js can render the branded 404.
   const isApi = pathname.startsWith("/api/");
-  const PROTECTED_PAGES = ["/chat", "/baseline", "/upgrade", "/account"];
+  const PROTECTED_PAGES = ["/chat", "/baseline", "/upgrade", "/account", "/settings"];
   const isProtectedPage = PROTECTED_PAGES.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );

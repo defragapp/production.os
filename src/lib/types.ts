@@ -10,8 +10,38 @@ export interface User {
   stripe_customer_id: string | null;
   subscription_tier: SubscriptionTier;
   email_verified?: number;
+  display_name?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type InviteStatus = "pending" | "accepted" | "revoked";
+
+export interface Invite {
+  id: string;
+  owner_user_id: string;
+  email: string;
+  role: string;
+  token_hash: string;
+  status: InviteStatus;
+  created_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+}
+
+/** A connection row as seen by one authenticated user. */
+export interface RelationshipView {
+  id: string;
+  relationId: string;
+  personId: string;
+  personName: string;
+  personEmailMasked: string;
+  myLabel: string;
+  peerLabel: string | null;
+  peerHasBaseline: boolean;
+  peerSharesBaseline: boolean;
+  shareBaseline: boolean;
+  createdAt: string;
 }
 
 export interface Baseline {

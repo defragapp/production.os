@@ -10,6 +10,7 @@ import { LoadingScreen } from "@/components/ui/loading";
 
 interface UserData {
   email: string;
+  display_name?: string | null;
   subscription_tier: string;
   stripe_customer_id: string | null;
   created_at: string;
@@ -189,6 +190,14 @@ export default function AccountPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Display name</span>
+                  <span className="text-sm font-medium">
+                    {user.display_name || (
+                      <span className="text-muted-foreground/60">— not set —</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Email</span>
                   <span className="text-sm font-medium">{user.email}</span>
                 </div>
@@ -230,6 +239,7 @@ export default function AccountPage() {
             </Card>
             <div className="flex flex-col gap-2">
               <Button variant="outline" className="w-full" onClick={() => router.push("/baseline")}>View Baseline</Button>
+              <Button variant="outline" className="w-full" onClick={() => router.push("/settings")}>Connections & Invites</Button>
               <Button variant="outline" className="w-full" onClick={() => router.push("/chat")}>Back to Chat</Button>
               <Button variant="outline" className="w-full" onClick={() => router.push("/")}>Home</Button>
               <Button variant="ghost" className="w-full text-destructive" onClick={handleSignOut}>Sign Out</Button>

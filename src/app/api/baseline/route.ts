@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
 import { computeNatalPositions, buildAstrologyBaseline } from "@/lib/nasa-jpl";
+import { computeHumanDesign } from "@/lib/sovereign-humandesign";
 import { getEnv } from "@/lib/env";
 import type { Baseline } from "@/lib/types";
 
@@ -36,10 +37,14 @@ export async function POST(request: NextRequest) {
   try {
     const positions = await computeNatalPositions(env, instant);
     const astrology = buildAstrologyBaseline(positions);
+    const humanDesign = computeHumanDesign(positions);
     nasaJplData = {
       astrology,
-      humanDesign: { type: "Generator", strategy: "To Respond", authority: "Sacral", note: "Human Design requires additional computation from natal positions" },
-      geneKeys: { note: "Gene Keys requires additional computation from natal positions" },
+      humanDesign,
+      geneKeys: {
+        keys: humanDesign.geneKeys,
+        note: "Gene Keys frequencies by line: Shadow (1–2), Gift (3–4), Siddhi (5–6).",
+      },
       numerology: { lifePath: computeLifePath(dob), birthDay: parseInt(dob.split("-")[2], 10) },
       meta: { tob, pob, dob, computedAt: new Date().toISOString(), source: "NASA/JPL Horizons API", observerCenter: "Earth geocenter 500@399" },
     };

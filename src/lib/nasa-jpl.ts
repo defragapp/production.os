@@ -207,6 +207,7 @@ export function buildAstrologyBaseline(positions: Record<string, NatalPosition>)
       sign: pos.sign,
       degree: Math.round(pos.degree * 100) / 100,
       retrograde: pos.retrograde,
+      longitude: Math.round(pos.longitude * 10000) / 10000,
       theme: SIGN_THEMES[pos.sign] ?? "unknown",
     };
   }
