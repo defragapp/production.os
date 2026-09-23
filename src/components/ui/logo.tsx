@@ -20,12 +20,11 @@ export function Logo({
       aria-label="Sovereign OS home"
       className={`group inline-flex items-center gap-2.5 ${className ?? ""}`}
     >
-      <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/5 backdrop-blur-sm transition-colors duration-[240ms] group-hover:border-white/30">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.4" className="text-foreground" />
-          <circle cx="12" cy="12" r="3" fill="currentColor" className="text-foreground" />
-          <line x1="6" y1="12" x2="2" y2="12" stroke="currentColor" strokeWidth="1.4" opacity="0.5" className="text-foreground" />
-        </svg>
+      <span className="relative flex h-8 w-8 items-center justify-center rounded-[10px] border border-white/15 bg-white/5 backdrop-blur-sm transition-colors duration-[240ms] group-hover:border-white/30">
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+            <path d="M12 3 L20 18 H4 Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" className="text-foreground" />
+            <path d="M12 21 L4 6 H20 Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" className="text-foreground" />
+          </svg>
       </span>
       {showWordmark && (
         <span className="font-display text-sm uppercase tracking-[0.18em] text-foreground">

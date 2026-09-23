@@ -23,14 +23,13 @@ export default function AppleIcon() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: 30,
-            backgroundColor: "#f4f4f5",
             color: "#0d0d0d",
-            fontSize: 72,
-            fontWeight: 700,
           }}
         >
-          S
+          <svg width="100" height="100" viewBox="0 0 64 64" fill="none">
+            <path d="M32 8 L52 48 H12 Z" stroke="currentColor" strokeWidth="3.5" strokeLinejoin="round" />
+            <path d="M32 56 L12 16 H52 Z" stroke="currentColor" strokeWidth="3.5" strokeLinejoin="round" />
+          </svg>
         </div>
       </div>
     ),
