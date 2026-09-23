@@ -139,10 +139,9 @@ export default function AccountPage() {
                 {isPlus ? (
                   <>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>✓ Unlimited AI messages</li>
-                      <li>✓ Every conversation stays with you — full history and threads</li>
-                      <li>✓ The patterns and meanings you&apos;ve worked out stay part of the picture</li>
-                      <li>✓ Priority AI inference</li>
+                      <li>✓ Unlimited AI messages — no daily cap</li>
+                      <li>✓ Your full Baseline, same private engine</li>
+                      <li>✓ One long conversation, as deep as it needs to go</li>
                     </ul>
                     <Button
                       className="w-full"
@@ -157,8 +156,8 @@ export default function AccountPage() {
                   <>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       <li>5 AI messages per day</li>
-                      <li>Baseline computation</li>
-                      <li>Basic chat history</li>
+                      <li>Your full Baseline</li>
+                      <li>Your conversations stay with you</li>
                     </ul>
                     {usage && usage.limit !== null && (
                       <div className="space-y-1.5">

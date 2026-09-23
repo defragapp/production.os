@@ -286,8 +286,8 @@ export function LandingClient() {
               Free to start. Keep going when it gets deep.
             </h2>
             <p className="mb-12 text-center text-muted-foreground">
-              Every plan includes your full Baseline. Free gives you a real answer — Sovereign+
-              keeps the whole conversation working for you.
+              Every plan includes your full Baseline and saves your conversations. Free gives you
+              five good answers a day — Sovereign+ removes the cap entirely.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -299,7 +299,7 @@ export function LandingClient() {
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <li>Your full Baseline</li>
                   <li>5 AI messages a day</li>
-                  <li>Start a conversation right now</li>
+                  <li>Your conversations stay with you</li>
                 </ul>
                 <Link
                   href="/onboard?mode=signup"
@@ -321,9 +321,9 @@ export function LandingClient() {
                   <span className="font-sans text-sm text-muted-foreground">/mo · or $99/yr</span>
                 </p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <li>Unlimited AI messages</li>
-                  <li>Every conversation stays with you — full history and threads</li>
-                  <li>The patterns and meanings you&apos;ve worked out stay part of the picture</li>
+                  <li>Unlimited AI messages — no daily cap</li>
+                  <li>Your full Baseline, same private engine</li>
+                  <li>One long conversation, as deep as it needs to go</li>
                 </ul>
                 <Link
                   href="/upgrade"

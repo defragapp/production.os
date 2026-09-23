@@ -87,7 +87,7 @@ function UpgradeContent() {
             description={
               isPlus
                 ? "Manage your subscription, update your payment method, or cancel anytime."
-                : "Free gives you a real answer. Sovereign+ keeps the whole conversation working for you."
+                : "Free includes your full Baseline and five AI messages a day. Sovereign+ removes the daily cap."
             }
           />
           {isPlus ? (
@@ -98,10 +98,9 @@ function UpgradeContent() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li>✓ Unlimited AI messages</li>
-                  <li>✓ Every conversation stays with you — full history and threads</li>
-                  <li>✓ The patterns and meanings you&apos;ve worked out stay part of the picture</li>
-                  <li>✓ Priority AI inference</li>
+                  <li>✓ Unlimited AI messages — no daily cap</li>
+                  <li>✓ Your full Baseline, same private engine</li>
+                  <li>✓ One long conversation, as deep as it needs to go</li>
                 </ul>
                 <Button className="w-full" onClick={handleManageBilling} disabled={portalLoading}>
                   {portalLoading ? "Opening billing..." : "Manage subscription (cancel in two clicks)"}
@@ -112,11 +111,11 @@ function UpgradeContent() {
           ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="flex flex-col">
-              <CardHeader><CardTitle className="text-base">Free</CardTitle><CardDescription>For trying out Sovereign OS</CardDescription></CardHeader>
+              <CardHeader><CardTitle className="text-base">Free</CardTitle><CardDescription>Five good answers a day</CardDescription></CardHeader>
               <CardContent className="flex flex-1 flex-col">
                 <p className="mb-4 font-display text-3xl font-normal">$0</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <li>5 AI messages per day</li><li>Baseline computation</li><li>Basic chat history</li>
+                  <li>5 AI messages per day</li><li>Your full Baseline</li><li>Your conversations stay with you</li>
                 </ul>
                 <Button variant="outline" className="mt-6 w-full" onClick={() => router.push("/chat")}>
                   Continue with Free
@@ -124,12 +123,12 @@ function UpgradeContent() {
               </CardContent>
             </Card>
             <Card className="border border-foreground/25">
-              <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>For deep pattern work</CardDescription></CardHeader>
+              <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>No daily cap — go as deep as you want</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
                 <p className="mb-4 inline-flex w-fit items-center rounded-md border border-foreground/20 bg-foreground/[0.06] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground">Save 59% · Best value</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <li>Unlimited AI messages</li><li>Every conversation stays with you — full history and threads</li><li>The patterns and meanings you&apos;ve worked out stay part of the picture</li><li>Priority AI inference</li>
+                  <li>Unlimited AI messages — no daily cap</li><li>Your full Baseline, same private engine</li><li>One long conversation, as deep as it needs to go</li>
                 </ul>
                 <div className="mt-6 space-y-2">
                   <Button className="w-full" onClick={() => handleUpgrade("annual")} disabled={loading !== null}>
