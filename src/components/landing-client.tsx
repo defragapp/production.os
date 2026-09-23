@@ -73,34 +73,45 @@ const HOW_IT_WORKS = [
 const EXPLORE = [
   {
     title: "Yourself",
-    desc: "Why you keep doing the same thing, and how your qualities change under pressure.",
+    desc: "Understand the patterns you repeat — and why your own qualities turn on you under pressure.",
+    example: "Why do I freeze the moment I get put on the spot?",
   },
   {
     title: "A relationship",
-    desc: "What's actually happening between two people, beyond each person's story about it.",
+    desc: "See what's actually happening between two people, beyond each person's version of it.",
+    example: "Why do we have the same fight every time money comes up?",
   },
   {
     title: "Your family",
-    desc: "The roles and loops everyone is playing out — even when nobody named them.",
+    desc: "See the roles, loyalties, and silent rules everyone is playing out — even when no one named them.",
+    example: "Why does my family go quiet the instant someone gets angry?",
   },
 ];
 
+const DEMO_ANSWER = [
+  "You've named the pattern precisely: closeness gets real, and you pull back before it can be depended on. That timing repeats because the retreat is doing a job — it keeps you safe from being relied on.",
+  "The cost is real. Pulling away tells the other person, gently and over time, that they aren't allowed in far enough to matter. They stop reaching; you read that as proof you were right to pull back. The distance starts to look necessary.",
+  "Your Baseline carries a Moon in Cancer — deep tenderness, and a reflex to guard what it loves. That's a tendency you carry, not a verdict on you. It means your protection comes from the same place your warmth does.",
+  "The honest question to sit with: what would change if you let one person see the full weight of what you feel?",
+];
+
 /**
- * The product, drawn in CSS: a conversation pulled from the real chat
- * experience. The answer uses the same structure Sovereign actually produces —
- * what you said, a possibility worth examining, what your Baseline suggests,
- * and a question left for you to answer.
+ * The product, drawn in CSS: a faithful sketch of the real chat experience —
+ * the same bubbles, Baseline chips, thread strip, and usage meter the app
+ * renders, with an answer in the authentic voice Sovereign actually produces:
+ * observe the pattern, name its cost, read the Baseline as a tendency, then
+ * leave one honest question open.
  */
 function ProductDemo() {
   return (
     <div className="relative mx-auto w-full max-w-md">
       <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-5 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-4 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Logo showWordmark={false} href="#" />
             <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Your Baseline
+              Sovereign OS
             </span>
           </div>
           <span className="rounded-md border border-foreground/25 bg-foreground/[0.06] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">
@@ -108,70 +119,60 @@ function ProductDemo() {
           </span>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-1.5">
-          {BASELINE_CHIPS.map((c) => (
-            <span
-              key={c}
-              className="rounded-md border border-border bg-background/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
-            >
-              {c}
-            </span>
-          ))}
+        <div className="mb-4 flex items-end gap-2">
+          <span className="mb-[1px] flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            New thread
+          </span>
+          <span className="shrink-0 whitespace-nowrap border-b-2 border-foreground px-2 py-1.5 text-xs text-foreground">
+            Pulling away when it gets real
+          </span>
         </div>
 
         <div className="mb-3 flex justify-end">
-          <div className="max-w-[85%] rounded-lg rounded-br-sm bg-primary px-3.5 py-2 text-[13px] leading-relaxed text-primary-foreground">
-            My mom always takes over, and then I go quiet. Why do I keep shutting down?
+          <div className="max-w-[88%] rounded-2xl bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground">
+            Why do I keep pulling away once a relationship gets serious?
           </div>
         </div>
 
-        <div className="mb-4 flex justify-start">
-          <div className="max-w-[96%] rounded-lg rounded-bl-sm bg-muted px-3.5 py-3">
-            <div className="space-y-2.5 text-[12px] leading-relaxed text-muted-foreground">
-              <p>
-                <span className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground/70">
-                  Said
-                </span>
-                This shows up in your family: she takes over, and you go quiet.
+        <div className="flex justify-start">
+          <div className="max-w-[96%] rounded-2xl bg-muted px-4 py-3 text-left sm:max-w-[92%]">
+            <div className="space-y-3 text-[15px] leading-relaxed text-foreground">
+              {DEMO_ANSWER.map((p) => (
+                <p key={p}>{p}</p>
+              ))}
+            </div>
+            <div className="mt-3 rounded-lg border border-border/60 bg-background/40 p-3">
+              <p className="mb-2 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Your Baseline
               </p>
-              <p>
-                <span className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground/70">
-                  Possibly
-                </span>
-                Going quiet may be how you stay safe in the conversation — not agreement, but
-                withdrawing so there&apos;s nothing to push against.
-              </p>
-              <p>
-                <span className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground/70">
-                  From your Baseline
-                </span>
-                Your moon in Cancer is quietly tender under pressure and can tip into retreat. A
-                tendency — not a verdict.
-              </p>
-              <p>
-                <span className="mr-2 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground/70">
-                  You decide
-                </span>
-                What would change if going quiet meant choosing — not conceding?
-              </p>
+              <div className="flex flex-wrap gap-2">
+                {BASELINE_CHIPS.map((c) => (
+                  <span
+                    key={c}
+                    className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1"
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{c}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
+        <div className="mb-1 mt-4 flex items-center justify-end gap-2.5">
+          <span className="text-xs text-muted-foreground/70">1 of 5 free messages used today</span>
+          <div className="h-[3px] w-24 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-foreground/50" style={{ width: "20%" }} />
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
-          <span className="flex-1 text-[12px] text-muted-foreground">
-            Ask about yourself, a relationship, or your family…
-          </span>
-          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-foreground/10 text-foreground">
-            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
-              <path
-                d="M12 19V5M5 12l7-7 7 7"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+          <span className="flex-1 text-[12px] text-muted-foreground">Type your message...</span>
+          <span className="flex h-7 items-center justify-center rounded-md bg-foreground px-3 font-mono text-[11px] uppercase tracking-[0.1em] text-background">
+            Send
           </span>
         </div>
       </div>
@@ -258,15 +259,19 @@ export function LandingClient() {
               <h2 className="font-display text-3xl font-normal text-foreground md:text-4xl">
                 Ask about any part of your life.
               </h2>
+              <p className="mt-3 text-muted-foreground">The questions people actually bring look like this.</p>
             </Reveal>
             <div className="grid gap-4 md:grid-cols-3">
               {EXPLORE.map((item, i) => (
                 <Reveal key={item.title} delay={i * 60}>
-                  <div className="h-full border-t border-foreground/20 pt-5">
+                  <div className="flex h-full flex-col border-t border-foreground/20 pt-5">
                     <h3 className="mb-2 font-display text-2xl font-normal text-foreground">
                       {item.title}
                     </h3>
                     <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+                    <p className="mt-4 rounded-lg border border-border bg-background/40 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-muted-foreground">
+                      “{item.example}”
+                    </p>
                   </div>
                 </Reveal>
               ))}
@@ -278,10 +283,11 @@ export function LandingClient() {
         <section className="border-t border-white/10 px-6 py-20 md:py-28">
           <Reveal className="mx-auto max-w-4xl">
             <h2 className="mb-3 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
-              Free to start. Upgrade when it gets deep.
+              Free to start. Keep going when it gets deep.
             </h2>
             <p className="mb-12 text-center text-muted-foreground">
-              Every plan includes your full Baseline. Sovereign+ removes the limits.
+              Every plan includes your full Baseline. Free gives you a real answer — Sovereign+
+              keeps the whole conversation working for you.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -316,8 +322,8 @@ export function LandingClient() {
                 </p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <li>Unlimited AI messages</li>
-                  <li>Full chat history &amp; threads</li>
-                  <li>Advanced pattern analysis</li>
+                  <li>Every conversation stays with you — full history and threads</li>
+                  <li>The patterns and meanings you&apos;ve worked out stay part of the picture</li>
                 </ul>
                 <Link
                   href="/upgrade"

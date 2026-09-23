@@ -140,8 +140,8 @@ export default function AccountPage() {
                   <>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       <li>✓ Unlimited AI messages</li>
-                      <li>✓ Full chat history & threads</li>
-                      <li>✓ Advanced pattern analysis</li>
+                      <li>✓ Every conversation stays with you — full history and threads</li>
+                      <li>✓ The patterns and meanings you&apos;ve worked out stay part of the picture</li>
                       <li>✓ Priority AI inference</li>
                     </ul>
                     <Button

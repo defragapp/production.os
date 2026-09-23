@@ -87,7 +87,7 @@ function UpgradeContent() {
             description={
               isPlus
                 ? "Manage your subscription, update your payment method, or cancel anytime."
-                : "Start free, then unlock unlimited AI conversations, full chat history, and advanced pattern analysis with Sovereign+."
+                : "Free gives you a real answer. Sovereign+ keeps the whole conversation working for you."
             }
           />
           {isPlus ? (
@@ -99,8 +99,8 @@ function UpgradeContent() {
               <CardContent className="space-y-3">
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>✓ Unlimited AI messages</li>
-                  <li>✓ Full chat history &amp; threads</li>
-                  <li>✓ Advanced pattern analysis</li>
+                  <li>✓ Every conversation stays with you — full history and threads</li>
+                  <li>✓ The patterns and meanings you&apos;ve worked out stay part of the picture</li>
                   <li>✓ Priority AI inference</li>
                 </ul>
                 <Button className="w-full" onClick={handleManageBilling} disabled={portalLoading}>
@@ -129,7 +129,7 @@ function UpgradeContent() {
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
                 <p className="mb-4 inline-flex w-fit items-center rounded-md border border-foreground/20 bg-foreground/[0.06] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground">Save 59% · Best value</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <li>Unlimited AI messages</li><li>Full chat history &amp; threads</li><li>Advanced pattern analysis</li><li>Priority AI inference</li>
+                  <li>Unlimited AI messages</li><li>Every conversation stays with you — full history and threads</li><li>The patterns and meanings you&apos;ve worked out stay part of the picture</li><li>Priority AI inference</li>
                 </ul>
                 <div className="mt-6 space-y-2">
                   <Button className="w-full" onClick={() => handleUpgrade("annual")} disabled={loading !== null}>
