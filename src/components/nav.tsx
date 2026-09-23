@@ -71,9 +71,10 @@ export function Nav() {
               <Link href="/onboard?mode=login" className={linkClass("/onboard")}>
                 Sign In
               </Link>
-<Link
+              <Link href="/faq" className={linkClass("/faq")}>FAQ</Link>
+              <Link
                 href="/onboard?mode=signup"
-                className="btn-glass mt-1 rounded-md px-3 py-3 text-center text-sm font-medium"
+                className="btn-glass mt-1 rounded-md px-4 py-1.5 text-sm font-medium"
               >
                 Get Started
               </Link>
@@ -160,9 +161,16 @@ export function Nav() {
                 Sign In
               </Link>
               <Link
+                href="/faq"
+                onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+              >
+                FAQ
+              </Link>
+              <Link
                 href="/onboard?mode=signup"
                 onClick={() => setOpen(false)}
-                className="mt-1 rounded-md bg-white/10 px-3 py-3 text-center text-sm font-medium text-foreground hover:bg-white/20"
+                className="btn-glass mt-1 rounded-md px-3 py-3 text-center text-sm font-medium"
               >
                 Get Started
               </Link>

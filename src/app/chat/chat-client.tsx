@@ -407,7 +407,7 @@ export function ChatClient() {
                   Ask anything.
                 </p>
                 <p className="mt-2 text-muted-foreground">
-                  Start a conversation to synthesize your emotional expression.
+                  About yourself, a relationship, or your family.
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground/60">
                   Your baseline is loaded — the AI will reference it as you chat.
