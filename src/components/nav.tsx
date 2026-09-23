@@ -11,7 +11,7 @@ const navLink =
 const navLinkActive = "text-foreground";
 
 const PLUS_BADGE =
-  "ml-1 inline-flex items-center gap-1 rounded-full border border-foreground/25 bg-foreground/[0.06] px-2.5 py-0.5 text-xs font-medium text-foreground";
+  "ml-1 inline-flex items-center rounded-md border border-foreground/25 bg-foreground/[0.06] px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground";
 
 export function Nav() {
   const router = useRouter();
@@ -71,9 +71,9 @@ export function Nav() {
               <Link href="/onboard?mode=login" className={linkClass("/onboard")}>
                 Sign In
               </Link>
-              <Link
+<Link
                 href="/onboard?mode=signup"
-                className="ml-1 rounded-md bg-white/10 px-4 py-1.5 text-sm font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-sm transition-all duration-[240ms] ease-spring hover:-translate-y-[2px] hover:bg-white/20"
+                className="btn-glass mt-1 rounded-md px-3 py-3 text-center text-sm font-medium"
               >
                 Get Started
               </Link>

@@ -359,19 +359,19 @@ export function ChatClient() {
       )}
 
       {threads.length > 0 || threadId ? (
-        <div className="border-b bg-background px-4 py-2">
-          <div className="mx-auto flex max-w-3xl items-center gap-2">
+        <div className="border-b border-border bg-background px-4 pt-3">
+          <div className="mx-auto flex max-w-3xl items-end gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={startNewThread}
               disabled={isStreaming}
-              className="shrink-0"
+              className="mb-[1px] shrink-0"
             >
               <Plus className="h-4 w-4" />
               New thread
             </Button>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <div className="flex items-end gap-1 overflow-x-auto">
               {threads.map((t) => {
                 const active = t.id === threadId;
                 return (
@@ -380,10 +380,10 @@ export function ChatClient() {
                     type="button"
                     onClick={() => openThread(t.id)}
                     disabled={isStreaming}
-                    className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors ${
+                    className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs transition-colors duration-[240ms] ${
                       active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted"
+                        ? "border-foreground text-foreground"
+                        : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
                     }`}
                   >
                     {t.label || formatThreadDate(t.updated_at)}

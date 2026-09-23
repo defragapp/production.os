@@ -127,7 +127,7 @@ function UpgradeContent() {
               <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>For deep pattern work</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
-                <p className="mb-4 inline-flex w-fit items-center rounded-full border border-foreground/20 bg-foreground/[0.06] px-3 py-1 text-xs font-medium text-foreground">Save 59% — best value</p>
+                <p className="mb-4 inline-flex w-fit items-center rounded-md border border-foreground/20 bg-foreground/[0.06] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground">Save 59% · Best value</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <li>Unlimited AI messages</li><li>Full chat history &amp; threads</li><li>Advanced pattern analysis</li><li>Priority AI inference</li>
                 </ul>

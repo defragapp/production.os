@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Nav } from "@/components/nav";
+import { Logo } from "@/components/ui/logo";
 
 /**
  * Scroll reveal that can NEVER blank the page:
@@ -56,38 +57,9 @@ function Reveal({
   );
 }
 
-function BgBackdrop() {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const onScroll = () => {
-      el.style.transform = `translate3d(0, ${window.scrollY * 0.15}px, 0)`;
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className="pointer-events-none fixed inset-0 z-0 opacity-40 mix-blend-screen"
-      style={{
-        background: "radial-gradient(ellipse at 50% 0%, rgba(20,20,26,1) 0%, rgba(5,5,7,1) 70%)",
-      }}
-    />
-  );
-}
-
-// Buttons and overlines share the app's semantic tokens (primary = white,
-// primary-foreground = near-black) so the landing matches the rest of Sovereign.
-const BTN_PRIMARY =
-  "bg-primary text-primary-foreground rounded-full px-8 py-3.5 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_24px_rgba(255,255,255,0.08)] hover:-translate-y-[2px] hover:bg-neutral-100 transition-all duration-[240ms] ease-spring";
-const BTN_GHOST =
-  "bg-white/[0.06] border border-white/[0.08] border-t-white/[0.15] text-foreground rounded-full px-8 py-3.5 font-medium backdrop-blur-md hover:bg-white/[0.12] transition-all duration-[240ms] ease-spring";
-
+// Overline and elevated CTAs share the app's semantic tokens. The single
+// primary action per screen uses the liquid-cream aurora; secondary actions
+// use frosted glass. Both are sharp-radius, never pills.
 const OVERLINE =
   "mb-5 block font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground";
 
@@ -123,29 +95,9 @@ function RotatingQuestions() {
   );
 }
 
-const BASELINE_EXAMPLES = [
-  {
-    range: "Nov 2026 – Feb 2027",
-    title: "A season of relational friction",
-    blurb:
-      "You may find yourself re-evaluating who you trust. Old patterns around responsibility could surface — not as problems to fix, but as signals worth noticing.",
-    tone: "challenging" as const,
-  },
-  {
-    range: "Dec 2026 – Jan 2027",
-    title: "Boundaries that hold",
-    blurb:
-      "Setting one clear limit might create unexpected space — for you, and for the people around you. The friction is the signal.",
-    tone: "challenging" as const,
-  },
-  {
-    range: "Jan 2027 – Apr 2027",
-    title: "Depth through a quiet season",
-    blurb:
-      "With fewer external demands, you may find more room to notice what you actually want — not what you've been trained to want.",
-    tone: "supportive" as const,
-  },
-];
+const BASELINE_CONTEXT = ["Sun · Virgo", "Moon · Cancer", "Rising · Capricorn", "Life Path · 7"];
+
+const TRUST_NOTES = ["Private by design", "NASA/JPL baseline", "Stripe-secured"];
 
 const LENSES = [
   { title: "Your own experience", desc: "What you actually notice and feel." },
@@ -185,83 +137,179 @@ const HOW_IT_WORKS = [
   },
 ];
 
+/**
+ * The product, drawn in CSS: a live chat-thread preview with baseline context.
+ * This is the single intentional "surface" on the landing — everything else
+ * is editorial, so the hero reads as a working tool, not a mock-up.
+ */
+function HeroMock() {
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
+      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-5 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Logo showWordmark={false} href="#" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              Baseline loaded
+            </span>
+          </div>
+          <span className="rounded-md border border-foreground/25 bg-foreground/[0.06] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">
+            Free · 0 of 5
+          </span>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {BASELINE_CONTEXT.map((c) => (
+            <span
+              key={c}
+              className="rounded-md border border-border bg-background/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+
+        <div className="mb-3 flex justify-end">
+          <div className="max-w-[85%] rounded-lg rounded-br-sm bg-primary px-3.5 py-2 text-[13px] leading-relaxed text-primary-foreground">
+            Why does setting one boundary create so much conflict?
+          </div>
+        </div>
+
+        <div className="mb-4 flex justify-start">
+          <div className="max-w-[92%] rounded-lg rounded-bl-sm bg-muted px-3.5 py-2.5">
+            <p className="font-display text-[15px] leading-snug text-foreground">
+              The friction is the signal.
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+              A limit you set for the first time isn&apos;t just a new rule — it&apos;s a new role. The
+              conflict is the system responding to the change.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+<span className="flex-1 text-[12px] text-muted-foreground">
+            Ask what&apos;s really happening…
+          </span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-foreground/10 text-foreground">
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
+              <path
+                d="M12 19V5M5 12l7-7 7 7"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LandingClient() {
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
-      <BgBackdrop />
       <Nav />
 
       <main className="relative z-10">
         {/* ── Section 1 · Hero ─────────────────────────────── */}
-        <section className="flex min-h-screen flex-col items-center justify-center px-6 pt-20 text-center">
-          <div className="max-w-4xl space-y-8">
+        <section className="relative overflow-hidden px-6 pb-24 pt-16 md:pb-32 md:pt-24">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[42rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,250,240,0.06),transparent_62%)]"
+            aria-hidden="true"
+          />
+          <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <Reveal>
-              <h1 className="font-display text-5xl font-normal leading-tight tracking-tight text-foreground md:text-7xl">
-                Understand yourself.
-                <br />
-                <span className="text-muted-foreground">Understand your relationships.</span>
-                <br />
-                See what is really happening.
-              </h1>
-            </Reveal>
-            <Reveal delay={60}>
-              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-                Sovereign helps you make sense of the patterns in your life — starting with you,
-                then looking at what happens between you and other people.
-              </p>
-            </Reveal>
-            <Reveal delay={90}>
-              <div className="mx-auto mt-6 flex min-h-[3rem] items-center justify-center px-4">
-                <RotatingQuestions />
+              <div className="text-left">
+                <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                  Sovereign OS
+                </p>
+                <h1 className="font-display text-5xl font-normal leading-[1.05] tracking-tight text-foreground md:text-6xl xl:text-7xl">
+                  Understand yourself.
+                  <br />
+                  <span className="text-muted-foreground">Understand your relationships.</span>
+                  <br />
+                  See what is really happening.
+                </h1>
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground md:text-xl">
+                  Sovereign helps you make sense of the patterns in your life — starting with you,
+                  then looking at what happens between you and other people.
+                </p>
+
+                <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Link href="/onboard?mode=signup" className="btn-aurora px-7 py-3 text-sm font-medium">
+                    Get Started
+                  </Link>
+                  <Link href="/onboard?mode=login" className="btn-glass px-7 py-3 text-sm font-medium text-foreground">
+                    Sign In
+                  </Link>
+                </div>
+
+                <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">
+                  {TRUST_NOTES.map((note, i) => (
+                    <li key={note} className="flex items-center gap-5">
+                      {i > 0 && <span className="h-px w-3 bg-border" aria-hidden="true" />}
+                      {note}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-10 flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground/70">
+                    Try asking
+                  </span>
+                  <RotatingQuestions />
+                </div>
               </div>
             </Reveal>
-            <Reveal delay={120}>
-              <div className="flex flex-col items-center gap-3 pt-8">
-                <Link href="/onboard?mode=signup" className={`${BTN_PRIMARY} px-6 py-2.5`}>
-                  Get Started
-                </Link>
-                <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                  Free to start.
-                </span>
-              </div>
+
+            <Reveal delay={120} from="left" className="w-full justify-self-center lg:justify-self-end">
+              <HeroMock />
             </Reveal>
           </div>
         </section>
 
         {/* ── Section 2 · The Experience ───────────────────── */}
-        <section className="border-t border-white/10 px-6 py-32">
+        <section className="border-t border-white/10 px-6 py-24 md:py-36">
           <div className="mx-auto max-w-4xl">
             <Reveal className="mb-16">
               <span className={OVERLINE}>01 · The Experience</span>
-              <h2 className="mb-4 font-display text-3xl font-normal text-foreground">Start with what&apos;s happening.</h2>
+              <h2 className="mb-4 font-display text-3xl font-normal text-foreground">
+                Start with what&apos;s happening.
+              </h2>
               <p className="text-lg text-muted-foreground">
                 You don&apos;t need the right words. Just tell Sovereign what&apos;s going on.
               </p>
             </Reveal>
 
-            <div className="mb-16 space-y-4">
+            <div className="border-t border-white/10">
               {QUESTIONS.map((quote, i) => (
-                <Reveal key={quote} delay={i * 70}>
-                  <div className="rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
-                    <p className="text-lg font-medium leading-snug text-foreground">“{quote}”</p>
-                  </div>
+                <Reveal key={quote} delay={i * 90}>
+                  <blockquote className="border-b border-white/10 py-9">
+                    <p className="font-display text-2xl leading-snug tracking-tight text-foreground md:text-3xl">
+                      “{quote}”
+                    </p>
+                  </blockquote>
                 </Reveal>
               ))}
             </div>
 
-            <Reveal>
+            <Reveal className="mt-16">
               <p className="max-w-2xl text-xl leading-relaxed text-muted-foreground md:text-2xl">
                 Sovereign helps you separate{" "}
                 <strong className="font-medium text-foreground">what happened</strong> from{" "}
-                <strong className="font-medium text-foreground">what you think it means.</strong> Then it
-                helps you look for the pattern.
+                <strong className="font-medium text-foreground">what you think it means.</strong>{" "}
+                Then it helps you look for the pattern.
               </p>
             </Reveal>
           </div>
         </section>
 
         {/* ── Section 3 · The Translation ──────────────────── */}
-        <section className="border-t border-white/10 bg-muted/30 px-6 py-32">
+        <section className="border-t border-white/10 bg-muted/30 px-6 py-24 md:py-36">
           <div className="mx-auto max-w-6xl">
             <Reveal className="mb-16 max-w-2xl">
               <span className={OVERLINE}>02 · The Translation</span>
@@ -274,16 +322,14 @@ export function LandingClient() {
               </p>
             </Reveal>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="divide-y divide-white/10 border-y border-white/10">
               {LENSES.map((lens, i) => (
-                <Reveal
-                  key={lens.title}
-                  delay={i * 60}
-                  className={i === 0 ? "lg:col-span-2" : undefined}
-                >
-                  <div className="h-full rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
-                    <h3 className="mb-2 font-medium text-foreground">{lens.title}</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{lens.desc}</p>
+                <Reveal key={lens.title} delay={i * 60} from="left">
+                  <div className="grid gap-1 py-5 sm:grid-cols-[240px_1fr] sm:items-baseline sm:gap-10">
+                    <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                      {`0${i + 1} · ${lens.title}`}
+                    </p>
+                    <p className="text-muted-foreground">{lens.desc}</p>
                   </div>
                 </Reveal>
               ))}
@@ -293,15 +339,16 @@ export function LandingClient() {
               <Reveal>
                 <span className={OVERLINE}>The Process</span>
               </Reveal>
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
                 {PROCESS.map((item, i) => (
-                  <Reveal key={item.step} delay={i * 60} className="relative group">
-                    <div className="absolute -left-4 top-0 hidden h-full w-px bg-white/10 transition-colors duration-[240ms] group-hover:bg-white/30 sm:block" />
-                    <span className="mb-3 block font-mono text-xs tracking-widest text-muted-foreground">
-                      {item.step}
-                    </span>
-                    <h3 className="mb-2 text-lg font-medium text-foreground">{item.title}</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+                  <Reveal key={item.step} delay={i * 60}>
+                    <div className="border-t border-foreground/20 pt-6 transition-colors duration-[240ms] group-hover:border-foreground/40">
+                      <span className="mb-2 block font-mono text-xs tracking-[0.16em] text-muted-foreground">
+                        {item.step}
+                      </span>
+                      <h3 className="mb-2 text-lg font-medium text-foreground">{item.title}</h3>
+                      <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+                    </div>
                   </Reveal>
                 ))}
               </div>
@@ -310,11 +357,11 @@ export function LandingClient() {
         </section>
 
         {/* ── Section 4 · The Baseline (engine reveal) ─────── */}
-        <section className="relative overflow-hidden border-y border-white/10 px-6 py-40">
+        <section className="relative overflow-hidden border-y border-white/10 px-6 py-32 md:py-40">
           <div className="absolute inset-0 z-0 bg-black/40" />
           <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)]" />
 
-          <div className="relative z-10 mx-auto max-w-4xl space-y-12 text-center">
+          <div className="relative z-10 mx-auto max-w-4xl space-y-14 text-center">
             <Reveal>
               <span className={OVERLINE}>03 · The Baseline</span>
               <h2 className="mb-4 font-display text-5xl font-normal text-foreground">Your Baseline</h2>
@@ -328,46 +375,26 @@ export function LandingClient() {
               </p>
             </Reveal>
 
-            <Reveal delay={80}>
-              <div className="mt-20 grid gap-5 text-left sm:grid-cols-3">
-                {HOW_IT_WORKS.map((item, i) => (
-                  <div
-                    key={item.title}
-                    className="group rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-[240ms] ease-spring hover:-translate-y-1 hover:border-white/20"
-                  >
-                    <span className="mb-4 block font-mono text-xs tracking-widest text-muted-foreground">
+            <div className="mx-auto max-w-2xl space-y-12 text-left">
+              {HOW_IT_WORKS.map((item, i) => (
+                <Reveal key={item.title} delay={i * 70}>
+                  <div className="relative pl-12">
+                    <span className="absolute left-0 top-0 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-white/5 font-mono text-[11px] tracking-widest text-muted-foreground">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <h3 className="mb-2 text-base font-medium text-foreground">{item.title}</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+                    <h3 className="text-base font-medium text-foreground">{item.title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
                   </div>
-                ))}
-              </div>
-            </Reveal>
+                </Reveal>
+              ))}
+            </div>
 
-            <Reveal delay={90}>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {BASELINE_EXAMPLES.map((ex) => (
-                  <div
-                    key={ex.range}
-                    className="rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md"
-                  >
-                    <span className="mb-2 block font-mono text-xs tracking-widest text-muted-foreground">
-                      {ex.range}
-                    </span>
-                    <h3 className="mb-1 text-sm font-medium text-foreground">{ex.title}</h3>
-                    <p className="text-xs leading-relaxed text-muted-foreground">{ex.blurb}</p>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-
-            <Reveal delay={120}>
+            <Reveal delay={80}>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Link href="/onboard?mode=signup" className={`${BTN_PRIMARY} w-full sm:w-auto`}>
+                <Link href="/onboard?mode=signup" className="btn-aurora w-full px-7 py-3 text-sm font-medium sm:w-auto">
                   Create Your Baseline
                 </Link>
-                <Link href="/onboard?mode=login" className={`${BTN_GHOST} w-full sm:w-auto`}>
+                <Link href="/onboard?mode=login" className="btn-glass w-full px-7 py-3 text-sm font-medium text-foreground sm:w-auto">
                   Sign In
                 </Link>
               </div>
@@ -376,32 +403,34 @@ export function LandingClient() {
         </section>
 
         {/* ── Section 5 · The Systems ──────────────────────── */}
-        <section className="border-t border-white/10 px-6 py-32">
-          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-2">
-            <Reveal className="flex flex-col justify-center">
+        <section className="border-t border-white/10 px-6 py-24 md:py-36">
+          <div className="mx-auto max-w-4xl">
+            <Reveal className="mb-20">
               <span className={OVERLINE}>04 · The Systems</span>
               <h2 className="mb-6 font-display text-4xl font-normal leading-tight text-foreground">
                 You are embedded in systems.
               </h2>
-              <p className="mb-6 text-lg leading-relaxed text-muted-foreground">
+              <p className="mb-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
                 Families, teams, and groups develop patterns of their own. These patterns form
                 around{" "}
                 <strong className="font-medium text-foreground">roles</strong>,{" "}
                 <strong className="font-medium text-foreground">expectations</strong>,{" "}
                 <strong className="font-medium text-foreground">responsibility</strong>, and{" "}
-                <strong className="font-medium text-foreground">feedback loops</strong> — and when one
-                person changes, the whole system responds.
+                <strong className="font-medium text-foreground">feedback loops</strong> — and when
+                one person changes, the whole system responds.
               </p>
-              <p className="text-lg leading-relaxed text-muted-foreground">
+              <p className="max-w-3xl text-lg leading-relaxed text-muted-foreground">
                 The goal isn&apos;t to find someone to blame. It&apos;s to understand the system you
                 are participating in.
               </p>
             </Reveal>
 
-            <Reveal delay={80} className="flex flex-col justify-center">
-              <div className="rounded-2xl border border-white/10 border-t-white/15 bg-white/[0.03] p-10 backdrop-blur-md">
-                <p className="mb-4 font-display text-3xl font-normal text-foreground">You remain the authority.</p>
-                <p className="text-xl leading-relaxed text-muted-foreground">
+            <Reveal delay={80}>
+              <div className="border-t border-white/10 pt-10">
+                <p className="font-display text-3xl leading-tight tracking-tight text-foreground md:text-4xl">
+                  You remain the authority.
+                </p>
+                <p className="mt-5 text-xl leading-relaxed text-muted-foreground">
                   Sovereign does not diagnose you. It helps distinguish{" "}
                   <strong className="font-medium text-foreground">what we know</strong>,{" "}
                   <strong className="font-medium text-foreground">what we think</strong>, and{" "}
@@ -418,8 +447,8 @@ export function LandingClient() {
             <h2 className="mb-10 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
               Questions, answered.
             </h2>
-            <div className="space-y-3">
-              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+            <div className="border-t border-white/10">
+              <details className="group border-b border-white/10 py-6">
                 <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
                   Is this therapy or medical advice?
                   <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
@@ -430,7 +459,7 @@ export function LandingClient() {
                   advice. If you are struggling, please reach out to a qualified professional.
                 </p>
               </details>
-              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+              <details className="group border-b border-white/10 py-6">
                 <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
                   What do you do with my birth data?
                   <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
@@ -441,7 +470,7 @@ export function LandingClient() {
                   delete your entire account — data included — in one click from your Account page.
                 </p>
               </details>
-              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+              <details className="group border-b border-white/10 py-6">
                 <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
                   What&apos;s the difference between Free and Sovereign+?
                   <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
@@ -452,7 +481,7 @@ export function LandingClient() {
                   analysis — monthly at $20, or annually at $99 (save 59%).
                 </p>
               </details>
-              <details className="group rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur-md">
+              <details className="group border-b border-white/10 py-6">
                 <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
                   Can I cancel anytime?
                   <span className="ml-4 text-muted-foreground transition-transform duration-200 group-open:rotate-45">+</span>
@@ -477,10 +506,10 @@ export function LandingClient() {
             </p>
 
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/onboard?mode=signup" className={`${BTN_PRIMARY} w-full sm:w-auto`}>
+              <Link href="/onboard?mode=signup" className="btn-aurora w-full px-7 py-3 text-sm font-medium sm:w-auto">
                 Create Your Baseline
               </Link>
-              <Link href="/onboard?mode=login" className={`${BTN_GHOST} w-full sm:w-auto`}>
+              <Link href="/onboard?mode=login" className="btn-glass w-full px-7 py-3 text-sm font-medium text-foreground sm:w-auto">
                 Sign In
               </Link>
             </div>

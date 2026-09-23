@@ -37,10 +37,10 @@ export function BaselineSummary({ data }: { data: BaselineData }) {
           {chips.map((c) => (
             <span
               key={c.label}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs"
+              className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1"
             >
-              <span className="text-muted-foreground">{c.label}</span>
-              <span className="font-medium text-foreground">{c.value}</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{c.label}</span>
+              <span className="text-xs font-medium text-foreground">{c.value}</span>
             </span>
           ))}
         </div>

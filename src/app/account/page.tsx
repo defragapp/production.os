@@ -16,10 +16,16 @@ interface UserData {
   email_verified?: number;
 }
 
+interface UsageData {
+  used: number;
+  limit: number | null;
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const [verifyStatus, setVerifyStatus] = useState<string | null>(null);
   const [user, setUser] = useState<UserData | null>(null);
+  const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [resent, setResent] = useState<string | null>(null);
@@ -31,12 +37,13 @@ export default function AccountPage() {
     fetch("/api/auth")
       .then((r) => r.json())
       .then((d) => {
-        const data = d as { user?: UserData };
+        const data = d as { user?: UserData; usage?: UsageData };
         if (!data.user) {
           router.push("/onboard");
           return;
         }
         setUser(data.user);
+        setUsage(data.usage ?? null);
       })
       .catch(() => router.push("/onboard"))
       .finally(() => setLoading(false));
@@ -125,7 +132,7 @@ export default function AccountPage() {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Plan</span>
-                  <span className={`rounded-full px-3 py-1 text-sm font-medium ${isPlus ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                  <span className={`rounded-md px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.14em] ${isPlus ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-muted-foreground"}`}>
                     {isPlus ? "Sovereign+" : "Free"}
                   </span>
                 </div>
@@ -153,6 +160,22 @@ export default function AccountPage() {
                       <li>Baseline computation</li>
                       <li>Basic chat history</li>
                     </ul>
+                    {usage && usage.limit !== null && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Messages used today</span>
+                          <span className="font-mono">
+                            {Math.min(usage.used, usage.limit)} / {usage.limit}
+                          </span>
+                        </div>
+                        <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-foreground/60"
+                            style={{ width: `${Math.min((usage.used / usage.limit) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     <Button className="w-full" onClick={() => router.push("/upgrade")}>
                       Upgrade to Sovereign+
                     </Button>
@@ -207,6 +230,7 @@ export default function AccountPage() {
               </CardContent>
             </Card>
             <div className="flex flex-col gap-2">
+              <Button variant="outline" className="w-full" onClick={() => router.push("/baseline")}>View Baseline</Button>
               <Button variant="outline" className="w-full" onClick={() => router.push("/chat")}>Back to Chat</Button>
               <Button variant="outline" className="w-full" onClick={() => router.push("/")}>Home</Button>
               <Button variant="ghost" className="w-full text-destructive" onClick={handleSignOut}>Sign Out</Button>

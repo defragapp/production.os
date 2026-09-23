@@ -75,6 +75,114 @@
   }
 }
 
+/* Elevated CTAs — a liquid-cream "aurora" reserved for the single primary
+   action on a screen, and frosted glass for secondary actions. Kept strictly
+   inside the cream/graphite scale; every animation bends to reduced motion. */
+@layer components {
+  .btn-glass {
+    position: relative;
+    border-radius: 0.5rem;
+    color: hsl(38 18% 95%);
+    background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.09), hsla(38, 18%, 95%, 0.03));
+    box-shadow:
+      inset 0 0 0 1px hsla(38, 18%, 95%, 0.14),
+      inset 0 1px 0 hsla(38, 18%, 95%, 0.18);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition:
+      background-color 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
+      transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  .btn-glass:hover {
+    background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.15), hsla(38, 18%, 95%, 0.06));
+    transform: translateY(-2px);
+  }
+
+  .btn-aurora {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    color: hsl(30 9% 8%);
+    background: linear-gradient(
+      110deg,
+      #ece4d6,
+      #faf6ec 24%,
+      #e5ddce 48%,
+      #f6f1e6 72%,
+      #ece4d6
+    );
+    background-size: 250% 250%;
+    box-shadow:
+      inset 0 0 0 1px hsla(38, 18%, 95%, 0.7),
+      inset 0 -1px 0 hsla(30, 9%, 8%, 0.14),
+      0 0 0 1px hsla(38, 18%, 95%, 0.1),
+      0 1px 2px rgba(0, 0, 0, 0.55),
+      0 10px 36px -14px hsla(38, 18%, 95%, 0.28);
+    animation: aurora-flow 9s ease-in-out infinite;
+    transition:
+      transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
+      box-shadow 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  .btn-aurora:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 0 0 1px hsla(38, 18%, 95%, 0.8),
+      inset 0 -1px 0 hsla(30, 9%, 8%, 0.1),
+      0 0 0 1px hsla(38, 18%, 95%, 0.16),
+      0 1px 2px rgba(0, 0, 0, 0.5),
+      0 14px 44px -12px hsla(38, 18%, 95%, 0.4);
+  }
+  .btn-aurora::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      hsla(38, 18%, 95%, 0.5) 50%,
+      transparent 60%
+    );
+    transform: translateX(-130%);
+    animation: aurora-sheen 5.5s ease-in-out infinite;
+  }
+  .btn-aurora > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@keyframes aurora-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes aurora-sheen {
+  0% {
+    transform: translateX(-130%);
+  }
+  55%,
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-aurora,
+  .btn-aurora::after,
+  .btn-glass {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .reveal {
   transition:
     opacity 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
