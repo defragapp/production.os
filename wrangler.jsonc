@@ -23,6 +23,6 @@
     "STRIPE_CANCEL_URL": "https://sovereign.defrag.app/upgrade?billing=cancelled",
     "STRIPE_PORTAL_RETURN_URL": "https://sovereign.defrag.app/account",
     "TURNSTILE_SITE_KEY": "0x4AAAAAAExjLzsh-Wwl9x4Y",
-    "NEXT_PUBLIC_CF_BEACON_TOKEN": ""
+    "NEXT_PUBLIC_CF_BEACON_TOKEN": "8b2341038462480c95e05d8e11f07213"
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Nav } from "@/components/nav";
@@ -41,8 +41,20 @@ export function ChatClient() {
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [baselineData, setBaselineData] = useState<BaselineData | undefined>();
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [usageBannerDismissed, setUsageBannerDismissed] = useState(false);
+  const [usage, setUsage] = useState<{ used: number; limit: number | null }>({ used: 0, limit: null });
+  const [billingSuccess, setBillingSuccess] = useState(false);
   const [showVerify, setShowVerify] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const refreshUsage = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth");
+      if (!res.ok) return;
+      const data = await res.json() as { usage?: { used: number; limit: number | null } };
+      if (data.usage) setUsage(data.usage);
+    } catch {}
+  }, []);
 
   const refreshThreads = useCallback(async (): Promise<ThreadSummary[]> => {
     try {
@@ -82,11 +94,12 @@ export function ChatClient() {
     (async () => {
       try {
         const authRes = await fetch("/api/auth");
-        const authData = await authRes.json() as { user?: unknown };
+        const authData = await authRes.json() as { user?: unknown; usage?: { used: number; limit: number | null } };
         if (!authData.user) {
           router.push("/onboard?mode=login");
           return;
         }
+        if (authData.usage) setUsage(authData.usage);
         const baselineRes = await fetch("/api/baseline");
         if (baselineRes.ok) {
           const bd = await baselineRes.json() as { baseline?: { nasa_jpl_json_data?: string } };
@@ -113,6 +126,17 @@ export function ChatClient() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("billing") === "success") {
+      setBillingSuccess(true);
+      params.delete("billing");
+      const qs = params.toString();
+      history.replaceState(null, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+    }
+  }, []);
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
@@ -151,6 +175,14 @@ export function ChatClient() {
             u[u.length - 1] = { role: "assistant", content: "Please verify your email address to use AI chat. Check your inbox for the verification link." };
             return u;
           });
+          return;
+        }
+        if (response.status === 403 && err.code === "baseline_required") {
+          router.push("/baseline");
+          return;
+        }
+        if (response.status === 403 && err.code === "subscription_required") {
+          router.push("/upgrade?from=baseline");
           return;
         }
         if (response.status === 401) {
@@ -222,9 +254,10 @@ export function ChatClient() {
         return u;
       });
     } finally {
+      refreshUsage();
       setIsStreaming(false);
     }
-  }, [input, isStreaming, messages, threadId, baselineData, refreshThreads, router]);
+  }, [input, isStreaming, messages, threadId, baselineData, refreshThreads, refreshUsage, router]);
 
   if (!authChecked) {
     return (
@@ -240,6 +273,25 @@ export function ChatClient() {
   return (
     <main className="flex min-h-screen flex-col">
       <Nav />
+
+      {billingSuccess && (
+        <div className="border-b bg-emerald-50 px-6 py-4 dark:bg-emerald-950/30">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+            <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+              Welcome to Sovereign+ — your plan is active and your baseline is now fully unlocked.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setBillingSuccess(false)}
+              aria-label="Dismiss"
+              className="shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {showVerify && (
         <div className="border-b bg-background px-6 py-4">
@@ -272,9 +324,34 @@ export function ChatClient() {
             <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
               You have reached the free tier limit. Upgrade to Sovereign+ for unlimited access.
             </p>
-            <Button size="sm" onClick={() => router.push("/upgrade")}>
-              Upgrade
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button size="sm" onClick={() => router.push("/upgrade")}>
+                Upgrade
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(usage.limit !== null && usage.used >= usage.limit && !showUpgrade && !usageBannerDismissed) && (
+        <div className="border-b bg-amber-50 px-6 py-4 dark:bg-amber-950/30">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              You&apos;ve used all {usage.limit} free messages today. Upgrade to Sovereign+ for unlimited access.
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button size="sm" onClick={() => router.push("/upgrade")}>
+                Upgrade
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setUsageBannerDismissed(true)}
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -370,22 +447,35 @@ export function ChatClient() {
       </div>
 
       <div className="border-t px-4 py-4">
-        <div className="mx-auto flex max-w-3xl gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
+        <div className="mx-auto max-w-3xl">
+          {usage.limit !== null && (
+            <div className="mb-1 text-right text-xs text-muted-foreground/70">
+              {usage.used >= usage.limit
+                ? `${usage.limit} of ${usage.limit} free messages used today`
+                : `${usage.used} of ${usage.limit} free messages used today`}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder={
+                usage.limit !== null && usage.used >= usage.limit
+                  ? "Free tier limit reached — upgrade for unlimited access"
+                  : "Type your message..."
               }
-            }}
-            placeholder="Type your message..."
-            disabled={isStreaming}
-          />
-          <Button onClick={sendMessage} disabled={isStreaming || !input.trim()}>
-            {isStreaming ? "..." : "Send"}
-          </Button>
+              disabled={isStreaming || (usage.limit !== null && usage.used >= usage.limit && !showUpgrade)}
+            />
+            <Button onClick={sendMessage} disabled={isStreaming || !input.trim()}>
+              {isStreaming ? "..." : "Send"}
+            </Button>
+          </div>
         </div>
       </div>
     </main>

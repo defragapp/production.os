@@ -17,6 +17,14 @@ import { getEnv } from "@/lib/env";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ── Canonical domain: fold the legacy app.defrag.app identity into
+  //    sovereign.defrag.app so every page/API has one canonical URL. ────
+  const host = request.headers.get("host")?.replace(/:\d+$/, "").toLowerCase();
+  if (host && host !== "localhost" && host !== "127.0.0.1" && host !== "sovereign.defrag.app") {
+    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, "https://sovereign.defrag.app");
+    return NextResponse.redirect(url, 308);
+  }
+
   // ── Public pages + Next.js metadata routes (icons, og images) ────
   const publicPages = ["/", "/onboard", "/terms", "/privacy"];
   if (

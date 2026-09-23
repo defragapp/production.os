@@ -10,22 +10,20 @@ const navLink =
   "rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors duration-[240ms] hover:text-foreground";
 const navLinkActive = "text-foreground";
 
-const AUTHED_LINKS = [
-  { href: "/chat", label: "Chat" },
-  { href: "/baseline", label: "Baseline" },
-  { href: "/upgrade", label: "Upgrade" },
-  { href: "/account", label: "Account" },
-];
+const PLUS_BADGE =
+  "ml-1 inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary";
 
 export function Nav() {
   const router = useRouter();
   const pathname = usePathname();
   const [authed, setAuthed] = useState(false);
+  const [tier, setTier] = useState<"free" | "sovereign+" | null>(null);
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
 
   const handleSignOut = async () => {
     setAuthed(false);
+    setTier(null);
     setOpen(false);
     await fetch("/api/auth", { method: "DELETE" });
     router.refresh();
@@ -37,8 +35,9 @@ export function Nav() {
     fetch("/api/auth")
       .then((r) => r.json())
       .then((d) => {
-        const data = d as { user?: unknown };
+        const data = d as { user?: { subscription_tier?: string | null } | null };
         setAuthed(!!data.user);
+        setTier(data.user?.subscription_tier === "sovereign+" ? "sovereign+" : data.user?.subscription_tier === "free" ? "free" : null);
       })
       .catch(() => setAuthed(false));
   }, []);
@@ -55,11 +54,14 @@ export function Nav() {
         <nav className="hidden items-center gap-1 md:flex">
           {authed ? (
             <>
-              {AUTHED_LINKS.map((l) => (
-                <Link key={l.href} href={l.href} className={linkClass(l.href)}>
-                  {l.label}
-                </Link>
-              ))}
+              <Link href="/chat" className={linkClass("/chat")}>Chat</Link>
+              <Link href="/baseline" className={linkClass("/baseline")}>Baseline</Link>
+              {tier === "sovereign+" ? (
+                <span className={PLUS_BADGE} title="Your plan">Sovereign+</span>
+              ) : (
+                <Link href="/upgrade" className={linkClass("/upgrade")}>Upgrade</Link>
+              )}
+              <Link href="/account" className={linkClass("/account")}>Account</Link>
               <button onClick={handleSignOut} className={navLink}>
                 Sign out
               </button>
@@ -101,18 +103,46 @@ export function Nav() {
         >
           {authed ? (
             <div className="flex flex-col">
-              {AUTHED_LINKS.map((l) => (
+              <Link
+                href="/chat"
+                onClick={() => setOpen(false)}
+                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
+                  pathname === "/chat" ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                Chat
+              </Link>
+              <Link
+                href="/baseline"
+                onClick={() => setOpen(false)}
+                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
+                  pathname === "/baseline" ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                Baseline
+              </Link>
+              {tier === "sovereign+" ? (
+                <span className="px-3 py-3 text-sm font-semibold text-primary">Sovereign+</span>
+              ) : (
                 <Link
-                  key={l.href}
-                  href={l.href}
+                  href="/upgrade"
                   onClick={() => setOpen(false)}
                   className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
-                    pathname === l.href ? "text-foreground" : "text-muted-foreground"
+                    pathname === "/upgrade" ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  {l.label}
+                  Upgrade
                 </Link>
-              ))}
+              )}
+              <Link
+                href="/account"
+                onClick={() => setOpen(false)}
+                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
+                  pathname === "/account" ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                Account
+              </Link>
               <button
                 onClick={handleSignOut}
                 className="rounded-md px-3 py-3 text-left text-sm text-muted-foreground hover:bg-white/5"

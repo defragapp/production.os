@@ -7,6 +7,7 @@ import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
 import type { User } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -26,7 +27,13 @@ export async function GET(request: NextRequest) {
     user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
   }
   if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
-  return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null });
+  // Daily AI chat usage for the UI (free tier only). Mirror or await the same
+  // KV counter the /api/chat route uses so the gauge matches the enforcement.
+  const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
+  const used = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10) || 0;
+  const isFree = user.subscription_tier === "free";
+  const usage = { used, limit: isFree ? FREE_TIER_DAILY_LIMIT : null };
+  return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null, usage });
 }
 
 const LOGIN_RATE_LIMIT_TTL = 300;

@@ -6,10 +6,8 @@ import { deriveBaseline } from "@/lib/sovereign-prompt";
 import type { DerivedBaseline } from "@/lib/sovereign-prompt";
 import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereign-reasoning";
 import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
+import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
-
-/** Free-tier message limit per day. */
-const FREE_TIER_DAILY_LIMIT = 5;
 
 /** Max content length per message accepted from the client. */
 const MAX_MESSAGE_LENGTH = 5000;
