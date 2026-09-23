@@ -2,8 +2,9 @@ import Link from "next/link";
 
 /**
  * Sovereign OS logomark + wordmark.
- * A single ring-and-dot glyph used on every surface so the platform
- * reads as one continuous brand.
+ * A single chalice-with-overflow droplet glyph (Ace of Cups) used on every
+ * surface — favicon, home-screen icon, and in-app nav — so the platform reads
+ * as one continuous brand: "my cup overflows."
  */
 export function Logo({
   href = "/",
