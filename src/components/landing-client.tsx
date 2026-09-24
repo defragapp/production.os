@@ -112,17 +112,26 @@ const EXPLORE = [
   {
     title: "Yourself",
     desc: "Understand what drives you — and why your own qualities can turn on you under pressure.",
-    example: "Why do I freeze the moment I get put on the spot?",
+    question: "Why do I freeze the moment I get put on the spot — and what kind of work actually fits how I'm built?",
+    mapping: "Built to process deeply before speaking, not to improvise on command · Current cycle favors steady depth over proving yourself fast",
+    response: "Freezing isn't a lack of capability — it's what happens when you're pushed to perform before you've had a second to take the room in. You do your best work where you can read the situation first and move deliberately, not where you have to sell an answer on the spot.",
+    reflection: "What changes if you stop treating your need for preparation like a flaw, and start building your career around roles that value depth over speed?",
   },
   {
     title: "A relationship",
     desc: "See what's actually happening between two people, beyond each person's version of it.",
-    example: "Why do we have the same fight every time money comes up?",
+    question: "Why do we have the same fight every time money comes up?",
+    mapping: "Two different reactions to pressure · One reaches for immediate certainty to feel safe; the other pulls back when urgency feels like control",
+    response: "Money is rarely what the fight is actually about. When stress rises, one of you tries to lock down a plan right away to calm the tension, and the other reads that urgency as pressure and shuts down. Neither of you is trying to leave the other alone — your ways of getting safe just collide at the exact wrong moment.",
+    reflection: "What happens next time if you name the stress in the room before you open the numbers?",
   },
   {
     title: "Your family",
     desc: "See the roles, loyalties, and silent rules everyone is playing out — even when no one named them.",
-    example: "Why does my family go quiet the instant someone gets angry?",
+    question: "Why does my family go quiet the instant someone gets angry?",
+    mapping: "Shared pattern where keeping the peace comes before honesty · Direct tension registers across the group as a threat to staying connected",
+    response: "In your family, silence isn't indifference — it's an old agreement that harmony is what keeps everyone safe. When someone shows real frustration, everyone pulls back to keep the room from fracturing. You don't have to force a confrontation to change your part in it.",
+    reflection: "What would it look like to state where you stand calmly once, and let their silence be theirs instead of rushing to fix it?",
   },
 ];
 
@@ -327,19 +336,46 @@ export function LandingClient() {
               </h2>
               <p className="mt-3 text-muted-foreground">The questions people actually bring look like this.</p>
             </Reveal>
-            <div className="grid gap-4 md:grid-cols-3">
-              {EXPLORE.map((item, i) => (
-                <Reveal key={item.title} delay={i * 60}>
-                  <div className="flex h-full flex-col border-t border-foreground/20 pt-5">
-                    <h3 className="mb-2 font-display text-2xl font-normal text-foreground">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
-                    <p className="mt-4 rounded-lg border border-border bg-background/40 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-muted-foreground">
-                      “{item.example}”
+            <div className="grid gap-x-6 gap-y-14 md:grid-cols-3">
+              {EXPLORE.map((item) => (
+                <div key={item.title} className="flex h-full min-w-0 flex-col border-t border-foreground/20 pt-5">
+                  <h3 className="mb-2 font-display text-2xl font-normal text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+
+                  {/* The question — the existing bordered monospace box. */}
+                  <Reveal className="reveal mt-4">
+                    <p className="break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-muted-foreground">
+                      “{item.question}”
                     </p>
-                  </div>
-                </Reveal>
+                  </Reveal>
+
+                  <Reveal className="reveal flex justify-center">
+                    <span aria-hidden="true" className="my-1 h-7 w-px bg-white/10" />
+                  </Reveal>
+
+                  {/* The quiet read — how the pattern and context are taken in. */}
+                  <Reveal className="reveal">
+                    <p className="break-words rounded-md border border-dashed border-border/70 bg-background/20 px-3 py-2 font-mono text-xs leading-relaxed text-muted-foreground/70">
+                      {item.mapping}
+                    </p>
+                  </Reveal>
+
+                  <Reveal className="reveal flex justify-center">
+                    <span aria-hidden="true" className="my-1 h-7 w-px bg-white/10" />
+                  </Reveal>
+
+                  {/* The answer — same editorial surface as the hero preview card. */}
+                  <Reveal className="reveal">
+                    <div className="break-words rounded-xl border border-white/10 bg-card/50 p-4 backdrop-blur-sm">
+                      <p className="text-sm leading-relaxed text-foreground/80">{item.response}</p>
+                      <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-foreground">
+                        {item.reflection}
+                      </p>
+                    </div>
+                  </Reveal>
+                </div>
               ))}
             </div>
           </div>
