@@ -20,6 +20,14 @@ import { getEnv } from "@/lib/env";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const noStore = (res: NextResponse) => {
+    // User data must never be cached by the edge/CDN.
+    if (pathname.startsWith("/api/")) {
+      res.headers.set("Cache-Control", "no-store");
+    }
+    return res;
+  };
+
   // ── Canonical domain: fold the legacy app.defrag.app identity into
   //    sovereign.defrag.app so every page/API has one canonical URL. ────
   const host = request.headers.get("host")?.replace(/:\d+$/, "").toLowerCase();
@@ -37,7 +45,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/opengraph-image") ||
     pathname.startsWith("/twitter-image")
   ) {
-    return NextResponse.next();
+    return noStore(NextResponse.next());
   }
 
   // ── Public API: auth endpoints, invite status, Stripe webhook ──────
@@ -47,7 +55,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/invites/info" ||
     pathname === "/api/webhooks/stripe"
   ) {
-    return NextResponse.next();
+    return noStore(NextResponse.next());
   }
 
   // ── Auth check ────────────────────────────────────────────────────
@@ -68,7 +76,7 @@ export async function middleware(request: NextRequest) {
   if (!secret) {
     // If JWT_SECRET isn't configured, fail closed
     if (isApi) {
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+      return noStore(NextResponse.json({ error: "Server configuration error" }, { status: 500 }));
     }
     return NextResponse.redirect(new URL("/onboard", request.url));
   }
@@ -76,7 +84,7 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) {
     if (isApi) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
     return NextResponse.redirect(new URL("/onboard", request.url));
   }
@@ -84,12 +92,12 @@ export async function middleware(request: NextRequest) {
   const payload = await verifyJWT(token, secret);
   if (!payload) {
     if (isApi) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
     return NextResponse.redirect(new URL("/onboard", request.url));
   }
 
-  return NextResponse.next();
+  return noStore(NextResponse.next());
 }
 
 export const config = {

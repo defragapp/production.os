@@ -1,9 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import type { User } from "@/lib/types";
 import { ChatClient } from "./chat-client";
+
+export const metadata: Metadata = { title: "Chat" };
 
 export const dynamic = "force-dynamic";
 

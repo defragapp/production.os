@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Users, X } from "lucide-react";
+import { Plus, Square, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Nav } from "@/components/nav";
@@ -40,6 +40,12 @@ function formatThreadDate(iso: string): string {
   }
 }
 
+const SUGGESTIONS = [
+  "What patterns am I repeating in my relationships?",
+  "Where am I holding tension with the people I love?",
+  "What should I look at more closely in my baseline?",
+];
+
 export function ChatClient() {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -57,6 +63,7 @@ export function ChatClient() {
   const [tier, setTier] = useState<"free" | "sovereign+" | null>(null);
   const [peopleOpen, setPeopleOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const refreshUsage = useCallback(async () => {
     try {
@@ -150,9 +157,16 @@ export function ChatClient() {
     }
   }, []);
 
-  const sendMessage = useCallback(async () => {
-    if (!input.trim() || isStreaming) return;
-    const userMessage: ChatMessage = { role: "user", content: input.trim() };
+  const stopStreaming = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsStreaming(false);
+  }, []);
+
+  const sendMessage = useCallback(async (promptOverride?: string) => {
+    const content = (promptOverride ?? input).trim();
+    if (!content || isStreaming) return;
+    const userMessage: ChatMessage = { role: "user", content };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
@@ -160,6 +174,8 @@ export function ChatClient() {
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
     const startedNewThread = threadId === null;
     let createdThreadId: string | null = null;
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -168,6 +184,7 @@ export function ChatClient() {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
           threadId: threadId || undefined,
         }),
+        signal: controller.signal,
       });
       if (!response.ok) {
         const err = await response.json() as { error?: string; upgradeRequired?: boolean; code?: string };
@@ -258,6 +275,10 @@ export function ChatClient() {
         }
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // User pressed Stop — keep the partial response as-is.
+        return;
+      }
       console.error("Chat error:", err);
       setMessages((prev) => {
         const u = [...prev];
@@ -265,6 +286,7 @@ export function ChatClient() {
         return u;
       });
     } finally {
+      abortRef.current = null;
       refreshUsage();
       setIsStreaming(false);
     }
@@ -434,6 +456,19 @@ export function ChatClient() {
                 <p className="mt-1 text-sm text-muted-foreground/60">
                   Your baseline is loaded — the AI will reference it as you chat.
                 </p>
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  {SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => sendMessage(s)}
+                      disabled={isStreaming}
+                      className="rounded-full border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -509,9 +544,16 @@ export function ChatClient() {
               }
               disabled={isStreaming || (usage.limit !== null && usage.used >= usage.limit && !showUpgrade)}
             />
-            <Button onClick={sendMessage} disabled={isStreaming || !input.trim()}>
-              {isStreaming ? "..." : "Send"}
-            </Button>
+            {isStreaming ? (
+              <Button onClick={stopStreaming} variant="outline">
+                <Square className="h-3.5 w-3.5" />
+                Stop
+              </Button>
+            ) : (
+              <Button onClick={() => sendMessage()} disabled={!input.trim()}>
+                Send
+              </Button>
+            )}
           </div>
           </div>
         </div>

@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   description:
     "Sovereign is an AI platform that helps you make sense of the patterns in your life — starting with you, then looking at what happens between you and other people.",
   applicationName: "Sovereign OS",
+  manifest: "/manifest.webmanifest",
   authors: [{ name: "Sovereign OS" }],
   keywords: [
     "AI patterns",
