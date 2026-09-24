@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
+import { PageTexture } from "@/components/page-texture";
 import { LoadingScreen } from "@/components/ui/loading";
 
 type InviteStatus = "invalid" | "revoked" | "accepted" | "expired" | "pending";
@@ -209,8 +210,9 @@ export default function InvitePage() {
 
   return (
     <>
+      <PageTexture />
       <Nav />
-      <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+      <main className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-md">
           {!token ? (
@@ -219,8 +221,9 @@ export default function InvitePage() {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-sm text-muted-foreground">
-                    The link you opened is missing the invitation token. Ask the person who invited
-                    you to share their invite link again, or check that you copied the whole link.
+                    It looks like the link got cut off — the part that identifies your invitation is
+                    missing. Ask the person who invited you to send it again, and make sure the
+                    whole link comes along.
                   </p>
                   <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
                     Back to Sovereign

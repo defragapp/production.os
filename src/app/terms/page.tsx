@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
+import { PageTexture } from "@/components/page-texture";
 
 export const metadata: Metadata = {
   title: "Terms of Service — Sovereign OS",
@@ -10,8 +12,10 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <>
+      <PageTexture />
       <Nav />
-      <main className="mx-auto max-w-3xl px-6 py-14">
+      <main className="relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-14">
+        <div className="section-rule absolute inset-x-0 top-0" aria-hidden="true" />
         <PageHeader title="Terms of Service" description="Last updated: September 23, 2026" center={false} />
         <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
           <section>
@@ -102,6 +106,13 @@ export default function TermsPage() {
             <h2 className="mb-2 text-lg font-semibold text-foreground">16. Contact</h2>
             <p>Questions about these Terms can be directed to <a href="mailto:sovereign@defrag.app" className="underline hover:text-foreground">sovereign@defrag.app</a>.</p>
           </section>
+        </div>
+        <div className="glass-panel mt-10 flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-medium text-foreground">Want any of this in plain terms?</p>
+            <p className="mt-1 text-xs text-muted-foreground">Reach out and ask — a real person reads every message that comes through support.</p>
+          </div>
+          <Link href="/support" className="btn-glass shrink-0 px-4 py-2 text-sm font-medium text-foreground">Ask a question</Link>
         </div>
       </main>
     </>

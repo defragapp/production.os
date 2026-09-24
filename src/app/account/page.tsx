@@ -7,8 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
+import { PageTexture } from "@/components/page-texture";
 import { LoadingScreen } from "@/components/ui/loading";
 import { AddPasskeyButton } from "@/components/passkey";
+
+function PlanFeature({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <svg viewBox="0 0 16 16" className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M2.5 8.5l4 4 7-9" />
+      </svg>
+      <span>{children}</span>
+    </li>
+  );
+}
 
 interface UserData {
   email: string;
@@ -80,10 +92,10 @@ export default function AccountPage() {
     try {
       const res = await fetch("/api/billing-portal");
       const data = await res.json() as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error || "Failed to open billing");
+      if (!res.ok || !data.url) throw new Error(data.error || "Couldn't open billing — try again in a moment.");
       window.location.href = data.url;
     } catch (err) {
-      setPortalError(err instanceof Error ? err.message : "Something went wrong");
+      setPortalError(err instanceof Error ? err.message : "Something went wrong — please try again.");
       setPortalLoading(false);
     }
   };
@@ -108,16 +120,21 @@ export default function AccountPage() {
     : verifyStatus === "missing" ? "No verification token was provided."
     : null;
 
-  const memberSince = new Date(user.created_at).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // D1's datetime('now') yields "YYYY-MM-DD HH:MM:SS" (UTC, no marker),
+  // which Safari refuses to parse — normalize before formatting.
+  const createdDate = user.created_at
+    ? new Date(/\d{4}-\d{2}-\d{2} /.test(user.created_at) ? `${user.created_at.replace(" ", "T")}Z` : user.created_at)
+    : null;
+  const memberSince =
+    createdDate && !Number.isNaN(createdDate.getTime())
+      ? createdDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+      : "—";
 
   return (
     <>
+      <PageTexture />
       <Nav />
-      <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+      <main className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-lg">
           <PageHeader title="Account" description="Your plan, profile, and account preferences." />
@@ -130,7 +147,7 @@ export default function AccountPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Subscription</CardTitle>
-                <CardDescription>Your current plan and benefits</CardDescription>
+                <CardDescription>Where you stand right now</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -141,26 +158,27 @@ export default function AccountPage() {
                 </div>
                 {isPlus ? (
                   <>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>✓ Unlimited AI messages — no daily cap</li>
-                      <li>✓ Invite people into your relationships</li>
-                      <li>✓ Your full Baseline, same private engine</li>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
+                      <PlanFeature>Invite people into your relationships</PlanFeature>
+                      <PlanFeature>Your full Baseline, same private engine</PlanFeature>
                     </ul>
                     <Button
                       className="w-full"
                       onClick={handleManageBilling}
                       disabled={portalLoading}
                     >
-                      {portalLoading ? "Opening billing..." : "Manage subscription (cancel in two clicks)"}
+                      {portalLoading ? "Opening billing..." : "Manage subscription"}
                     </Button>
+                    <p className="text-center text-xs text-muted-foreground/70">Cancel anytime — two clicks, no emails.</p>
                     {portalError && <p className="text-xs text-destructive">{portalError}</p>}
                   </>
                 ) : (
                   <>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>5 AI messages per day</li>
-                      <li>Your full Baseline</li>
-                      <li>Your conversations stay with you</li>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <PlanFeature>5 AI messages per day</PlanFeature>
+                      <PlanFeature>Your full Baseline</PlanFeature>
+                      <PlanFeature>Your conversations stay with you</PlanFeature>
                     </ul>
                     {usage && usage.limit !== null && (
                       <div className="space-y-1.5">
@@ -242,7 +260,7 @@ export default function AccountPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Security</CardTitle>
-                <CardDescription>Sign in faster and phishing-resistantly with a passkey</CardDescription>
+                <CardDescription>Sign in faster — and safer — with a passkey</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-sm text-muted-foreground">
@@ -254,19 +272,19 @@ export default function AccountPage() {
             </Card>
             <div className="space-y-2">
               <Button className="w-full" onClick={() => router.push("/chat")}>
-                Back to Chat
+                Back to chat
               </Button>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Button variant="outline" onClick={() => router.push("/baseline")}>View Baseline</Button>
-                <Button variant="outline" onClick={() => router.push("/settings")}>Connections &amp; Invites</Button>
+                <Button variant="outline" onClick={() => router.push("/settings")}>Connections &amp; invites</Button>
               </div>
             </div>
 
             <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/[0.04] p-4">
-              <p className="text-sm font-medium text-foreground">Danger zone</p>
+              <p className="text-sm font-medium text-foreground">Sign out or delete</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Signing out ends this session. Deleting removes your baseline, chat history, and
-                subscription permanently — this cannot be undone.
+                Signing out ends this session on this device. Deleting erases your Baseline, chat
+                history, and subscription for good — there&apos;s no way back.
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <Button variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-1" onClick={handleSignOut}>

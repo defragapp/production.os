@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
+import { PageTexture } from "@/components/page-texture";
 import { LoadingScreen } from "@/components/ui/loading";
 import type { RelationshipView } from "@/lib/types";
 
@@ -191,13 +192,13 @@ export default function SettingsPage() {
         body: JSON.stringify({ action: "rotate" }),
       });
       const data = await res.json() as { shareUrl?: string; error?: string };
-      if (!res.ok || !data.shareUrl) throw new Error(data.error || "Could not re-share");
+      if (!res.ok || !data.shareUrl) throw new Error(data.error || "Couldn't copy the link");
       await navigator.clipboard.writeText(data.shareUrl);
       setCopiedId(row.id);
       setTimeout(() => setCopiedId(null), 2000);
       await loadPeople();
     } catch {
-      setInviteError("Could not open the share link. Please copy the invite email instead.");
+      setInviteError("Couldn't copy the link. Try again, or ask them to check their email instead.");
     }
   };
 
@@ -205,8 +206,9 @@ export default function SettingsPage() {
 
   return (
     <>
+      <PageTexture />
       <Nav />
-      <main className="relative flex min-h-[calc(100vh-3.5rem)] items-start justify-center overflow-hidden p-6">
+      <main className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-start justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-2xl">
           <PageHeader
@@ -245,8 +247,9 @@ export default function SettingsPage() {
                   </Button>
                 </CardContent>
                 <p className="px-6 pb-4 text-xs leading-relaxed text-muted-foreground/70">
-                  If left blank, connected people see your email&apos;s local part. Either way they
-                  never see your email address or birth data.
+                  If you leave this blank, people you connect with see the name in front of the
+                  &ldquo;@&rdquo; in your email. Either way, they never see your full email address
+                  or your birth data.
                 </p>
               </Card>
 
@@ -475,7 +478,7 @@ export default function SettingsPage() {
               </Card>
 
               <Button variant="outline" className="w-full" onClick={() => router.push("/account")}>
-                Back to Account
+                Back to account
               </Button>
             </div>
           )}

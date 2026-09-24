@@ -23,12 +23,12 @@ export async function GET(request: NextRequest) {
   // email_verified column. Fall back rather than 500ing the session check.
   let user: User | null;
   try {
-    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name FROM users WHERE id = ?").bind(payload.sub).first<User>();
+    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
   } catch {
     try {
-      user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(payload.sub).first<User>();
+      user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
     } catch {
-      user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
+      user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
     }
   }
   if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
