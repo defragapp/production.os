@@ -46,7 +46,7 @@ export function Nav() {
     `${navLink} ${pathname === href ? navLinkActive : ""}`;
 
   return (
-    <header className="pt-safe sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-md">
+    <header className="pt-safe relative sticky top-0 z-50 bg-background/70 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
 
@@ -93,6 +93,9 @@ export function Nav() {
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
+      {/* Gradient hairline instead of a hard full-width border — reads as a
+          lit edge, matching the landing section rules. */}
+      <div aria-hidden="true" className="section-rule absolute inset-x-0 bottom-0" />
 
       {/* Mobile menu */}
       {mounted && (

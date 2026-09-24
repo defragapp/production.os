@@ -130,7 +130,19 @@ const DEMO_REFLECTION = "What would change if you let one person see the full we
  */
 function ProductDemo() {
   return (
-    <div className="demo-float relative mx-auto w-full max-w-md">
+    <div className="relative mx-auto w-full max-w-md">
+      {/* Stacked-window depth: two faint surfaces rotated behind the chat
+          card — the "there's a whole product here" cue, without covering
+          anything meaningful. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-4 bottom-[-18px] h-full rotate-[1.8deg] rounded-xl border border-white/[0.06] bg-card/30"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-6 bottom-[-9px] h-full rotate-[-1.2deg] rounded-xl border border-white/[0.09] bg-card/45"
+      />
+      <div className="demo-float relative">
       <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
       <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-4 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center justify-between">
@@ -186,6 +198,7 @@ function ProductDemo() {
             Send
           </span>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -342,6 +355,17 @@ export function LandingClient() {
               </h2>
             </Reveal>
             <Workflow />
+            {/* Honest provenance strip — real data sources, no fabricated logos. */}
+            <Reveal delay={160} className="mt-12">
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 md:text-[11px]">
+                {["NASA/JPL Horizons ephemeris", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
+                  <span key={source} className="flex items-center gap-5">
+                    {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
+                    {source}
+                  </span>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
 
