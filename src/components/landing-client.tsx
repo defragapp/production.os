@@ -93,54 +93,34 @@ const DEMO_BASELINE: BaselineData = {
 
 const TRUST_NOTES = ["Private by design", "NASA/JPL data", "Free to start"];
 
-const HOW_IT_WORKS = [
-  {
-    title: "Set your Baseline",
-    desc: "Date, time, and place of birth. About a minute — computed from NASA/JPL planetary data.",
-  },
-  {
-    title: "Talk about what's happening",
-    desc: "About you, a relationship, or your family. In your own words.",
-  },
-  {
-    title: "Get a grounded read",
-    desc: "Sovereign separates what happened from what it might mean — and leaves the deciding to you.",
-  },
-];
-
 const EXPLORE = [
   {
     title: "Yourself",
-    desc: "Understand what drives you — and why your own qualities can turn on you under pressure.",
-    question: "Why do I freeze the moment I get put on the spot — and what kind of work actually fits how I'm built?",
-    mapping: "Built to process deeply before speaking, not to improvise on command · Current cycle favors steady depth over proving yourself fast",
-    response: "Freezing isn't a lack of capability — it's what happens when you're pushed to perform before you've had a second to take the room in. You do your best work where you can read the situation first and move deliberately, not where you have to sell an answer on the spot.",
-    reflection: "What changes if you stop treating your need for preparation like a flaw, and start building your career around roles that value depth over speed?",
+    desc: "What drives you — and why your own qualities can turn on you under pressure.",
+    question: "Why do I freeze the moment I get put on the spot?",
   },
   {
     title: "A relationship",
-    desc: "See what's actually happening between two people, beyond each person's version of it.",
+    desc: "What's actually happening between two people, beyond each person's version.",
     question: "Why do we have the same fight every time money comes up?",
-    mapping: "Two different reactions to pressure · One reaches for immediate certainty to feel safe; the other pulls back when urgency feels like control",
-    response: "Money is rarely what the fight is actually about. When stress rises, one of you tries to lock down a plan right away to calm the tension, and the other reads that urgency as pressure and shuts down. Neither of you is trying to leave the other alone — your ways of getting safe just collide at the exact wrong moment.",
-    reflection: "What happens next time if you name the stress in the room before you open the numbers?",
   },
   {
     title: "Your family",
-    desc: "See the roles, loyalties, and silent rules everyone is playing out — even when no one named them.",
+    desc: "The roles, loyalties, and silent rules everyone is playing out.",
     question: "Why does my family go quiet the instant someone gets angry?",
-    mapping: "Shared pattern where keeping the peace comes before honesty · Direct tension registers across the group as a threat to staying connected",
-    response: "In your family, silence isn't indifference — it's an old agreement that harmony is what keeps everyone safe. When someone shows real frustration, everyone pulls back to keep the room from fracturing. You don't have to force a confrontation to change your part in it.",
-    reflection: "What would it look like to state where you stand calmly once, and let their silence be theirs instead of rushing to fix it?",
   },
 ];
 
+// The anatomy of a Sovereign read — shown once, as a diagram, instead of
+// three times as full prose columns.
+const READ_FLOW = ["Your question", "The pattern", "Your Baseline", "A question back"];
+
 const DEMO_ANSWER = [
-  "You've named the pattern precisely: closeness gets real, and you pull back before it can be depended on. That timing repeats because the retreat is doing a job — it keeps you safe from being relied on.",
-  "The cost is real. Pulling away tells the other person, gently and over time, that they aren't allowed in far enough to matter. They stop reaching; you read that as proof you were right to pull back. The distance starts to look necessary.",
-  "Your Baseline carries a Moon in Cancer — deep tenderness, and a reflex to guard what it loves. That's a tendency you carry, not a verdict on you. It means your protection comes from the same place your warmth does.",
-  "The honest question to sit with: what would change if you let one person see the full weight of what you feel?",
+  "You've named the pattern: closeness gets real, and you pull back before it can be depended on.",
+  "Your Baseline carries a Moon in Cancer — tenderness, and a reflex to guard what it loves. A tendency, not a verdict.",
 ];
+
+const DEMO_REFLECTION = "What would change if you let one person see the full weight of what you feel?";
 
 /**
  * The product, drawn in CSS: the same chat surfaces the app renders, with an
@@ -185,10 +165,13 @@ function ProductDemo() {
 
         <div className="flex justify-start">
           <div className="max-w-[96%] rounded-2xl bg-muted px-3.5 py-2.5 text-left sm:max-w-[92%] sm:px-4 sm:py-3">
-            <div className="space-y-2 text-[13px] leading-relaxed text-foreground sm:space-y-3 sm:text-[15px]">
+            <div className="space-y-2 text-[13px] leading-relaxed text-foreground sm:space-y-2.5 sm:text-[14px]">
               {DEMO_ANSWER.map((p) => (
                 <p key={p}>{p}</p>
               ))}
+              <p className="border-t border-border/70 pt-2 text-foreground/90 italic">
+                {DEMO_REFLECTION}
+              </p>
             </div>
           </div>
         </div>
@@ -209,63 +192,87 @@ function ProductDemo() {
 }
 
 /**
- * How-it-works as a vertical timeline: the accent line fills as you scroll.
- * Base markup is a static, fully-visible list (plain SSR HTML). Only after JS
- * runs is the fill driven by scroll position; each row still fades in via the
- * guarded <Reveal>. Reduced-motion users see the static rail with no fill.
+ * The product flow as a visual workflow: three nodes connected by arrows.
+ * Horizontal on desktop, vertical on mobile. Copy is deliberately minimal —
+ * the diagram carries the explanation, not paragraphs.
  */
-function StepsTimeline() {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const fillRef = useRef<HTMLDivElement>(null);
+const WORKFLOW = [
+  {
+    title: "Set your Baseline",
+    desc: "Birth data, computed from NASA/JPL planetary positions.",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="12" cy="12" r="2" fill="currentColor" />
+        <path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    title: "Talk it through",
+    desc: "A relationship, your family, or you — in your own words.",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+        <path d="M4.5 6.5A2 2 0 0 1 6.5 4.5h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6.2L8 19.2V15.5h-1.5a2 2 0 0 1-2-2v-7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M8.5 8.5h7M8.5 11.5h4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    title: "Get a grounded read",
+    desc: "The pattern, named. The deciding left to you.",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="m15.5 8.5-2.2 5-4.8 2 2.2-5 4.8-2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+];
 
-  useEffect(() => {
-    const track = trackRef.current;
-    const fill = fillRef.current;
-    if (!track || !fill) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let raf = 0;
-    const update = () => {
-      raf = 0;
-      const rect = track.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const progress = Math.min(1, Math.max(0, (vh * 0.55 - rect.top) / rect.height));
-      fill.style.height = `${Math.round(progress * 100)}%`;
-    };
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, []);
-
+function WorkflowArrow({ vertical }: { vertical?: boolean }) {
   return (
-    <div className="mx-auto max-w-2xl">
-      <div ref={trackRef} className="relative">
-        <div aria-hidden="true" className="absolute bottom-3 left-[3px] top-3 w-px bg-white/10" />
-        <div ref={fillRef} aria-hidden="true" className="absolute left-[3px] top-3 w-px bg-foreground/45" style={{ height: 0 }} />
-        <div className="space-y-10">
-          {HOW_IT_WORKS.map((step, i) => (
-            <Reveal key={step.title} from="left">
-              <div className="relative flex gap-5">
-                <span className="relative z-10 mt-1 flex h-2.5 w-2.5 shrink-0 items-center justify-center rounded-full border border-foreground/50 bg-background" />
-                <div className="min-w-0">
-                  <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Step 0{i + 1}
-                  </p>
-                  <h3 className="mb-1.5 text-lg font-medium text-foreground">{step.title}</h3>
-                  <p className="max-w-md text-base leading-relaxed text-muted-foreground">{step.desc}</p>
-                </div>
+    <div
+      aria-hidden="true"
+      className={`flex shrink-0 items-center justify-center text-muted-foreground/50 ${
+        vertical ? "h-8 py-1" : "h-6 w-6 pt-0 md:h-auto"
+      }`}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className={`h-5 w-5 ${vertical ? "rotate-90 md:rotate-0" : "rotate-90 md:rotate-0"}`}
+        fill="none"
+      >
+        <path d="M4 12h14m0 0-5-5m5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
+function Workflow() {
+  return (
+    <div className="mx-auto flex max-w-4xl flex-col items-stretch md:flex-row md:items-center md:gap-2">
+      {WORKFLOW.map((step, i) => (
+        <div key={step.title} className="contents">
+          <Reveal delay={i * 90}>
+            <div className="glass-panel flex h-full flex-col items-start gap-3 p-5 md:p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-foreground/15 bg-foreground/[0.06] text-foreground">
+                  {step.icon}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  0{i + 1}
+                </span>
               </div>
-            </Reveal>
-          ))}
+              <div>
+                <h3 className="text-base font-medium text-foreground md:text-lg">{step.title}</h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground md:text-sm">{step.desc}</p>
+              </div>
+            </div>
+          </Reveal>
+          {i < WORKFLOW.length - 1 && <WorkflowArrow vertical />}
         </div>
-      </div>
+      ))}
     </div>
   );
 }
@@ -284,15 +291,15 @@ export function LandingClient() {
                 <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Sovereign OS
                 </p>
-                <h1 className="font-display text-[2rem] font-normal leading-[1.12] tracking-tight text-foreground sm:text-5xl md:text-[3.5rem] md:leading-[1.05]">
+                <h1 className="font-display text-[1.875rem] font-normal leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.875rem] md:leading-[1.1]">
                   Understand yourself, <span className="text-iridescent">your people</span>, and the systems you live within.
                 </h1>
-                <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base md:text-lg">
+                <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
                   Sovereign is an AI that talks through what&apos;s happening in your life —
                   personal, private, and grounded in a Baseline built from your birth data.
                 </p>
 
-                <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                <div className="mt-7 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                   <Link href="/onboard?mode=signup" className="btn-aurora px-7 py-3 text-sm font-semibold">
                     Start free
                   </Link>
@@ -319,87 +326,68 @@ export function LandingClient() {
         </section>
 
 {/* ── How it works ─────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-24">
-          <div className="mx-auto max-w-3xl">
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-20">
+          <div className="mx-auto max-w-5xl">
             <Reveal>
-              <h2 className="mb-10 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
+              <h2 className="mb-8 text-center font-display text-2xl font-normal text-foreground md:text-3xl">
                 From your Baseline to a grounded read.
               </h2>
             </Reveal>
-            <StepsTimeline />
+            <Workflow />
           </div>
         </section>
 
         {/* ── What you can explore ─────────────────────────── */}
-        <section className="border-t border-white/10 bg-muted/30 px-6 py-16 md:py-24">
+        <section className="border-t border-white/10 bg-muted/30 px-6 py-16 md:py-20">
           <div className="mx-auto max-w-5xl">
-            <Reveal className="mb-12 text-center">
-              <h2 className="font-display text-3xl font-normal text-foreground md:text-4xl">
+            <Reveal className="mb-10 text-center">
+              <h2 className="font-display text-2xl font-normal text-foreground md:text-3xl">
                 Ask about any part of your life.
               </h2>
-              <p className="mt-3 text-muted-foreground">The questions people actually bring look like this.</p>
+              <p className="mt-3 text-sm text-muted-foreground md:text-base">The questions people actually bring look like this.</p>
             </Reveal>
-            <div className="grid gap-x-6 gap-y-14 md:grid-cols-3 md:gap-y-0">
-              {EXPLORE.map((item) => (
-                <div
-                  key={item.title}
-                  className="flex min-w-0 flex-col border-t border-foreground/20 pt-5 md:grid md:row-span-6 md:grid-rows-subgrid"
-                >
-                  {/* Row 1 — title + description, aligned across the row. */}
-                  <div>
-                    <h3 className="mb-2 font-display text-2xl font-normal text-foreground">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
-                  </div>
 
-                  {/* The question — a readable quote, raised in contrast. */}
-                  <Reveal className="reveal mt-4">
-                    <p className="break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-foreground/90">
+            <div className="grid gap-4 md:grid-cols-3">
+              {EXPLORE.map((item, i) => (
+                <Reveal key={item.title} delay={i * 90}>
+                  <div className="flex h-full flex-col p-5 md:p-6 rounded-xl border border-white/10 bg-card/60">
+                    <h3 className="font-display text-xl font-normal text-foreground">{item.title}</h3>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground md:text-sm">{item.desc}</p>
+                    <p className="mt-4 break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground/90">
                       “{item.question}”
                     </p>
-                  </Reveal>
-
-                  <Reveal className="reveal hidden justify-center md:flex">
-                    <span aria-hidden="true" className="my-1 h-7 w-px bg-white/10" />
-                  </Reveal>
-
-                  {/* The quiet read — desktop only; on mobile it collapses to keep
-                      the column to a scannable question → answer. */}
-                  <Reveal className="reveal hidden md:block">
-                    <p className="break-words rounded-md border border-dashed border-border/70 bg-background/20 px-3 py-2 font-mono text-xs leading-relaxed text-muted-foreground">
-                      {item.mapping}
-                    </p>
-                  </Reveal>
-
-                  <Reveal className="reveal hidden justify-center md:flex">
-                    <span aria-hidden="true" className="my-1 h-7 w-px bg-white/10" />
-                  </Reveal>
-
-                  {/* The answer — same editorial surface as the hero preview card. */}
-                  <Reveal className="reveal mt-5 md:mt-0">
-                    <div className="break-words rounded-xl border border-white/10 bg-card/60 p-4 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur-sm">
-                      <p className="text-sm leading-relaxed text-foreground/80">{item.response}</p>
-                      <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-foreground">
-                        {item.reflection}
-                      </p>
-                    </div>
-                  </Reveal>
-                </div>
+                  </div>
+                </Reveal>
               ))}
             </div>
+
+            {/* Anatomy of a read — one diagram instead of three prose columns. */}
+            <Reveal delay={120} className="mt-10">
+              <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-2">
+                {READ_FLOW.map((node, i) => (
+                  <div key={node} className="flex flex-col items-center gap-3 md:flex-row md:gap-2">
+                    <span className="rounded-full border border-foreground/15 bg-foreground/[0.04] px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                      {node}
+                    </span>
+                    {i < READ_FLOW.length - 1 && <WorkflowArrow vertical />}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-center text-xs text-muted-foreground/70">
+                Every read returns to your Baseline — and leaves the deciding to you.
+              </p>
+            </Reveal>
           </div>
         </section>
 
 {/* ── Plans ────────────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-24">
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-20">
           <Reveal className="mx-auto max-w-4xl">
-            <h2 className="mb-3 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
+            <h2 className="mb-3 text-center font-display text-2xl font-normal text-foreground md:text-3xl">
               Free to start. Keep going when it gets deep.
             </h2>
-            <p className="mb-12 text-center text-muted-foreground">
-              Every plan includes your full Baseline and saves your conversations. Free gives you
-              five good answers a day — Sovereign+ removes the cap entirely.
+            <p className="mb-10 text-center text-sm text-muted-foreground md:text-base">
+              Every plan includes your full Baseline and saves your conversations.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -449,12 +437,12 @@ export function LandingClient() {
         </section>
 
 {/* ── Final CTA ────────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-20 text-center md:py-24">
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 text-center md:py-20">
           <Reveal className="mx-auto max-w-2xl">
-            <h2 className="mb-4 font-display text-3xl font-normal text-foreground sm:text-4xl md:text-5xl">
+            <h2 className="mb-4 font-display text-2xl font-normal text-foreground sm:text-3xl md:text-4xl">
               Start with one honest question.
             </h2>
-            <p className="mb-8 text-lg text-muted-foreground">
+            <p className="mb-7 text-muted-foreground">
               It&apos;s free — you don&apos;t need to have anything figured out.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
