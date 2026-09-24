@@ -33,16 +33,16 @@ const STEPS = [
 
 const BOUNDARIES = [
   {
-    title: "No label for what you're going through",
+    title: "No labels, no diagnoses",
     body: "No condition, no category, no verdict. Sovereign is here for reflection and understanding — not clinical assessment, treatment, or advice of any kind.",
   },
   {
-    title: "Not a horoscope",
+    title: "A reference, not a prediction",
     body: "Your Baseline is a computational reference built from astronomical data — not astrology. Nothing is 'ruled by the stars,' and no outcome is written.",
   },
   {
-    title: "Not a therapist",
-    body: "Sovereign is not a licensed practice, a substitute for professional care, or an assessment tool. It is a mirror you control, for your own thinking.",
+    title: "A mirror you control",
+    body: "Sovereign is not a licensed practice, a substitute for professional care, or an assessment tool. It reflects what you bring, for your own thinking.",
   },
 ];
 
@@ -58,13 +58,13 @@ export default function AboutPage() {
             Sovereign OS · Our Philosophy
           </p>
           <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-6xl">
-            A tool for <span className="text-iridescent">understanding</span>, not a label for what&apos;s wrong.
+            A tool for <span className="text-iridescent">understanding</span>, not a verdict.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
-            Most self-understanding is sold as a verdict: here is who you are, here is what&apos;s wrong,
-            here is the future. Sovereign works the way clear-eyed conversation works — a grounded
-            starting point, honest language, both sides of the story, and the deciding left to you.
-            It reflects what is already there; it never pronounces on you.
+            Most self-understanding is sold as a verdict — here is who you are, here is your future.
+            Sovereign works the way clear-eyed conversation works: a grounded starting point, honest
+            language, both sides of the story, and the deciding left to you. It reflects what is
+            already there; it never pronounces on you.
           </p>
         </section>
 
@@ -101,10 +101,10 @@ export default function AboutPage() {
         <section className="border-t border-white/10 bg-muted/30 px-6 py-16 md:py-24">
           <div className="mx-auto max-w-4xl">
             <p className="mb-3 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              What it isn&apos;t
+              What it is &mdash; and what it isn&apos;t
             </p>
             <h2 className="mb-12 font-display text-3xl font-normal text-foreground md:text-4xl">
-              Honest about its limits.
+              Honest about what it is.
             </h2>
             <div className="grid gap-10 md:grid-cols-3 md:gap-8">
               {BOUNDARIES.map((b) => (

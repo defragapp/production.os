@@ -336,13 +336,19 @@ export function LandingClient() {
               </h2>
               <p className="mt-3 text-muted-foreground">The questions people actually bring look like this.</p>
             </Reveal>
-            <div className="grid gap-x-6 gap-y-14 md:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-14 md:grid-cols-3 md:gap-y-0">
               {EXPLORE.map((item) => (
-                <div key={item.title} className="flex h-full min-w-0 flex-col border-t border-foreground/20 pt-5">
-                  <h3 className="mb-2 font-display text-2xl font-normal text-foreground">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+                <div
+                  key={item.title}
+                  className="flex min-w-0 flex-col border-t border-foreground/20 pt-5 md:grid md:row-span-6 md:grid-rows-subgrid"
+                >
+                  {/* Row 1 — title + description, aligned across the row. */}
+                  <div>
+                    <h3 className="mb-2 font-display text-2xl font-normal text-foreground">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
+                  </div>
 
                   {/* The question — the existing bordered monospace box. */}
                   <Reveal className="reveal mt-4">
