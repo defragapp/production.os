@@ -31,8 +31,17 @@ export async function POST(request: NextRequest) {
   if (!interval) return NextResponse.json({ error: "interval must be 'monthly' or 'annual'" }, { status: 400 });
 
   const idempotencyKey = `checkout_${payload.sub}_${interval}_${generateUUID()}`;
+  // Reuse the account's existing Stripe customer when we have one, so a
+  // re-subscribe doesn't spawn a duplicate customer keyed on the same email.
+  let stripeCustomerId: string | null = null;
   try {
-    const { url } = await createCheckoutSession(env, payload.sub, payload.email, interval, idempotencyKey);
+    const row = await env.DB.prepare("SELECT stripe_customer_id FROM users WHERE id = ?").bind(payload.sub).first<{ stripe_customer_id: string | null }>();
+    stripeCustomerId = row?.stripe_customer_id ?? null;
+  } catch (e) {
+    console.error("[checkout] failed to read stripe_customer_id:", e);
+  }
+  try {
+    const { url } = await createCheckoutSession(env, payload.sub, payload.email, interval, idempotencyKey, stripeCustomerId);
     return NextResponse.json({ url });
   } catch (err) {
     console.error("[checkout] Stripe checkout session failed:", err);

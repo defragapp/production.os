@@ -120,6 +120,53 @@ const EMAIL_TEMPLATES = {
     },
   },
 
+  // Confirm a successful recurring payment. Belt-and-suspenders with Stripe's
+  // own receipt emails (dashboard toggle) so the user always gets an on-brand
+  // confirmation even if that toggle is off.
+  "payment-received": {
+    subject: "Your payment was received",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; amount?: string; date?: string; next?: string };
+      const detail = v.amount
+        ? `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">We received <strong>$${v.amount}</strong>${v.date ? ` on ${v.date}` : ""}.${v.next ? ` Your next billing date is ${v.next}.` : ""}</p>`
+        : `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Your Sovereign+ payment is confirmed and your plan remains active.</p>`;
+      return emailShell(
+        "Payment received",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 4px;text-align:center">Thanks for staying with Sovereign OS.</p>` +
+        detail +
+        `<div style="text-align:center">${emailLink(`${v.origin}/account?tab=billing`, "View billing history")}</div>`
+      );
+    },
+  },
+
+  // Dunning: a charge failed and Stripe is retrying. Nudge the user to update
+  // their payment method before the subscription lapses.
+  "payment-failed": {
+    subject: "We couldn't process your payment",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string; attempt?: number };
+      return emailShell(
+        "Payment issue",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Your most recent Sovereign+ payment${v.attempt && v.attempt > 1 ? ` (attempt ${v.attempt})` : ""} didn't go through. We'll retry automatically, but to keep your access uninterrupted please update your payment details.</p>` +
+        `<div style="text-align:center">${emailButton(`${v.origin}/account?tab=billing`, "Update payment method")}</div>` +
+        `<p style="color:#a1a1aa;font-size:13px;margin:16px 0 0;text-align:center">You can manage your subscription any time from your account billing page.</p>`
+      );
+    },
+  },
+
+  // Sent once we detect the subscription has ended (webhook or sync).
+  "subscription-canceled": {
+    subject: "Your Sovereign+ subscription has ended",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { origin: string };
+      return emailShell(
+        "Subscription ended",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 16px;text-align:center">Your Sovereign+ subscription is no longer active and your account has moved back to the free plan. Your data is safe — resubscribe whenever you're ready to.</p>` +
+        `<div style="text-align:center">${emailButton(`${v.origin}/upgrade`, "Resubscribe")}</div>`
+      );
+    },
+  },
+
   "trial-ending": {
     subject: "Your trial ends soon",
     render: (vars: Record<string, unknown>): string => {

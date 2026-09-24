@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { startRegistration, startAuthentication } from "@simplewebauthn/browser";
 import type {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
+  AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
 import { Button } from "@/components/ui/button";
 
@@ -31,29 +32,62 @@ export function PasskeySignInButton({ className }: { className?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const supported = passkeysSupported();
 
-  if (!passkeysSupported()) return null;
+  const getOptions = async (): Promise<{ requestId: string; options: PublicKeyCredentialRequestOptionsJSON }> => {
+    const optRes = await fetch("/api/auth/passkey/authenticate", { method: "POST" });
+    const opts = await readJson<{ requestId?: string; options?: PublicKeyCredentialRequestOptionsJSON; error?: string }>(optRes);
+    if (!opts?.options || !opts.requestId) throw new Error(opts?.error || "Could not start sign-in.");
+    return { requestId: opts.requestId, options: opts.options };
+  };
+
+  const finishLogin = async (requestId: string, response: AuthenticationResponseJSON) => {
+    const verRes = await fetch("/api/auth/passkey/authenticate", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId, response }),
+    });
+    const data = await readJson<{ error?: string; hasBaseline?: boolean }>(verRes);
+    if (!verRes.ok) throw new Error(data?.error || "Passkey sign-in failed.");
+    router.push(data?.hasBaseline ? "/chat" : "/baseline");
+    router.refresh();
+  };
+
+  // Conditional / autofill UI: lets iOS Safari offer the passkey in the
+  // keyboard QuickType bar and desktop Chrome in the form autofill dropdown.
+  // Needs an <input autocomplete="username webauthn"> on the login form (set in
+  // onboard-content.tsx). Best-effort: any failure is ignored, since the
+  // explicit button below is always available.
+  useEffect(() => {
+    if (!supported) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { requestId, options } = await getOptions();
+        const response = await startAuthentication({
+          optionsJSON: options,
+          useBrowserAutofill: true,
+          verifyBrowserAutofillInput: true,
+        });
+        if (cancelled) return;
+        await finishLogin(requestId, response);
+      } catch {
+        /* conditional UI unsupported/no credential — the button is the fallback */
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supported]);
+
+  if (!supported) return null;
 
   const onClick = async () => {
     setError(null);
     setBusy(true);
     try {
-      const optRes = await fetch("/api/auth/passkey/authenticate", { method: "POST" });
-      const opts = await readJson<{ requestId?: string; options?: PublicKeyCredentialRequestOptionsJSON; error?: string }>(optRes);
-      if (!opts?.options || !opts.requestId) throw new Error(opts?.error || "Could not start sign-in.");
-
-      const response = await startAuthentication({ optionsJSON: opts.options });
-
-      const verRes = await fetch("/api/auth/passkey/authenticate", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId: opts.requestId, response }),
-      });
-      const data = await readJson<{ error?: string; hasBaseline?: boolean }>(verRes);
-      if (!verRes.ok) throw new Error(data?.error || "Passkey sign-in failed.");
-
-      router.push(data?.hasBaseline ? "/chat" : "/baseline");
-      router.refresh();
+      const { requestId, options } = await getOptions();
+      const response = await startAuthentication({ optionsJSON: options });
+      await finishLogin(requestId, response);
     } catch (e) {
       // AbortError = user dismissed the prompt; treat as a soft, retryable state.
       const msg = e instanceof Error ? e.message : "";
@@ -93,7 +127,7 @@ export function AddPasskeyButton({ onDone }: { onDone?: () => void }) {
       const opts = await readJson<PublicKeyCredentialCreationOptionsJSON & { error?: string }>(optRes);
       if (!opts?.challenge) throw new Error((opts as { error?: string })?.error || "Could not start passkey setup.");
 
-      const response = await startRegistration({ optionsJSON: opts });
+      const response = await startRegistration({ optionsJSON: opts, useAutoRegister: true });
 
       const verRes = await fetch("/api/auth/passkey/register", {
         method: "PUT",

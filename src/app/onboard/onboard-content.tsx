@@ -321,7 +321,7 @@ export function OnboardContent() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
-                      autoComplete="email"
+                      autoComplete={isLogin ? "username webauthn" : "email"}
                     />
                   </div>
                   <div className="space-y-2">

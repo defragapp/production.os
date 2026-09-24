@@ -59,6 +59,7 @@ export function ChatClient() {
   const [usageBannerDismissed, setUsageBannerDismissed] = useState(false);
   const [usage, setUsage] = useState<{ used: number; limit: number | null }>({ used: 0, limit: null });
   const [billingSuccess, setBillingSuccess] = useState(false);
+  const [confirmingPlan, setConfirmingPlan] = useState(false);
   const [showVerify, setShowVerify] = useState(false);
   const [tier, setTier] = useState<"free" | "sovereign+" | null>(null);
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -156,6 +157,41 @@ export function ChatClient() {
       history.replaceState(null, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
     }
   }, []);
+
+  // After checkout, Stripe's webhook flips the tier asynchronously — so the tier
+  // we fetched on mount can still read "free" even though payment succeeded.
+  // Rather than assert "you're upgraded" (and risk being wrong), poll /api/auth
+  // for a short window (it also reconciles against Stripe) and unlock only once
+  // the server actually reports sovereign+.
+  useEffect(() => {
+    if (!billingSuccess || tier === "sovereign+") {
+      setConfirmingPlan(false);
+      return;
+    }
+    setConfirmingPlan(true);
+    let cancelled = false;
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries += 1;
+      try {
+        const res = await fetch("/api/auth");
+        if (res.ok && !cancelled) {
+          const data = await res.json() as { user?: { subscription_tier?: string | null }; usage?: { used: number; limit: number | null } };
+          if (data.usage) setUsage(data.usage);
+          if (data.user?.subscription_tier === "sovereign+") {
+            setTier("sovereign+");
+            setShowUpgrade(false);
+            setConfirmingPlan(false);
+            clearInterval(timer);
+            router.refresh();
+            return;
+          }
+        }
+      } catch {}
+      if (tries >= 8) { clearInterval(timer); if (!cancelled) setConfirmingPlan(false); }
+    }, 2000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [billingSuccess, tier, router]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
@@ -310,9 +346,20 @@ export function ChatClient() {
       {billingSuccess && (
         <div className="border-b border-border bg-background px-6 py-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-            <p className="text-sm font-medium text-foreground">
-              Welcome to Sovereign+ — your plan is active and your baseline is now fully unlocked.
-            </p>
+            {confirmingPlan ? (
+              <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
+                </span>
+                Confirming your payment and unlocking Sovereign+…
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-foreground">
+                Welcome to Sovereign+ — your plan is active and your baseline is now fully unlocked.
+              </p>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -509,8 +556,8 @@ export function ChatClient() {
         </div>
       </div>
 
-      <div className="border-t px-4 py-4">
-        <div className="mx-auto max-w-3xl">
+      <div className="border-t px-4 pb-safe">
+        <div className="mx-auto max-w-3xl py-4">
           <BaselineDrawer data={baselineData} />
           <div className="mt-2">
           {usage.limit !== null && (
@@ -527,6 +574,16 @@ export function ChatClient() {
                 />
               </div>
             </div>
+          )}
+          {/* Soft in-chat nudge in the band just before the hard wall (1–2 left).
+              Deliberately excludes the at-cap case, which the banner above already owns. */}
+          {usage.limit !== null && usage.used < usage.limit && usage.limit - usage.used <= 2 && !showUpgrade && (
+            <p className="mb-1.5 text-xs text-muted-foreground">
+              {usage.limit - usage.used === 1 ? "Last free message today" : `${usage.limit - usage.used} free messages left today`}{" "}
+              <Link href="/upgrade" className="font-medium text-foreground underline underline-offset-2">
+                unlock unlimited with Sovereign+
+              </Link>
+            </p>
           )}
           <div className="flex gap-2">
             <Input
@@ -559,6 +616,8 @@ export function ChatClient() {
           </div>
         </div>
       </div>
+      {/* Keeps the composer clear of the fixed standalone tab bar (no-op in the browser). */}
+      <div className="tab-bar-spacer standalone-only sm:hidden" aria-hidden="true" />
     </main>
   );
 }

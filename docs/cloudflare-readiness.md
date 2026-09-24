@@ -8,6 +8,12 @@ the media-spike scenario where visitor and signup volume jump ~100× for hours.
 
 Everything recommended here is available on the **Free** plan unless noted.
 
+> **Companion doc:** [`scaling-plan.md`](./scaling-plan.md) is the operational twin
+> of this readiness map — it records what has actually been applied via the API
+> token, the current free-plan ceilings, a thresholds→action matrix, the upgrade
+> ladder, and ready-to-paste prompts for Cloudflare agent "Lee" for the moment
+> traffic approaches a limit.
+
 - Account ID: `8b1954d216d65077c6480d62583fe2c2`
 - Worker: `production-os` · Zone: `defrag.app` · App origin: `sovereign.defrag.app`
 - D1: `production-os-db` · KV: `SESSION_KV` · AI Gateway: `sovereign-ai-gateway`
@@ -149,6 +155,10 @@ curl -X POST https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets \
 ---
 
 ## 4. Media-spike playbook (the scenario you flagged)
+
+> The step-by-step operational version (thresholds, monitoring, and the exact
+> Lee prompts) lives in [`scaling-plan.md`](./scaling-plan.md). This section is the
+> strategic summary; that one is what you hand an agent mid-spike.
 
 The architecture is already edge-native, so the plan is about **cost + abuse +
 perceived latency**, not server capacity:

@@ -5,9 +5,11 @@ Goal (yours, restated): turn the signup → free-use → upgrade path into a
 circumvented to get paid features for free, and needs no manual work per
 subscriber (checkout, receipt, and monthly/cancel management are Stripe-hosted).
 
-This is an **evaluation + plan**, not yet implemented (you asked to tackle Stripe
-*after* the Cloudflare architecture). The Cloudflare side is now done/shipped
-(passkeys live, hardening plan in `docs/cloudflare-readiness.md`).
+This was an **evaluation + plan**; the four revenue-hardening gaps in §2.1–§2.4 are
+now **implemented** (see the ✅ status markers). The remaining §2.5–§2.6 items are
+dashboard/config, and the §3 funnel items are product moves. Cloudflare side is
+shipped (passkeys live; hardening in `docs/cloudflare-readiness.md` and the
+operations runbook in `docs/scaling-plan.md`).
 
 ---
 
@@ -35,31 +37,41 @@ That is the correct, un-bypassable shape — keep it.
 
 ## 2. Hardening gaps to close (prioritized) — before relying on it for revenue
 
-1. **Duplicate Stripe customers.** Checkout sends `customer_email` (and
+> Status legend: ✅ implemented in code this pass · 🔧 dashboard/config step.
+
+1. ✅ **Duplicate Stripe customers.** Checkout sent `customer_email` (and
    `client_reference_id`) but never the stored `stripe_customer_id`. A returning
-   subscriber gets a *new* Stripe customer each time → split receipts/portal
-   history. **Fix:** when `users.stripe_customer_id` exists, create the session
-   with `customer=<id>` instead of `customer_email`. Receipts and the billing
-   portal then always point at one customer.
-2. **Missed payment / dunning events.** The webhook handles
-   `customer.subscription.*` and `checkout.session.completed` but **not**
-   `invoice.payment_failed`, `invoice.paid`, or `checkout.session.async_payment_failed`.
-   Today a failed renewal relies on `customer.subscription.updated` to demote.
-   **Fix:** add those cases so a card failure reliably demotes to `free` (and a
-   recovered payment re-promotes). Turn on **Stripe's Automated dunning + Smart
-   Retries** in the dashboard (this is the "hands-off" part that actually
-   recovers involuntary churn for you).
-3. **Receipt emails.** Stripe only emails receipts/invoices if
+   subscriber got a *new* Stripe customer each time → split receipts/portal
+   history. **Done:** `createCheckoutSession()` now takes an optional
+   `customerId` and, when present, sets `customer=<id>` (dropping `customer_email`);
+   `/api/checkout` reads `users.stripe_customer_id` and passes it. Receipts and the
+   billing portal now always point at one customer.
+2. ✅ **Missed payment / dunning events.** The webhook handled
+   `customer.subscription.*` and `checkout.session.completed` but **not** the
+   invoice lifecycle. **Done:** `invoice.payment_failed` (keeps tier during Stripe's
+   retries per best practice + sends a throttled `payment-failed` email),
+   `invoice.paid`/`invoice.payment_succeeded` (ensures `sovereign+` + sends an
+   on-brand `payment-received` receipt once, deduped per invoice),
+   `invoice.payment_action_required` (SCA nudge), and
+   `checkout.session.async_payment_failed` (demote to `free`). Users are resolved
+   by `customer` → `users.stripe_customer_id` with a `metadata.account_id` /
+   `client_reference_id` fallback. **🔧 Also turn on Stripe's Automated dunning +
+   Smart Retries in the dashboard** — that is the hands-off involuntary-churn
+   recovery that complements these events.
+3. 🔧 **Receipt emails.** Stripe only emails its own receipts/invoices if
    **Settings → Emails → "Email customers about… receipts / subscription
-   invoices"** are ON. Verify in the dashboard — nothing in code sends them, and
-   you explicitly want emailed receipts. (Also confirm the sender domain passes
-   SPF/DKIM so they don't land in spam.)
-4. **Webhook-loss reconciliation (safety net).** If a webhook is ever dropped, a
-   payer could be stuck on `free` or a canceler left on `sovereign+`. Add a
-   lightweight reconciliation: on login (or a daily Durable-Object alarm) that
-   notices `subscription_tier` newer than X, re-fetch the customer's active
-   subscription from Stripe and correct the DB. Cheap, and it makes the system
-   self-healing rather than webhook-perfect.
+   invoices"** are ON (verify in the dashboard; SPF/DKIM must pass so they don't
+   spam). **Belt-and-suspenders now in code:** the app itself sends branded
+   `payment-received` / `payment-failed` / `subscription-canceled` templates
+   (`src/lib/email.ts`) from the webhook, so revenue confirmation survives even if
+   that toggle is off.
+4. ✅ **Webhook-loss reconciliation (safety net).** If a webhook is dropped, a payer
+   could be stuck on `free` or a canceler left on `sovereign+`. **Done:**
+   `syncStripeTier()` in `src/lib/stripe.ts` re-fetches the customer's active
+   subscription and corrects the DB; it is called from `GET /api/auth` only when a
+   `stripe_customer_id` exists and a KV `tier-sync:<id>` stamp is older than ~6h
+   (bounded cost), so a lost `customer.subscription.deleted` self-heals on the
+   user's next session.
 5. **Portal/checkout config.** In the dashboard, enable in the Customer Portal:
    plan switching (monthly↔annual), cancellation-at-period-end, and update
    payment method. That is the entire "manage my subscription" UX with zero

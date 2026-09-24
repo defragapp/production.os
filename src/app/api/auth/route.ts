@@ -7,6 +7,7 @@ import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { syncStripeTier } from "@/lib/stripe";
 import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
 import type { User } from "@/lib/types";
 
@@ -31,6 +32,21 @@ export async function GET(request: NextRequest) {
     }
   }
   if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
+
+  // Webhook-loss reconciliation: if Stripe is configured and we have a customer
+  // id, occasionally (≤ 1×/6h) verify the stored tier against Stripe's live
+  // subscriptions. Self-heals a dropped customer.subscription.deleted so a
+  // lapsed subscriber stops seeing Sovereign+ on their next session. Bounded by
+  // a KV stamp to keep the hot session-check path cheap.
+  if (user.stripe_customer_id && env.STRIPE_SECRET_KEY) {
+    const syncKey = `tier-sync:${user.id}`;
+    if (!(await env.SESSION_KV.get(syncKey))) {
+      await env.SESSION_KV.put(syncKey, "1", { expirationTtl: 6 * 60 * 60 });
+      const synced = await syncStripeTier(env, user.id, user.stripe_customer_id);
+      if (synced !== user.subscription_tier) user.subscription_tier = synced;
+    }
+  }
+
   const hasBaseline = !!(await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(payload.sub).first());
   // Daily AI chat usage for the UI (free tier only). Mirror or await the same
   // KV counter the /api/chat route uses so the gauge matches the enforcement.

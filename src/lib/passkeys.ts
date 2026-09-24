@@ -117,9 +117,13 @@ export async function buildRegistrationOptions(
     attestationType: "none",
     excludeCredentials,
     // Discoverable (resident) + device-bound so login works with no email.
+    // preferredAuthenticatorType nudges iOS/Safari to offer the device's own
+    // Face ID / Touch ID first, for a native-app feel; userVerification
+    // "required" ensures the biometric is actually captured.
+    preferredAuthenticatorType: "localDevice",
     authenticatorSelection: {
       residentKey: "required",
-      userVerification: "preferred",
+      userVerification: "required",
     },
   });
   await putChallenge(env, `pkreg:${user.userId}`, options.challenge);

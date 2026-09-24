@@ -46,7 +46,7 @@ export function Nav() {
     `${navLink} ${pathname === href ? navLinkActive : ""}`;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-md">
+    <header className="pt-safe sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
 

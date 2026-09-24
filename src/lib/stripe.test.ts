@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, verifyStripeSignature } from "./stripe";
+import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, createCheckoutSession, syncStripeTier, verifyStripeSignature } from "./stripe";
 import { createHmac } from "node:crypto";
 import type { AppEnv } from "./env";
 
@@ -128,5 +128,75 @@ describe("createPortalSession", () => {
     await expect(createPortalSession(withoutReturn, "cus_123")).rejects.toThrow(
       "Stripe portal return URL is not configured",
     );
+  });
+});
+
+describe("createCheckoutSession", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => { global.fetch = originalFetch; });
+
+  function mockCheckoutOk() {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ url: "https://checkout.stripe.com/pay/cs_test_1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    ) as unknown as typeof fetch;
+  }
+  const bodyOf = () => String((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+
+  it("reuses an existing customer id instead of customer_email", async () => {
+    mockCheckoutOk();
+    await createCheckoutSession(env, "acct_1", "user@example.com", "monthly", "idem_1", "cus_existing");
+    const body = bodyOf();
+    expect(body).toContain("customer=cus_existing");
+    expect(body).not.toContain("customer_email=");
+  });
+
+  it("falls back to customer_email when no customer id is known", async () => {
+    mockCheckoutOk();
+    await createCheckoutSession(env, "acct_1", "user@example.com", "annual", "idem_2", null);
+    const body = bodyOf();
+    expect(body).toContain("customer_email=user%40example.com");
+    expect(body).not.toContain("customer=cus");
+    expect(body).toContain("line_items%5B0%5D%5Bprice%5D=price_annual");
+  });
+});
+
+describe("syncStripeTier", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => { global.fetch = originalFetch; });
+
+  function mockEnv(subs: Array<{ status: string }>) {
+    const run = vi.fn().mockResolvedValue({ success: true });
+    const bind = vi.fn(() => ({ run }));
+    const prepare = vi.fn(() => ({ bind }));
+    const db = { prepare } as unknown as AppEnv["DB"];
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: subs }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    ) as unknown as typeof fetch;
+    return { db, run };
+  }
+
+  it("derives sovereign+ from an active subscription", async () => {
+    const { db, run } = mockEnv([{ status: "active" }]);
+    const tier = await syncStripeTier({ ...env, DB: db } as unknown as AppEnv, "u1", "cus_1");
+    expect(tier).toBe("sovereign+");
+    expect(run).toHaveBeenCalled();
+  });
+
+  it("derives free when the customer has no active subscription", async () => {
+    const { db, run } = mockEnv([]);
+    const tier = await syncStripeTier({ ...env, DB: db } as unknown as AppEnv, "u1", "cus_1");
+    expect(tier).toBe("free");
+    expect(run).toHaveBeenCalled();
+  });
+
+  it("is a no-op returning free when Stripe is unconfigured", async () => {
+    const run = vi.fn();
+    const db = { prepare: vi.fn(() => ({ bind: vi.fn(() => ({ run })) })) } as unknown as AppEnv["DB"];
+    const tier = await syncStripeTier({ ...env, STRIPE_SECRET_KEY: "", DB: db } as unknown as AppEnv, "u1", "cus_1");
+    expect(tier).toBe("free");
+    expect(run).not.toHaveBeenCalled();
   });
 });

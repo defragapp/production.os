@@ -25,7 +25,9 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 > implemented passkey (WebAuthn) flow — is documented in [`docs/auth.md`](docs/auth.md).
 >
 > Related: [`docs/cloudflare-readiness.md`](docs/cloudflare-readiness.md)
-> (edge security + scale/media-spike plan) and
+> (edge security + scale/media-spike plan), its operational twin
+> [`docs/scaling-plan.md`](docs/scaling-plan.md) (free-plan ceilings, thresholds →
+> action matrix, upgrade ladder, and copy-paste "agent Lee" prompts), and
 > [`docs/stripe-plan.md`](docs/stripe-plan.md) (free → Sovereign+ monetization).
 
 ## CI/CD

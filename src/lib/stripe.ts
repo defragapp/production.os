@@ -100,6 +100,10 @@ export async function createCheckoutSession(
   email: string,
   interval: "monthly" | "annual",
   idempotencyKey: string,
+  // When the account already has a Stripe customer (from a prior subscription
+  // or the portal), reuse it instead of letting Stripe create a duplicate by
+  // email. Keeps billing history and the portal tied to one customer id.
+  customerId?: string | null,
 ): Promise<{ url: string }> {
   const price = configuredPrice(env, interval);
   if (!price) throw new Error("Stripe price is not configured");
@@ -108,7 +112,11 @@ export async function createCheckoutSession(
   body.set("mode", "subscription");
   body.set("line_items[0][price]", price);
   body.set("line_items[0][quantity]", "1");
-  body.set("customer_email", email);
+  if (customerId) {
+    body.set("customer", customerId);
+  } else {
+    body.set("customer_email", email);
+  }
   body.set("client_reference_id", accountId);
   body.set("success_url", env.STRIPE_SUCCESS_URL);
   body.set("cancel_url", env.STRIPE_CANCEL_URL);
@@ -188,6 +196,45 @@ export async function cancelActiveSubscriptions(env: AppEnv, customerId: string 
   } catch (err) {
     console.error("[stripe] failed to cancel subscriptions on account deletion:", err);
   }
+}
+
+/**
+ * Reconcile a user's tier against Stripe's source of truth. Webhooks are
+ * best-effort — a dropped `customer.subscription.deleted` (or a Worker cold
+ * start that missed a delivery) can leave a lapsed subscriber on Sovereign+.
+ * Pull the customer's live subscriptions and correct `users.subscription_tier`
+ * when it disagrees. Returns the effective tier so the caller can act on it.
+ * Best-effort: any Stripe failure is swallowed (we keep the stored tier).
+ */
+export async function syncStripeTier(
+  env: AppEnv,
+  userId: string,
+  customerId: string,
+): Promise<"free" | "sovereign+"> {
+  if (!env.STRIPE_SECRET_KEY) return "free";
+  let tier: "free" | "sovereign+" = "free";
+  try {
+    const res = await fetch(
+      `https://api.stripe.com/v1/subscriptions?customer=${encodeURIComponent(customerId)}&status=active&limit=1`,
+      { headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": STRIPE_API_VERSION } },
+    );
+    if (res.ok) {
+      const data = await res.json() as { data?: Array<{ status?: string }> };
+      const active = (data.data ?? []).some((s) => tierFromSubscriptionStatus(s.status || "") === "sovereign_plus");
+      if (active) tier = "sovereign+";
+    }
+  } catch (err) {
+    console.error("[stripe] tier sync failed:", err);
+    return "free";
+  }
+  try {
+    // `IS NOT ?` is SQLite null-safe inequality: only write when the stored
+    // tier actually differs (including when it was NULL).
+    await env.DB.prepare("UPDATE users SET subscription_tier = ? WHERE id = ? AND subscription_tier IS NOT ?").bind(tier, userId, tier).run();
+  } catch (err) {
+    console.error("[stripe] tier sync DB write failed:", err);
+  }
+  return tier;
 }
 
 export {

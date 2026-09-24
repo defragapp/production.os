@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, JetBrains_Mono, Manrope } from "next/font/google";
 import { WebAnalytics } from "@/components/web-analytics";
+import { TabBar } from "@/components/tab-bar";
+import { InstallPrompt } from "@/components/install-prompt";
 import "./globals.css";
 
 const sans = Manrope({
@@ -23,6 +25,26 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+// device px = logical pt × pixel ratio; the URL w/h mirror that so the PNG is
+// 1:1 with the backing store (Safari won't scale a startup image to fit).
+type Startup = { url: string; media: string };
+function splash(w: number, h: number, dpr: number, orientation: "portrait" | "landscape"): Startup {
+  return {
+    url: `/apple-splash?w=${w * dpr}&h=${h * dpr}`,
+    media: `screen and (device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: ${orientation})`,
+  };
+}
+const APPLE_STARTUP_IMAGES: Startup[] = [
+  // iPhone 15/16 Pro & Pro Max, 13 Pro/Pro Max share the 3x tall classes.
+  splash(393, 852, 3, "portrait"),
+  splash(430, 932, 3, "portrait"),
+  splash(390, 844, 3, "portrait"),
+  splash(393, 852, 2, "portrait"),
+  // iPad (10th gen) / Air / Pro 11" & 12.9"-13".
+  splash(820, 1180, 2, "portrait"),
+  splash(1024, 1366, 2, "portrait"),
+];
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://sovereign.defrag.app"),
   title: {
@@ -38,6 +60,11 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Sovereign OS",
+    // Dark launch screens for the common iPhone/iPad viewports so an installed
+    // app opens straight into the brand instead of a white flash. Add more by
+    // appending { url, media } rows; `media` must match the device's logical
+    // size × its -webkit-device-pixel-ratio. Served by /apple-splash.
+    startupImage: APPLE_STARTUP_IMAGES,
   },
   keywords: [
     "AI patterns",
@@ -77,6 +104,7 @@ export const viewport: Viewport = {
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
   viewportFit: "cover",
 };
 
@@ -87,6 +115,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
+        <TabBar />
+        <InstallPrompt />
         <WebAnalytics />
       </body>
     </html>
