@@ -188,7 +188,7 @@ export function OnboardContent() {
               <CardContent className="pt-6">
                 <form onSubmit={handleResetConfirm} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password (min 8 characters)</Label>
+                    <Label htmlFor="new-password">New password (at least 8 characters)</Label>
                     <Input
                       id="new-password"
                       type="password"
@@ -325,7 +325,7 @@ export function OnboardContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password (min 8 characters)</Label>
+                    <Label htmlFor="password">Password (at least 8 characters)</Label>
                     <Input
                       id="password"
                       type="password"
@@ -367,8 +367,8 @@ export function OnboardContent() {
                           <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" "}
                           and{" "}
                           <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
-                          I understand my birth data is used to compute my baseline, is never shared
-                          with third parties, and that the Service&apos;s outputs are protected by the Terms.
+                          My birth data is used only to compute my Baseline, and it&apos;s never
+                          shared with anyone else.
                         </Label>
                       </div>
                     </>
@@ -452,8 +452,8 @@ export function OnboardContent() {
             <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
             <h1 className="font-display text-3xl font-normal tracking-tight">Build Your Baseline</h1>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-              The computational picture of how you tend to communicate, feel, and decide — computed
-              from NASA/JPL planetary data. About a minute.
+              A plain-language picture of how you tend to communicate, feel, and decide — built
+              from NASA/JPL planetary data. Takes about a minute.
             </p>
           </div>
 
@@ -464,7 +464,7 @@ export function OnboardContent() {
                 onSaved={() => router.push(existingUser ? "/chat" : "/upgrade?from=baseline")}
               />
               <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">
-                You can update or refine it later from your baseline.
+                You can update it later from your Baseline.
               </p>
             </CardContent>
           </Card>

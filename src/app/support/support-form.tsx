@@ -66,7 +66,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
           <Input id="support-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Optional" maxLength={80} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="support-email">Reply email</Label>
+          <Label htmlFor="support-email">Email for the reply</Label>
           <Input
             id="support-email"
             type="email"
@@ -128,8 +128,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
       </button>
 
       <p className="text-center text-xs leading-5 text-muted-foreground/70">
-        Your message is sent to the Sovereign team only — never a third party. If you&apos;re experiencing
-        an emergency, please contact local emergency services instead of writing to us.
+        Goes straight to the Sovereign team — never a third party.
       </p>
     </form>
   );

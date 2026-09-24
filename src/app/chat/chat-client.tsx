@@ -237,7 +237,7 @@ export function ChatClient() {
           setShowVerify(true);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: "Please verify your email address to use AI chat. Check your inbox for the verification link." };
+            u[u.length - 1] = { role: "assistant", content: "Verify your email to keep chatting with the AI — the link is in your inbox." };
             return u;
           });
           return;
@@ -262,7 +262,7 @@ export function ChatClient() {
         }
         setMessages((prev) => {
           const u = [...prev];
-          u[u.length - 1] = { role: "assistant", content: `Error: ${err.error || "Something went wrong."}` };
+          u[u.length - 1] = { role: "assistant", content: err.error || "Something went wrong — please try again." };
           return u;
         });
         return;
@@ -318,7 +318,7 @@ export function ChatClient() {
       console.error("Chat error:", err);
       setMessages((prev) => {
         const u = [...prev];
-        u[u.length - 1] = { role: "assistant", content: "Error: Could not connect to the server." };
+        u[u.length - 1] = { role: "assistant", content: "Couldn't reach Sovereign — check your connection and try again." };
         return u;
       });
     } finally {
@@ -502,7 +502,7 @@ export function ChatClient() {
                   About yourself, a relationship, or your family.
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground/60">
-                  Your baseline is loaded — the AI will reference it as you chat.
+                  Your Baseline is loaded — Sovereign will bring it into every answer.
                 </p>
                 <div className="mt-6 flex flex-col items-center gap-2">
                   {SUGGESTIONS.map((s) => (

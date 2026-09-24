@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
+import { PageTexture } from "@/components/page-texture";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import type { BaselineData } from "@/lib/types";
 
@@ -306,10 +307,7 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
 export function LandingClient() {
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
-      {/* Texture layers: film grain + corner vignette turn the flat black
-          background into a lit, photographed stage. Both fixed and inert. */}
-      <div className="vignette-overlay" aria-hidden="true" />
-      <div className="grain-overlay" aria-hidden="true" />
+      <PageTexture />
       <Nav />
 
       <main className="relative z-10">

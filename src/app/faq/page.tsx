@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
+import { PageTexture } from "@/components/page-texture";
 
 export const metadata: Metadata = {
   title: "FAQ — Sovereign OS",
@@ -11,27 +12,27 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: "What is Sovereign OS?",
-    a: "Sovereign is an AI that helps you think through what's happening in your life — with yourself, in a relationship, or inside your family. It separates what actually happened from what you may have made it mean, and helps you decide for yourself what to do about it. It is not fortune-telling: it is grounded in a personal Baseline computed from your date, time, and place of birth using NASA/JPL planetary data.",
+    a: "An AI that helps you think through what's happening in your life — with yourself, in a relationship, or at home. It separates what actually happened from what it started to mean to you, and leaves the deciding to you. It's not fortune-telling: every read is grounded in a personal Baseline computed from your birth date, time, and place using NASA/JPL planetary data.",
   },
   {
     q: "Is this therapy or medical advice?",
-    a: "No. Sovereign is a tool for self-reflection and awareness. It does not diagnose, treat, or replace professional mental health, medical, financial, or legal advice. Sovereign never tells you who you are — you remain the authority over your own life. It offers possibilities worth examining and asks questions that help you think more clearly. If you are struggling, please reach out to a qualified professional.",
+    a: "No. Sovereign is a mirror, not a clinician. It doesn't diagnose, treat, or stand in for professional mental-health, medical, financial, or legal advice — and it never tells you who you are. It offers possibilities worth examining and questions that help you think more clearly. If you're struggling, please reach out to a qualified professional.",
   },
   {
     q: "What does the AI actually do?",
-    a: "Every answer keeps three things separate: what you told us (the facts as you described them), what your Baseline suggests (a general tendency, not a verdict about you), and what is only a possibility worth examining. It never claims to know another person's inner reasons, and it never predicts the future. It ends by asking you a question — because understanding is something you do, not something you receive.",
+    a: "Every answer keeps three things apart: what you said happened, what your Baseline suggests (a tendency, not a verdict about you), and what's only a possibility worth examining. It never claims to know what's going on inside someone else, and it never predicts the future. It usually ends by asking you a question — because understanding is something you do, not something you receive.",
   },
   {
     q: "Where does my Baseline come from?",
-    a: "Your Baseline is computed from your date, time, and place of birth. We calculate the position of the planets from NASA/JPL ephemeris data and combine it with two other systems (numerology and Human Design) into a single, readable profile the AI references in your conversations.",
+    a: "From your birth date, time, and place. We compute the planets' positions from NASA/JPL ephemeris data and combine them with two long-standing reference systems (numerology and Human Design) into one readable profile that the AI brings into your conversations.",
   },
   {
     q: "What do you do with my birth data?",
-    a: "One thing only: computing your Baseline. It is never sold or shared. You can delete your entire account — baseline, chats, and data — in one click from your Account page, and we remove it.",
+    a: "One thing only: computing your Baseline. It is never sold or shared. You can delete your entire account — Baseline, chats, and data — in one click from your Account page, and we remove it.",
   },
   {
     q: "What's the difference between Free and Sovereign+?",
-    a: "Free includes your full Baseline and 5 AI messages per day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $20/month, or $99/year (save 59%). You can cancel anytime.",
+    a: "Free includes your full Baseline and 5 AI messages a day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $20/month, or $99/year (save 59%). You can cancel anytime.",
   },
   {
     q: "Can I cancel anytime?",
@@ -42,8 +43,9 @@ const FAQS = [
 export default function FaqPage() {
   return (
     <>
+      <PageTexture />
       <Nav />
-      <main className="mx-auto max-w-3xl px-6 py-14">
+      <main className="relative mx-auto max-w-3xl px-6 py-14">
         <PageHeader
           title="Questions, answered"
           description="What Sovereign is, how it works, and what it means for you."
@@ -57,22 +59,38 @@ export default function FaqPage() {
           Compare Free vs Sovereign+ →
         </Link>
 
-        <div className="border-t border-border">
+        <div className="glass-panel px-6 md:px-8">
           {FAQS.map((item) => (
             <details
               key={item.q}
-              className="group border-b border-border py-6"
+              className="group border-b border-border/70 py-5 last:border-b-0"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between text-base font-medium text-foreground [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-[15px] font-medium text-foreground transition-colors duration-200 hover:text-foreground/80 [&::-webkit-details-marker]:hidden md:text-base">
                 {item.q}
-                <span className="ml-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45">
+                <span className="ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-sm text-muted-foreground transition-all duration-200 group-open:rotate-45 group-open:border-foreground/30 group-open:text-foreground">
                   +
                 </span>
               </summary>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+              <p className="max-w-prose pb-1 pt-3 text-sm leading-7 text-muted-foreground">{item.a}</p>
             </details>
           ))}
         </div>
+
+        {/* Anything the FAQ didn't cover goes to a human — same lit-band
+            treatment as the landing's closing CTA. */}
+        <div className="section-rule mt-14" aria-hidden="true" />
+        <section className="relative overflow-hidden py-14 text-center">
+          <div className="hero-light" aria-hidden="true" />
+          <div className="relative">
+            <h2 className="font-display text-xl font-normal tracking-tight text-foreground md:text-2xl">
+              Question we didn&apos;t answer?
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">Tell us — we read everything, and a person writes back.</p>
+            <Link href="/support" className="btn-glass mt-6 inline-block px-6 py-2.5 text-sm font-medium text-foreground">
+              Write to the team
+            </Link>
+          </div>
+        </section>
       </main>
     </>
   );
