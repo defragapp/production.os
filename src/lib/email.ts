@@ -101,7 +101,7 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string; token: string };
       return emailShell(
         "Reset your password",
-        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">You requested a password reset. This link is valid for 15 minutes.</p>` +
+        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">You requested a password reset. This link is valid for 30 minutes.</p>` +
         `<div style="text-align:center">${emailButton(`${v.origin}/onboard?reset=${v.token}`, "Reset Password")}</div>`
       );
     },

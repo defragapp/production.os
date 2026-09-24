@@ -10,6 +10,12 @@
      inner route. Foreground text is a warm cream; pure color is reserved for
      nothing but the user's own life data. */
   :root {
+    /* Tell the browser we are a dark document so native UI — the baseline
+       date picker, autofill dropdowns, <select> menus, form-validation styling,
+       and scrollbars — renders in dark on iOS/macOS/Windows instead of a
+       bright default that fights the graphite theme. No effect on our own
+       styling; it only governs UA-drawn chrome. */
+    color-scheme: dark;
     --background: 30 8% 4.5%;
     --foreground: 38 18% 95%;
     --card: 30 7% 6%;
