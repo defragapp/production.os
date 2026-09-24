@@ -4,7 +4,7 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/about", "/faq", "/terms", "/privacy"],
+      allow: ["/", "/about", "/faq", "/terms", "/privacy", "/support", "/llms.txt", "/llms-full.txt"],
       disallow: ["/api/", "/chat", "/baseline", "/upgrade", "/account", "/onboard"],
     },
     sitemap: "https://sovereign.defrag.app/sitemap.xml",

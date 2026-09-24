@@ -5,7 +5,13 @@
  */
 import type { AppEnv } from "./env";
 
-interface SendEmailOptions { to: string; subject: string; html: string; }
+interface SendEmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  /** Optional sender-exposed reply address (e.g. the support form's user). */
+  replyTo?: string;
+}
 
 /**
  * Email verification is only enforced when we can actually deliver mail.
@@ -151,6 +157,34 @@ const EMAIL_TEMPLATES = {
       );
     },
   },
+
+  "support-received": {
+    subject: "We received your message",
+    render: (_vars: Record<string, unknown>): string => {
+      return emailShell(
+        "We received your message",
+        `<p style="color:#52525b;line-height:1.6;margin:0 0 8px;text-align:center">Thanks for reaching out. Your message to Sovereign OS has been received, and someone will get back to you.</p>` +
+        `<p style="color:#a1a1aa;font-size:13px;margin:0;text-align:center">Please don't reply with personal details, account passwords, or payment information in support messages.</p>`
+      );
+    },
+  },
+
+  "support-notification": {
+    subject: "New support message",
+    render: (vars: Record<string, unknown>): string => {
+      const v = vars as { name: string; email: string; topic: string; message: string };
+      const topic = v.topic || "General";
+      const body = v.message.split("\n").map((line) => `<p style="color:#52525b;line-height:1.6;margin:0 0 8px">${line || "&nbsp;"}</p>`).join("");
+      return emailShell(
+        `Support: ${topic}`,
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="text-align:left">
+<tr><td style="padding:2px 0"><span style="color:#a1a1aa;font-size:12px;">From</span><br><strong style="color:#18181b;font-size:14px;">${v.name || "Anonymous"} &lt;${v.email}&gt;</strong></td></tr>
+<tr><td style="padding:8px 0 2px"><span style="color:#a1a1aa;font-size:12px;">Topic</span><br><strong style="color:#18181b;font-size:14px;">${topic}</strong></td></tr>
+<tr><td style="padding:8px 0 2px"><span style="color:#a1a1aa;font-size:12px;">Message</span><br><div style="margin-top:4px">${body}</div></td></tr>
+</table>`
+      );
+    },
+  },
 } as const;
 
 type TemplateName = keyof typeof EMAIL_TEMPLATES;
@@ -179,7 +213,13 @@ export async function sendTemplate<T extends TemplateName>(
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: `Sovereign OS <${fromEmail}>`, to: [opts.to], subject: opts.subject, html: opts.html }),
+        body: JSON.stringify({
+          from: `Sovereign OS <${fromEmail}>`,
+          to: [opts.to],
+          reply_to: opts.replyTo,
+          subject: opts.subject,
+          html: opts.html,
+        }),
       });
       if (!response.ok) { const err = await response.json() as { message?: string }; throw new Error(`Resend error: ${err.message || response.statusText}`); }
       return;
@@ -197,7 +237,13 @@ export async function sendTransactionalEmail(env: AppEnv, opts: SendEmailOptions
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: `Sovereign OS <${fromEmail}>`, to: [opts.to], subject: opts.subject, html: opts.html }),
+        body: JSON.stringify({
+          from: `Sovereign OS <${fromEmail}>`,
+          to: [opts.to],
+          reply_to: opts.replyTo,
+          subject: opts.subject,
+          html: opts.html,
+        }),
       });
       if (!response.ok) { const err = await response.json() as { message?: string }; throw new Error(`Resend error: ${err.message || response.statusText}`); }
       return;

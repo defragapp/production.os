@@ -15,6 +15,8 @@ export interface AppEnv {
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_SECRET_KEY: string;
   RESEND_API_KEY: string;
+  /** Operator inbox for the /support form (falls back to FROM_EMAIL). */
+  SUPPORT_INBOX?: string;
   TURNSTILE_SITE_KEY: string;
   TURNSTILE_SECRET_KEY: string;
 }

@@ -1,5 +1,32 @@
 import { LandingClient } from "@/components/landing-client";
 
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://sovereign.defrag.app/#organization",
+  name: "Sovereign OS",
+  url: "https://sovereign.defrag.app",
+  logo: "https://sovereign.defrag.app/icon.svg",
+  description:
+    "A private AI platform for understanding yourself, your people, and the systems you live within.",
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    url: "https://sovereign.defrag.app/support",
+    email: "sovereign@defrag.app",
+    availableLanguage: ["en"],
+  },
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://sovereign.defrag.app/#website",
+  name: "Sovereign OS",
+  url: "https://sovereign.defrag.app",
+  publisher: { "@id": "https://sovereign.defrag.app/#organization" },
+};
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -14,6 +41,7 @@ const jsonLd = {
     { "@type": "Offer", name: "Sovereign+ Monthly", price: "20", priceCurrency: "USD" },
     { "@type": "Offer", name: "Sovereign+ Annual", price: "99", priceCurrency: "USD" },
   ],
+  publisher: { "@id": "https://sovereign.defrag.app/#organization" },
 };
 
 const faqJsonLd = {
@@ -58,6 +86,14 @@ const faqJsonLd = {
 export default function Home() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

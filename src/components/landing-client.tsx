@@ -185,7 +185,7 @@ function ProductDemo() {
         </div>
 
         <div className="mt-3">
-          <BaselineDrawer data={DEMO_BASELINE} />
+          <BaselineDrawer data={DEMO_BASELINE} overlay />
         </div>
 
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
@@ -461,12 +461,9 @@ export function LandingClient() {
             <Link href="/privacy" className="transition-colors duration-[240ms] hover:text-foreground">
               Privacy
             </Link>
-            <a
-              href="mailto:sovereign@defrag.app"
-              className="transition-colors duration-[240ms] hover:text-foreground"
-            >
-              sovereign@defrag.app
-            </a>
+            <Link href="/support" className="transition-colors duration-[240ms] hover:text-foreground">
+              Support
+            </Link>
           </div>
         </div>
       </footer>

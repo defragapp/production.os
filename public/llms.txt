@@ -1,0 +1,51 @@
+# Sovereign OS
+
+> A private AI platform for understanding yourself, your people, and the systems you live within. Sovereign computes a personal **Baseline** from the user's date, time, and place of birth using NASA/JPL planetary coordinates, then uses a reflection-first AI (not diagnosis, not astrology, not psychology) to help the user examine patterns in their own words — including relationship and family patterns, with consent-gated context from people who accept an invitation.
+
+## What it is
+
+- **Your Baseline is the anchor.** One input — birth date, time, place — produces a computational picture of tendencies: how you tend to communicate, feel, and decide. It is a frame of reference, never a verdict, never destiny.
+- **You explore in your own words.** The AI grounds every answer in the user's Baseline and in what the user actually said. It separates *observed* facts, *Baseline-supported* interpretation, *interpretive* readings (which require the user's confirmation), and *unknowns* it declares plainly.
+- **Relationships are consent-gated.** A person only enters a user's context if they accept an invitation and the relationship stays scoped to each person's own data. No one can see another person's raw Baseline.
+- **Four levels of inquiry.** The AI works at four levels: Reflection (you), Meaning (what you mean by a loaded word like love, success, or safety), Relationship (what happens between two people), and System (roles, loyalties, and rules inside a family or group).
+
+## The evidence discipline
+
+Sovereign never presents an interpretation as an observation. Every response distinguishes:
+1. **Observed** — what the user said happened.
+2. **Baseline-supported** — interpretation grounded in the computed Baseline.
+3. **Interpretive** — a plausible reading offered for confirmation.
+4. **Unknown** — what cannot be determined.
+
+It does not diagnose, does not pathologize, does not moralize, does not issue relationship verdicts, does not claim knowledge of another person's hidden emotions, and does not predict outcomes. Users can correct any interpretation and the AI accepts the correction without defensiveness.
+
+## What you can do on Sovereign
+
+- Create a free account and compute your Baseline (date, time, and place of birth).
+- Have grounded, structured conversations about yourself, a relationship, or your family.
+- Invite people you trust into consent-gated relationships and see where two Baselines align and clash.
+- Upgrade to Sovereign+ (subscription) for the full people/relationships feature set.
+
+## What Sovereign is not
+
+- Not a diagnostic tool, not medical advice, not a therapist, not a crisis line — if someone is in crisis, Surface directs them to professional resources.
+- Not astrology in the horoscope sense. The Baseline is a computational reference built from astronomical data, interpreted as tendencies, not as fate.
+- Not a psychological assessment.
+
+## Files of interest to AI crawlers
+
+- Landing page: https://sovereign.defrag.app/
+- Our Philosophy (how and for what the platform works): https://sovereign.defrag.app/about
+- FAQ: https://sovereign.defrag.app/faq
+- Support: https://sovereign.defrag.app/support
+- Terms of Service: https://sovereign.defrag.app/terms
+- Privacy Policy: https://sovereign.defrag.app/privacy
+
+## Point of contact
+
+- Human support: https://sovereign.defrag.app/support or support email sovereign@defrag.app
+- Security disclosures: https://sovereign.defrag.app/.well-known/security.txt
+
+## Privacy
+
+User birth data and conversations are private. Sovereign never sells data, never trains third-party models on user conversations, and every AI answer is generated per-user with no cross-user leakage. Relationships appear only through explicit, consent-gated invitations.

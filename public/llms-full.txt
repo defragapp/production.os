@@ -1,0 +1,83 @@
+# Sovereign OS — Full Reference
+
+> A private AI platform for understanding yourself, your people, and the systems you live within. This file is a machine-readable expansion of the short `llms.txt`.
+
+## Overview
+
+Sovereign OS ("Sovereign") is a personal intelligence layer. A user provides their date, time, and place of birth once. Sovereign computes a **Baseline** — a computational picture of tendencies — from the ten natal bodies using NASA/JPL Horizons coordinates (astrological placements), Human Design (type, strategy, authority, profile, defined centers, active channels), Gene Keys (active gates, lines, frequencies, themes), and numerology (life path number). The Baseline is a frame of reference, not a verdict: it describes how a person tends to communicate, feel, and decide, and it is never presented as identity or destiny.
+
+The user then converses with an AI in their own words. The AI's job is to help the user see their own patterns more clearly and decide for themselves — not to diagnose, not to deliver fixed answers, and not to behave as an authority.
+
+## How conversations are grounded
+
+Every AI answer is generated per user from three sources:
+
+1. **Baseline signals** — derived from the user's computed Baseline (sun/moon themes, qualities, pressure responses, underused capacities, Human Design type/strategy/authority, Gene Keys, life path). These are tendencies used to support reflection.
+2. **The conversation itself** — a window of prior exchanges in the same thread.
+3. **Consent-gated relationship context** — the profiles of people who have explicitly accepted the user's invitation and consented to appear in that user's context. A person can never appear in another's AI context without consent, and each side is read through its own Baseline.
+
+The pipeline is deterministic in structure: compute baseline → derive signals → classify the user's question into an inquiry level → reason with evidence discipline → generate through a local cloud model (Llama 3.1 8B Instruct) via an AI Gateway with automatic fallback.
+
+## Evidence discipline (in full)
+
+Every response distinguishes four states and never collapses them:
+
+- **Observed** — what the user said happened, or what is factually known. ("You said…", "According to your Baseline…")
+- **Baseline-supported** — interpretation grounded in the computed Baseline. ("Your Baseline suggests…", "One quality that appears in your Baseline is…")
+- **Interpretive** — a plausible reading that requires the user's confirmation. ("One possibility worth examining…", "It may be that…", "This could indicate…")
+- **Unknown** — cannot be determined from available information. ("I can't determine that…", "That would require knowing…")
+
+An interpretation is never presented as an observation. An unknown is never presented as an interpretation.
+
+## The four levels of inquiry
+
+The AI classifies each question into a level and adapts:
+
+1. **Level 1 — Reflection** ("Help me understand myself"): uses the Baseline to identify qualities, patterns, pressure responses, and underused capacities.
+2. **Level 2 — Meaning** ("Help me understand what I mean by what I'm experiencing"): when a loaded concept materially changes the interpretation — love, success, failure, enough, respect, loyalty, responsibility, safety, trust, family, commitment, freedom, helping, fairness, betrayal, abandonment, control, strength, weakness, independence, being needed, being good, being selfish — the AI asks what the concept means to the user before interpreting.
+3. **Level 3 — Relationship** ("Help me understand what happens between us"): requires consent-gated context about the other person; if none exists, the AI works only with what the user described and explicitly separates what happened from what the user made it mean.
+4. **Level 4 — System** ("Help me understand what happens when these people interact"): roles, loyalties, and unwritten rules inside a family or group; requires consent-gated context about multiple participants.
+
+## Reasoning model: Meaning → Expression → Consequence
+
+When a pattern is identified, the AI walks through: (1) Meaning — what the user attached to the experience; (2) Expression — how that shows up in behavior; (3) Consequence — what results; (4) Reinforcement — what temporarily confirms the meaning; (5) Cost — what becomes harder; (6) Question — what reframes without diagnosing.
+
+## Safety and boundaries (in full)
+
+- **No diagnosis.** The AI does not pathologize, does not install identity labels ("you have low self-worth"), and does not treat the Baseline as a clinical signal.
+- **No relational verdicts.** It does not claim knowledge of another person's hidden emotions or intentions, and does not judge who is right.
+- **No overvalidation or moralizing.** It does not say what the user should do.
+- **No destiny.** It never predicts outcomes.
+- **User correction is integral.** The user can reject any interpretation; the AI accepts it, integrates it, and does not re-assert it.
+- **Crisis handling.** If a user discloses trauma, self-harm, abuse, or danger, the AI acknowledges what was shared, does not attempt to analyze it, and directs the user to appropriate professional resources.
+- **Content safety layer.** A lexicon-based moderation layer (negation-aware) blocks prohibited categories (diagnosis, pathology, self-harm encouragement, harassment/abuse, explicit content, dangerous/illegal action). Higher-risk turns are answered with a grounded, repair-style response rather than silence or fabrication.
+- **Answer integrity.** If the model does not return a complete, valid answer, the API retries the model once and, on repeat failure, returns an honest "couldn't finish" message — never a hallucinated placeholder.
+
+## Data, privacy, and consent (in full)
+
+- Birth data is used for one purpose only: computing the Baseline. It is never shared, sold, or used to train anyone else's view of the user.
+- The raw baseline JSON and conversation history are scoped to the owning account in that account's D1 row and KV stores.
+- AI answers are generated per request; there is no training on user conversations at all.
+- Relationships appear only through explicit invitations; each participant's data is visible only through their own authenticated session. The invited person must accept and consent before their derived profile can be used in another user's AI context.
+- Accounts can be deleted in one click, which removes the account and its data.
+- Free tier: 5 AI messages/day, 20 requests/min burst cap. Sovereign+ (subscription) removes the daily message cap and unlocks relationship invitations.
+
+## What Sovereign is NOT
+
+- Not therapy, not medical advice, not a crisis line.
+- Not astrology in the horoscope sense — the Baseline is computational, derived from astronomical coordinates, and read as tendencies, never as fate.
+- Not a psychological or clinical assessment tool.
+
+## Links
+
+- Landing: https://sovereign.defrag.app/
+- Philosophy: https://sovereign.defrag.app/about
+- FAQ: https://sovereign.defrag.app/faq
+- Support: https://sovereign.defrag.app/support
+- Terms: https://sovereign.defrag.app/terms
+- Privacy: https://sovereign.defrag.app/privacy
+- security.txt: https://sovereign.defrag.app/.well-known/security.txt
+
+---
+
+*This file intentionally mirrors how Sovereign works so that AI crawlers and search engines can represent the product accurately. If you have questions, contact sovereign@defrag.app.*

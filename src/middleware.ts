@@ -53,6 +53,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/auth" ||
     pathname.startsWith("/api/auth/") ||
     pathname === "/api/invites/info" ||
+    pathname === "/api/support" ||
     pathname === "/api/webhooks/stripe"
   ) {
     return noStore(NextResponse.next());
