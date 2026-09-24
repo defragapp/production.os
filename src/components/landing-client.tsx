@@ -277,31 +277,34 @@ export function LandingClient() {
 
       <main className="relative z-10">
         {/* ── Hero ─────────────────────────────────────────── */}
-        <section className="relative overflow-hidden px-6 pb-20 pt-16 md:pb-28 md:pt-24">
-          <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1fr_1fr]">
+        <section className="relative overflow-hidden px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
             <Reveal>
               <div className="text-left">
                 <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Sovereign OS
                 </p>
-                <h1 className="font-display text-4xl font-normal leading-[1.1] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+                <h1 className="font-display text-[2rem] font-normal leading-[1.12] tracking-tight text-foreground sm:text-5xl md:text-[3.5rem] md:leading-[1.05]">
                   Understand yourself, <span className="text-iridescent">your people</span>, and the systems you live within.
                 </h1>
-                <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+                <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base md:text-lg">
                   Sovereign is an AI that talks through what&apos;s happening in your life —
                   personal, private, and grounded in a Baseline built from your birth data.
                 </p>
 
-                <div className="mt-9">
-                  <Link href="/onboard?mode=signup" className="btn-aurora inline-block px-7 py-3 text-sm font-medium">
+                <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                  <Link href="/onboard?mode=signup" className="btn-aurora px-7 py-3 text-sm font-semibold">
                     Start free
+                  </Link>
+                  <Link href="/about" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground">
+                    Read the philosophy →
                   </Link>
                 </div>
 
-                <ul className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">
+                <ul className="mt-7 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px] text-muted-foreground">
                   {TRUST_NOTES.map((note, i) => (
-                    <li key={note} className="flex items-center gap-5">
-                      {i > 0 && <span className="h-px w-3 bg-border" aria-hidden="true" />}
+                    <li key={note} className="flex items-center gap-3.5">
+                      {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/50" aria-hidden="true" />}
                       {note}
                     </li>
                   ))}
@@ -316,10 +319,10 @@ export function LandingClient() {
         </section>
 
 {/* ── How it works ─────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-20 md:py-28">
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-24">
           <div className="mx-auto max-w-3xl">
             <Reveal>
-              <h2 className="mb-14 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
+              <h2 className="mb-10 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
                 From your Baseline to a grounded read.
               </h2>
             </Reveal>
@@ -328,7 +331,7 @@ export function LandingClient() {
         </section>
 
         {/* ── What you can explore ─────────────────────────── */}
-        <section className="border-t border-white/10 bg-muted/30 px-6 py-20 md:py-28">
+        <section className="border-t border-white/10 bg-muted/30 px-6 py-16 md:py-24">
           <div className="mx-auto max-w-5xl">
             <Reveal className="mb-12 text-center">
               <h2 className="font-display text-3xl font-normal text-foreground md:text-4xl">
@@ -350,30 +353,31 @@ export function LandingClient() {
                     <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
                   </div>
 
-                  {/* The question — the existing bordered monospace box. */}
+                  {/* The question — a readable quote, raised in contrast. */}
                   <Reveal className="reveal mt-4">
-                    <p className="break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-muted-foreground">
+                    <p className="break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 font-mono text-xs leading-relaxed text-foreground/90">
                       “{item.question}”
                     </p>
                   </Reveal>
 
-                  <Reveal className="reveal flex justify-center">
+                  <Reveal className="reveal hidden justify-center md:flex">
                     <span aria-hidden="true" className="my-1 h-7 w-px bg-white/10" />
                   </Reveal>
 
-                  {/* The quiet read — how the pattern and context are taken in. */}
-                  <Reveal className="reveal">
-                    <p className="break-words rounded-md border border-dashed border-border/70 bg-background/20 px-3 py-2 font-mono text-xs leading-relaxed text-muted-foreground/70">
+                  {/* The quiet read — desktop only; on mobile it collapses to keep
+                      the column to a scannable question → answer. */}
+                  <Reveal className="reveal hidden md:block">
+                    <p className="break-words rounded-md border border-dashed border-border/70 bg-background/20 px-3 py-2 font-mono text-xs leading-relaxed text-muted-foreground">
                       {item.mapping}
                     </p>
                   </Reveal>
 
-                  <Reveal className="reveal flex justify-center">
+                  <Reveal className="reveal hidden justify-center md:flex">
                     <span aria-hidden="true" className="my-1 h-7 w-px bg-white/10" />
                   </Reveal>
 
                   {/* The answer — same editorial surface as the hero preview card. */}
-                  <Reveal className="reveal">
+                  <Reveal className="reveal mt-5 md:mt-0">
                     <div className="break-words rounded-xl border border-white/10 bg-card/60 p-4 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur-sm">
                       <p className="text-sm leading-relaxed text-foreground/80">{item.response}</p>
                       <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-foreground">
@@ -388,7 +392,7 @@ export function LandingClient() {
         </section>
 
 {/* ── Plans ────────────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-20 md:py-28">
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-24">
           <Reveal className="mx-auto max-w-4xl">
             <h2 className="mb-3 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
               Free to start. Keep going when it gets deep.
@@ -445,12 +449,12 @@ export function LandingClient() {
         </section>
 
 {/* ── Final CTA ────────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-28 text-center">
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-20 text-center md:py-24">
           <Reveal className="mx-auto max-w-2xl">
             <h2 className="mb-4 font-display text-3xl font-normal text-foreground sm:text-4xl md:text-5xl">
               Start with one honest question.
             </h2>
-            <p className="mb-12 text-lg text-muted-foreground">
+            <p className="mb-8 text-lg text-muted-foreground">
               It&apos;s free — you don&apos;t need to have anything figured out.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">

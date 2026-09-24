@@ -157,108 +157,66 @@
 }
 
 @layer components {
+  /* Secondary action: a clean translucent glass surface with a readable label
+     and a crisp hairline. The orbiting conic edge was removed by design — it
+     read as a rendering artifact on small screens and undercut the premium
+     feel, which is exactly the opposite of its intent. */
   .btn-glass {
     position: relative;
-    isolation: isolate;
-    border: 0;
-    border-radius: 0.5rem;
-    color: hsl(38 18% 95%);
+    border: 1px solid hsla(38, 18%, 95%, 0.18);
+    border-radius: 0.625rem;
+    color: hsl(38 18% 96%);
     background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.07), hsla(38, 18%, 95%, 0.02));
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    box-shadow:
-      inset 0 1px 0 hsla(38, 18%, 95%, 0.1),
-      0 8px 24px -16px rgba(0, 0, 0, 0.7);
+    box-shadow: inset 0 1px 0 hsla(38, 18%, 95%, 0.08);
     transition:
-      transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
-      box-shadow 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
-  }
-  .btn-glass::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: conic-gradient(
-      from var(--edge),
-      transparent 0deg,
-      hsla(38, 22%, 82%, 0.24) 55deg,
-      hsla(38, 30%, 95%, 0.6) 80deg,
-      hsla(38, 22%, 82%, 0.24) 105deg,
-      transparent 160deg,
-      transparent 360deg
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    animation: edge-orbit 6s linear infinite;
-    pointer-events: none;
+      transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+      box-shadow 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+      background 0.2s ease,
+      border-color 0.2s ease;
   }
   .btn-glass:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
+    border-color: hsla(38, 18%, 95%, 0.34);
+    background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.11), hsla(38, 18%, 95%, 0.04));
     box-shadow:
-      inset 0 1px 0 hsla(38, 18%, 95%, 0.14),
-      0 12px 28px -14px rgba(0, 0, 0, 0.75);
+      inset 0 1px 0 hsla(38, 18%, 95%, 0.12),
+      0 10px 26px -16px rgba(0, 0, 0, 0.7);
   }
 
+  /* Primary action: a solid, high-contrast cream button — the single most
+     obvious thing on the screen. A deep soft shadow plus a top highlight give
+     it a physical, premium finish that holds up on mobile as well as desktop,
+     instead of the previous translucent box that read as unstyled. */
   .btn-aurora {
     position: relative;
-    isolation: isolate;
     border: 0;
-    border-radius: 0.5rem;
-    color: hsl(38 18% 96%);
-    background: linear-gradient(180deg, hsla(38, 22%, 92%, 0.16), hsla(38, 18%, 95%, 0.05));
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    border-radius: 0.625rem;
+    color: #141210;
+    background: linear-gradient(180deg, #fbf7ef, #ece2cf);
     box-shadow:
-      inset 0 1px 0 hsla(38, 18%, 95%, 0.22),
-      0 10px 30px -14px hsla(38, 25%, 80%, 0.25);
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 10px 26px -12px rgba(0, 0, 0, 0.55),
+      0 2px 6px -2px rgba(0, 0, 0, 0.4);
     transition:
-      transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
-      box-shadow 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
-  }
-  .btn-aurora::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border-radius: inherit;
-    padding: 1.25px;
-    background: conic-gradient(
-      from var(--edge),
-      hsla(38, 20%, 70%, 0.35) 0deg,
-      hsla(38, 35%, 96%, 0.95) 60deg,
-      hsla(30, 30%, 88%, 0.5) 95deg,
-      hsla(38, 20%, 70%, 0.2) 150deg,
-      transparent 210deg,
-      hsla(38, 30%, 92%, 0.6) 300deg,
-      hsla(38, 20%, 70%, 0.35) 360deg
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    animation: edge-orbit 4.5s linear infinite;
-    pointer-events: none;
+      transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+      box-shadow 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+      filter 0.2s ease;
   }
   .btn-aurora:hover {
     transform: translateY(-2px);
+    filter: brightness(1.02);
     box-shadow:
-      inset 0 1px 0 hsla(38, 18%, 95%, 0.28),
-      0 14px 34px -12px hsla(38, 30%, 82%, 0.35);
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      0 16px 36px -14px rgba(0, 0, 0, 0.6),
+      0 3px 9px -2px rgba(0, 0, 0, 0.45);
+  }
+  .btn-aurora:active {
+    transform: translateY(0);
   }
 
-  /* Keep any icon/label children above the orbiting edge pseudo-element. */
+  /* Keep any icon/label children stacked above the button surface. */
   .btn-aurora > *,
   .btn-glass > * {
     position: relative;
