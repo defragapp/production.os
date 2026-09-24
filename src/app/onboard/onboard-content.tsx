@@ -13,6 +13,20 @@ import { BaselineForm } from "@/components/baseline-form";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
+/**
+ * Parse a JSON response defensively. A worker crash or proxy error can return
+ * an empty/non-JSON body; calling res.json() directly then throws the opaque
+ * "Unexpected end of JSON input", so we surface null and let callers decide.
+ */
+async function readJsonSafe<T>(res: Response): Promise<T | null> {
+  try {
+    const text = await res.text();
+    return text ? (JSON.parse(text) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function OnboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -77,11 +91,12 @@ export function OnboardContent() {
       });
 
       if (!authRes.ok) {
-        const err = await authRes.json() as { error?: string };
-        throw new Error(err.error || "Authentication failed");
+        const err = await readJsonSafe<{ error?: string }>(authRes);
+        throw new Error(err?.error || `We couldn't create your account right now (${authRes.status}). Please try again.`);
       }
 
-      const data = await authRes.json() as { user?: { email?: string }; hasBaseline?: boolean };
+      const data = await readJsonSafe<{ user?: { email?: string }; hasBaseline?: boolean }>(authRes);
+      if (!data) throw new Error("Unexpected response from the server. Please try again.");
       if (data.user?.email) setEmail(data.user.email);
 
       if (isLogin || existingUser) {
@@ -118,8 +133,8 @@ export function OnboardContent() {
       });
 
       if (!res.ok) {
-        const err = await res.json() as { error?: string };
-        throw new Error(err.error || "Failed to send reset email");
+        const err = await readJsonSafe<{ error?: string }>(res);
+        throw new Error(err?.error || "Failed to send reset email");
       }
 
       setResetSent(true);
@@ -143,8 +158,8 @@ export function OnboardContent() {
       });
 
       if (!res.ok) {
-        const err = await res.json() as { error?: string };
-        throw new Error(err.error || "Failed to reset password");
+        const err = await readJsonSafe<{ error?: string }>(res);
+        throw new Error(err?.error || "Failed to reset password");
       }
 
       setNotice("Password reset successfully. You can now sign in.");

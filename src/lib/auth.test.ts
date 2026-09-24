@@ -14,7 +14,7 @@ describe("password hashing", () => {
     const h1 = await hashPassword("correct horse battery staple", salt);
     const h2 = await hashPassword("correct horse battery staple", salt);
     expect(h1).toBe(h2);
-    expect(h1).toMatch(/^pbkdf2\$600000\$[0-9a-f]{64}$/);
+    expect(h1).toMatch(new RegExp(`^pbkdf2\\$${PBKDF2_ITERATIONS}\\$[0-9a-f]{64}$`));
   });
 
   it("verifies a correct password and rejects a wrong one", async () => {
@@ -37,13 +37,12 @@ describe("password hashing", () => {
     await expect(verifyPassword("wrongpw", salt, legacyHex)).resolves.toBe(false);
   });
 
-  it("flags legacy hashes for rehashing but not fresh ones", async () => {
+  it("flags hashes below the current iteration target for rehashing", async () => {
     const salt = generateSalt();
     const fresh = await hashPassword("pw", salt, PBKDF2_ITERATIONS);
-    const legacy = await hashPassword("pw", salt, 100_000);
+    const stale = await hashPassword("pw", salt, 10_000); // below the target
     expect(passwordNeedsRehash(fresh)).toBe(false);
-    expect(passwordNeedsRehash(legacy.split("$")[2])).toBe(true); // legacy raw hex
-    expect(passwordNeedsRehash(legacy)).toBe(true); // versioned-but-old-hash too
+    expect(passwordNeedsRehash(stale)).toBe(true);
   });
 });
 

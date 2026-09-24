@@ -5,9 +5,17 @@
 const JWT_SECRET_ENV_KEY = "JWT_SECRET";
 const SESSION_COOKIE_NAME = "sovereign_session";
 
-/** PBKDF2-HMAC-SHA256 iterations for NEW hashes (OWASP recommended >= 600k). */
-export const PBKDF2_ITERATIONS = 600_000;
-/** Legacy iterations still used to verify plus parse pre-versioning hashes. */
+/**
+ * PBKDF2-HMAC-SHA256 iterations for NEW hashes. Pinned to 100,000 because
+ * Cloudflare Workers' WebCrypto (workerd) rejects PBKDF2 deriveBits above
+ * 100,000 iterations — requesting OWASP's 600k recommendation throws a 500 on
+ * every signup (the failure is invisible locally because Node allows it).
+ * Raise this only if the platform lifts the ceiling or we move to a
+ * Workers-supported KDF (e.g. Argon2 via WASM/native). Existing hashes store
+ * their own iteration count, so bumping it later stays backward-compatible.
+ */
+export const PBKDF2_ITERATIONS = 100_000;
+/** Iteration count the earliest (unversioned, raw-hex) hashes were created at. */
 const PBKDF2_ITERATIONS_LEGACY = 100_000;
 /** Prefix marking a versioned hash as `pbkdf2$<iterations>$<hex>`. */
 const HASH_PREFIX = "pbkdf2$";
