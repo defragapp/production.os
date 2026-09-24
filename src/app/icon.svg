@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect width="64" height="64" rx="14" fill="#0d0d0d"/>
-  <path d="M20 16 H44 L46 24 Q32 47 28 40 Z" stroke="#f4f4f5" strokeWidth="3" strokeLinejoin="round"/>
-  <path d="M32 41 V48" stroke="#f4f4f5" strokeWidth="3" strokeLinecap="round"/>
-  <path d="M32 48 H26 M32 48 H38" stroke="#f4f4f5" strokeWidth="3" strokeLinecap="round"/>
-  <path d="M22.5 12 Q32 18 41.5 12" stroke="#f4f4f5" strokeWidth="2.5" strokeLinecap="round"/>
-  <circle cx="45" cy="9" r="3.2" fill="#f4f4f5"/>
+  <path d="M21 17 H45 L48 29 Q47 37 32 40 Q19 36 18 29 Z" stroke="#f4f4f5" strokeWidth="3" strokeLinejoin="round"/>
+  <path d="M27 23 Q30 47 32 42 Q34 40 38 40" stroke="#f4f4f5" strokeWidth="3" strokeLinejoin="round"/>
+  <path d="M32 41 V50" stroke="#f4f4f5" strokeWidth="3" strokeLinecap="round"/>
+  <path d="M32 50 H22 M32 50 H42" stroke="#f4f4f5" strokeWidth="3" strokeLinecap="round"/>
+  <path d="M8 20 Q12 30 26 35 Q32 21 24 46 Q14 50 9 48" stroke="#f4f4f5" strokeWidth="3" strokeLinecap="round"/>
+  <path d="M27 38 Q24 41 22 48" stroke="#f4f4f5" strokeWidth="3" strokeLinecap="round"/>
+  <path d="M46 46 Q49 51 47 45" stroke="#f4f4f5" strokeWidth="3" strokeLinecap="round"/>
 </svg>
