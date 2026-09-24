@@ -111,7 +111,7 @@ const HOW_IT_WORKS = [
 const EXPLORE = [
   {
     title: "Yourself",
-    desc: "Understand the patterns you repeat — and why your own qualities turn on you under pressure.",
+    desc: "Understand what drives you — and why your own qualities can turn on you under pressure.",
     example: "Why do I freeze the moment I get put on the spot?",
   },
   {
@@ -141,7 +141,7 @@ const DEMO_ANSWER = [
  */
 function ProductDemo() {
   return (
-    <div className="relative mx-auto w-full max-w-md">
+    <div className="demo-float relative mx-auto w-full max-w-md">
       <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
       <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-4 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center justify-between">
@@ -280,7 +280,7 @@ export function LandingClient() {
                   Sovereign OS
                 </p>
                 <h1 className="font-display text-5xl font-normal leading-[1.08] tracking-tight text-foreground md:text-6xl">
-                  See the patterns shaping your life — and decide what they mean.
+                  Understand yourself, <span className="text-iridescent">your people</span>, and the systems you live within.
                 </h1>
                 <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
                   Sovereign is an AI that talks through what&apos;s happening in your life —
@@ -372,7 +372,7 @@ export function LandingClient() {
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col rounded-xl border border-border bg-background/40 p-7">
+              <div className="glass-panel flex flex-col p-7">
                 <p className="mb-1 flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Free
                 </p>
@@ -390,7 +390,7 @@ export function LandingClient() {
                 </Link>
               </div>
 
-              <div className="relative flex flex-col rounded-xl border border-foreground/25 bg-card/40 p-7">
+              <div className="glass-panel relative flex flex-col p-7">
                 <p className="mb-1 flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Sovereign+
                   <span className="rounded-md border border-foreground/20 bg-foreground/[0.06] px-2 py-0.5 text-[10px] font-medium normal-case tracking-[0.14em] text-foreground">
@@ -449,6 +449,9 @@ export function LandingClient() {
             <p className="mt-0.5">Private by design. Grounded in data. Yours to decide.</p>
           </div>
           <div className="flex flex-wrap items-center gap-6">
+            <Link href="/about" className="transition-colors duration-[240ms] hover:text-foreground">
+              Philosophy
+            </Link>
             <Link href="/faq" className="transition-colors duration-[240ms] hover:text-foreground">
               FAQ
             </Link>

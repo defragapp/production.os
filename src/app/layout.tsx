@@ -30,10 +30,15 @@ export const metadata: Metadata = {
     template: "%s · Sovereign OS",
   },
   description:
-    "Sovereign is an AI platform that helps you make sense of the patterns in your life — starting with you, then looking at what happens between you and other people.",
+    "Sovereign is a private AI platform for understanding yourself, your people, and the systems you live within — starting with your baseline.",
   applicationName: "Sovereign OS",
   manifest: "/manifest.webmanifest",
   authors: [{ name: "Sovereign OS" }],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Sovereign OS",
+  },
   keywords: [
     "AI patterns",
     "self reflection",
@@ -44,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Sovereign OS — Understand the patterns in your life",
     description:
-      "An AI platform for making sense of the patterns in your life and relationships.",
+      "A private AI platform for understanding yourself, your people, and the systems you live within.",
     type: "website",
     locale: "en_US",
     images: [{ url: "/opengraph-image?v=2", width: 1200, height: 630, alt: "Sovereign OS" }],
@@ -58,7 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Sovereign OS",
     description:
-      "Make sense of the patterns in your life and relationships.",
+      "Understand yourself, your people, and the systems you live within.",
   },
   robots: {
     index: true,
@@ -72,6 +77,7 @@ export const viewport: Viewport = {
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

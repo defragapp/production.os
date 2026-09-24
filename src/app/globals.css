@@ -57,12 +57,128 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* iPhone home-indicator clearance when the app opens standalone (PWA). */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
-/* A subtle radial glow shared across app pages, echoing the landing backdrop. */
+/* A subtle radial glow shared across app pages, echoing the landing backdrop.
+   Upgraded to a breathing "room-light": a soft top wash plus a faint warm
+   accent low-light that drifts very slowly — applied automatically to every
+   page that mounts .app-glow. Reduced motion turns it into a static wash. */
 .app-glow {
-  background: radial-gradient(ellipse at 50% 0%, rgba(255,250,240,0.05), transparent 60%);
+  background:
+    radial-gradient(ellipse 85% 55% at 50% 0%, rgba(255, 250, 240, 0.07), transparent 62%),
+    radial-gradient(ellipse 55% 40% at 22% 16%, rgba(232, 214, 178, 0.05), transparent 62%);
+  animation: aura-drift 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Glass panels — the translucent "lit surface" used across cards: hairline
+   cream edge, crisp top highlight, blur. Same scale as btn-glass. */
+.glass-panel {
+  position: relative;
+  border-radius: 0.875rem;
+  background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.06), hsla(38, 18%, 95%, 0.02));
+  box-shadow:
+    inset 0 0 0 1px hsla(38, 18%, 95%, 0.1),
+    inset 0 1px 0 hsla(38, 18%, 95%, 0.12),
+    0 24px 70px -28px rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Iridescent cream→gold text accent. Still strictly inside the warm
+   graphite/cream scale — reserved for a few key words per screen. */
+.text-iridescent {
+  background-image: linear-gradient(
+    100deg,
+    #e7dfd0,
+    #f6f1e6 28%,
+    #d8c49a 52%,
+    #f6f1e6 76%,
+    #e7dfd0
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: iridescent-flow 12s ease-in-out infinite;
+}
+
+/* Soft candle-glow behind the chalice mark (nav, hero, footer, app). */
+.logo-halo {
+  position: absolute;
+  inset: -45%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, hsla(38, 18%, 95%, 0.16), transparent 64%);
+  filter: blur(10px);
+  animation: halo-breathe 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* A gentle hover-in-air float for the product mock on the landing hero. */
+.demo-float {
+  animation: demo-float 7s ease-in-out infinite;
+}
+
+@keyframes aura-drift {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(6px) scale(1.015);
+    opacity: 0.9;
+  }
+}
+
+@keyframes iridescent-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes halo-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.07);
+  }
+}
+
+@keyframes demo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-glow,
+  .text-iridescent,
+  .logo-halo,
+  .demo-float {
+    animation: none !important;
+  }
+  .app-glow {
+    transform: none;
+  }
+  .logo-halo {
+    opacity: 0.7;
+  }
 }
 
 /* Landing reveals — content is visible by default; only when JS successfully

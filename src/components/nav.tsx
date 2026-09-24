@@ -69,6 +69,7 @@ export function Nav() {
             </>
           ) : (
             <>
+              <Link href="/about" className={linkClass("/about")}>Philosophy</Link>
               <Link href="/faq" className={linkClass("/faq")}>FAQ</Link>
               <Link href="/onboard?mode=login" className={linkClass("/onboard")}>
                 Sign in
@@ -163,6 +164,13 @@ export function Nav() {
             </div>
           ) : (
             <div className="flex flex-col">
+              <Link
+                href="/about"
+                onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+              >
+                Philosophy
+              </Link>
               <Link
                 href="/faq"
                 onClick={() => setOpen(false)}
