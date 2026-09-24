@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { JWT_SECRET_ENV_KEY, hashPassword, generateSalt, generateResetToken, hashResetToken } from "@/lib/auth";
+import { JWT_SECRET_ENV_KEY, hashPassword, generateSalt, generateResetToken, hashResetToken, PBKDF2_ITERATIONS } from "@/lib/auth";
 import { sendTransactionalEmail } from "@/lib/email";
 import { getEnv } from "@/lib/env";
 import type { User } from "@/lib/types";
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Invalid or expired reset token" }, { status: 400 });
     await env.SESSION_KV.delete(`reset-token:${tokenHash}`);
     const salt = generateSalt();
-    const passwordHash = await hashPassword(body.newPassword, salt);
+    const passwordHash = await hashPassword(body.newPassword, salt, PBKDF2_ITERATIONS, env.PASSWORD_PEPPER);
     await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, updated_at = datetime('now') WHERE id = ?").bind(passwordHash, salt, userId).run();
     return NextResponse.json({ ok: true, message: "Password reset successfully" });
   }

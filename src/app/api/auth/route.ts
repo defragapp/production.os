@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createJWT, generateSalt, generateUUID, hashPassword,
-  verifyJWT, verifyPassword, passwordNeedsRehash, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
+  verifyJWT, verifyPassword, passwordNeedsRehash, PBKDF2_ITERATIONS, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
 } from "@/lib/auth";
 import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
@@ -65,20 +65,22 @@ export async function POST(request: NextRequest) {
 
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
+  const pepper = env.PASSWORD_PEPPER;
   if (email && !isValidEmail(email)) return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
   if (!email || !password) return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   const existing = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<User & { password_hash: string; password_salt: string }>();
   let userId: string;
   if (existing) {
-    const valid = await verifyPassword(password, existing.password_salt, existing.password_hash);
+    const valid = await verifyPassword(password, existing.password_salt, existing.password_hash, pepper);
     if (!valid) return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     userId = existing.id;
-    // Upgrade-on-login: silently move legacy (100k-iteration) hashes to the
-    // current target (600k) so existing users are re-hashed without an outage.
-    if (passwordNeedsRehash(existing.password_hash)) {
+    // Upgrade-on-login: silently move hashes that predate the current policy
+    // (legacy raw hex, sub-target iterations, or un-peppered) to the current
+    // peppered 100k form, so accounts harden without an outage or password reset.
+    if (passwordNeedsRehash(existing.password_hash, PBKDF2_ITERATIONS, !!pepper)) {
       const newSalt = generateSalt();
-      const newHash = await hashPassword(password, newSalt);
+      const newHash = await hashPassword(password, newSalt, PBKDF2_ITERATIONS, pepper);
       try {
         await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, updated_at = datetime('now') WHERE id = ?").bind(newHash, newSalt, existing.id).run();
       } catch (e) {
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
   } else {
     const salt = generateSalt();
-    const passwordHash = await hashPassword(password, salt);
+    const passwordHash = await hashPassword(password, salt, PBKDF2_ITERATIONS, pepper);
     userId = generateUUID();
     await env.DB.prepare("INSERT INTO users (id, email, password_hash, password_salt, subscription_tier) VALUES (?, ?, ?, ?, 'free')").bind(userId, email, passwordHash, salt).run();
     const origin = new URL(request.url).origin;

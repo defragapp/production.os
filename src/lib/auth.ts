@@ -19,6 +19,8 @@ export const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_ITERATIONS_LEGACY = 100_000;
 /** Prefix marking a versioned hash as `pbkdf2$<iterations>$<hex>`. */
 const HASH_PREFIX = "pbkdf2$";
+/** Marks a peppered hash segment: `pbkdf2$<iter>$pepper$<hmac-hex>`. */
+const PEPPER_TAG = "pepper";
 
 /** Encode a string as an ArrayBuffer for WebCrypto calls. */
 function toArrayBuffer(s: string): ArrayBuffer {
@@ -32,43 +34,77 @@ export function generateSalt(): string {
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function toHex(buf: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /** PBKDF2-HMAC-SHA256 over a raw password + salt, returning hex. */
 async function computeHash(password: string, salt: string, iterations: number): Promise<string> {
   const keyMaterial = await crypto.subtle.importKey("raw", toArrayBuffer(password), "PBKDF2", false, ["deriveBits"]);
   const derived = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: toArrayBuffer(salt), iterations, hash: "SHA-256" }, keyMaterial, 256);
-  return Array.from(new Uint8Array(derived), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/** Hash a password with a salt, storing a versioned `pbkdf2$<iterations>$<hex>` string. */
-export async function hashPassword(password: string, salt: string, iterations: number = PBKDF2_ITERATIONS): Promise<string> {
-  const hex = await computeHash(password, salt, iterations);
-  return `${HASH_PREFIX}${iterations}$${hex}`;
+  return toHex(derived);
 }
 
 /**
- * Parse a stored hash, tolerating BOTH the new versioned format and the
- * legacy raw 64-hex format (which hashes were created at 100k iterations).
+ * HMAC-SHA256(pepper, message), hex. This keyed layer compensates for the
+ * platform-capped 100k PBKDF2 rounds and makes a leaked D1 dump non-crackable
+ * without the separate PASSWORD_PEPPER secret.
  */
-export function parseStoredHash(storedHash: string): { iterations: number; hex: string } {
+async function keyedDigest(pepper: string, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", toArrayBuffer(pepper), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, toArrayBuffer(message));
+  return toHex(sig);
+}
+
+/**
+ * Hash a password with a salt. When `pepper` is supplied the stored value is a
+ * keyed digest of the PBKDF2 output (`pbkdf2$<iter>$pepper$<hmac>`) so the raw
+ * PBKDF2 digest never reaches the DB; without a pepper it stays
+ * `pbkdf2$<iter>$<hex>` for backward compatibility.
+ */
+export async function hashPassword(password: string, salt: string, iterations: number = PBKDF2_ITERATIONS, pepper?: string): Promise<string> {
+  const hex = await computeHash(password, salt, iterations);
+  if (!pepper) return `${HASH_PREFIX}${iterations}$${hex}`;
+  const mac = await keyedDigest(pepper, hex);
+  return `${HASH_PREFIX}${iterations}$${PEPPER_TAG}$${mac}`;
+}
+
+/**
+ * Parse a stored hash. Tolerates three formats: the peppered versioned form,
+ * the un-peppered versioned form, and the earliest raw 64-hex form (100k).
+ */
+export function parseStoredHash(storedHash: string): { iterations: number; digest: string; peppered: boolean } {
   if (storedHash && storedHash.startsWith(HASH_PREFIX)) {
-    const [, iterStr, hex] = storedHash.split("$");
-    const iterations = parseInt(iterStr, 10);
-    return { iterations: Number.isFinite(iterations) && iterations > 0 ? iterations : PBKDF2_ITERATIONS_LEGACY, hex: hex ?? "" };
+    const parts = storedHash.split("$");
+    const parsed = parseInt(parts[1], 10);
+    const iterations = Number.isFinite(parsed) && parsed > 0 ? parsed : PBKDF2_ITERATIONS_LEGACY;
+    if (parts[2] === PEPPER_TAG) return { iterations, digest: parts[3] ?? "", peppered: true };
+    return { iterations, digest: parts[2] ?? "", peppered: false };
   }
-  return { iterations: PBKDF2_ITERATIONS_LEGACY, hex: storedHash ?? "" };
+  return { iterations: PBKDF2_ITERATIONS_LEGACY, digest: storedHash ?? "", peppered: false };
 }
 
-/** True when the stored hash was created with fewer iterations than the target. */
-export function passwordNeedsRehash(storedHash: string): boolean {
-  return parseStoredHash(storedHash).iterations < PBKDF2_ITERATIONS;
+/**
+ * True when the stored hash should be rewritten: fewer iterations than the
+ * target, or (when a pepper is now configured) still un-peppered.
+ */
+export function passwordNeedsRehash(storedHash: string, target: number = PBKDF2_ITERATIONS, wantPepper = false): boolean {
+  const { iterations, peppered } = parseStoredHash(storedHash);
+  if (wantPepper && !peppered) return true;
+  return iterations < target;
 }
 
-/** Verify a password against a stored hash + salt (supports legacy and versioned). */
-export async function verifyPassword(password: string, salt: string, storedHash: string): Promise<boolean> {
-  const { iterations, hex } = parseStoredHash(storedHash);
-  if (!hex) return false;
-  const computed = await computeHash(password, salt, iterations);
-  return timingSafeEqual(computed, hex);
+/** Verify a password against a stored hash + salt (peppered, versioned, legacy). */
+export async function verifyPassword(password: string, salt: string, storedHash: string, pepper?: string): Promise<boolean> {
+  const { iterations, digest, peppered } = parseStoredHash(storedHash);
+  if (!digest) return false;
+  const hex = await computeHash(password, salt, iterations);
+  if (peppered) {
+    if (!pepper) return false; // cannot check a keyed digest without the pepper
+    const mac = await keyedDigest(pepper, hex);
+    return timingSafeEqual(mac, digest);
+  }
+  return timingSafeEqual(hex, digest);
 }
 
 function timingSafeEqual(a: string, b: string): boolean {

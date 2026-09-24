@@ -46,6 +46,32 @@ describe("password hashing", () => {
   });
 });
 
+describe("peppered hashing", () => {
+  it("round-trips a peppered hash and never stores the raw PBKDF2 digest", async () => {
+    const pepper = "unit-test-pepper-secret";
+    const salt = generateSalt();
+    const hash = await hashPassword("correct battery staple", salt, PBKDF2_ITERATIONS, pepper);
+    expect(hash).toContain("$pepper$");
+    // The raw 64-hex PBKDF2 output must not appear verbatim in a peppered row.
+    const rawHex = (await hashPassword("correct battery staple", salt, PBKDF2_ITERATIONS)).split("$")[2];
+    expect(hash).not.toContain(rawHex);
+    await expect(verifyPassword("correct battery staple", salt, hash, pepper)).resolves.toBe(true);
+    await expect(verifyPassword("wrong", salt, hash, pepper)).resolves.toBe(false);
+    // A peppered hash cannot be checked without the pepper.
+    await expect(verifyPassword("correct battery staple", salt, hash)).resolves.toBe(false);
+  });
+
+  it("still verifies legacy un-peppered hashes and flags them for upgrade", async () => {
+    const pepper = "unit-test-pepper-secret";
+    const salt = generateSalt();
+    const unpeppered = await hashPassword("pw", salt, PBKDF2_ITERATIONS); // pre-pepper row
+    await expect(verifyPassword("pw", salt, unpeppered, pepper)).resolves.toBe(true); // verifies regardless
+    expect(passwordNeedsRehash(unpeppered, PBKDF2_ITERATIONS, true)).toBe(true); // upgrade to peppered on login
+    const peppered = await hashPassword("pw", salt, PBKDF2_ITERATIONS, pepper);
+    expect(passwordNeedsRehash(peppered, PBKDF2_ITERATIONS, true)).toBe(false); // already current
+  });
+});
+
 describe("JWT", () => {
   const secret = "test-secret-value";
 

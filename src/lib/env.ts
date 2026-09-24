@@ -12,6 +12,13 @@ export interface AppEnv {
   STRIPE_CANCEL_URL: string;
   STRIPE_PORTAL_RETURN_URL: string;
   JWT_SECRET: string;
+  /**
+   * Server-side secret layered over PBKDF2 when hashing passwords (see
+   * lib/auth.ts). A leaked D1 is useless without this value. Must be a long
+   * random secret set via `wrangler secret put PASSWORD_PEPPER` and NEVER
+   * rotated once peppered hashes exist (rotation would break existing logins).
+   */
+  PASSWORD_PEPPER?: string;
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_SECRET_KEY: string;
   RESEND_API_KEY: string;
