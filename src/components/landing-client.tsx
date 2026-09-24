@@ -368,7 +368,7 @@ export function LandingClient() {
 
                   {/* The answer — same editorial surface as the hero preview card. */}
                   <Reveal className="reveal">
-                    <div className="break-words rounded-xl border border-white/10 bg-card/50 p-4 backdrop-blur-sm">
+                    <div className="break-words rounded-xl border border-white/10 bg-card/60 p-4 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.7)] backdrop-blur-sm">
                       <p className="text-sm leading-relaxed text-foreground/80">{item.response}</p>
                       <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-foreground">
                         {item.reflection}
