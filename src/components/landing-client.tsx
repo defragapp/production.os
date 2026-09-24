@@ -251,22 +251,22 @@ function WorkflowArrow({ vertical }: { vertical?: boolean }) {
 
 function Workflow() {
   return (
-    <div className="mx-auto flex max-w-4xl flex-col items-stretch md:flex-row md:items-center md:gap-2">
+    <div className="mx-auto flex max-w-5xl flex-col items-stretch md:flex-row md:items-center md:gap-3">
       {WORKFLOW.map((step, i) => (
         <div key={step.title} className="contents">
           <Reveal delay={i * 90}>
-            <div className="glass-panel flex h-full flex-col items-start gap-3 p-5 md:p-6">
+            <div className="glass-panel flex h-full flex-col items-start gap-4 p-6 md:p-7">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-foreground/15 bg-foreground/[0.06] text-foreground">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-foreground/15 bg-foreground/[0.06] text-foreground">
                   {step.icon}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                   0{i + 1}
                 </span>
               </div>
               <div>
-                <h3 className="text-base font-medium text-foreground md:text-lg">{step.title}</h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground md:text-sm">{step.desc}</p>
+                <h3 className="text-lg font-medium text-foreground md:text-xl">{step.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{step.desc}</p>
               </div>
             </div>
           </Reveal>
@@ -284,17 +284,17 @@ export function LandingClient() {
 
       <main className="relative z-10">
         {/* ── Hero ─────────────────────────────────────────── */}
-        <section className="relative overflow-hidden px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16">
+        <section className="relative overflow-hidden px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16 lg:pb-28 lg:pt-20">
           <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
             <Reveal>
               <div className="text-left">
                 <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Sovereign OS
                 </p>
-                <h1 className="font-display text-[1.875rem] font-normal leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.875rem] md:leading-[1.1]">
+                <h1 className="font-display text-[1.875rem] font-normal leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.875rem] md:leading-[1.1] lg:text-[3.25rem] lg:leading-[1.08]">
                   Understand yourself, <span className="text-iridescent">your people</span>, and the systems you live within.
                 </h1>
-                <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
+                <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base lg:text-lg lg:leading-8">
                   Sovereign is an AI that talks through what&apos;s happening in your life —
                   personal, private, and grounded in a Baseline built from your birth data.
                 </p>
@@ -308,7 +308,7 @@ export function LandingClient() {
                   </Link>
                 </div>
 
-                <ul className="mt-7 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px] text-muted-foreground">
+                <ul className="mt-7 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px] text-muted-foreground lg:text-sm">
                   {TRUST_NOTES.map((note, i) => (
                     <li key={note} className="flex items-center gap-3.5">
                       {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/50" aria-hidden="true" />}
@@ -350,10 +350,10 @@ export function LandingClient() {
             <div className="grid gap-4 md:grid-cols-3">
               {EXPLORE.map((item, i) => (
                 <Reveal key={item.title} delay={i * 90}>
-                  <div className="flex h-full flex-col p-5 md:p-6 rounded-xl border border-white/10 bg-card/60">
-                    <h3 className="font-display text-xl font-normal text-foreground">{item.title}</h3>
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground md:text-sm">{item.desc}</p>
-                    <p className="mt-4 break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground/90">
+                  <div className="flex h-full flex-col p-6 md:p-7 rounded-xl border border-white/10 bg-card/60">
+                    <h3 className="font-display text-xl font-normal text-foreground md:text-2xl">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{item.desc}</p>
+                    <p className="mt-4 break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-sm leading-relaxed text-foreground/90 md:mt-auto md:text-[15px]">
                       “{item.question}”
                     </p>
                   </div>
@@ -362,18 +362,18 @@ export function LandingClient() {
             </div>
 
             {/* Anatomy of a read — one diagram instead of three prose columns. */}
-            <Reveal delay={120} className="mt-10">
+            <Reveal delay={120} className="mt-12">
               <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-2">
                 {READ_FLOW.map((node, i) => (
                   <div key={node} className="flex flex-col items-center gap-3 md:flex-row md:gap-2">
-                    <span className="rounded-full border border-foreground/15 bg-foreground/[0.04] px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="rounded-full border border-foreground/25 bg-foreground/[0.05] px-5 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground/80 md:text-xs">
                       {node}
                     </span>
                     {i < READ_FLOW.length - 1 && <WorkflowArrow vertical />}
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-center text-xs text-muted-foreground/70">
+              <p className="mt-5 text-center text-sm text-muted-foreground/70">
                 Every read returns to your Baseline — and leaves the deciding to you.
               </p>
             </Reveal>
@@ -446,7 +446,7 @@ export function LandingClient() {
               It&apos;s free — you don&apos;t need to have anything figured out.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/onboard?mode=signup" className="btn-aurora w-full px-7 py-3 text-sm font-medium sm:w-auto">
+              <Link href="/onboard?mode=signup" className="btn-aurora w-full px-8 py-3.5 text-base font-medium sm:w-auto">
                 Start free
               </Link>
             </div>

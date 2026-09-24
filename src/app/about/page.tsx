@@ -69,12 +69,12 @@ export default function AboutPage() {
         </section>
 
         <section className="border-t border-white/10 px-6 py-16 md:py-24">
-          <div className="mx-auto max-w-3xl">
-            <div className="mb-12 grid gap-4 md:grid-cols-[160px_1fr] md:items-end">
-              <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-12">
+              <p className="mb-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                 How it works
               </p>
-              <p className="max-w-md text-sm leading-6 text-muted-foreground">
+              <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base md:leading-7">
                 Four moves, in order: anchor on your Baseline, explore in your own words, widen to the
                 people around you, then widen again to the systems both of you stand inside.
               </p>
@@ -86,8 +86,8 @@ export default function AboutPage() {
                   <p className="mb-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                     {s.step}
                   </p>
-                  <div className="grid gap-3 md:grid-cols-[200px_1fr]">
-                    <h2 className="font-display text-2xl font-normal leading-snug text-foreground md:text-3xl">
+                  <div className="grid gap-3 md:grid-cols-[280px_1fr] md:gap-8">
+                    <h2 className="font-display text-2xl font-normal leading-snug text-foreground md:text-[1.65rem] md:leading-[1.25]">
                       {s.title}
                     </h2>
                     <p className="max-w-prose text-sm leading-6 text-muted-foreground md:text-[15px] md:leading-7">{s.body}</p>
