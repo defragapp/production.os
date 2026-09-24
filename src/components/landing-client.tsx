@@ -144,7 +144,7 @@ function ProductDemo() {
       />
       <div className="demo-float relative">
       <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-4 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
+      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.07),0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Logo showWordmark={false} href="#" />
@@ -268,7 +268,7 @@ function Workflow() {
       {WORKFLOW.map((step, i) => (
         <div key={step.title} className="contents">
           <Reveal delay={i * 90}>
-            <div className="glass-panel flex h-full flex-col items-start gap-4 p-6 md:p-7">
+            <div className="glass-panel card-lift flex h-full flex-col items-start gap-4 p-6 md:p-7">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-foreground/20 bg-gradient-to-b from-foreground/[0.12] to-foreground/[0.02] text-foreground">
                   {step.icon}
@@ -290,9 +290,26 @@ function Workflow() {
   );
 }
 
+/** Pricing feature line with a quiet check marker — bare text lists read as
+    unfinished next to premium pricing tables. */
+function PlanFeature({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <svg viewBox="0 0 24 24" className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" fill="none" aria-hidden="true">
+        <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {children}
+    </li>
+  );
+}
+
 export function LandingClient() {
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
+      {/* Texture layers: film grain + corner vignette turn the flat black
+          background into a lit, photographed stage. Both fixed and inert. */}
+      <div className="vignette-overlay" aria-hidden="true" />
+      <div className="grain-overlay" aria-hidden="true" />
       <Nav />
 
       <main className="relative z-10">
@@ -311,8 +328,8 @@ export function LandingClient() {
                   Now in public beta
                   <span aria-hidden="true" className="text-foreground/40">→</span>
                 </Link>
-                <h1 className="font-display text-[1.875rem] font-normal leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.875rem] md:leading-[1.1] lg:text-[3.25rem] lg:leading-[1.08]">
-                  Understand yourself, <span className="text-iridescent">your people</span>, and the systems you live within.
+                <h1 className="font-display text-[2rem] font-normal leading-[1.12] tracking-tight text-foreground sm:text-4xl md:text-[3rem] md:leading-[1.06] lg:text-[3.75rem] lg:leading-[1.04] xl:text-[4.125rem]">
+                  Understand <span className="italic">yourself</span>, your people, and the systems you live within.
                 </h1>
                 <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base lg:text-lg lg:leading-8">
                   Sovereign is an AI that talks through what&apos;s happening in your life —
@@ -347,10 +364,11 @@ export function LandingClient() {
 
 {/* ── How it works ─────────────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
-        <section className="relative overflow-hidden px-6 py-16 md:py-20">
+        <section className="relative overflow-hidden px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
-            <Reveal>
-              <h2 className="mb-8 text-center font-display text-2xl font-normal text-foreground md:text-3xl">
+            <Reveal className="mb-10 text-center md:mb-12">
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">How it works</p>
+              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 From your Baseline to a grounded read.
               </h2>
             </Reveal>
@@ -371,10 +389,11 @@ export function LandingClient() {
 
         {/* ── What you can explore ─────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
-        <section className="bg-muted/30 px-6 py-16 md:py-20">
+        <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
-            <Reveal className="mb-10 text-center">
-              <h2 className="font-display text-2xl font-normal text-foreground md:text-3xl">
+            <Reveal className="mb-10 text-center md:mb-12">
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">What people ask</p>
+              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 Ask about any part of your life.
               </h2>
               <p className="mt-3 text-sm text-muted-foreground md:text-base">The questions people actually bring look like this.</p>
@@ -383,7 +402,7 @@ export function LandingClient() {
             <div className="grid gap-4 md:grid-cols-3">
               {EXPLORE.map((item, i) => (
                 <Reveal key={item.title} delay={i * 90}>
-                  <div className="flex h-full flex-col p-6 md:p-7 rounded-xl border border-white/10 bg-card/60">
+                  <div className="glass-panel card-lift flex h-full flex-col p-6 md:p-7">
                     <h3 className="font-display text-xl font-normal text-foreground md:text-2xl">{item.title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{item.desc}</p>
                     <p className="mt-4 break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-sm leading-relaxed text-foreground/90 md:mt-auto md:text-[15px]">
@@ -415,9 +434,10 @@ export function LandingClient() {
 
 {/* ── Plans ────────────────────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
-        <section className="relative overflow-hidden px-6 py-16 md:py-20">
+        <section className="relative overflow-hidden px-6 py-20 md:py-28">
           <Reveal className="mx-auto max-w-4xl">
-            <h2 className="mb-3 text-center font-display text-2xl font-normal text-foreground md:text-3xl">
+            <p className="mb-3 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">Plans</p>
+            <h2 className="mb-3 text-center font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
               Free to start. Keep going when it gets deep.
             </h2>
             <p className="mb-10 text-center text-sm text-muted-foreground md:text-base">
@@ -425,15 +445,15 @@ export function LandingClient() {
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="glass-panel flex flex-col p-7">
+              <div className="glass-panel card-lift flex flex-col p-7">
                 <p className="mb-1 flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Free
                 </p>
                 <p className="mb-5 font-display text-3xl font-normal">$0</p>
-                <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <li>Your full Baseline</li>
-                  <li>5 AI messages a day</li>
-                  <li>Your conversations stay with you</li>
+                <ul className="flex-1 space-y-2.5 text-sm text-muted-foreground">
+                  <PlanFeature>Your full Baseline</PlanFeature>
+                  <PlanFeature>5 AI messages a day</PlanFeature>
+                  <PlanFeature>Your conversations stay with you</PlanFeature>
                 </ul>
                 <Link
                   href="/onboard?mode=signup"
@@ -443,7 +463,7 @@ export function LandingClient() {
                 </Link>
               </div>
 
-              <div className="glass-panel relative flex flex-col p-7">
+              <div className="glass-panel card-lift relative flex flex-col p-7">
                 <p className="mb-1 flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Sovereign+
                   <span className="rounded-md border border-foreground/20 bg-foreground/[0.06] px-2 py-0.5 text-[10px] font-medium normal-case tracking-[0.14em] text-foreground">
@@ -454,10 +474,10 @@ export function LandingClient() {
                   $20
                   <span className="font-sans text-sm text-muted-foreground">/mo · or $99/yr</span>
                 </p>
-                <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <li>Unlimited AI messages — no daily cap</li>
-                  <li>Invite people into your relationships</li>
-                  <li>Your full Baseline, same private engine</li>
+                <ul className="flex-1 space-y-2.5 text-sm text-muted-foreground">
+                  <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
+                  <PlanFeature>Invite people into your relationships</PlanFeature>
+                  <PlanFeature>Your full Baseline, same private engine</PlanFeature>
                 </ul>
                 <Link
                   href="/upgrade"
@@ -472,10 +492,11 @@ export function LandingClient() {
 
 {/* ── Final CTA ────────────────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
-        <section className="relative overflow-hidden px-6 py-20 text-center md:py-28">
+        <section className="relative overflow-hidden px-6 py-24 text-center md:py-32">
           <div className="hero-light" aria-hidden="true" />
           <Reveal className="relative mx-auto max-w-2xl">
-            <h2 className="mb-4 font-display text-2xl font-normal text-foreground sm:text-3xl md:text-4xl">
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">Begin</p>
+            <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl md:text-[2.75rem] md:leading-[1.15]">
               Start with one honest question.
             </h2>
             <p className="mb-7 text-muted-foreground">
@@ -490,11 +511,12 @@ export function LandingClient() {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-background px-6 py-12 text-sm text-muted-foreground">
+      <footer className="relative bg-background px-6 pb-12 pt-14 text-sm text-muted-foreground">
+        <div className="section-rule absolute inset-x-0 top-0" aria-hidden="true" />
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <p className="font-medium text-foreground">Sovereign OS</p>
-            <p className="mt-0.5">Private by design. Grounded in data. Yours to decide.</p>
+            <Logo href="#" />
+            <p className="mt-2.5">Private by design. Grounded in data. Yours to decide.</p>
           </div>
           <div className="flex flex-wrap items-center gap-6">
             <Link href="/about" className="transition-colors duration-[240ms] hover:text-foreground">
@@ -514,7 +536,7 @@ export function LandingClient() {
             </Link>
           </div>
         </div>
-        <div className="mx-auto mt-8 flex max-w-6xl flex-col gap-1 border-t border-white/10 pt-6 text-xs text-muted-foreground/70">
+        <div className="mx-auto mt-10 flex max-w-6xl flex-col gap-1 border-t border-white/[0.06] pt-6 text-xs text-muted-foreground/60">
           <p>Sovereign OS™ — © 2026 Sovereign OS. All rights reserved.</p>
           <p>Sovereign OS is a trademark used as a common-law mark. The Service and its AI outputs are protected under the Terms of Service.</p>
         </div>

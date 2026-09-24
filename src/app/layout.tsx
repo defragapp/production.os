@@ -14,7 +14,9 @@ const sans = Manrope({
 const display = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
-  style: "normal",
+  // Italic axis loaded deliberately: an italicized accent word in the display
+  // serif is the editorial craft signal premium dark sites lean on.
+  style: ["normal", "italic"],
   variable: "--font-display",
   display: "swap",
 });

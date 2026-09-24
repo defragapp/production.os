@@ -110,6 +110,50 @@
   background: linear-gradient(90deg, transparent, hsla(38, 18%, 95%, 0.16), transparent);
 }
 
+/* Film grain — the single strongest "crafted, not templated" signal on
+   premium dark product sites. A fixed, non-interactive turbulence layer at
+   ~4% alpha: invisible as a pattern, felt as texture. It kills the flat
+   "empty black" look that pure background colors always have. */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+}
+
+/* Corner vignette — deepens the edges so the lit center reads as a stage.
+   Fixed (not scrolling) so it behaves like lens falloff on the viewport. */
+.vignette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: radial-gradient(130% 100% at 50% 42%, transparent 58%, rgba(0, 0, 0, 0.38) 100%);
+}
+
+/* Card hover lift — a 3px rise with a brighter inset edge. Micro-interaction
+   only; no color drift, so it stays inside the established lighting system. */
+.card-lift {
+  transition:
+    transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
+    box-shadow 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 0 0 1px hsla(38, 18%, 95%, 0.16),
+    inset 0 1px 0 hsla(38, 18%, 95%, 0.2),
+    0 30px 70px -30px rgba(0, 0, 0, 0.8);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-lift,
+  .card-lift:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 /* Glass panels — the translucent "lit surface" used across cards: hairline
    cream edge, crisp top highlight, blur. Same scale as btn-glass. */
 .glass-panel {
