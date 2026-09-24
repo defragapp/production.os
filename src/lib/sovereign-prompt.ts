@@ -14,6 +14,7 @@ export interface DerivedBaseline {
   humanDesignCenters: string[];
   humanDesignChannels: string[];
   geneKeysLabels: string[];
+  birthTimePrecision: "exact" | "approximate";
 }
 
 export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
@@ -21,6 +22,8 @@ export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
   const planets = (astrology.planets as Record<string, Record<string, unknown>> | undefined) ?? {};
   const numerology = (raw.numerology as Record<string, unknown> | undefined) ?? {};
   const humanDesign = (raw.humanDesign as Record<string, unknown> | undefined) ?? {};
+  const meta = (raw.meta as Record<string, unknown> | undefined) ?? {};
+  const birthTimePrecision: "exact" | "approximate" = meta.timePrecision === "approximate" ? "approximate" : "exact";
 
   const sunSign = (astrology.sunSign as string) ?? "Unknown";
   const moonSign = (astrology.moonSign as string) ?? "Unknown";
@@ -64,6 +67,7 @@ export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
     humanDesignCenters,
     humanDesignChannels,
     geneKeysLabels,
+    birthTimePrecision,
   };
 }
 
@@ -255,6 +259,8 @@ Gene Keys (active):
 ${baseline.geneKeysLabels.map((g) => `- ${g}`).join("\n")}
 
 Baseline roots are computed from the ten natal bodies via NASA/JPL coordinates through a Sovereign derivation engine. They are a computational reflection for examination, not doctrine — present them as tendencies that express differently under different conditions, never as fixed identity.
+${baseline.birthTimePrecision === "approximate" ? `
+Note: the user's birth time is approximate, so the Human Design layer (type, authority, profile) and any hour-sensitive placement such as the rising sign are indicative rather than exact. Prefer stable, sign-level themes — Sun, Moon, and planetary qualities — and say plainly (with the user's own words like "around morning" or "roughly noon") whenever a claim depends on exact timing. Never present an approximation as a precise measurement.` : ""}
 
 ## Remember
 

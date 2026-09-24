@@ -2,9 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -16,16 +13,12 @@ import { Nav } from "@/components/nav";
 import { Stepper } from "@/components/stepper";
 import { PageHeader } from "@/components/page-header";
 import { LoadingScreen } from "@/components/ui/loading";
+import { BaselineForm } from "@/components/baseline-form";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
 function BaselineContent() {
   const router = useRouter();
-  const [dob, setDob] = useState("");
-  const [tob, setTob] = useState("");
-  const [pob, setPob] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [invite, setInvite] = useState<string | null>(null);
 
@@ -66,31 +59,6 @@ function BaselineContent() {
     })();
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/baseline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dob, tob, pob }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json() as { error?: string };
-        throw new Error(err.error || "Failed to compute baseline");
-      }
-
-      router.push(nextHref(invite));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (!authChecked) {
     return (
       <>
@@ -120,51 +88,16 @@ function BaselineContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dob">Date of Birth</Label>
-                  <Input
-                    id="dob"
-                    type="date"
-                    required
-                    value={dob}
-                    onChange={(e) => setDob(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tob">Time of Birth (24h)</Label>
-                  <Input
-                    id="tob"
-                    type="time"
-                    required
-                    value={tob}
-                    onChange={(e) => setTob(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pob">Place of Birth</Label>
-                  <Input
-                    id="pob"
-                    type="text"
-                    required
-                    value={pob}
-                    onChange={(e) => setPob(e.target.value)}
-                    placeholder="City, Country"
-                  />
-                </div>
-
-                {error && <p className="text-sm text-destructive">{error}</p>}
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Computing baseline..." : "Compute My Baseline"}
-                </Button>
-              </form>
+              <BaselineForm
+                submitLabel="Compute My Baseline"
+                onSaved={() => router.push(nextHref(invite))}
+              />
             </CardContent>
           </Card>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            We use your exact birth time and location to compute planetary positions via NASA data.
-            This data is stored securely and never shared.
+            Your birth time and location compute planetary positions via NASA data — a precise time is
+            ideal, and an approximation works too. This data is stored securely and never shared.
           </p>
         </div>
       </main>

@@ -59,6 +59,11 @@
     @apply bg-background text-foreground;
     /* iPhone home-indicator clearance when the app opens standalone (PWA). */
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Stop iOS Safari from auto-inflating text and keep labels crisp. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
   }
 }
 

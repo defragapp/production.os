@@ -31,13 +31,14 @@ export async function GET(request: NextRequest) {
     }
   }
   if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
+  const hasBaseline = !!(await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(payload.sub).first());
   // Daily AI chat usage for the UI (free tier only). Mirror or await the same
   // KV counter the /api/chat route uses so the gauge matches the enforcement.
   const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
   const used = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10) || 0;
   const isFree = user.subscription_tier === "free";
   const usage = { used, limit: isFree ? FREE_TIER_DAILY_LIMIT : null };
-  return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null, usage });
+  return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null, usage, hasBaseline });
 }
 
 const LOGIN_RATE_LIMIT_TTL = 300;
@@ -111,7 +112,8 @@ export async function POST(request: NextRequest) {
     }
   }
   const token = await createJWT(userId, email, secret);
-  const response = NextResponse.json({ user: { id: userId, email } });
+  const hasBaseline = !!(await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(userId).first());
+  const response = NextResponse.json({ user: { id: userId, email }, hasBaseline });
   response.cookies.set(SESSION_COOKIE_NAME, token, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 7 * 24 * 60 * 60 });
   return response;
 }

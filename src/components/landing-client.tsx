@@ -279,10 +279,10 @@ export function LandingClient() {
                 <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   Sovereign OS
                 </p>
-                <h1 className="font-display text-5xl font-normal leading-[1.08] tracking-tight text-foreground md:text-6xl">
+                <h1 className="font-display text-4xl font-normal leading-[1.1] tracking-tight text-foreground sm:text-5xl md:text-6xl">
                   Understand yourself, <span className="text-iridescent">your people</span>, and the systems you live within.
                 </h1>
-                <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+                <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
                   Sovereign is an AI that talks through what&apos;s happening in your life —
                   personal, private, and grounded in a Baseline built from your birth data.
                 </p>
@@ -291,9 +291,9 @@ export function LandingClient() {
                   <Link href="/onboard?mode=signup" className="btn-aurora px-7 py-3 text-sm font-medium">
                     Start free
                   </Link>
-                  <Link href="/onboard?mode=login" className="btn-glass px-7 py-3 text-sm font-medium text-foreground">
-                    Sign in
-                  </Link>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">
+                    Signing in is the same thing
+                  </span>
                 </div>
 
                 <ul className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">
@@ -424,7 +424,7 @@ export function LandingClient() {
             aria-hidden="true"
           />
           <Reveal className="mx-auto max-w-2xl">
-            <h2 className="mb-4 font-display text-4xl font-normal text-foreground md:text-5xl">
+            <h2 className="mb-4 font-display text-3xl font-normal text-foreground sm:text-4xl md:text-5xl">
               Start with one honest question.
             </h2>
             <p className="mb-12 text-lg text-muted-foreground">
@@ -433,9 +433,6 @@ export function LandingClient() {
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/onboard?mode=signup" className="btn-aurora w-full px-7 py-3 text-sm font-medium sm:w-auto">
                 Start free
-              </Link>
-              <Link href="/onboard?mode=login" className="btn-glass w-full px-7 py-3 text-sm font-medium text-foreground sm:w-auto">
-                Sign in
               </Link>
             </div>
           </Reveal>
@@ -465,6 +462,10 @@ export function LandingClient() {
               Support
             </Link>
           </div>
+        </div>
+        <div className="mx-auto mt-8 flex max-w-6xl flex-col gap-1 border-t border-white/10 pt-6 text-xs text-muted-foreground/70">
+          <p>Sovereign OS™ — © 2026 Sovereign OS. All rights reserved.</p>
+          <p>Sovereign OS is a trademark used as a common-law mark. The Service and its AI outputs are protected under the Terms of Service.</p>
         </div>
       </footer>
     </div>

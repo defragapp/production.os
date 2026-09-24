@@ -68,5 +68,8 @@ export function buildBaselineLimitations(baseline: DerivedBaseline): string[] {
   if (baseline.humanDesignType === "Unknown") {
     limitations.push("Human Design type is unknown, so it is not used as context.");
   }
+  if (baseline.birthTimePrecision === "approximate") {
+    limitations.push("Birth time is approximate, so time-sensitive layers (Human Design type and authority, rising sign) are indicative rather than exact.");
+  }
   return limitations;
 }

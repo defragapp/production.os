@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { deriveBaseline, buildSystemPrompt } from "./sovereign-prompt";
+import { buildBaselineLimitations } from "./sovereign-baseline";
 
 describe("deriveBaseline", () => {
   it("returns safe defaults for empty data", () => {
@@ -29,6 +30,21 @@ describe("deriveBaseline", () => {
     expect(d.numerologyLifePath).toBe(7);
     expect(d.qualities.some((q) => q.includes("Sun"))).toBe(true);
     expect(d.pressureResponse).toContain("Outwardly");
+  });
+
+  it("defaults birth time to exact and reads approximate precision from meta", () => {
+    expect(deriveBaseline({}).birthTimePrecision).toBe("exact");
+    const approx = deriveBaseline({ meta: { timePrecision: "approximate", tobAccuracy: "morning" } });
+    expect(approx.birthTimePrecision).toBe("approximate");
+    expect(buildBaselineLimitations(approx).some((l) => l.includes("approximate"))).toBe(true);
+    expect(buildBaselineLimitations(deriveBaseline({})).some((l) => l.includes("approximate"))).toBe(false);
+  });
+
+  it("warns the model about approximate birth time in the system prompt", () => {
+    const exact = buildSystemPrompt(deriveBaseline({}));
+    expect(exact).not.toContain("birth time is approximate");
+    const approxPrompt = buildSystemPrompt(deriveBaseline({ meta: { timePrecision: "approximate" } }));
+    expect(approxPrompt).toContain("the user's birth time is approximate");
   });
 });
 

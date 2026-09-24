@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { TurnstileWidget } from "@/components/turnstile";
 import { Stepper } from "@/components/stepper";
+import { BaselineForm } from "@/components/baseline-form";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
@@ -21,9 +22,6 @@ export function OnboardContent() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [tob, setTob] = useState("");
-  const [pob, setPob] = useState("");
-  const [dob, setDob] = useState("");
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,84 +31,77 @@ export function OnboardContent() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [tsFailed, setTsFailed] = useState(false);
   const [tsKey, setTsKey] = useState(0);
+  const [phase, setPhase] = useState<"account" | "baseline">("account");
 
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
-  const [accountCreated, setAccountCreated] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth")
       .then((r) => r.json())
       .then((d) => {
-        const data = d as { user?: { email?: string }; turnstileSiteKey?: string | null };
+        const data = d as { user?: { email?: string } | null; turnstileSiteKey?: string | null; hasBaseline?: boolean };
         if (data.user) {
           setExistingUser(true);
           setEmail(data.user.email || "");
+          // Already signed in: send people to the workspace. Baseline is the
+          // only first-time step, so an account without one just continues there.
+          if (data.hasBaseline) {
+            router.replace("/chat");
+          } else {
+            setPhase("baseline");
+          }
         }
         setTurnstileSiteKey(data.turnstileSiteKey || null);
       })
       .catch(() => {});
-  }, []);
+  }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Phase 1: Account creation (no baseline yet)
-    if (!accountCreated && !existingUser) {
-      if (!consent) {
-        setError("Please agree to the Terms and Privacy Policy to continue.");
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const authRes = await fetch("/api/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
-        });
-
-        if (!authRes.ok) {
-          const err = await authRes.json() as { error?: string };
-          throw new Error(err.error || "Authentication failed");
-        }
-
-        // Account created — show baseline fields (phase 2)
-        setAccountCreated(true);
-        setTurnstileToken(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-        setTurnstileToken(null);
-      } finally {
-        setLoading(false);
-      }
+    if (!isLogin && !consent) {
+      setError("Please agree to the Terms and Privacy Policy to continue.");
       return;
     }
 
-    // Phase 2: Baseline submission (account exists or returning user)
-    if (dob && tob && pob) {
-      setLoading(true);
-      try {
-        const baselineRes = await fetch("/api/baseline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tob, pob, dob }),
-        });
+    setLoading(true);
+    try {
+      const authRes = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
+      });
 
-        if (!baselineRes.ok) {
-          const err = await baselineRes.json() as { error?: string };
-          throw new Error(err.error || "Failed to save baseline");
-        }
-
-        router.push(existingUser ? "/chat" : "/upgrade?from=baseline");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      } finally {
-        setLoading(false);
+      if (!authRes.ok) {
+        const err = await authRes.json() as { error?: string };
+        throw new Error(err.error || "Authentication failed");
       }
+
+      const data = await authRes.json() as { user?: { email?: string }; hasBaseline?: boolean };
+      if (data.user?.email) setEmail(data.user.email);
+
+      if (isLogin || existingUser) {
+        if (data.hasBaseline) {
+          router.push("/chat");
+        } else {
+          // Returning account that never built a Baseline — same first-time step.
+          setExistingUser(true);
+          setPhase("baseline");
+        }
+      } else {
+        // Account created — Baseline is the next, distinct step.
+        setPhase("baseline");
+      }
+      setTurnstileToken(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setTurnstileToken(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -272,171 +263,182 @@ export function OnboardContent() {
     );
   }
 
-  // ── Main Sign In / Create Baseline ────────────────────────────
-  const title = existingUser ? "Welcome Back" : isLogin ? "Sign In" : "Create Your Baseline";
-  const description = existingUser
-    ? "Sign in to continue to your AI workspace."
-    : isLogin
+  // ── Step 1: account (sign in / sign up) ───────────────────────
+  if (phase === "account") {
+    const title = isLogin ? "Sign In" : "Create Your Account";
+    const description = isLogin
       ? "Welcome back. Sign in to continue where you left off."
-      : "Create your account and baseline to make sense of the patterns in your life.";
-  const currentStep = existingUser || isLogin ? 0 : 1;
+      : "Start free. You can build your Baseline right after.";
 
+    return (
+      <>
+        <Nav />
+        <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+          <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
+          <div className="w-full max-w-md">
+            <Stepper steps={STEPS} current={0} />
+            <div className="mb-8 text-center">
+              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
+              <h1 className="font-display text-3xl font-normal tracking-tight">{title}</h1>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6">
+                <form onSubmit={handleAuthSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password (min 8 characters)</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      autoComplete={isLogin ? "current-password" : "new-password"}
+                    />
+                  </div>
+
+                  {isLogin && (
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => { setShowForgot(true); setError(null); }}
+                        className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+
+                  {!isLogin && (
+                    <>
+                      <div className="border-t pt-4" />
+                      <div className="flex items-start gap-2 pt-2">
+                        <input
+                          id="consent"
+                          type="checkbox"
+                          checked={consent}
+                          onChange={(e) => setConsent(e.target.checked)}
+                          required
+                          className="mt-1 h-4 w-4 rounded border-border"
+                        />
+                        <Label htmlFor="consent" className="text-sm font-normal leading-relaxed">
+                          I agree to the{" "}
+                          <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" "}
+                          and{" "}
+                          <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+                          I understand my birth data is used to compute my baseline, is never shared
+                          with third parties, and that the Service&apos;s outputs are protected by the Terms.
+                        </Label>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Sign in and sign up are both protected by Turnstile. */}
+                  <div className="space-y-2 pt-1">
+                    {turnstileSiteKey && !tsFailed && (
+                      <TurnstileWidget
+                        key={tsKey}
+                        siteKey={turnstileSiteKey}
+                        onToken={setTurnstileToken}
+                        onError={() => {
+                          setTurnstileToken(null);
+                          setTsFailed(true);
+                        }}
+                      />
+                    )}
+                    {!turnstileSiteKey && !tsFailed && (
+                      <p className="text-sm text-muted-foreground">Security check unavailable — continuing without it.</p>
+                    )}
+                  </div>
+
+                  {tsFailed && (
+                    <div className="flex items-center justify-between gap-2 border-t pt-4 text-sm text-destructive">
+                      <span>Security check couldn&apos;t load. Check your connection.</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTsFailed(false);
+                          setTsKey((k) => k + 1);
+                        }}
+                        className="shrink-0 underline underline-offset-4 hover:text-foreground"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+                  </Button>
+                </form>
+
+                <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">
+                  {isLogin ? (
+                    <>
+                      New to Sovereign?{" "}
+                      <a href="/onboard?mode=signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+                        Create your account
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      Have an account?{" "}
+                      <a href="/onboard?mode=login" className="font-medium text-foreground underline-offset-4 hover:underline">
+                        Sign in
+                      </a>
+                    </>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  // ── Step 2: Baseline — first-time only ────────────────────────
   return (
     <>
       <Nav />
       <main className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-md">
-          <Stepper steps={STEPS} current={currentStep} />
+          <Stepper steps={STEPS} current={1} />
           <div className="mb-8 text-center">
             <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
-            <h1 className="font-display text-3xl font-normal tracking-tight">{title}</h1>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
+            <h1 className="font-display text-3xl font-normal tracking-tight">Build Your Baseline</h1>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+              The computational picture of how you tend to communicate, feel, and decide — computed
+              from NASA/JPL planetary data. About a minute.
+            </p>
           </div>
 
           <Card>
             <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password (min 8 characters)</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    autoComplete={existingUser || isLogin ? "current-password" : "new-password"}
-                  />
-                </div>
-
-                <div className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => { setShowForgot(true); setError(null); }}
-                    className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-
-                {/* Consent + Turnstile — only during initial signup, before account exists */}
-                {!(existingUser || isLogin) && !accountCreated && (
-                  <>
-                    <div className="border-t pt-4" />
-                    <div className="flex items-start gap-2 pt-2">
-                      <input
-                        id="consent"
-                        type="checkbox"
-                        checked={consent}
-                        onChange={(e) => setConsent(e.target.checked)}
-                        required
-                        className="mt-1 h-4 w-4 rounded border-border"
-                      />
-                      <Label htmlFor="consent" className="text-sm font-normal leading-relaxed">
-                        I agree to the{" "}
-                        <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" "}
-                        and{" "}
-                        <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
-                        I understand my birth data is used to compute my baseline and is never shared with third parties.
-                      </Label>
-                    </div>
-
-                    {turnstileSiteKey && !tsFailed && (
-                      <div className="space-y-2">
-                        <TurnstileWidget
-                          key={tsKey}
-                          siteKey={turnstileSiteKey}
-                          onToken={setTurnstileToken}
-                          onError={() => {
-                            setTurnstileToken(null);
-                            setTsFailed(true);
-                          }}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Baseline fields — only after account created or returning user */}
-                {!isLogin && (existingUser || accountCreated) && (
-                  <>
-                    <div className="border-t pt-4" />
-                    <div className="space-y-2">
-                      <Label htmlFor="dob">Date of Birth</Label>
-                      <Input id="dob" type="date" required value={dob} onChange={(e) => setDob(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tob">Time of Birth (24h)</Label>
-                      <Input id="tob" type="time" required value={tob} onChange={(e) => setTob(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pob">Place of Birth</Label>
-                      <Input id="pob" type="text" required value={pob} onChange={(e) => setPob(e.target.value)} placeholder="City, Country" />
-                    </div>
-                  </>
-                )}
-
-                {tsFailed && (
-                  <div className="flex items-center justify-between gap-2 border-t pt-4 text-sm text-destructive">
-                    <span>Security check couldn&apos;t load. Check your connection.</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTsFailed(false);
-                        setTsKey((k) => k + 1);
-                      }}
-                      className="shrink-0 underline underline-offset-4 hover:text-foreground"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                )}
-
-                {error && <p className="text-sm text-destructive">{error}</p>}
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading
-                    ? "Please wait..."
-                    : existingUser
-                      ? "Sign In"
-                      : isLogin
-                        ? "Sign In"
-                        : accountCreated
-                          ? "Save Baseline & Continue"
-                          : "Create Account"}
-                </Button>
-              </form>
-
+              <BaselineForm
+                submitLabel="Save Baseline & Continue"
+                onSaved={() => router.push(existingUser ? "/chat" : "/upgrade?from=baseline")}
+              />
               <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">
-                {isLogin ? (
-                  <>
-                    New to Sovereign?{" "}
-                    <a href="/onboard?mode=signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-                      Create your baseline
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    Have an account?{" "}
-                    <a href="/onboard?mode=login" className="font-medium text-foreground underline-offset-4 hover:underline">
-                      Sign in
-                    </a>
-                  </>
-                )}
+                You can update or refine it later from your baseline.
               </p>
             </CardContent>
           </Card>
