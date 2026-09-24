@@ -54,6 +54,14 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      {
+        // Next.js stamps `s-maxage=31536000` on prerendered HTML, which pins
+        // stale pages in device caches (iOS Safari, home-screen PWAs) across
+        // deploys. Force revalidation on every document request; hashed
+        // static assets under /_next/static keep their immutable caching.
+        source: "/((?!api|_next/static|_next/image).*)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
+      },
     ];
   },
 };
