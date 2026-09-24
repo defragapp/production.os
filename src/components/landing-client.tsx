@@ -257,7 +257,7 @@ function Workflow() {
           <Reveal delay={i * 90}>
             <div className="glass-panel flex h-full flex-col items-start gap-4 p-6 md:p-7">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-foreground/15 bg-foreground/[0.06] text-foreground">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-foreground/20 bg-gradient-to-b from-foreground/[0.12] to-foreground/[0.02] text-foreground">
                   {step.icon}
                 </span>
                 <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -285,12 +285,19 @@ export function LandingClient() {
       <main className="relative z-10">
         {/* ── Hero ─────────────────────────────────────────── */}
         <section className="relative overflow-hidden px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16 lg:pb-28 lg:pt-20">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+          <div className="hero-light" aria-hidden="true" />
+          <div className="hero-grid" aria-hidden="true" />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
             <Reveal>
               <div className="text-left">
-                <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Sovereign OS
-                </p>
+                <Link
+                  href="/about"
+                  className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-foreground/15 bg-foreground/[0.05] px-4 py-1.5 text-xs text-muted-foreground backdrop-blur-sm transition-colors hover:border-foreground/35 hover:text-foreground"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#e0b57c] shadow-[0_0_8px_rgba(224,181,124,0.8)]" aria-hidden="true" />
+                  Now in public beta
+                  <span aria-hidden="true" className="text-foreground/40">→</span>
+                </Link>
                 <h1 className="font-display text-[1.875rem] font-normal leading-[1.15] tracking-tight text-foreground sm:text-4xl md:text-[2.875rem] md:leading-[1.1] lg:text-[3.25rem] lg:leading-[1.08]">
                   Understand yourself, <span className="text-iridescent">your people</span>, and the systems you live within.
                 </h1>
@@ -326,7 +333,8 @@ export function LandingClient() {
         </section>
 
 {/* ── How it works ─────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-20">
+        <div className="section-rule" aria-hidden="true" />
+        <section className="relative overflow-hidden px-6 py-16 md:py-20">
           <div className="mx-auto max-w-5xl">
             <Reveal>
               <h2 className="mb-8 text-center font-display text-2xl font-normal text-foreground md:text-3xl">
@@ -338,7 +346,8 @@ export function LandingClient() {
         </section>
 
         {/* ── What you can explore ─────────────────────────── */}
-        <section className="border-t border-white/10 bg-muted/30 px-6 py-16 md:py-20">
+        <div className="section-rule" aria-hidden="true" />
+        <section className="bg-muted/30 px-6 py-16 md:py-20">
           <div className="mx-auto max-w-5xl">
             <Reveal className="mb-10 text-center">
               <h2 className="font-display text-2xl font-normal text-foreground md:text-3xl">
@@ -381,7 +390,8 @@ export function LandingClient() {
         </section>
 
 {/* ── Plans ────────────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 md:py-20">
+        <div className="section-rule" aria-hidden="true" />
+        <section className="relative overflow-hidden px-6 py-16 md:py-20">
           <Reveal className="mx-auto max-w-4xl">
             <h2 className="mb-3 text-center font-display text-2xl font-normal text-foreground md:text-3xl">
               Free to start. Keep going when it gets deep.
@@ -437,8 +447,10 @@ export function LandingClient() {
         </section>
 
 {/* ── Final CTA ────────────────────────────────────── */}
-<section className="relative overflow-hidden border-t border-white/10 px-6 py-16 text-center md:py-20">
-          <Reveal className="mx-auto max-w-2xl">
+        <div className="section-rule" aria-hidden="true" />
+        <section className="relative overflow-hidden px-6 py-20 text-center md:py-28">
+          <div className="hero-light" aria-hidden="true" />
+          <Reveal className="relative mx-auto max-w-2xl">
             <h2 className="mb-4 font-display text-2xl font-normal text-foreground sm:text-3xl md:text-4xl">
               Start with one honest question.
             </h2>

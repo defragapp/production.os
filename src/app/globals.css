@@ -73,11 +73,41 @@
   }
 }
 
-/* The breathing "room-light" glow was removed by design: the drifting warm
-   wash read as a discolored, broken screen behind page headings. The class is
-   kept as a no-op so markup that mounts .app-glow needs no changes. */
+/* Ambient light layer — STATIC, deliberately. An earlier animated "room-light"
+   drift was removed because motion read as screen discoloration; removing ALL
+   light, though, left every surface flat black and journal-quiet. This is the
+   middle ground modern product sites use: a fixed warm wash from the top edge,
+   never animated, kept under ~10% alpha so it reads as lighting, not decoration. */
 .app-glow {
-  display: none;
+  background: radial-gradient(70% 45% at 50% 0%, hsla(38, 28%, 88%, 0.06), transparent 70%);
+}
+
+/* Hero stage: light + fine grid texture, masked to fade out. */
+.hero-light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(72% 52% at 50% -8%, hsla(38, 30%, 88%, 0.1), transparent 68%),
+    radial-gradient(40% 34% at 84% 8%, hsla(28, 38%, 66%, 0.07), transparent 72%);
+}
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(hsla(38, 18%, 95%, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, hsla(38, 18%, 95%, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(64% 46% at 50% 0%, black, transparent 72%);
+  mask-image: radial-gradient(64% 46% at 50% 0%, black, transparent 72%);
+}
+
+/* Section divider: a hairline that fades at both ends instead of a hard
+   full-width rule — the quiet signal of a lit edge rather than a table line. */
+.section-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsla(38, 18%, 95%, 0.16), transparent);
 }
 
 /* Glass panels — the translucent "lit surface" used across cards: hairline
