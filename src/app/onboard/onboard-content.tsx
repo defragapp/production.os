@@ -367,8 +367,8 @@ export function OnboardContent() {
                   </div>
 
                   {tsFailed && (
-                    <div className="flex items-center justify-between gap-2 border-t pt-4 text-sm text-destructive">
-                      <span>Security check couldn&apos;t load. Check your connection.</span>
+                    <div className="flex items-center justify-between gap-2 border-t pt-4 text-sm text-muted-foreground">
+                      <span>Security check unavailable. You can still continue &mdash; we&apos;ll verify your email.</span>
                       <button
                         type="button"
                         onClick={() => {

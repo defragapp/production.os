@@ -327,14 +327,15 @@ export function ChatClient() {
       )}
 
       {showVerify && (
-        <div className="border-b bg-background px-6 py-4">
+        <div className="border-b border-border bg-muted/50 px-6 py-4">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Verify your email address to unlock AI chat. Check your inbox for the verification link.
+            <p className="text-sm text-foreground">
+              <span className="font-medium">Verify your email to unlock AI chat.</span>{" "}
+              <span className="text-muted-foreground">Check your inbox for the verification link.</span>
             </p>
             <Button
               size="sm"
-              variant="outline"
+              className="shrink-0"
               onClick={async () => {
                 try {
                   const r = await fetch("/api/auth/resend", { method: "POST" });
@@ -463,7 +464,7 @@ export function ChatClient() {
                       type="button"
                       onClick={() => sendMessage(s)}
                       disabled={isStreaming}
-                      className="rounded-full border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
+                      className="rounded-md border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
                     >
                       {s}
                     </button>

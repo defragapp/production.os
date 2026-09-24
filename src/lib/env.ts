@@ -19,6 +19,12 @@ export interface AppEnv {
   SUPPORT_INBOX?: string;
   TURNSTILE_SITE_KEY: string;
   TURNSTILE_SECRET_KEY: string;
+  /**
+   * Set to "true" to make Turnstile a hard gate on signup (a missing token is
+   * rejected). Leave unset for the default best-effort posture, where a client
+   * that can't load the widget still gets through. See lib/turnstile.ts.
+   */
+  TURNSTILE_REQUIRED?: string;
 }
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";

@@ -22,8 +22,8 @@
     --muted-foreground: 32 8% 70%;
     --accent: 30 8% 12.5%;
     --accent-foreground: 38 18% 95%;
-    --destructive: 30 10% 60%;
-    --destructive-foreground: 30 9% 8%;
+    --destructive: 6 58% 57%;
+    --destructive-foreground: 38 18% 96%;
     --border: 30 7% 14%;
     --input: 30 7% 16%;
     --ring: 38 12% 85%;
@@ -43,8 +43,8 @@
     --muted-foreground: 32 8% 70%;
     --accent: 30 8% 12.5%;
     --accent-foreground: 38 18% 95%;
-    --destructive: 30 10% 60%;
-    --destructive-foreground: 30 9% 8%;
+    --destructive: 6 58% 57%;
+    --destructive-foreground: 38 18% 96%;
     --border: 30 7% 14%;
     --input: 30 7% 16%;
     --ring: 38 12% 85%;
@@ -67,16 +67,11 @@
   }
 }
 
-/* A subtle radial glow shared across app pages, echoing the landing backdrop.
-   Upgraded to a breathing "room-light": a soft top wash plus a faint warm
-   accent low-light that drifts very slowly — applied automatically to every
-   page that mounts .app-glow. Reduced motion turns it into a static wash. */
+/* The breathing "room-light" glow was removed by design: the drifting warm
+   wash read as a discolored, broken screen behind page headings. The class is
+   kept as a no-op so markup that mounts .app-glow needs no changes. */
 .app-glow {
-  background:
-    radial-gradient(ellipse 85% 55% at 50% 0%, rgba(255, 250, 240, 0.07), transparent 62%),
-    radial-gradient(ellipse 55% 40% at 22% 16%, rgba(232, 214, 178, 0.05), transparent 62%);
-  animation: aura-drift 18s ease-in-out infinite;
-  will-change: transform, opacity;
+  display: none;
 }
 
 /* Glass panels — the translucent "lit surface" used across cards: hairline
@@ -93,72 +88,25 @@
   backdrop-filter: blur(12px);
 }
 
-/* Iridescent cream→gold text accent. Still strictly inside the warm
-   graphite/cream scale — reserved for a few key words per screen. */
+/* Cream text accent for a few key words per screen. The animated gold sheen
+   was removed by design (it drifted warm gold across headings); this is now a
+   static, gold-free cream treatment. */
 .text-iridescent {
-  background-image: linear-gradient(
-    100deg,
-    #e7dfd0,
-    #f6f1e6 28%,
-    #d8c49a 52%,
-    #f6f1e6 76%,
-    #e7dfd0
-  );
-  background-size: 220% 100%;
+  background-image: linear-gradient(100deg, #f4efe4, #e7dfd0);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: iridescent-flow 12s ease-in-out infinite;
 }
 
-/* Soft candle-glow behind the chalice mark (nav, hero, footer, app). */
+/* The breathing candle-glow behind the logo mark was removed by design — it
+   read as a moving yellow discoloration. Hidden so logo markup is untouched. */
 .logo-halo {
-  position: absolute;
-  inset: -45%;
-  border-radius: 9999px;
-  background: radial-gradient(circle, hsla(38, 18%, 95%, 0.16), transparent 64%);
-  filter: blur(10px);
-  animation: halo-breathe 5.5s ease-in-out infinite;
-  pointer-events: none;
+  display: none;
 }
 
 /* A gentle hover-in-air float for the product mock on the landing hero. */
 .demo-float {
   animation: demo-float 7s ease-in-out infinite;
-}
-
-@keyframes aura-drift {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(6px) scale(1.015);
-    opacity: 0.9;
-  }
-}
-
-@keyframes iridescent-flow {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes halo-breathe {
-  0%,
-  100% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.95;
-    transform: scale(1.07);
-  }
 }
 
 @keyframes demo-float {
@@ -172,17 +120,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-glow,
-  .text-iridescent,
-  .logo-halo,
   .demo-float {
     animation: none !important;
-  }
-  .app-glow {
-    transform: none;
-  }
-  .logo-halo {
-    opacity: 0.7;
   }
 }
 
@@ -196,111 +135,156 @@
   }
 }
 
-/* Elevated CTAs — a liquid-cream "aurora" reserved for the single primary
-   action on a screen, and frosted glass for secondary actions. Kept strictly
-   inside the cream/graphite scale; every animation bends to reduced motion. */
+/* ── Premium motion-glass buttons ──────────────────────────────────
+   CTAs are no longer flat rectangles. Each is a translucent glass surface
+   with an iridescent light that orbits the exterior edge — a masked conic
+   gradient whose angle is animated via @property. .btn-aurora is the single
+   primary action on a screen (brighter fill, faster edge); .btn-glass is the
+   secondary action (fainter). All strictly inside the cream/graphite scale,
+   and every animation bends to prefers-reduced-motion. */
+
+/* Registered custom property so the conic edge angle can be animated. */
+@property --edge {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 @layer components {
   .btn-glass {
     position: relative;
+    isolation: isolate;
+    border: 0;
     border-radius: 0.5rem;
     color: hsl(38 18% 95%);
-    background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.09), hsla(38, 18%, 95%, 0.03));
+    background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.07), hsla(38, 18%, 95%, 0.02));
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     box-shadow:
-      inset 0 0 0 1px hsla(38, 18%, 95%, 0.14),
-      inset 0 1px 0 hsla(38, 18%, 95%, 0.18);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
+      inset 0 1px 0 hsla(38, 18%, 95%, 0.1),
+      0 8px 24px -16px rgba(0, 0, 0, 0.7);
     transition:
-      background-color 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
-      transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
+      transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
+      box-shadow 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  .btn-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--edge),
+      transparent 0deg,
+      hsla(38, 22%, 82%, 0.24) 55deg,
+      hsla(38, 30%, 95%, 0.6) 80deg,
+      hsla(38, 22%, 82%, 0.24) 105deg,
+      transparent 160deg,
+      transparent 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: edge-orbit 6s linear infinite;
+    pointer-events: none;
   }
   .btn-glass:hover {
-    background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.15), hsla(38, 18%, 95%, 0.06));
     transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 hsla(38, 18%, 95%, 0.14),
+      0 12px 28px -14px rgba(0, 0, 0, 0.75);
   }
 
   .btn-aurora {
     position: relative;
     isolation: isolate;
-    overflow: hidden;
+    border: 0;
     border-radius: 0.5rem;
-    color: hsl(30 9% 8%);
-    background: linear-gradient(
-      110deg,
-      #ece4d6,
-      #faf6ec 24%,
-      #e5ddce 48%,
-      #f6f1e6 72%,
-      #ece4d6
-    );
-    background-size: 250% 250%;
+    color: hsl(38 18% 96%);
+    background: linear-gradient(180deg, hsla(38, 22%, 92%, 0.16), hsla(38, 18%, 95%, 0.05));
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     box-shadow:
-      inset 0 0 0 1px hsla(38, 18%, 95%, 0.7),
-      inset 0 -1px 0 hsla(30, 9%, 8%, 0.14),
-      0 0 0 1px hsla(38, 18%, 95%, 0.1),
-      0 1px 2px rgba(0, 0, 0, 0.55),
-      0 10px 36px -14px hsla(38, 18%, 95%, 0.28);
-    animation: aurora-flow 9s ease-in-out infinite;
+      inset 0 1px 0 hsla(38, 18%, 95%, 0.22),
+      0 10px 30px -14px hsla(38, 25%, 80%, 0.25);
     transition:
       transform 0.24s cubic-bezier(0.25, 0.1, 0.25, 1),
       box-shadow 0.24s cubic-bezier(0.25, 0.1, 0.25, 1);
   }
-  .btn-aurora:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      inset 0 0 0 1px hsla(38, 18%, 95%, 0.8),
-      inset 0 -1px 0 hsla(30, 9%, 8%, 0.1),
-      0 0 0 1px hsla(38, 18%, 95%, 0.16),
-      0 1px 2px rgba(0, 0, 0, 0.5),
-      0 14px 44px -12px hsla(38, 18%, 95%, 0.4);
-  }
-  .btn-aurora::after {
+  .btn-aurora::before {
     content: "";
     position: absolute;
     inset: 0;
     z-index: 0;
-    pointer-events: none;
-    background: linear-gradient(
-      105deg,
-      transparent 40%,
-      hsla(38, 18%, 95%, 0.5) 50%,
-      transparent 60%
+    border-radius: inherit;
+    padding: 1.25px;
+    background: conic-gradient(
+      from var(--edge),
+      hsla(38, 20%, 70%, 0.35) 0deg,
+      hsla(38, 35%, 96%, 0.95) 60deg,
+      hsla(30, 30%, 88%, 0.5) 95deg,
+      hsla(38, 20%, 70%, 0.2) 150deg,
+      transparent 210deg,
+      hsla(38, 30%, 92%, 0.6) 300deg,
+      hsla(38, 20%, 70%, 0.35) 360deg
     );
-    transform: translateX(-130%);
-    animation: aurora-sheen 5.5s ease-in-out infinite;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: edge-orbit 4.5s linear infinite;
+    pointer-events: none;
   }
-  .btn-aurora > * {
+  .btn-aurora:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 hsla(38, 18%, 95%, 0.28),
+      0 14px 34px -12px hsla(38, 30%, 82%, 0.35);
+  }
+
+  /* Keep any icon/label children above the orbiting edge pseudo-element. */
+  .btn-aurora > *,
+  .btn-glass > * {
     position: relative;
     z-index: 1;
   }
-}
 
-@keyframes aurora-flow {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
+  /* These buttons set their own surface, so provide an explicit focus ring. */
+  .btn-aurora:focus-visible,
+  .btn-glass:focus-visible {
+    outline: 2px solid hsl(38 30% 88%);
+    outline-offset: 2px;
   }
 }
 
-@keyframes aurora-sheen {
-  0% {
-    transform: translateX(-130%);
-  }
-  55%,
-  100% {
-    transform: translateX(130%);
+@keyframes edge-orbit {
+  to {
+    --edge: 360deg;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn-aurora,
-  .btn-aurora::after,
-  .btn-glass {
+  .btn-aurora::before,
+  .btn-glass::before {
     animation: none !important;
+  }
+  .btn-aurora,
+  .btn-glass {
     transition: none !important;
+  }
+  .btn-aurora:hover,
+  .btn-glass:hover {
+    transform: none !important;
   }
 }
 

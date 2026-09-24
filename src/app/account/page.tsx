@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
@@ -237,20 +238,41 @@ export default function AccountPage() {
                 </div>
               </CardContent>
             </Card>
-            <div className="flex flex-col gap-2">
-              <Button variant="outline" className="w-full" onClick={() => router.push("/baseline")}>View Baseline</Button>
-              <Button variant="outline" className="w-full" onClick={() => router.push("/settings")}>Connections & Invites</Button>
-              <Button variant="outline" className="w-full" onClick={() => router.push("/chat")}>Back to Chat</Button>
-              <Button variant="outline" className="w-full" onClick={() => router.push("/")}>Home</Button>
-              <Button variant="ghost" className="w-full text-destructive" onClick={handleSignOut}>Sign Out</Button>
-              <Button
-                variant="outline"
-                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete Account"}
+            <div className="space-y-2">
+              <Button className="w-full" onClick={() => router.push("/chat")}>
+                Back to Chat
               </Button>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button variant="outline" onClick={() => router.push("/baseline")}>View Baseline</Button>
+                <Button variant="outline" onClick={() => router.push("/settings")}>Connections &amp; Invites</Button>
+              </div>
+            </div>
+
+            <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/[0.04] p-4">
+              <p className="text-sm font-medium text-foreground">Danger zone</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Signing out ends this session. Deleting removes your baseline, chat history, and
+                subscription permanently — this cannot be undone.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Button variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-1" onClick={handleSignOut}>
+                  Sign Out
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-destructive/40 text-destructive hover:bg-destructive/10 sm:flex-1"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete Account"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex justify-center pt-1">
+              <Link href="/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Return to homepage
+              </Link>
             </div>
           </div>
         </div>

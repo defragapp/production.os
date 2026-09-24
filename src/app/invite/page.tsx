@@ -122,13 +122,13 @@ function AcceptCard({
             <div className="flex flex-col gap-2">
               <Link
                 href={`/onboard?mode=signup&invite=${encodeURIComponent(token)}`}
-                className="btn-aurora w-full rounded-md px-4 py-2.5 text-center text-sm font-medium"
+                className="btn-aurora w-full px-4 py-2.5 text-center text-sm font-medium"
               >
                 Create a free account
               </Link>
               <Link
                 href={`/onboard?mode=login&invite=${encodeURIComponent(token)}`}
-                className="btn-glass w-full rounded-md px-4 py-2.5 text-center text-sm font-medium text-foreground"
+                className="btn-glass w-full px-4 py-2.5 text-center text-sm font-medium text-foreground"
               >
                 Sign in
               </Link>
@@ -150,7 +150,7 @@ function AcceptCard({
               <div className="flex flex-col gap-2">
                 <Link
                   href={`/baseline?invite=${encodeURIComponent(token)}`}
-                  className="btn-aurora w-full rounded-md px-4 py-2.5 text-center text-sm font-medium"
+                  className="btn-aurora w-full px-4 py-2.5 text-center text-sm font-medium"
                 >
                   Set up my baseline
                 </Link>

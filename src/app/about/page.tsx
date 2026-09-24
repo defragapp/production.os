@@ -90,7 +90,7 @@ export default function AboutPage() {
                     <h2 className="font-display text-2xl font-normal leading-snug text-foreground md:text-3xl">
                       {s.title}
                     </h2>
-                    <p className="max-w-xl text-[15px] leading-7 text-muted-foreground">{s.body}</p>
+                    <p className="max-w-prose text-sm leading-6 text-muted-foreground md:text-[15px] md:leading-7">{s.body}</p>
                   </div>
                 </li>
               ))}

@@ -169,14 +169,14 @@ function ProductDemo() {
         </div>
 
         <div className="mb-3 flex justify-end">
-          <div className="max-w-[88%] rounded-2xl bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground">
+          <div className="max-w-[88%] rounded-2xl bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground sm:px-4 sm:py-3 sm:text-[15px]">
             Why do I keep pulling away once a relationship gets serious?
           </div>
         </div>
 
         <div className="flex justify-start">
-          <div className="max-w-[96%] rounded-2xl bg-muted px-4 py-3 text-left sm:max-w-[92%]">
-            <div className="space-y-3 text-[15px] leading-relaxed text-foreground">
+          <div className="max-w-[96%] rounded-2xl bg-muted px-3.5 py-2.5 text-left sm:max-w-[92%] sm:px-4 sm:py-3">
+            <div className="space-y-2 text-[13px] leading-relaxed text-foreground sm:space-y-3 sm:text-[15px]">
               {DEMO_ANSWER.map((p) => (
                 <p key={p}>{p}</p>
               ))}
@@ -283,13 +283,10 @@ export function LandingClient() {
                   personal, private, and grounded in a Baseline built from your birth data.
                 </p>
 
-                <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Link href="/onboard?mode=signup" className="btn-aurora px-7 py-3 text-sm font-medium">
+                <div className="mt-9">
+                  <Link href="/onboard?mode=signup" className="btn-aurora inline-block px-7 py-3 text-sm font-medium">
                     Start free
                   </Link>
-                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">
-                    Signing in is the same thing
-                  </span>
                 </div>
 
                 <ul className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground/80">
@@ -311,10 +308,6 @@ export function LandingClient() {
 
 {/* ── How it works ─────────────────────────────────── */}
 <section className="relative overflow-hidden border-t border-white/10 px-6 py-20 md:py-28">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[32rem] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(255,250,240,0.05),transparent_65%)]"
-            aria-hidden="true"
-          />
           <div className="mx-auto max-w-3xl">
             <Reveal>
               <h2 className="mb-14 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
@@ -354,10 +347,6 @@ export function LandingClient() {
 
 {/* ── Plans ────────────────────────────────────────── */}
 <section className="relative overflow-hidden border-t border-white/10 px-6 py-20 md:py-28">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[30rem] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(255,250,240,0.05),transparent_65%)]"
-            aria-hidden="true"
-          />
           <Reveal className="mx-auto max-w-4xl">
             <h2 className="mb-3 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
               Free to start. Keep going when it gets deep.
@@ -415,10 +404,6 @@ export function LandingClient() {
 
 {/* ── Final CTA ────────────────────────────────────── */}
 <section className="relative overflow-hidden border-t border-white/10 px-6 py-28 text-center">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[28rem] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(255,250,240,0.05),transparent_62%)]"
-            aria-hidden="true"
-          />
           <Reveal className="mx-auto max-w-2xl">
             <h2 className="mb-4 font-display text-3xl font-normal text-foreground sm:text-4xl md:text-5xl">
               Start with one honest question.

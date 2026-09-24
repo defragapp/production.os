@@ -1,9 +1,16 @@
 /**
- * Cloudflare Turnstile verification helper.
+ * Cloudflare Turnstile verification helper (best-effort).
  *
- * Gracefully degrades: if TURNSTILE_SECRET_KEY is not configured, verification
- * is skipped (returns true). When configured, the request must carry a valid
- * token that passes siteverify.
+ * Turnstile is defense-in-depth, not a hard gate:
+ *  - Not configured (missing site key or secret) → skip entirely (returns true).
+ *  - Configured but no token submitted → allowed by default. The widget can
+ *    legitimately fail to load on the client (content blockers, Safari/iOS ITP
+ *    third-party-cookie blocking, strict corporate networks); hard-blocking
+ *    there dead-ends real signups, so we fall back on the login rate limiter
+ *    and email verification instead. Set the TURNSTILE_REQUIRED="true" env var
+ *    to restore strict enforcement (a missing token is then rejected).
+ *  - A token IS submitted → it must pass siteverify, so forged/garbage tokens
+ *    are always rejected regardless of mode.
  */
 import type { AppEnv } from "./env";
 
@@ -15,8 +22,11 @@ interface SiteVerifyResponse {
 
 export async function verifyTurnstileToken(env: AppEnv, token?: string): Promise<boolean> {
   const secret = env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
-  if (!token) return false;
+  const siteKey = env.TURNSTILE_SITE_KEY;
+  // Not configured → the widget never renders, nothing to verify.
+  if (!secret || !siteKey) return true;
+  // No token: best-effort by default, rejected only under strict mode.
+  if (!token) return env.TURNSTILE_REQUIRED !== "true";
 
   const body = new URLSearchParams();
   body.set("secret", secret);

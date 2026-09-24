@@ -74,7 +74,7 @@ export function Nav() {
               <Link href="/support" className={linkClass("/support")}>Support</Link>
               <Link
                 href="/onboard?mode=signup"
-                className="btn-aurora ml-1 mt-0.5 rounded-md px-4 py-2 text-sm font-medium"
+                className="btn-aurora ml-1 mt-0.5 px-4 py-2 text-sm font-medium"
               >
                 Start free
               </Link>
@@ -186,7 +186,7 @@ export function Nav() {
               <Link
                 href="/onboard?mode=signup"
                 onClick={() => setOpen(false)}
-                className="btn-aurora mt-1 rounded-md px-3 py-3 text-center text-sm font-medium"
+                className="btn-aurora mt-1 px-3 py-3 text-center text-sm font-medium"
               >
                 Start free
               </Link>

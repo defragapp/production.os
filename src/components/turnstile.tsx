@@ -53,8 +53,16 @@ export function TurnstileWidget({ siteKey, onToken, onError }: TurnstileWidgetPr
     if (window.turnstile) render();
     else inject();
 
+    // Safety net: some content blockers drop the script without firing
+    // onerror. If the API never becomes available, surface the fallback so the
+    // form isn't left with an empty, non-blocking widget.
+    const failTimer = setTimeout(() => {
+      if (!cancelled && !window.turnstile) callbacksRef.current.onError?.();
+    }, 8000);
+
     return () => {
       cancelled = true;
+      clearTimeout(failTimer);
       if (window.turnstile && widgetIdRef.current) {
         try { window.turnstile.remove(widgetIdRef.current); } catch {}
       }
