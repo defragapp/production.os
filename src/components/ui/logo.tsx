@@ -23,13 +23,55 @@ export function Logo({
     >
       <span className="relative inline-flex">
         <span className="logo-halo" aria-hidden="true" />
-        <svg viewBox="0 0 20 20" className="relative h-6 w-6 text-foreground" fill="none" aria-hidden="true">
-        <path d="M5.9 6.9 H14.1 L14.7 8.8 Q14.7 12.5 10 13.6 Q5.3 12.5 5.3 8.8 Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-        <path d="M7.5 6.6 Q8.1 4.7 10 4.4 Q11.9 4.7 12.5 6.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M10 13.6 V15.9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M10 15.9 H7.5 M10 15.9 H12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        <circle cx="15.6" cy="4.7" r="0.9" fill="currentColor" />
-      </svg>
+        <svg viewBox="0 0 64 64" className="relative h-6 w-6 text-foreground" fill="none" aria-hidden="true">
+          {/* Descending Dove (Y: 2 to 14, Centered at X=32) */}
+          <path d="M32 14 C30 12 25 8 18 3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M18 3 C20.5 6 23.5 11 27 12 C29.5 12.5 31 11 31 8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M31 8 C31.5 5 32 2 32 2 C32 2 32.5 5 33 8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M33 8 C33 11 34.5 12.5 37 12 C40.5 11 43.5 6 46 3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M46 3 C39 8 34 12 32 14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+
+          {/* Cross & Wafer / Disk (Y: 14 to 22) */}
+          <circle cx="32" cy="18" r="4" stroke="currentColor" strokeWidth="2.2" />
+          <path d="M32 15.5 V20.5 M29.5 18 H34.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+
+          {/* Chalice Bowl (Y: 22 to 39) */}
+          <path d="M24 22 C23.5 28 25 35 30 39 Q32 40 34 39 C39 35 40.5 28 40 22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M24 22 Q32 24 40 22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+
+          {/* S Details inside Chalice */}
+          <path d="M34 26 C34 25.1 33.1 24.5 32 24.5 C30.8 24.5 29.8 25.2 29.8 26.5 C29.8 28.5 34.2 29 34.2 31 C34.2 33 33 34 32 34 C30.5 34 29.8 32.7 29.8 31.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+
+          {/* Stem & Knop (Y: 39 to 48) */}
+          <path d="M30 39 V48 M34 39 V48" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <circle cx="32" cy="41.5" r="0.8" fill="currentColor" />
+          <circle cx="32" cy="44" r="0.8" fill="currentColor" />
+          <circle cx="32" cy="46.5" r="0.8" fill="currentColor" />
+          <path d="M28.5 48 Q32 49 35.5 48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+
+          {/* Flared Foot / Base (Y: 48 to 54) */}
+          <path d="M30 48 C28 50 25.5 52.5 24 54 Q32 56 40 54 C38.5 52.5 36 50 34 48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M24 54 Q32 55.5 40 54" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M27.5 52.2 Q32 53.2 36.5 52.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+
+          {/* Minimized Divine Abundance & Flow (Streams Y: 15 to 62) */}
+          {/* Left Streams */}
+          <path d="M26 23 C26 15 20 15 20 21 V62" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M27 23 C27 17 22 17 22 21 V62" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          {/* Right Streams */}
+          <path d="M38 23 C38 15 44 15 44 21 V62" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M37 23 C37 17 42 17 42 21 V62" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+
+          {/* Droplets (Teardrops) */}
+          <path d="M 15 26 Q 14 28 15 29 Q 16 28 15 26" fill="currentColor" />
+          <path d="M 17 34 Q 16 36 17 37 Q 18 36 17 34" fill="currentColor" />
+          <path d="M 14 44 Q 13 46 14 47 Q 15 46 14 44" fill="currentColor" />
+          <path d="M 16 52 Q 15 54 16 55 Q 17 54 16 52" fill="currentColor" />
+          <path d="M 49 26 Q 48 28 49 29 Q 50 28 49 26" fill="currentColor" />
+          <path d="M 47 34 Q 46 36 47 37 Q 48 36 47 34" fill="currentColor" />
+          <path d="M 50 44 Q 49 46 50 47 Q 51 46 50 44" fill="currentColor" />
+          <path d="M 48 52 Q 47 54 48 55 Q 49 54 48 52" fill="currentColor" />
+        </svg>
       </span>
       {showWordmark && (
         <span className="font-display text-sm uppercase tracking-[0.18em] text-foreground">

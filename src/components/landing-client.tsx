@@ -269,10 +269,6 @@ export function LandingClient() {
       <main className="relative z-10">
         {/* ── Hero ─────────────────────────────────────────── */}
         <section className="relative overflow-hidden px-6 pb-20 pt-16 md:pb-28 md:pt-24">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[42rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,250,240,0.06),transparent_62%)]"
-            aria-hidden="true"
-          />
           <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1fr_1fr]">
             <Reveal>
               <div className="text-left">
