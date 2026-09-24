@@ -46,7 +46,12 @@ export const metadata: Metadata = {
       "An AI platform for making sense of the patterns in your life and relationships.",
     type: "website",
     locale: "en_US",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Sovereign OS" }],
+    images: [{ url: "/opengraph-image?v=2", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
+  icons: {
+    icon: { url: "/icon.svg?v=2", type: "image/svg+xml" },
+    shortcut: { url: "/icon.svg?v=2" },
+    apple: { url: "/apple-icon?v=2", sizes: "180x180", type: "image/png" },
   },
   twitter: {
     card: "summary_large_image",

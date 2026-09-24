@@ -23,21 +23,15 @@ export default function AppleIcon() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#0d0d0d",
+            color: "#f4f4f5",
           }}
         >
-          <svg width="130" height="130" viewBox="0 0 64 64" fill="none">
-            <path d="M20 22 H44 L46 28 Q46 40 32 43 Q18 40 18 28 Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
-            <path d="M32 43 V52" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            <path d="M32 52 H25 M32 52 H39" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            <path d="M25 15 Q28 26 32 24 Q36 26 39 15" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            <path d="M24 20 Q15 26 12 33 M12 33 Q9 35 7 32" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            <path d="M40 20 Q49 26 52 33 M52 33 Q55 35 57 32" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            <circle cx="6" cy="29" r="3.4" fill="currentColor" />
-            <circle cx="25" cy="10" r="3.2" fill="currentColor" />
-            <circle cx="39" cy="10" r="3.2" fill="currentColor" />
-            <circle cx="58" cy="29" r="3.4" fill="currentColor" />
-            <path d="M32 10 Q32 15 32 20" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          <svg width="140" height="140" viewBox="0 0 64 64" fill="none">
+            <path d="M19 22 H45 L47 28 Q47 40 32 43.5 Q17 40 17 28 Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+            <path d="M24 21 Q26 15 32 14 Q38 15 40 21" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            <path d="M32 43.5 V51" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            <path d="M32 51 H24 M32 51 H40" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            <circle cx="50" cy="15" r="3" fill="currentColor" />
           </svg>
         </div>
       </div>

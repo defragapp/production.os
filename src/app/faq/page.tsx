@@ -31,7 +31,7 @@ const FAQS = [
   },
   {
     q: "What's the difference between Free and Sovereign+?",
-    a: "Free includes your full Baseline and 5 AI messages per day. Sovereign+ removes the daily cap, keeps your complete conversation history, and adds advanced pattern analysis — $20/month, or $99/year (save 59%). You can cancel anytime.",
+    a: "Free includes your full Baseline and 5 AI messages per day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $20/month, or $99/year (save 59%). You can cancel anytime.",
   },
   {
     q: "Can I cancel anytime?",

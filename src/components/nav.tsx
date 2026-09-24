@@ -69,15 +69,15 @@ export function Nav() {
             </>
           ) : (
             <>
-              <Link href="/onboard?mode=login" className={linkClass("/onboard")}>
-                Sign In
-              </Link>
               <Link href="/faq" className={linkClass("/faq")}>FAQ</Link>
+              <Link href="/onboard?mode=login" className={linkClass("/onboard")}>
+                Sign in
+              </Link>
               <Link
                 href="/onboard?mode=signup"
                 className="btn-glass mt-1 rounded-md px-4 py-1.5 text-sm font-medium"
               >
-                Get Started
+                Start free
               </Link>
             </>
           )}
@@ -164,13 +164,6 @@ export function Nav() {
           ) : (
             <div className="flex flex-col">
               <Link
-                href="/onboard?mode=login"
-                onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
-              >
-                Sign In
-              </Link>
-              <Link
                 href="/faq"
                 onClick={() => setOpen(false)}
                 className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
@@ -178,11 +171,18 @@ export function Nav() {
                 FAQ
               </Link>
               <Link
+                href="/onboard?mode=login"
+                onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+              >
+                Sign in
+              </Link>
+              <Link
                 href="/onboard?mode=signup"
                 onClick={() => setOpen(false)}
                 className="btn-glass mt-1 rounded-md px-3 py-3 text-center text-sm font-medium"
               >
-                Get Started
+                Start free
               </Link>
             </div>
           )}

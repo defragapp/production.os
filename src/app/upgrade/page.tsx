@@ -99,8 +99,8 @@ function UpgradeContent() {
               <CardContent className="space-y-3">
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>✓ Unlimited AI messages — no daily cap</li>
+                  <li>✓ Invite people into your relationships</li>
                   <li>✓ Your full Baseline, same private engine</li>
-                  <li>✓ One long conversation, as deep as it needs to go</li>
                 </ul>
                 <Button className="w-full" onClick={handleManageBilling} disabled={portalLoading}>
                   {portalLoading ? "Opening billing..." : "Manage subscription (cancel in two clicks)"}
@@ -128,7 +128,7 @@ function UpgradeContent() {
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
                 <p className="mb-4 inline-flex w-fit items-center rounded-md border border-foreground/20 bg-foreground/[0.06] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground">Save 59% · Best value</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <li>Unlimited AI messages — no daily cap</li><li>Your full Baseline, same private engine</li><li>One long conversation, as deep as it needs to go</li>
+                  <li>Unlimited AI messages — no daily cap</li><li>Invite people into your relationships</li><li>Your full Baseline, same private engine</li>
                 </ul>
                 <div className="mt-6 space-y-2">
                   <Button className="w-full" onClick={() => handleUpgrade("annual")} disabled={loading !== null}>

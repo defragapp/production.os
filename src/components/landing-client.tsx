@@ -19,10 +19,12 @@ function Reveal({
   children,
   className,
   delay = 0,
+  from = "up",
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
+  from?: "up" | "left";
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,7 +32,7 @@ function Reveal({
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
     el.classList.add("js-ok");
-    el.classList.add("reveal-from-up");
+    el.classList.add(from === "left" ? "reveal-from-left" : "reveal-from-up");
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -44,7 +46,7 @@ function Reveal({
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [from]);
 
   return (
     <div ref={ref} className={className} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
@@ -132,11 +134,10 @@ const DEMO_ANSWER = [
 ];
 
 /**
- * The product, drawn in CSS: a faithful sketch of the real chat experience —
- * the same bubbles, Baseline chips, thread strip, and usage meter the app
- * renders, with an answer in the authentic voice Sovereign actually produces:
- * observe the pattern, name its cost, read the Baseline as a tendency, then
- * leave one honest question open.
+ * The product, drawn in CSS: the same chat surfaces the app renders, with an
+ * answer in the authentic voice Sovereign actually produces: observe the
+ * pattern, name its cost, read the Baseline as a tendency, then leave one
+ * honest question open.
  */
 function ProductDemo() {
   return (
@@ -151,7 +152,7 @@ function ProductDemo() {
             </span>
           </div>
           <span className="rounded-md border border-foreground/25 bg-foreground/[0.06] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">
-            Free · 5 a day
+            Preview
           </span>
         </div>
 
@@ -183,13 +184,6 @@ function ProductDemo() {
           </div>
         </div>
 
-        <div className="mb-1 mt-4 flex items-center justify-end gap-2.5">
-          <span className="text-xs text-muted-foreground/70">1 of 5 free messages used today</span>
-          <div className="h-[3px] w-24 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-foreground/50" style={{ width: "20%" }} />
-          </div>
-        </div>
-
         <div className="mt-3">
           <BaselineDrawer data={DEMO_BASELINE} />
         </div>
@@ -199,6 +193,68 @@ function ProductDemo() {
           <span className="flex h-7 items-center justify-center rounded-md bg-foreground px-3 font-mono text-[11px] uppercase tracking-[0.1em] text-background">
             Send
           </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * How-it-works as a vertical timeline: the accent line fills as you scroll.
+ * Base markup is a static, fully-visible list (plain SSR HTML). Only after JS
+ * runs is the fill driven by scroll position; each row still fades in via the
+ * guarded <Reveal>. Reduced-motion users see the static rail with no fill.
+ */
+function StepsTimeline() {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    const fill = fillRef.current;
+    if (!track || !fill) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const rect = track.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const progress = Math.min(1, Math.max(0, (vh * 0.55 - rect.top) / rect.height));
+      fill.style.height = `${Math.round(progress * 100)}%`;
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <div ref={trackRef} className="relative">
+        <div aria-hidden="true" className="absolute bottom-3 left-[3px] top-3 w-px bg-white/10" />
+        <div ref={fillRef} aria-hidden="true" className="absolute left-[3px] top-3 w-px bg-foreground/45" style={{ height: 0 }} />
+        <div className="space-y-10">
+          {HOW_IT_WORKS.map((step, i) => (
+            <Reveal key={step.title} from="left">
+              <div className="relative flex gap-5">
+                <span className="relative z-10 mt-1 flex h-2.5 w-2.5 shrink-0 items-center justify-center rounded-full border border-foreground/50 bg-background" />
+                <div className="min-w-0">
+                  <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Step 0{i + 1}
+                  </p>
+                  <h3 className="mb-1.5 text-lg font-medium text-foreground">{step.title}</h3>
+                  <p className="max-w-md text-base leading-relaxed text-muted-foreground">{step.desc}</p>
+                </div>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </div>
@@ -224,7 +280,7 @@ export function LandingClient() {
                   Sovereign OS
                 </p>
                 <h1 className="font-display text-5xl font-normal leading-[1.08] tracking-tight text-foreground md:text-6xl">
-                  A clearer read on yourself, your relationships, and your family.
+                  See the patterns shaping your life — and decide what they mean.
                 </h1>
                 <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
                   Sovereign is an AI that talks through what&apos;s happening in your life —
@@ -257,24 +313,20 @@ export function LandingClient() {
           </div>
         </section>
 
-        {/* ── How it works ─────────────────────────────────── */}
-        <section className="border-t border-white/10 px-6 py-20 md:py-28">
-          <Reveal className="mx-auto max-w-3xl">
-            <h2 className="mb-12 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
-              Three steps to a clearer view.
-            </h2>
-            <div className="border-t border-white/10">
-              {HOW_IT_WORKS.map((step, i) => (
-                <Reveal key={step.title} delay={i * 60}>
-                  <div className="grid gap-1 border-b border-white/10 py-6 sm:grid-cols-[64px_180px_1fr] sm:items-baseline sm:gap-6">
-                    <p className="font-mono text-xs text-muted-foreground">0{i + 1}</p>
-                    <h3 className="text-base font-medium text-foreground">{step.title}</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </Reveal>
+{/* ── How it works ─────────────────────────────────── */}
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-20 md:py-28">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[32rem] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(255,250,240,0.05),transparent_65%)]"
+            aria-hidden="true"
+          />
+          <div className="mx-auto max-w-3xl">
+            <Reveal>
+              <h2 className="mb-14 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
+                From your Baseline to a grounded read.
+              </h2>
+            </Reveal>
+            <StepsTimeline />
+          </div>
         </section>
 
         {/* ── What you can explore ─────────────────────────── */}
@@ -304,8 +356,12 @@ export function LandingClient() {
           </div>
         </section>
 
-        {/* ── Plans ────────────────────────────────────────── */}
-        <section className="border-t border-white/10 px-6 py-20 md:py-28">
+{/* ── Plans ────────────────────────────────────────── */}
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-20 md:py-28">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[30rem] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(255,250,240,0.05),transparent_65%)]"
+            aria-hidden="true"
+          />
           <Reveal className="mx-auto max-w-4xl">
             <h2 className="mb-3 text-center font-display text-3xl font-normal text-foreground md:text-4xl">
               Free to start. Keep going when it gets deep.
@@ -347,8 +403,8 @@ export function LandingClient() {
                 </p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <li>Unlimited AI messages — no daily cap</li>
+                  <li>Invite people into your relationships</li>
                   <li>Your full Baseline, same private engine</li>
-                  <li>One long conversation, as deep as it needs to go</li>
                 </ul>
                 <Link
                   href="/upgrade"
@@ -361,8 +417,12 @@ export function LandingClient() {
           </Reveal>
         </section>
 
-        {/* ── Final CTA ────────────────────────────────────── */}
-        <section className="border-t border-white/10 px-6 py-28 text-center">
+{/* ── Final CTA ────────────────────────────────────── */}
+<section className="relative overflow-hidden border-t border-white/10 px-6 py-28 text-center">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[28rem] -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(255,250,240,0.05),transparent_62%)]"
+            aria-hidden="true"
+          />
           <Reveal className="mx-auto max-w-2xl">
             <h2 className="mb-4 font-display text-4xl font-normal text-foreground md:text-5xl">
               Start with one honest question.
@@ -386,7 +446,7 @@ export function LandingClient() {
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <div>
             <p className="font-medium text-foreground">Sovereign OS</p>
-            <p className="mt-0.5">A clearer read on the life you&apos;re actually living.</p>
+            <p className="mt-0.5">Private by design. Grounded in data. Yours to decide.</p>
           </div>
           <div className="flex flex-wrap items-center gap-6">
             <Link href="/faq" className="transition-colors duration-[240ms] hover:text-foreground">

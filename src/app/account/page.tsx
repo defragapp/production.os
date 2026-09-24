@@ -141,8 +141,8 @@ export default function AccountPage() {
                   <>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       <li>✓ Unlimited AI messages — no daily cap</li>
+                      <li>✓ Invite people into your relationships</li>
                       <li>✓ Your full Baseline, same private engine</li>
-                      <li>✓ One long conversation, as deep as it needs to go</li>
                     </ul>
                     <Button
                       className="w-full"
