@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
 import { LoadingScreen } from "@/components/ui/loading";
+import { AddPasskeyButton } from "@/components/passkey";
 
 interface UserData {
   email: string;
@@ -236,6 +237,19 @@ export default function AccountPage() {
                   <span className="text-sm text-muted-foreground">Member since</span>
                   <span className="text-sm font-medium">{memberSince}</span>
                 </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Security</CardTitle>
+                <CardDescription>Sign in faster and phishing-resistantly with a passkey</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Use Face ID, Touch ID, or your device&apos;s unlock. Your password stays as a backup,
+                  so you can never get locked out.
+                </p>
+                <AddPasskeyButton />
               </CardContent>
             </Card>
             <div className="space-y-2">

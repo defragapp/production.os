@@ -10,6 +10,7 @@ import { Nav } from "@/components/nav";
 import { TurnstileWidget } from "@/components/turnstile";
 import { Stepper } from "@/components/stepper";
 import { BaselineForm } from "@/components/baseline-form";
+import { PasskeySignInButton } from "@/components/passkey";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
@@ -300,6 +301,16 @@ export function OnboardContent() {
 
             <Card>
               <CardContent className="pt-6">
+                {isLogin && (
+                  <>
+                    <PasskeySignInButton />
+                    <div className="my-4 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
+                      <span className="h-px flex-1 bg-border" />
+                      or use your password
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
+                  </>
+                )}
                 <form onSubmit={handleAuthSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>

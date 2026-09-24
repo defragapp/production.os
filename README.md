@@ -15,14 +15,18 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 | AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`) |
 | AI Routing | AI Gateway (ID: `sovereign-ai-gateway`) + direct fallback |
 | Baseline Engine | NASA/JPL Horizons API (planetary positions) |
-| Auth | Email/Password (WebCrypto PBKDF2-100k + HMAC pepper) + JWT (HS256) — passkeys on the roadmap |
+| Auth | Passkeys (WebAuthn, passkey-first) + Email/Password fallback (PBKDF2-100k + HMAC pepper) + JWT (HS256) |
 | Bot Protection | Cloudflare Turnstile (best-effort, env-gated) |
 | Email | Resend (`sovereign@defrag.app`, verified domain, click/open tracking) |
 | Payments | Stripe (Free vs Sovereign+ monthly/annual) |
 
 > The full authentication model — session handling, password hashing/pepper,
 > the Cloudflare Workers PBKDF2 ceiling, best-effort Turnstile, and the
-> passkey rollout plan — is documented in [`docs/auth.md`](docs/auth.md).
+> implemented passkey (WebAuthn) flow — is documented in [`docs/auth.md`](docs/auth.md).
+>
+> Related: [`docs/cloudflare-readiness.md`](docs/cloudflare-readiness.md)
+> (edge security + scale/media-spike plan) and
+> [`docs/stripe-plan.md`](docs/stripe-plan.md) (free → Sovereign+ monetization).
 
 ## CI/CD
 
@@ -124,7 +128,9 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/route.ts              # POST login/signup, GET session, DELETE logout (Turnstile)
-│   │   ├── auth/reset/route.ts        # POST password reset (email via Resend)
+│   │   ├── auth/reset/route.ts         # POST password reset (email via Resend)
+│   │   ├── auth/passkey/register/route.ts   # WebAuthn enrollment (POST options / PUT verify), session-gated
+│   │   ├── auth/passkey/authenticate/route.ts # WebAuthn login (POST options / PUT verify), issues session cookie
 │   │   ├── baseline/route.ts          # GET/POST natal baseline (NASA/JPL Horizons)
 │   │   ├── chat/route.ts              # Sovereign chat: SSE streaming via Workers AI + AI Gateway
 │   │   ├── checkout/route.ts          # POST → Stripe Checkout session (JWT-guarded)
@@ -146,10 +152,13 @@ src/
 │   └── page.tsx                       # Landing page (server shell + JSON-LD; renders LandingClient)
 ├── components/
 │   ├── nav.tsx                        # Nav + sign-out (DELETE /api/auth)
+│   ├── passkey.tsx                    # "Continue with passkey" (login) + "Add a passkey" (account)
 │   ├── turnstile.tsx                  # Turnstile widget (client, env-gated)
 │   └── ui/                            # shadcn/ui (accordion, button, card, input, label)
 ├── lib/
 │   ├── auth.ts                        # WebCrypto PBKDF2 + JWT (HS256), reset tokens
+│   ├── passkeys.ts                    # WebAuthn (@simplewebauthn/server): register/authenticate, KV challenges
+│   ├── base64url.ts                   # workerd-safe base64url <-> bytes (passkey keys)
 │   ├── email.ts                       # Resend transactional email
 │   ├── env.ts                         # AppEnv type + getEnv() helper
 │   ├── nasa-jpl.ts                    # NASA/JPL Horizons API → natal positions
@@ -203,6 +212,7 @@ correction, leakage) and §53 regressions are covered in
 - Routes run in the Cloudflare Workers runtime via the OpenNext adapter (compatibility flag `nodejs_compat`; no explicit `runtime = "edge"` exports).
 - Passwords are hashed with PBKDF2-HMAC-SHA256 at **100,000 iterations** (the Cloudflare Workers / workerd WebCrypto ceiling — values above 100k throw at runtime) and then keyed with an HMAC using the `PASSWORD_PEPPER` secret, so a leaked D1 dump is not crackable on its own. Stored hashes are versioned (`pbkdf2$<iter>$pepper$<hmac>`) and older/un-peppered rows are transparently upgraded on successful login. Login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed). See [`docs/auth.md`](docs/auth.md).
 - JWT session tokens are stored in an httpOnly, Secure, SameSite=Lax cookie (7-day expiry) and verified on every API call via middleware + route guards.
+- **Passkeys (WebAuthn) are live** and passkey-first for return logins: `@simplewebauthn/server` v13 (edge-compatible), a `passkeys` D1 table, and `/api/auth/passkey/{register,authenticate}` endpoints (POST options / PUT verify; challenges are single-use in KV). A "Continue with passkey" button tops the login card and an "Add a passkey" control lives on the account page; enrollment requires an existing session and the password stays as the fallback, so nobody is locked out. The browser ceremony must be validated on a real device. See [`docs/auth.md`](docs/auth.md) §9.
 - The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Responses stream as Server-Sent Events (SSE) and persist to D1 threads.
 - The chat route windows conversation context to the most recent 20 messages (`MAX_CONTEXT_MESSAGES`) before inference, capping token spend while full history remains stored in D1.
 - The `GET /api/threads` list is paginated (`page`/`limit`, default 50, max 50) and returns `{ threads, total, page, pageSize }`; the `?id=` detail lookup is unchanged.

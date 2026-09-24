@@ -66,3 +66,20 @@ CREATE TABLE IF NOT EXISTS relationships (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_relationships_pair ON relationships(user_a, user_b);
 CREATE INDEX IF NOT EXISTS idx_relationships_user_a ON relationships(user_a);
 CREATE INDEX IF NOT EXISTS idx_relationships_user_b ON relationships(user_b);
+
+-- Passkeys (WebAuthn). One row per registered authenticator; a user may hold
+-- several (laptop + phone). Password stays as the recovery path, so losing a
+-- device never locks anyone out. credential_id is the base64url authenticator
+-- id (primary key for fast lookup during login); public_key stores the CBOR
+-- COSE key as base64url; counter supports replay detection.
+CREATE TABLE IF NOT EXISTS passkeys (
+  credential_id  TEXT PRIMARY KEY,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  public_key     TEXT NOT NULL,
+  counter        INTEGER,
+  transports     TEXT,
+  label          TEXT,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  last_used_at   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id);

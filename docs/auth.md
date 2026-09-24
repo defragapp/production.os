@@ -55,7 +55,7 @@ for a consumer product.
 users (id PK, email UNIQUE, password_hash, password_salt, email_verified, …)
 baselines (user_id PK/FK → users.id, nasa_jpl_json_data, …)   -- ON DELETE CASCADE
 threads   (id PK, user_id FK → users.id, message_history, …)  -- ON DELETE CASCADE
-passkeys  (planned: credential_id PK, user_id FK → users.id, …)
+passkeys  (credential_id PK, user_id FK → users.id, public_key, counter, …)
 ```
 
 A passkey or password is only ever an *unlock mechanism* that resolves to a
@@ -177,38 +177,69 @@ resolves to the "continue without it" path instead of an empty, non-working box.
 - All auth/entitlement checks are server-side; the client is never trusted.
 
 ### Recommended Cloudflare additions (free tier)
-- **Bot Fight Mode** + a **WAF rate-limiting rule** on `/api/auth` at the zone
+See **[docs/cloudflare-readiness.md](./cloudflare-readiness.md)** for the full,
+prioritized hardening-and-scale plan. In brief:
+- **Bot Fight Mode** + a **WAF rate-limiting rule** on `/api/auth*` at the zone
   level → edge-level abuse protection behind (not instead of) the KV limiter.
-- Keep **Turnstile** on signup *and* login.
+  These live in the Cloudflare security API, which the project's Workers-scoped
+  deploy token cannot write; they are pending a dashboard/token action by the
+  account owner (exact steps are in the readiness doc).
+- Keep **Turnstile** on signup *and* login (strict mode is a documented toggle).
 - **Web Analytics** (already integrated) is privacy-first and cookieless —
   consistent with the product's stance.
 
 ---
 
-## 9. Passkeys (WebAuthn) — decided direction, not yet built
+## 9. Passkeys (WebAuthn) — implemented
 
-Passkeys are the correct next step and directly serve the iOS-native, low-friction
-UX goal. **They also sidestep the entire §4 hashing-ceiling debate**, because a
-passkey involves no shared secret to hash — Workers WebCrypto's ES256/Ed25519
-verification is fully supported.
+Passkeys serve the iOS-native, low-friction UX goal and **sidestep the §4
+hashing-ceiling debate entirely**: a passkey has no shared secret to hash —
+Workers WebCrypto's ES256/Ed25519 signature verification is fully supported.
 
-Recommended model: **passkey-first, password as an optional fallback** (never
-passkey-only, to avoid lockout with no recovery path).
+Model in production: **passkey-first for return logins, password as the always-
+available fallback** (never passkey-only, so there is always a recovery path and
+nobody is locked out by losing a device).
 
-Planned surface (kept deliberately small so the UI stays uncluttered):
-- `passkeys(credential_id PK, user_id FK, public_key, counter, transports, created_at)`.
-- `POST /api/auth/passkey/register/{options,verify}` and
-  `POST /api/auth/passkey/authenticate/{options,verify}`, using
-  `@simplewebauthn/server` (edge-compatible; handles CBOR/COSE/attestation so we
-  do not hand-roll it). Challenges stored in KV with a short TTL.
-- UI: one "Continue with a passkey" button on login; "Add a passkey" on the
-  account page after email/password signup. Password sign-in remains the visible
-  fallback.
+What is built:
+- **Schema:** `passkeys(credential_id PK, user_id FK → users.id ON DELETE
+  CASCADE, public_key, counter, transports, label, created_at, last_used_at)` +
+  index on `user_id`. Applied to prod D1 via `npm run db:migrate:remote`.
+- **Library:** [`src/lib/passkeys.ts`](../src/lib/passkeys.ts) wraps
+  `@simplewebauthn/server` (v13; edge-compatible, handles CBOR/COSE/attestation
+  so nothing is hand-rolled). RP id/origin are derived from the request host, so
+  it is correct on `sovereign.defrag.app` and on `localhost`. Challenges are
+  single-use and held in `SESSION_KV` with a 300s TTL — never in a cookie.
+- **Endpoints** (all under `/api/auth/passkey`, public in the middleware;
+  registration additionally self-verifies the session so a credential can only
+  ever be bound to a signed-in user):
+  - `POST /api/auth/passkey/register` → registration options (requires session).
+  - `PUT  /api/auth/passkey/register` → verify attestation, store credential.
+  - `POST /api/auth/passkey/authenticate` → auth options + `requestId`
+    (discoverable credentials — no email needed).
+  - `PUT  /api/auth/passkey/authenticate` → verify assertion, update counter,
+    issue the same 7-day httpOnly session cookie as password login. Throttled
+    per IP+credential like the password route.
+- **UI** ([`src/components/passkey.tsx`](../src/components/passkey.tsx)): a
+  single "Continue with passkey" button atop the login card (only when the
+  browser supports WebAuthn), and an "Add a passkey" control in a Security card
+  on the account page. Password sign-in stays visible beneath it. A dismissed
+  ceremony degrades to the password path — never a dead end.
 
-Deliberately **not** recommended: WASM Argon2id/scrypt. It adds a fragile
-CPU/memory-heavy dependency on Workers, and passkeys remove the need for it.
-If passkeys are ever dropped, revisit Argon2id via a vetted WASM module with
-parameters tuned to the Workers memory limit.
+**Verified live:** `POST …/authenticate` returns well-formed options with
+`rpId: "sovereign.defrag.app"`; `POST …/register` 401s without a session; the
+password login path is unchanged. The **browser ceremony itself (Face ID / Touch
+ID / security key) must be exercised on a real device** — it cannot be driven
+curl-side, which is why enrollment is gated behind an existing session.
+
+Counter is stored and advanced on each successful assertion for replay
+detection; sign-out never deletes a passkey (it is a device unlock, not a
+session). To let users name/remove individual passkeys later, surface the
+`label`/`created_at` columns with a delete endpoint.
+
+Deliberately **not** used: WASM Argon2id/scrypt. It adds a fragile, CPU/memory-
+heavy dependency on Workers, and passkeys remove the need for it. If passkeys
+were ever dropped, revisit Argon2id via a vetted WASM module tuned to the
+Workers memory limit.
 
 ---
 
