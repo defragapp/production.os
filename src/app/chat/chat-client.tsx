@@ -530,7 +530,7 @@ export function ChatClient() {
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[92%] rounded-2xl px-4 py-3 sm:max-w-[85%] ${
+                  className={`max-w-[92%] rounded-xl px-4 py-3 sm:max-w-[85%] ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-foreground"

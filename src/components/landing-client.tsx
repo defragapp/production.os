@@ -171,13 +171,13 @@ function ProductDemo() {
         </div>
 
         <div className="mb-3 flex justify-end">
-          <div className="max-w-[88%] rounded-2xl bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground sm:px-4 sm:py-3 sm:text-[15px]">
+          <div className="max-w-[88%] rounded-xl bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground sm:px-4 sm:py-3 sm:text-[15px]">
             Why do I keep pulling away once a relationship gets serious?
           </div>
         </div>
 
         <div className="flex justify-start">
-          <div className="max-w-[96%] rounded-2xl bg-muted px-3.5 py-2.5 text-left sm:max-w-[92%] sm:px-4 sm:py-3">
+          <div className="max-w-[96%] rounded-xl bg-muted px-3.5 py-2.5 text-left sm:max-w-[92%] sm:px-4 sm:py-3">
             <div className="space-y-2 text-[13px] leading-relaxed text-foreground sm:space-y-2.5 sm:text-[14px]">
               {DEMO_ANSWER.map((p) => (
                 <p key={p}>{p}</p>
@@ -320,7 +320,7 @@ export function LandingClient() {
               <div className="text-left">
                 <Link
                   href="/about"
-                  className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-foreground/15 bg-foreground/[0.05] px-4 py-1.5 text-xs text-muted-foreground backdrop-blur-sm transition-colors hover:border-foreground/35 hover:text-foreground"
+                  className="mb-6 inline-flex items-center gap-2.5 rounded-md border border-foreground/15 bg-foreground/[0.05] px-4 py-1.5 text-xs text-muted-foreground backdrop-blur-sm transition-colors hover:border-foreground/35 hover:text-foreground"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#e0b57c] shadow-[0_0_8px_rgba(224,181,124,0.8)]" aria-hidden="true" />
                   Now in public beta
@@ -416,7 +416,7 @@ export function LandingClient() {
               <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-2">
                 {READ_FLOW.map((node, i) => (
                   <div key={node} className="flex flex-col items-center gap-3 md:flex-row md:gap-2">
-                    <span className="rounded-full border border-foreground/25 bg-foreground/[0.05] px-5 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground/80 md:text-xs">
+                    <span className="rounded-md border border-foreground/25 bg-foreground/[0.05] px-5 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground/80 md:text-xs">
                       {node}
                     </span>
                     {i < READ_FLOW.length - 1 && <WorkflowArrow vertical />}
