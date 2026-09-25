@@ -388,7 +388,10 @@ export function scanPatternCandidates(history: ChatMessage[]): PatternCandidate[
     const lastUser = [...history].reverse().find((m) => m.role === "user");
     if (lastUser && !REPEATED_CUES.some((rx) => rx.test(lastUser.content))) {
       quality.push({
-        description: "A single event has been described so far.",
+        // Phrased about the situation, not about the user's disclosure count —
+        // the model may echo this line, and "you've mentioned a single event"
+        // reads as a false claim of shared history on a first exchange.
+        description: "A single occurrence — not yet evidence of a pattern.",
         evidence: [lastUser.content.slice(0, 240)],
         recurrence: "single-event",
         confidence: "low",

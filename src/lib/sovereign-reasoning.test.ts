@@ -4,6 +4,7 @@ import {
   detectMeaningTargets,
   findMeaningTriggers,
   scanCorrections,
+  scanPatternCandidates,
   windowHistoryPreservingCorrections,
   buildReasoningContext,
   buildReasoningPrompt,
@@ -208,5 +209,28 @@ describe("buildReasoningContext", () => {
     expect(withConsent[0].content).toContain("CONSENTED CONTEXT");
     expect(withConsent[0].content).toContain("Alex (brother)");
     expect(withConsent[0].content).toContain("No birth data, coordinates, or raw chart data is present");
+  });
+});
+
+describe("first-turn framing (no false shared history)", () => {
+  const singleEventHistory: ChatMessage[] = [
+    { role: "user", content: "I snapped at a coworker yesterday and it's been bothering me." },
+  ];
+
+  it("keeps the single-occurrence guardrail without inventorying disclosures", () => {
+    const patterns = scanPatternCandidates(singleEventHistory);
+    const single = patterns.find((p) => p.recurrence === "single-event");
+    expect(single).toBeDefined();
+    // Must not read as the AI taking stock of what the user has told it.
+    expect(single?.description).not.toMatch(/described so far|mentioned/i);
+  });
+
+  it("instructs the model never to inventory the user's disclosures", () => {
+    const prompt = buildReasoningPrompt(
+      buildReasoningContext({ history: singleEventHistory, baseline: BASELINE }),
+      singleEventHistory,
+      BASELINE,
+    );
+    expect(prompt[0].content).toContain("Never inventory the user's disclosures");
   });
 });
