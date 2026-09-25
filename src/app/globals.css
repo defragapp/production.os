@@ -216,13 +216,15 @@
   }
 }
 
-/* ── Premium motion-glass buttons ──────────────────────────────────
-   CTAs are no longer flat rectangles. Each is a translucent glass surface
-   with an iridescent light that orbits the exterior edge — a masked conic
-   gradient whose angle is animated via @property. .btn-aurora is the single
-   primary action on a screen (brighter fill, faster edge); .btn-glass is the
-   secondary action (fainter). All strictly inside the cream/graphite scale,
-   and every animation bends to prefers-reduced-motion. */
+/* ── Button system ─────────────────────────────────────────────────
+   Three tiers, one scale:
+   • .btn-focal  — the single focal navigation/conversion signal (nav CTA,
+                   hero CTA): a translucent glass plate with one slow,
+                   iridescent light orbiting its exterior edge.
+   • .btn-aurora — solid cream for in-app primary actions (forms, chat send).
+   • .btn-glass  — translucent secondary actions.
+   Everything stays inside the cream/graphite scale and bends to
+   prefers-reduced-motion. */
 
 /* Registered custom property so the conic edge angle can be animated. */
 @property --edge {
@@ -233,9 +235,8 @@
 
 @layer components {
   /* Secondary action: a clean translucent glass surface with a readable label
-     and a crisp hairline. The orbiting conic edge was removed by design — it
-     read as a rendering artifact on small screens and undercut the premium
-     feel, which is exactly the opposite of its intent. */
+     and a crisp hairline. The orbiting light lives only on .btn-focal —
+     ordinary actions stay quiet so the focal one reads as *the* signal. */
   .btn-glass {
     position: relative;
     border: 1px solid hsla(38, 18%, 95%, 0.3);
@@ -300,9 +301,66 @@
 
   /* These buttons set their own surface, so provide an explicit focus ring. */
   .btn-aurora:focus-visible,
-  .btn-glass:focus-visible {
+  .btn-glass:focus-visible,
+  .btn-focal:focus-visible {
     outline: 2px solid hsl(38 30% 88%);
     outline-offset: 2px;
+  }
+
+  /* Focal CTA — premium motion glass. The border is a conic gradient painted
+     on border-box under a transparent 1px border: a constant faint hairline
+     with one wide, soft iridescent comet sweeping the perimeter (angle
+     animated via @property --edge). No masked pseudo-element, so it cannot
+     seam or flicker on small screens; browsers without @property simply get
+     the static edge highlight. The plate itself must be an OPAQUE deep-graphite
+     gradient: a translucent fill lets the conic light bleed through the whole
+     face and smears into a rainbow blotch (the artifact that sank the first
+     attempt). Opaque warm-dark over the near-black page still reads as glass. */
+  .btn-focal {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    color: #f7f2e8;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    background:
+      linear-gradient(180deg, hsl(32 15% 13%), hsl(28 12% 9%)) padding-box,
+      conic-gradient(
+          from var(--edge),
+          hsla(40, 30%, 86%, 0.22) 0deg,
+          hsla(40, 30%, 86%, 0.22) 264deg,
+          hsla(38, 85%, 78%, 0.85) 296deg,
+          hsla(160, 60%, 70%, 0.45) 320deg,
+          hsla(258, 65%, 74%, 0.5) 340deg,
+          hsla(40, 30%, 86%, 0.22) 360deg
+        ) border-box;
+    box-shadow:
+      inset 0 1px 0 hsla(40, 30%, 92%, 0.14),
+      0 10px 30px -14px rgba(0, 0, 0, 0.65);
+    transition:
+      transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+      box-shadow 0.25s ease,
+      filter 0.25s ease;
+    animation: edge-orbit 7s linear infinite;
+  }
+  .btn-focal:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow:
+      inset 0 1px 0 hsla(40, 30%, 92%, 0.2),
+      0 14px 34px -14px rgba(0, 0, 0, 0.7);
+  }
+  .btn-focal:active {
+    transform: translateY(0);
+  }
+  .btn-focal svg {
+    transition: transform 0.25s ease;
+  }
+  .btn-focal:hover svg {
+    transform: translateX(2px);
   }
 }
 
@@ -313,9 +371,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn-aurora::before,
-  .btn-glass::before {
+  /* The orbiting light freezes with the comet resting at its opening angle;
+     the button keeps its full glass treatment, just without motion. */
+  .btn-focal {
     animation: none !important;
+  }
+  .btn-focal,
+  .btn-focal:hover {
+    transition: none !important;
+    transform: none !important;
+  }
+  .btn-focal:hover svg {
+    transform: none !important;
   }
   .btn-aurora,
   .btn-glass {

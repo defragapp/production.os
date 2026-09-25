@@ -335,7 +335,7 @@ export function LandingClient() {
                 </p>
 
                 <div className="mt-7 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-                  <Link href="/onboard?mode=signup" className="btn-aurora px-7 py-3 text-sm font-semibold">
+                  <Link href="/onboard?mode=signup" className="btn-focal px-7 py-3 text-sm font-semibold">
                     Start free
                   </Link>
                   <Link href="/about" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground">
