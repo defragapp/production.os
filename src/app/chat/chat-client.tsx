@@ -558,7 +558,9 @@ export function ChatClient() {
 
       <div className="border-t px-4 pb-safe">
         <div className="mx-auto max-w-3xl py-4">
-          <BaselineDrawer data={baselineData} />
+          {/* Overlay mode: the panel folds up as a floating popover so opening
+              it never pushes the composer off-screen. */}
+          <BaselineDrawer data={baselineData} overlay />
           <div className="mt-2">
           {usage.limit !== null && (
             <div className="mb-1 flex items-center justify-end gap-2.5">
