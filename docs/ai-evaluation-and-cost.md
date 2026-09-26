@@ -37,11 +37,13 @@ safety-sensitive contexts, and routes to a supported, non-directive response.
 Confirmed deployed in the chat route pipeline.
 
 **Emotive glyphs:** none found — no emoji anywhere in `src` or `public`. The brand is a
-non-representational "overflowing cup" emblem with a single source of truth
-(`src/components/ui/brand-mark.tsx`): a stripped-goblet silhouette (`StrippedIcon`) drives
-the tab/favicon icon (`icon.svg`, on a graphite plate), the iOS home-screen icon
-(`apple-icon.tsx`), and the nav/footer lockup (`logo.tsx`), while the illustrated
-line mark (`Emblem`) appears on the social card (`opengraph-image.tsx`).
+single canonical "overflowing cup" glyph (Ace of Cups), defined once as data in
+`src/lib/brand-mark.ts` (`BRAND_MARK_SHAPES`) and rendered by
+`src/components/ui/brand-mark.tsx`. The identical artwork appears on the nav/footer
+lockup (`logo.tsx`), the tab/favicon icon (`icon.svg`, on a graphite plate), the iOS
+home-screen icon (`apple-icon.tsx`), and the social card (`opengraph-image.tsx`).
+There is deliberately no separate simplified/illustrated variant — surfaces differ in
+size, never in the mark itself.
 
 ---
 
@@ -112,6 +114,6 @@ either already live or cheap/free to finish:
 
 - **Dynamic E2E AI eval** still requires a second consented test account
   (invite → email verify → accept → chat). Tracked in `TODO.md`.
-- Brand mark: the "emblematic" overflowing-cup system is now shipped as a single
-  source of truth (`brand-mark.tsx`) across nav, favicon, iOS icon, and the social
-  card — the earlier "more emblematic mark" nicety is done.
+- Brand mark: the overflowing-cup glyph ships as a single canonical mark (one
+  `BRAND_MARK_SHAPES` source) reused across nav, favicon, iOS icon, and the social
+  card. Surfaces scale the same artwork; there is no separate logo/icon.

@@ -157,11 +157,12 @@ src/
 │   ├── passkey.tsx                    # "Continue with passkey" (login) + "Add a passkey" (account)
 │   ├── rich-text.tsx                  # Renders assistant answers from markdown-lite (headings, lists, bold, code)
 │   ├── turnstile.tsx                  # Turnstile widget (client, env-gated)
-│   └── ui/                            # shadcn/ui (accordion, button, card, input, label) + brand-mark.tsx (StrippedIcon/Emblem logo source of truth) + section.tsx (airy titled group)
+│   └── ui/                            # shadcn/ui (accordion, button, card, input, label) + brand-mark.tsx (canonical Ace-of-Cups logo, renders lib/brand-mark.ts) + section.tsx (airy titled group)
 ├── lib/
 │   ├── auth.ts                        # WebCrypto PBKDF2 + JWT (HS256), reset tokens
 │   ├── passkeys.ts                    # WebAuthn (@simplewebauthn/server): register/authenticate, KV challenges
 │   ├── base64url.ts                   # workerd-safe base64url <-> bytes (passkey keys)
+│   ├── brand-mark.ts                  # Single source of truth for the logo glyph (BRAND_MARK_SHAPES) reused by nav/favicon/iOS/social surfaces
 │   ├── email.ts                       # Resend transactional email
 │   ├── env.ts                         # AppEnv type + getEnv() helper
 │   ├── nasa-jpl.ts                    # NASA/JPL Horizons API → natal positions
