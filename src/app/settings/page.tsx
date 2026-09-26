@@ -264,8 +264,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">Loading…</p>
                   ) : connections.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No connections yet. Send an invitation below and it becomes a connection once
-                      the person accepts.
+                      {tier === "free"
+                        ? "No connections yet. Connections grow from invitations, which are part of Sovereign+."
+                        : "No connections yet. Send an invitation below and it becomes a connection once the person accepts."}
                     </p>
                   ) : (
                     <ul className="space-y-3">
@@ -415,7 +416,9 @@ export default function SettingsPage() {
                     </p>
                   )}
 
-                  {invites === null ? null : invites.length === 0 ? (
+                  {/* A free user can't have invitations and is behind the paywall,
+                      so showing "No invitations yet" here only contradicts the gate. */}
+                  {tier === "free" ? null : invites === null ? null : invites.length === 0 ? (
                     <p className="text-xs text-muted-foreground/70">No invitations yet.</p>
                   ) : (
                     <ul className="space-y-2">

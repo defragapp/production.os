@@ -9,6 +9,7 @@ import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineDrawer } from "@/components/baseline-drawer";
+import { RichText } from "@/components/rich-text";
 import type { ChatMessage, BaselineData, RelationshipView } from "@/lib/types";
 
 interface InviteView {
@@ -127,7 +128,7 @@ export function ChatClient() {
         if (baselineRes.ok) {
           const bd = await baselineRes.json() as { baseline?: { nasa_jpl_json_data?: string } };
           if (!bd.baseline || !bd.baseline.nasa_jpl_json_data) {
-            router.push("/baseline");
+            router.push("/baseline?from=chat");
             return;
           }
           try {
@@ -246,7 +247,7 @@ export function ChatClient() {
           return;
         }
         if (response.status === 403 && err.code === "baseline_required") {
-          router.push("/baseline");
+          router.push("/baseline?from=chat");
           return;
         }
         if (response.status === 403 && err.code === "subscription_required") {
@@ -546,10 +547,12 @@ export function ChatClient() {
                       <span className="h-2 w-2 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
                       <span className="ml-1">Thinking…</span>
                     </span>
+                  ) : msg.role === "assistant" ? (
+                    <div className="text-[15px]">
+                      <RichText text={msg.content} />
+                    </div>
                   ) : (
-                    <>
-                      <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
-                    </>
+                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
                   )}
                 </div>
               </div>

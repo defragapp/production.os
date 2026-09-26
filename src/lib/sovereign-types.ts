@@ -171,6 +171,12 @@ export interface SafetyValidation {
 
 export interface ModelInput {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  /**
+   * Generation output budget. When omitted the model adapter applies
+   * DEFAULT_MAX_TOKENS — the previous reliance on the provider's small implicit
+   * default truncated answers mid-sentence, so the budget is now explicit.
+   */
+  maxTokens?: number;
 }
 
 export interface ModelOutput {

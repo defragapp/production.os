@@ -9,6 +9,13 @@ import type { ModelInput, ModelOutput } from "./sovereign-types";
 export const SOVEREIGN_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 export const DEFAULT_GATEWAY_ID = "sovereign-ai-gateway";
 
+/**
+ * Default generation output budget. Cloudflare's implicit default is small
+ * enough to truncate a typical Sovereign answer mid-sentence, so we always send
+ * an explicit value. Bounded upward to keep per-message compute cost sane.
+ */
+export const DEFAULT_MAX_TOKENS = 1024;
+
 export class ModelError extends Error {}
 
 export interface SovereignModel {
@@ -30,13 +37,14 @@ export function createCloudflareModel(
     async generate(input: ModelInput): Promise<ModelOutput> {
       const messages = modelMessages(input);
       if (messages.length === 0) throw new ModelError("No messages to send to the model.");
+      const params = { messages, max_tokens: input.maxTokens ?? DEFAULT_MAX_TOKENS };
       try {
-        const result = await ai.run(model, { messages }, { gateway: { id: gatewayId } });
+        const result = await ai.run(model, params, { gateway: { id: gatewayId } });
         return { text: extractText(result), usedGateway: true };
       } catch (gatewayErr) {
         console.error("[sovereign-model] gateway run failed:", gatewayErr);
         try {
-          const result = await ai.run(model, { messages });
+          const result = await ai.run(model, params);
           return { text: extractText(result), usedGateway: false };
         } catch (directErr) {
           console.error("[sovereign-model] direct run failed:", directErr);

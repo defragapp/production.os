@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createCloudflareModel, ModelError } from "./sovereign-model";
+import { createCloudflareModel, ModelError, DEFAULT_MAX_TOKENS } from "./sovereign-model";
 import type { ModelInput } from "./sovereign-types";
 
 function fakeEnv(run: (model: string, input: unknown, settings?: unknown) => Promise<unknown>) {
@@ -53,5 +53,19 @@ describe("createCloudflareModel", () => {
   it("rejects empty message inputs", async () => {
     const model = createCloudflareModel(fakeEnv(async () => ({ response: "nope" })));
     await expect(model.generate({ messages: [] })).rejects.toThrow(ModelError);
+  });
+
+  it("sends an explicit max_tokens budget, honoring default and override", async () => {
+    const seen: unknown[] = [];
+    const model = createCloudflareModel(
+      fakeEnv(async (_model, input) => {
+        seen.push(input);
+        return { response: "ok" };
+      }),
+    );
+    await model.generate(INPUT);
+    expect((seen[0] as { max_tokens: number }).max_tokens).toBe(DEFAULT_MAX_TOKENS);
+    await model.generate({ messages: INPUT.messages, maxTokens: 64 });
+    expect((seen[1] as { max_tokens: number }).max_tokens).toBe(64);
   });
 });

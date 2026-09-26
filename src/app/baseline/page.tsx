@@ -25,14 +25,17 @@ function BaselineContent() {
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
   const [invite, setInvite] = useState<string | null>(null);
+  const [fromChat, setFromChat] = useState(false);
   const [row, setRow] = useState<Baseline | null>(null);
   const [parsed, setParsed] = useState<BaselineData | null>(null);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const token = new URLSearchParams(window.location.search).get("invite");
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("invite");
       setInvite(token && token.trim() ? token : null);
+      setFromChat(params.get("from") === "chat");
     }
   }, []);
 
@@ -100,8 +103,13 @@ function BaselineContent() {
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
           <div className="w-full max-w-md">
             <Stepper steps={STEPS} current={1} />
+            {fromChat && (
+              <p className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
+                You need your Baseline before you can chat with the AI — it takes about a minute.
+              </p>
+            )}
             <PageHeader
-              title="Set Your Baseline"
+              title="Build Your Baseline"
               description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. Your data is never shared with third parties."
             />
 
@@ -109,12 +117,12 @@ function BaselineContent() {
               <CardHeader>
                 <CardTitle className="text-base">Birth Information</CardTitle>
                 <CardDescription>
-                  This is a one-time setup. You can review and update it here any time.
+                  Set it once, then review or update it here any time.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <BaselineForm
-                  submitLabel="Compute My Baseline"
+                  submitLabel="Build My Baseline"
                   onSaved={() => {
                     void loadBaseline();
                   }}

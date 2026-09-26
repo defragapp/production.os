@@ -32,6 +32,7 @@ function UpgradeContent() {
   const [error, setError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [isPlus, setIsPlus] = useState(false);
+  const [hasBaseline, setHasBaseline] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
@@ -39,9 +40,12 @@ function UpgradeContent() {
     (async () => {
       try {
         const res = await fetch("/api/auth");
-        const data = await res.json() as { user?: { subscription_tier?: string } | null };
+        const data = await res.json() as { user?: { subscription_tier?: string } | null; hasBaseline?: boolean };
         if (!data.user) { router.push("/onboard?mode=login"); return; }
         setIsPlus(data.user.subscription_tier === "sovereign+");
+        // Reflect the real funnel state: a no-baseline visitor who lands here
+        // directly shouldn't see "✓ Baseline" on the stepper.
+        if (typeof data.hasBaseline === "boolean") setHasBaseline(data.hasBaseline);
       } catch { router.push("/onboard?mode=login"); }
       finally { setAuthChecked(true); }
     })();
@@ -89,7 +93,7 @@ function UpgradeContent() {
       <main className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-3xl">
-          <Stepper steps={STEPS} current={2} />
+          <Stepper steps={STEPS} current={2} completed={hasBaseline ? 2 : 1} />
           {fromBaseline && (
             <p className="mb-4 text-center text-sm font-medium text-foreground">
               Your Baseline is ready. Last step — choose how you&apos;d like to continue.

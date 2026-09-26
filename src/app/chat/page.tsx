@@ -39,11 +39,12 @@ export default async function ChatPage() {
     .first<User & { subscription_tier: string | null }>();
   if (!user) redirect("/onboard?mode=login");
 
-  // Gate: must have completed baseline (onboarding)
+  // Gate: must have completed baseline (onboarding). Send to the /baseline
+  // setup page (not /onboard) so the "why you're here" banner is shown.
   const baseline = await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?")
     .bind(payload.sub)
     .first<{ user_id: string }>();
-  if (!baseline) redirect("/onboard");
+  if (!baseline) redirect("/baseline?from=chat");
 
   // Gate: must have chosen a subscription tier (free or sovereign+)
   if (!user.subscription_tier) redirect("/upgrade?from=baseline");

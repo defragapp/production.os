@@ -5,15 +5,23 @@
 export function Stepper({
   steps,
   current,
+  completed,
 }: {
   steps: string[];
   current: number;
+  /**
+   * How many steps are genuinely finished. Defaults to `current` (the common
+   * linear funnel). Override it when the user is viewing a later step without
+   * having completed an earlier one, so checkmarks never lie.
+   */
+  completed?: number;
 }) {
+  const completedCount = completed ?? current;
   return (
     <nav aria-label="Progress" className="mb-8">
       <ol className="flex flex-wrap items-center justify-center gap-2 text-xs">
         {steps.map((label, i) => {
-          const done = i < current;
+          const done = i < completedCount;
           const active = i === current;
           return (
             <li key={label} className="flex items-center gap-2">

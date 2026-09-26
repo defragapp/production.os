@@ -66,5 +66,8 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("Baseline-supported");
     expect(prompt).toContain("Interpretive");
     expect(prompt).toContain("Unknown");
+    // The evidence states must stay internal — the model is told not to print
+    // them as headings/labels, so the answer reads as prose, not a filled form.
+    expect(prompt).toContain("not headings or tags to print");
   });
 });

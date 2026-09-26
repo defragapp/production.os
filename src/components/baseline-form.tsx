@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { validateDateOfBirth } from "@/lib/date-of-birth";
 
 const TOB_BUCKETS = [
   { key: "morning", label: "Morning" },
@@ -40,7 +41,11 @@ export function BaselineForm({
   onDone?: () => void;
   defaults?: { dob?: string | null; pob?: string | null; tob?: string | null };
 }) {
-  const [dob, setDob] = useState(defaults?.dob ?? "");
+  // Split the ISO `YYYY-MM-DD` default (if any) into editable numeric parts.
+  const defaultDob = defaults?.dob && /^\d{4}-\d{2}-\d{2}$/.test(defaults.dob) ? defaults.dob : "";
+  const [dobYY, setDobYY] = useState(defaultDob.slice(0, 4));
+  const [dobMM, setDobMM] = useState(defaultDob.slice(5, 7));
+  const [dobDD, setDobDD] = useState(defaultDob.slice(8, 10));
   const [pob, setPob] = useState(defaults?.pob ?? "");
   const [tob, setTob] = useState(defaults?.tob ?? "");
   const [unknownTime, setUnknownTime] = useState(false);
@@ -48,9 +53,22 @@ export function BaselineForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const onlyDigits = (v: string, max: number) => v.replace(/[^0-9]/g, "").slice(0, max);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate the date explicitly: a native <input type="date"> fails silently
+    // and is inaccessible to keyboard / screen-reader / automated entry, so the
+    // whole product dead-ends. Three numeric fields + this shared check give a
+    // clear, reachable error on the funnel's anchor field.
+    const dobCheck = validateDateOfBirth(dobMM, dobDD, dobYY);
+    if (!dobCheck.ok) {
+      setError(dobCheck.error);
+      return;
+    }
+    const dob = dobCheck.iso;
 
     if (unknownTime && !bucket) {
       setError("Choose the closest time window, or you can go back and enter your exact time.");
@@ -88,20 +106,57 @@ export function BaselineForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="bf-dob">Date of birth</Label>
-        <Input
-          id="bf-dob"
-          type="date"
-          required
-          value={dob}
-          onChange={(e) => setDob(e.target.value)}
-        />
-        <p className="text-[13px] leading-relaxed text-muted-foreground">
+      <fieldset className="space-y-2 border-0 p-0 m-0">
+        <legend className="text-sm font-medium leading-none">Date of birth</legend>
+        <div className="flex items-end gap-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="bf-dob-mm" className="block text-xs font-normal text-muted-foreground">Month</Label>
+            <Input
+              id="bf-dob-mm"
+              inputMode="numeric"
+              autoComplete="bday-month"
+              maxLength={2}
+              placeholder="MM"
+              value={dobMM}
+              onChange={(e) => { setDobMM(onlyDigits(e.target.value, 2)); setError(null); }}
+              aria-describedby="bf-dob-hint"
+              className="w-[4.5rem] text-center tabular-nums"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bf-dob-dd" className="block text-xs font-normal text-muted-foreground">Day</Label>
+            <Input
+              id="bf-dob-dd"
+              inputMode="numeric"
+              autoComplete="bday-day"
+              maxLength={2}
+              placeholder="DD"
+              value={dobDD}
+              onChange={(e) => { setDobDD(onlyDigits(e.target.value, 2)); setError(null); }}
+              aria-describedby="bf-dob-hint"
+              className="w-[4.5rem] text-center tabular-nums"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bf-dob-yy" className="block text-xs font-normal text-muted-foreground">Year</Label>
+            <Input
+              id="bf-dob-yy"
+              inputMode="numeric"
+              autoComplete="bday-year"
+              maxLength={4}
+              placeholder="YYYY"
+              value={dobYY}
+              onChange={(e) => { setDobYY(onlyDigits(e.target.value, 4)); setError(null); }}
+              aria-describedby="bf-dob-hint"
+              className="w-[5.5rem] text-center tabular-nums"
+            />
+          </div>
+        </div>
+        <p id="bf-dob-hint" className="text-[13px] leading-relaxed text-muted-foreground">
           The anchor. It fixes where the Sun and Moon stood when you arrived — the qualities
           your Baseline starts from.
         </p>
-      </div>
+      </fieldset>
 
       <div className="space-y-2">
         <Label htmlFor="bf-tob">Time of birth</Label>
