@@ -42,6 +42,10 @@ function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
 }
 
 async function handleChat(request: NextRequest) {
+  // Cold-path diagnostic: Workers AI generation dominates latency, but a slow
+  // D1/consent prelude or isolate cold start shows up in `pre`. One compact
+  // line per request into `wrangler tail` settles the load-latency questions.
+  const tStart = Date.now();
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return new Response(JSON.stringify({ error: "JWT_SECRET is not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
@@ -139,6 +143,7 @@ async function handleChat(request: NextRequest) {
 
   const model = createCloudflareModel(env);
   let result;
+  const tPre = Date.now();
   try {
     const context = buildReasoningContext({ history: conversation, baseline: derived, consented });
     result = await generateSovereignResponse(context, conversation, derived, model);
@@ -149,6 +154,8 @@ async function handleChat(request: NextRequest) {
     }
     return new Response(JSON.stringify({ error: "Something went wrong while generating a response. Please try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
+  const tGen = Date.now();
+  console.log(`[chat] timing pre=${tPre - tStart}ms gen=${tGen - tPre}ms total_to_response=${tGen - tStart}ms`);
 
   const currentThreadId = threadId ?? generateUUID();
   const userId = payload.sub;

@@ -11,6 +11,10 @@ import type { RelationshipView, User } from "./types";
 export const MAX_PENDING_INVITES = 5;
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// The pure invite-lapse predicate lives in `./invite-status` (dependency-free,
+// so it is unit-testable without pulling in next/server).
+export { isLapsedInvite } from "./invite-status";
+
 /** Suggested relationship labels offered in the invite/settings UI. */
 export const ROLE_SUGGESTIONS = [
   "friend", "partner", "spouse", "mom", "dad", "sister", "brother", "sibling",

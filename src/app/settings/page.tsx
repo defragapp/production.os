@@ -24,6 +24,7 @@ interface InviteRow {
   emailMasked: string;
   role: string;
   status: string;
+  lapsed?: boolean;
   createdAt: string;
   expiresAt: string;
   acceptedAt: string | null;
@@ -428,11 +429,13 @@ export default function SettingsPage() {
                               </span>
                             </p>
                             <p className="mt-0.5 text-xs text-muted-foreground/70">
-                              {inv.acceptedAt
-                                ? <>Accepted · {shortDate(inv.acceptedAt)}</>
-                                : inv.status === "revoked"
-                                  ? <>Revoked</>
-                                  : <>Invited · {shortDate(inv.createdAt)} · expires {shortDate(inv.expiresAt)}</>}
+                              {inv.lapsed
+                                ? <>Was connected · no longer active</>
+                                : inv.acceptedAt
+                                  ? <>Accepted · {shortDate(inv.acceptedAt)}</>
+                                  : inv.status === "revoked"
+                                    ? <>Revoked</>
+                                    : <>Invited · {shortDate(inv.createdAt)} · expires {shortDate(inv.expiresAt)}</>}
                             </p>
                           </div>
                           {inv.status === "pending" && (

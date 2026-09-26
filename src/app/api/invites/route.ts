@@ -3,7 +3,7 @@ import { generateResetToken, hashResetToken, generateUUID } from "@/lib/auth";
 import { sendTemplate } from "@/lib/email";
 import {
   getAuthPayload, loadUser, isPlusTier, normalizedLabel, maskEmail, personName,
-  MAX_PENDING_INVITES, INVITE_TTL_MS,
+  MAX_PENDING_INVITES, INVITE_TTL_MS, isLapsedInvite,
 } from "@/lib/connections";
 import type { Invite } from "@/lib/types";
 
@@ -27,11 +27,23 @@ export async function GET(request: NextRequest) {
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const invites = await env.DB.prepare(`SELECT id, email, role, status, created_at, expires_at, accepted_at FROM invites WHERE owner_user_id = ? ORDER BY created_at DESC`).bind(payload.sub).all<Pick<Invite, "id" | "email" | "role" | "status" | "created_at" | "expires_at" | "accepted_at">>();
+  // Emails still backed by a live relationship. Accepted invites to any other
+  // address are ghosts — the person connected then deleted their account.
+  const peerEmails = new Set<string>();
+  try {
+    const peers = await env.DB.prepare(
+      `SELECT lower(u.email) AS email FROM relationships r JOIN users u ON u.id = CASE WHEN r.user_a = ?1 THEN r.user_b ELSE r.user_a END WHERE r.user_a = ?1 OR r.user_b = ?1`,
+    ).bind(payload.sub).all<{ email: string }>();
+    for (const p of peers.results ?? []) if (p.email) peerEmails.add(p.email);
+  } catch (e) {
+    console.error("[invites] peer lookup failed:", e);
+  }
   const list = (invites.results ?? []).map((inv) => ({
     id: inv.id,
     emailMasked: maskEmail(inv.email),
     role: inv.role,
     status: inv.status,
+    lapsed: isLapsedInvite(inv.status, inv.email, peerEmails),
     createdAt: inv.created_at,
     expiresAt: inv.expires_at,
     acceptedAt: inv.accepted_at,

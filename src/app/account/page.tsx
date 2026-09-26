@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
@@ -44,6 +45,8 @@ export default function AccountPage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
   const [resent, setResent] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
@@ -70,20 +73,26 @@ export default function AccountPage() {
     router.push("/");
   };
 
-  const handleDelete = async () => {
-    if (
-      !window.confirm(
-        "Delete your account permanently? This removes your baseline, chat history, and subscription. This cannot be undone.",
-      )
-    ) {
-      return;
-    }
+  // Escape closes the destructive-action dialog without deleting anything.
+  useEffect(() => {
+    if (!showDelete) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setShowDelete(false); setDeleteText(""); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showDelete]);
+
+  const openDelete = () => { setDeleteText(""); setShowDelete(true); };
+  const cancelDelete = () => { setShowDelete(false); setDeleteText(""); };
+
+  const confirmDelete = async () => {
+    if (deleteText.trim().toUpperCase() !== "DELETE") return;
     setDeleting(true);
     try {
       await fetch("/api/auth/account", { method: "DELETE" });
       router.push("/");
     } catch {
       setDeleting(false);
+      setShowDelete(false);
     }
   };
 
@@ -290,7 +299,7 @@ export default function AccountPage() {
                 <Button
                   variant="outline"
                   className="border-destructive/40 text-destructive hover:bg-destructive/10 sm:flex-1"
-                  onClick={handleDelete}
+                  onClick={openDelete}
                   disabled={deleting}
                 >
                   {deleting ? "Deleting..." : "Delete Account"}
@@ -306,6 +315,54 @@ export default function AccountPage() {
           </div>
         </div>
       </main>
+
+      {showDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-account-title"
+          onClick={cancelDelete}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="delete-account-title" className="font-display text-xl font-normal tracking-tight text-foreground">
+              Delete your account?
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              This permanently erases your Baseline, chat history, connections, and subscription
+              for <span className="font-medium text-foreground">{user.email}</span>. There is no way
+              back.
+            </p>
+            <label htmlFor="delete-confirm" className="mt-4 block text-sm font-medium text-foreground">
+              Type <span className="font-mono">DELETE</span> to confirm
+            </label>
+            <Input
+              id="delete-confirm"
+              autoFocus
+              value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder="DELETE"
+              className="mt-2"
+            />
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row-reverse">
+              <Button
+                variant="outline"
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 sm:flex-1"
+                onClick={confirmDelete}
+                disabled={deleting || deleteText.trim().toUpperCase() !== "DELETE"}
+              >
+                {deleting ? "Deleting..." : "Permanently delete"}
+              </Button>
+              <Button variant="ghost" className="sm:flex-1" onClick={cancelDelete} disabled={deleting}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
