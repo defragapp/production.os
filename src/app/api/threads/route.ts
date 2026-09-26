@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import type { Thread, ChatMessage } from "@/lib/types";
+import { mergeThreadHistory } from "@/lib/threads";
 
 async function getAuthPayload(request: NextRequest) {
   const env = await getEnv();
@@ -50,12 +51,7 @@ export async function POST(request: NextRequest) {
     if (!existing) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     let existingMessages: ChatMessage[] = [];
     try { existingMessages = JSON.parse(existing.message_history) as ChatMessage[]; } catch {}
-    const merged = [...existingMessages];
-    for (const msg of userFacingMessages) {
-      const last = merged[merged.length - 1];
-      if (last && last.role === msg.role && last.content === msg.content) continue;
-      merged.push(msg);
-    }
+    const merged = mergeThreadHistory(existingMessages, userFacingMessages);
     await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ?").bind(JSON.stringify(merged), body.threadId).run();
     return NextResponse.json({ threadId: body.threadId, messageCount: merged.length });
   }

@@ -158,7 +158,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
 
       {open && (
         overlay ? (
-          <div className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-72 overflow-y-auto rounded-lg border border-border/60 bg-card p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+          <div className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain rounded-lg border border-border/60 bg-card p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl">
             {content}
           </div>
         ) : (
