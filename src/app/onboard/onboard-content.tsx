@@ -100,7 +100,7 @@ export function OnboardContent() {
       const authRes = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
+        body: JSON.stringify({ email, password, intent: isLogin ? "login" : "signup", turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
       });
 
       if (!authRes.ok) {
@@ -393,9 +393,8 @@ export function OnboardContent() {
                           className="mt-1 h-4 w-4 rounded border-border"
                         />
                         <Label htmlFor="consent" className="text-sm font-normal leading-relaxed">
-                          I agree to the{" "}
-                          <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" "}
-                          and{" "}
+                          I agree to the {""}
+                          <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" and "}
                           <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
                           My birth data is used only to compute my Baseline, and it&apos;s never
                           shared with anyone else.

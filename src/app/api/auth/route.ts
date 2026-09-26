@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
-  let body: { email?: string; password?: string; turnstileToken?: string };
+  let body: { email?: string; password?: string; turnstileToken?: string; intent?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
 
   const turnstileValid = await verifyTurnstileToken(env, body.turnstileToken);
@@ -86,6 +86,12 @@ export async function POST(request: NextRequest) {
   if (!email || !password) return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   const existing = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<User & { password_hash: string; password_salt: string }>();
+  // Explicit sign-in must never provision an account. Without this, a "Sign In"
+  // submit for an unknown (or just-deleted) email silently created one and
+  // signed the visitor in as its owner.
+  if (!existing && body.intent === "login") {
+    return NextResponse.json({ error: "No account found for this email. Create your account to get started." }, { status: 401 });
+  }
   let userId: string;
   if (existing) {
     const valid = await verifyPassword(password, existing.password_salt, existing.password_hash, pepper);
