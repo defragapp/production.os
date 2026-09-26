@@ -62,6 +62,7 @@ export function ChatClient() {
   const [billingSuccess, setBillingSuccess] = useState(false);
   const [confirmingPlan, setConfirmingPlan] = useState(false);
   const [showVerify, setShowVerify] = useState(false);
+  const [resendState, setResendState] = useState<string | null>(null);
   const [tier, setTier] = useState<"free" | "sovereign+" | null>(null);
   const [peopleOpen, setPeopleOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -384,21 +385,28 @@ export function ChatClient() {
               <span className="font-medium">Verify your email to unlock AI chat.</span>{" "}
               <span className="text-muted-foreground">Check your inbox for the verification link.</span>
             </p>
-            <Button
-              size="sm"
-              className="shrink-0"
-              onClick={async () => {
-                try {
-                  const r = await fetch("/api/auth/resend", { method: "POST" });
-                  const d = await r.json() as { ok?: boolean; error?: string };
-                  alert(d.ok ? "Verification email sent. Please check your inbox." : d.error || "Could not send verification email.");
-                } catch {
-                  alert("Could not send verification email.");
-                }
-              }}
-            >
-              Resend verification email
-            </Button>
+            <div className="flex shrink-0 items-center gap-3">
+              {resendState?.startsWith("error:") && (
+                <p className="text-xs text-destructive" role="alert">{resendState.slice(7)}</p>
+              )}
+              <Button
+                size="sm"
+                className="shrink-0"
+                disabled={resendState === "sending"}
+                onClick={async () => {
+                  setResendState("sending");
+                  try {
+                    const r = await fetch("/api/auth/resend", { method: "POST" });
+                    const d = await r.json() as { ok?: boolean; error?: string };
+                    setResendState(d.ok ? "sent" : `error: ${d.error || "Could not send verification email."}`);
+                  } catch {
+                    setResendState("error: Could not send verification email.");
+                  }
+                }}
+              >
+                {resendState === "sending" ? "Sending…" : resendState === "sent" ? "Verification email sent ✓" : "Resend verification email"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -491,7 +499,9 @@ export function ChatClient() {
 
       {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
 
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      {/* role="log": screen readers announce each newly appended message as a
+          conversation, without re-reading the whole history. */}
+      <div className="flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
         <div className="mx-auto max-w-3xl space-y-4">
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center pt-20">
@@ -528,6 +538,10 @@ export function ChatClient() {
             const isLast = idx === messages.length - 1;
             const streamingEmpty =
               msg.role === "assistant" && isLast && isStreaming && !msg.content;
+            // Stopped before the first token arrived — without this the bubble
+            // would render as empty space with no explanation.
+            const stoppedEmpty =
+              msg.role === "assistant" && isLast && !isStreaming && !msg.content;
             return (
               <div
                 key={idx}
@@ -541,12 +555,14 @@ export function ChatClient() {
                   }`}
                 >
                   {streamingEmpty ? (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground" aria-hidden="true">
                       <span className="h-2 w-2 animate-pulse rounded-full bg-current" />
                       <span className="h-2 w-2 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
                       <span className="h-2 w-2 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
                       <span className="ml-1">Thinking…</span>
                     </span>
+                  ) : stoppedEmpty ? (
+                    <p className="text-sm text-muted-foreground">Response stopped.</p>
                   ) : msg.role === "assistant" ? (
                     <div className="text-[15px]">
                       <RichText text={msg.content} />

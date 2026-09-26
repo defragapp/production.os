@@ -285,11 +285,11 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
 
 export function LandingClient() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
+    <div className="relative min-h-screen bg-background font-sans text-foreground selection:bg-muted">
       <PageTexture />
       <Nav />
 
-      <main id="main" className="relative z-10">
+      <main id="main" className="relative z-10 overflow-x-hidden">
         {/* ── Hero ─────────────────────────────────────────── */}
         <section className="relative overflow-hidden px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16 lg:pb-28 lg:pt-20">
           <div className="hero-light" aria-hidden="true" />
@@ -513,7 +513,7 @@ export function LandingClient() {
             </Link>
           </div>
         </div>
-        <div className="mx-auto mt-10 flex max-w-6xl flex-col gap-1 border-t border-white/[0.06] pt-6 text-xs text-muted-foreground/60">
+        <div className="mx-auto mt-10 flex max-w-6xl flex-col gap-1 border-t border-white/[0.06] pt-6 text-xs text-muted-foreground/75">
           <p>Sovereign OS™ — © 2026 Sovereign OS. All rights reserved.</p>
           <p>Sovereign OS is a trademark used as a common-law mark. The Service and its AI outputs are protected under the Terms of Service.</p>
         </div>

@@ -87,6 +87,16 @@
     -webkit-tap-highlight-color: transparent;
     text-rendering: optimizeLegibility;
   }
+
+  /* Warm keyboard focus ring for anything that doesn't set its own — raw links,
+     the Baseline drawer trigger, etc. Components like Input/Button override
+     this with their own ring via `outline-none`; this only catches the
+     stragglers that would otherwise show the browser's default blue outline
+     and break the warm-only palette. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 }
 
 /* Skip-to-content link (WCAG 2.4.1). Rendered first in the body so it is the

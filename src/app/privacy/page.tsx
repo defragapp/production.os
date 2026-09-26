@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Sovereign OS",
+  title: "Privacy Policy",
   description: "How Sovereign OS collects, uses, and protects your data.",
 };
 
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
         </div>
         <div className="glass-panel mt-10 flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-medium text-foreground">Something here unclear?</p>
+            <p className="text-sm font-medium text-foreground">Something unclear?</p>
             <p className="mt-1 text-xs text-muted-foreground">A real person reads every message that comes through support.</p>
           </div>
           <Link href="/support" className="btn-glass shrink-0 px-4 py-2 text-sm font-medium text-foreground">Ask a question</Link>

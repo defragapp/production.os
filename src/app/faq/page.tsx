@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
 
 export const metadata: Metadata = {
-  title: "FAQ — Sovereign OS",
+  title: "FAQ",
   description: "Answers about Sovereign OS — how the AI works, what we do with your data, and how the free and paid plans compare.",
 };
 
@@ -83,7 +83,7 @@ export default function FaqPage() {
           <div className="hero-light" aria-hidden="true" />
           <div className="relative">
             <h2 className="font-display text-xl font-normal tracking-tight text-foreground md:text-2xl">
-              Questions we didn&apos;t answer?
+              Questions we haven&apos;t answered?
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">Tell us — we read everything, and a person writes back.</p>
             <Link href="/support" className="btn-glass mt-6 inline-block px-6 py-2.5 text-sm font-medium text-foreground">

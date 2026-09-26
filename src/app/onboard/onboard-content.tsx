@@ -210,8 +210,9 @@ export function OnboardContent() {
         <Nav />
         <main id="main" className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
           <div className="w-full max-w-md">
-            <Stepper steps={STEPS} current={0} />
-            <div className="mb-8 text-center">
+            {/* Password reset is an account-recovery side trip, not an
+                onboarding step — no stepper. */}
+            <div className="mb-8 mt-2 text-center">
               <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
               <h1 className="font-display text-3xl font-normal tracking-tight">Set a New Password</h1>
             </div>
@@ -272,8 +273,8 @@ export function OnboardContent() {
         <Nav />
         <main id="main" className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
           <div className="w-full max-w-md">
-            <Stepper steps={STEPS} current={0} />
-            <div className="mb-8 text-center">
+            {/* Forgot-password is recovery, not onboarding — no stepper. */}
+            <div className="mb-8 mt-2 text-center">
               <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
               <h1 className="font-display text-3xl font-normal tracking-tight">Reset Password</h1>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -323,8 +324,10 @@ export function OnboardContent() {
         <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
           <div className="w-full max-w-md">
-            <Stepper steps={STEPS} current={0} />
-            <div className="mb-8 text-center">
+            {/* The stepper only applies to new accounts; returning users
+                signing in aren't mid-funnel, so "1 of 3" is noise. */}
+            {!isLogin && <Stepper steps={STEPS} current={0} />}
+            <div className={`${isLogin ? "mt-2" : ""} mb-8 text-center`}>
               <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
               <h1 className="font-display text-3xl font-normal tracking-tight">{title}</h1>
               <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>

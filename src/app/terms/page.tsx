@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Sovereign OS",
+  title: "Terms of Service",
   description: "Terms of Service for Sovereign OS, your personal intelligence layer.",
 };
 
@@ -25,7 +25,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">2. The Service</h2>
-            <p>Sovereign OS provides AI-assisted insight and pattern awareness based on your baseline — computed from your date, time, and place of birth using NASA/JPL planetary data. The Service helps a person reflect on their experiences, relationships, and family patterns for personal understanding. Outputs are provided for your personal, non-commercial use within the Service.</p>
+            <p>Sovereign OS provides AI-assisted insight and pattern awareness based on your Baseline — computed from your date, time, and place of birth using NASA/JPL planetary data. The Service helps a person reflect on their experiences, relationships, and family patterns for personal understanding. Outputs are provided for your personal, non-commercial use within the Service.</p>
           </section>
 
           <section>
@@ -42,7 +42,7 @@ export default function TermsPage() {
             <h2 className="mb-2 text-lg font-semibold text-foreground">5. Prohibited Conduct</h2>
             <p>You agree not to misuse the Service or attempt to undermine it, including:</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
-              <li>Accessing or attempting to access another user&apos;s account, baseline, conversation, or data without authorization;</li>
+              <li>Accessing or attempting to access another user&apos;s account, Baseline, conversation, or data without authorization;</li>
               <li>Scraping, crawling, spidering, harvesting, or automatically collecting the Service, its pages, its outputs, or its data by any means, whether manual or automated;</li>
               <li>Reverse-engineering, decompiling, disassembling, or otherwise attempting to derive the source code, algorithms, prompts, derivation logic, or operation of the Service&apos;s AI engine (&quot;the Engine&quot;);</li>
               <li>Copying, reproducing, redistributing, or building competing or derivative products or services from the Service or its outputs;</li>
@@ -58,7 +58,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">7. Intellectual Property</h2>
-            <p>© 2026 Sovereign OS. All rights reserved. The Service — including the Engine, its derivation logic, the Baseline output format, the AI system prompt, its trade dress, and the &quot;Sovereign OS&quot; and &quot;Sovereign+&quot; wordmarks (used as common-law trademarks) and chalice mark — is licensed to you for your personal use, not sold. Nothing in these Terms grants you any right, title, or license (by implication, estoppel, or otherwise) in the Service or its intellectual property. You may not use the Sovereign OS wordmark or mark to endorse or imply any association without our prior written consent.</p>
+            <p>© 2026 Sovereign OS. All rights reserved. The Service — including the Engine, its derivation logic, the Baseline output format, the AI system prompt, its trade dress, and the &quot;Sovereign OS&quot; and &quot;Sovereign+&quot; wordmarks (used as common-law trademarks) and the chalice mark — is licensed to you for your personal use, not sold. Nothing in these Terms grants you any right, title, or license (by implication, estoppel, or otherwise) in the Service or its intellectual property. You may not use the Sovereign OS wordmark or mark to endorse or imply any association without our prior written consent.</p>
             <p className="mt-2">What you bring to a conversation is yours. What the Service generates — its Baseline derivations, its reads, and the method by which it produces them — belongs to Sovereign OS. You may use your transcripts and outputs for your own personal record-keeping, but not to extract, redistribute, or reconstruct the Service itself.</p>
           </section>
 

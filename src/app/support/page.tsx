@@ -6,7 +6,7 @@ import { SupportForm } from "./support-form";
 import { getEnv } from "@/lib/env";
 
 export const metadata: Metadata = {
-  title: "Support — Sovereign OS",
+  title: "Support",
   description:
     "Get in touch with the Sovereign team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.",
 };
@@ -64,8 +64,14 @@ export default async function SupportPage() {
                 Prefer email?
               </p>
               <p className="text-sm leading-6 text-muted-foreground">
-                Write to <span className="text-foreground">sovereign@defrag.app</span> directly.
-                Please leave out passwords, card numbers, and other sensitive details.
+                Write to{" "}
+                <a
+                  href="mailto:sovereign@defrag.app"
+                  className="text-foreground underline underline-offset-4 transition-colors duration-200 hover:text-foreground/80"
+                >
+                  sovereign@defrag.app
+                </a>{" "}
+                directly. Please leave out passwords, card numbers, and other sensitive details.
               </p>
             </div>
             <Link

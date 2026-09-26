@@ -44,6 +44,10 @@ export function Nav() {
 
   const linkClass = (href: string) =>
     `${navLink} ${pathname === href ? navLinkActive : ""}`;
+  // WCAG 4.1.2: expose "this is the current page" to assistive tech, not just
+  // the visual highlight.
+  const ariaCurrent = (href: string) =>
+    pathname === href ? ("page" as const) : undefined;
 
   return (
     <header className="pt-safe relative sticky top-0 z-50 bg-background/70 backdrop-blur-md">
@@ -54,24 +58,24 @@ export function Nav() {
         <nav className="hidden items-center gap-1 md:flex">
           {authed ? (
             <>
-              <Link href="/chat" className={linkClass("/chat")}>Chat</Link>
-              <Link href="/baseline" className={linkClass("/baseline")}>Baseline</Link>
+              <Link href="/chat" className={linkClass("/chat")} aria-current={ariaCurrent("/chat")}>Chat</Link>
+              <Link href="/baseline" className={linkClass("/baseline")} aria-current={ariaCurrent("/baseline")}>Baseline</Link>
               {tier === "sovereign+" ? (
                 <span className={PLUS_BADGE} title="Your plan">Sovereign+</span>
               ) : (
-                <Link href="/upgrade" className={linkClass("/upgrade")}>Upgrade</Link>
+                <Link href="/upgrade" className={linkClass("/upgrade")} aria-current={ariaCurrent("/upgrade")}>Upgrade</Link>
               )}
-              <Link href="/account" className={linkClass("/account")}>Account</Link>
-              <Link href="/settings" className={linkClass("/settings")}>Settings</Link>
+              <Link href="/account" className={linkClass("/account")} aria-current={ariaCurrent("/account")}>Account</Link>
+              <Link href="/settings" className={linkClass("/settings")} aria-current={ariaCurrent("/settings")}>Settings</Link>
               <button onClick={handleSignOut} className={navLink}>
                 Sign out
               </button>
             </>
           ) : (
             <>
-              <Link href="/about" className={linkClass("/about")}>Philosophy</Link>
-              <Link href="/faq" className={linkClass("/faq")}>FAQ</Link>
-              <Link href="/support" className={linkClass("/support")}>Support</Link>
+              <Link href="/about" className={linkClass("/about")} aria-current={ariaCurrent("/about")}>Philosophy</Link>
+              <Link href="/faq" className={linkClass("/faq")} aria-current={ariaCurrent("/faq")}>FAQ</Link>
+              <Link href="/support" className={linkClass("/support")} aria-current={ariaCurrent("/support")}>Support</Link>
               <Link
                 href="/onboard?mode=signup"
                 className="btn-focal ml-1 px-4 py-2 text-sm font-medium"
@@ -112,6 +116,7 @@ export function Nav() {
               <Link
                 href="/chat"
                 onClick={() => setOpen(false)}
+                aria-current={ariaCurrent("/chat")}
                 className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
                   pathname === "/chat" ? "text-foreground" : "text-muted-foreground"
                 }`}
@@ -121,6 +126,7 @@ export function Nav() {
               <Link
                 href="/baseline"
                 onClick={() => setOpen(false)}
+                aria-current={ariaCurrent("/baseline")}
                 className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
                   pathname === "/baseline" ? "text-foreground" : "text-muted-foreground"
                 }`}
@@ -133,6 +139,7 @@ export function Nav() {
                 <Link
                   href="/upgrade"
                   onClick={() => setOpen(false)}
+                  aria-current={ariaCurrent("/upgrade")}
                   className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
                     pathname === "/upgrade" ? "text-foreground" : "text-muted-foreground"
                   }`}
@@ -143,6 +150,7 @@ export function Nav() {
               <Link
                 href="/account"
                 onClick={() => setOpen(false)}
+                aria-current={ariaCurrent("/account")}
                 className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
                   pathname === "/account" ? "text-foreground" : "text-muted-foreground"
                 }`}
@@ -152,6 +160,7 @@ export function Nav() {
               <Link
                 href="/settings"
                 onClick={() => setOpen(false)}
+                aria-current={ariaCurrent("/settings")}
                 className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
                   pathname === "/settings" ? "text-foreground" : "text-muted-foreground"
                 }`}

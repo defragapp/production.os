@@ -4,7 +4,7 @@ import { Nav } from "@/components/nav";
 import { PageTexture } from "@/components/page-texture";
 
 export const metadata: Metadata = {
-  title: "Our Philosophy — Sovereign OS",
+  title: "Our Philosophy",
   description:
     "How Sovereign works and what it is for: a private AI platform for understanding yourself, your people, and the systems you live within — not a diagnosis, not astrology, not psychology.",
 };

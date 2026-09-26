@@ -54,6 +54,9 @@ export default function SettingsPage() {
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Destructive actions confirm inline (a browser confirm() dialog would break
+  // the visual language): "conn:<id>" or "inv:<id>" while awaiting the second click.
+  const [confirmAction, setConfirmAction] = useState<string | null>(null);
 
   const loadPeople = useCallback(async () => {
     const [relRes, invRes] = await Promise.all([fetch("/api/relationships"), fetch("/api/invites")]);
@@ -171,13 +174,14 @@ export default function SettingsPage() {
   };
 
   const removeConnection = async (row: RelationshipView) => {
-    if (!window.confirm(`Remove ${row.personName} from your connections? Their connection with you is removed from both sides.`)) return;
     await fetch(`/api/relationships?id=${encodeURIComponent(row.relationId)}`, { method: "DELETE" });
+    setConfirmAction(null);
     await loadPeople();
   };
 
   const revokeInvite = async (row: InviteRow) => {
     await fetch(`/api/invites/${encodeURIComponent(row.id)}`, { method: "DELETE" });
+    setConfirmAction(null);
     setInviteSuccess(null);
     await loadPeople();
   };
@@ -294,14 +298,26 @@ export default function SettingsPage() {
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => removeConnection(c)}
-                                aria-label="Remove connection"
-                                className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-destructive"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                              {confirmAction === `conn:${c.relationId}` ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground">Remove? This ends sharing for both of you.</span>
+                                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => removeConnection(c)}>
+                                    Remove
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => setConfirmAction(null)}>
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmAction(`conn:${c.relationId}`)}
+                                  aria-label="Remove connection"
+                                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-destructive"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -447,15 +463,31 @@ export default function SettingsPage() {
                                   <span className="inline-flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" /> Copy link</span>
                                 )}
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => revokeInvite(inv)}
-                                className="text-muted-foreground hover:text-destructive"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                                Revoke
-                              </Button>
+                              {confirmAction === `inv:${inv.id}` ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-destructive"
+                                    onClick={() => revokeInvite(inv)}
+                                  >
+                                    Confirm revoke
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => setConfirmAction(null)}>
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setConfirmAction(`inv:${inv.id}`)}
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  Revoke
+                                </Button>
+                              )}
                             </div>
                           )}
                         </li>

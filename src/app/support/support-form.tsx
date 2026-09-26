@@ -62,8 +62,10 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="support-name">Your name</Label>
-          <Input id="support-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Optional" maxLength={80} />
+          {/* Optional-ness must live in the label, not a placeholder that
+              disappears once you type. */}
+          <Label htmlFor="support-name">Your name (optional)</Label>
+          <Input id="support-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="How should we call you?" maxLength={80} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="support-email">Email for the reply</Label>
