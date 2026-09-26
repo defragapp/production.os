@@ -101,7 +101,9 @@ export function Nav() {
       {mounted && (
         <nav
           className={`overflow-hidden border-border bg-background/95 backdrop-blur-md transition-all duration-200 ease-out md:hidden ${
-            open ? "max-h-96 border-t opacity-100" : "max-h-0 opacity-0"
+            open
+              ? "visible max-h-96 border-t opacity-100"
+              : "invisible max-h-0 pointer-events-none opacity-0"
           }`}
           aria-hidden={!open}
         >

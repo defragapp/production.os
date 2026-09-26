@@ -106,7 +106,8 @@ export const viewport: Viewport = {
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // NOTE: no maximumScale/user-scalable cap — pinching to zoom must stay
+  // available (WCAG 1.4.4 Resize Text). The old maximumScale: 1 blocked it.
   viewportFit: "cover",
 };
 

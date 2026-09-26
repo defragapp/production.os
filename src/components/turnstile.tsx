@@ -31,6 +31,10 @@ export function TurnstileWidget({ siteKey, onToken, onError }: TurnstileWidgetPr
       if (cancelled || !containerRef.current || !window.turnstile) return;
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
+        // The whole app is dark-first (color-scheme: dark). Turnstile defaults
+        // to a light/white box that reads as a jarring blank card on the
+        // signup/login/support forms, so pin it to the dark theme to match.
+        theme: "dark",
         callback: (token: string) => callbacksRef.current.onToken(token),
         "expired-callback": () => callbacksRef.current.onToken(null),
         "error-callback": () => {
