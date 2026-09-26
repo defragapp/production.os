@@ -378,7 +378,7 @@ export function ChatClient() {
       )}
 
       {showVerify && (
-        <div className="border-b border-border bg-muted/50 px-6 py-4">
+        <div className="border-b border-border bg-surface-1 px-6 py-4">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-foreground">
               <span className="font-medium">Verify your email to unlock AI chat.</span>{" "}
@@ -534,10 +534,10 @@ export function ChatClient() {
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[92%] rounded-xl px-4 py-3 sm:max-w-[85%] ${
+                  className={`max-w-[92%] rounded-panel px-4 py-3 sm:max-w-[85%] ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
+                      : "border border-border bg-surface-2 text-foreground"
                   }`}
                 >
                   {streamingEmpty ? (

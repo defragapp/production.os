@@ -22,7 +22,7 @@ export function emailVerificationEnabled(env: AppEnv): boolean {
   return Boolean(env.RESEND_API_KEY);
 }
 
-/** Branded Sovereign OS email shell: dark graphite surface, mono wordmark header, cream body, quiet footer. Mirrors the deployed product theme. */
+/** Branded Sovereign OS email shell: dark graphite surface, mono wordmark header, cream body, quiet footer. Mirrors the deployed product theme (warm graphite + cream glass). */
 export function emailShell(title: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -30,10 +30,10 @@ export function emailShell(title: string, bodyHtml: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body style="margin:0;padding:32px 16px;background:#0d0d0d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#16130f;border-radius:12px;border:1px solid rgba(250,245,236,0.10);border-collapse:separate;">
+<body style="margin:0;padding:32px 16px;background:#0c0b09;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#141110;border-radius:12px;border:1px solid rgba(250,245,236,0.08);border-collapse:separate;">
 <tr>
-<td style="background:#0d0d0d;padding:22px 28px;text-align:center;border-bottom:1px solid rgba(250,245,236,0.08);border-radius:12px 12px 0 0;">
+<td style="background:#0c0b09;padding:22px 28px;text-align:center;border-bottom:1px solid rgba(250,245,236,0.08);border-radius:12px 12px 0 0;">
 <span style="font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;color:#f4efe4;font-size:14px;font-weight:600;letter-spacing:0.22em;">
 SOVEREIGN<span style="color:#8a857b">.OS</span>
 </span>

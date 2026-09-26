@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { ArrowRight, Check, CircleDot, Compass, MessageCircle, Plus } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
@@ -137,15 +138,15 @@ function ProductDemo() {
           anything meaningful. */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-4 bottom-[-18px] h-full rotate-[1.8deg] rounded-xl border border-white/[0.06] bg-card/30"
+        className="absolute inset-x-4 bottom-[-18px] h-full rotate-[1.8deg] rounded-panel border border-border bg-surface-1/60"
       />
       <div
         aria-hidden="true"
-        className="absolute inset-x-6 bottom-[-9px] h-full rotate-[-1.2deg] rounded-xl border border-white/[0.09] bg-card/45"
+        className="absolute inset-x-6 bottom-[-9px] h-full rotate-[-1.2deg] rounded-panel border border-border bg-surface-2/70"
       />
-      <div className="demo-float relative">
-      <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.07),0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
+      <div className="relative">
+      <div className="demo-backlight" aria-hidden="true" />
+      <div className="relative overflow-hidden rounded-panel border border-border bg-surface-2 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.07),0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Logo showWordmark={false} href="#" markClassName="h-7 w-auto" />
@@ -160,9 +161,7 @@ function ProductDemo() {
 
         <div className="mb-4 flex items-end gap-2">
           <span className="mb-[1px] flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
+            <Plus className="h-3 w-3" strokeWidth={1.8} aria-hidden="true" />
             New thread
           </span>
           <span className="shrink-0 whitespace-nowrap border-b-2 border-foreground px-2 py-1.5 text-xs text-foreground">
@@ -171,13 +170,13 @@ function ProductDemo() {
         </div>
 
         <div className="mb-3 flex justify-end">
-          <div className="max-w-[88%] rounded-xl bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground sm:px-4 sm:py-3 sm:text-[15px]">
+          <div className="max-w-[88%] rounded-panel bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground sm:px-4 sm:py-3 sm:text-[15px]">
             Why do I keep pulling away once a relationship gets serious?
           </div>
         </div>
 
         <div className="flex justify-start">
-          <div className="max-w-[96%] rounded-xl bg-muted px-3.5 py-2.5 text-left sm:max-w-[92%] sm:px-4 sm:py-3">
+          <div className="max-w-[96%] rounded-panel border border-border bg-surface-2 px-3.5 py-2.5 text-left sm:max-w-[92%] sm:px-4 sm:py-3">
             <div className="space-y-2 text-[13px] leading-relaxed text-foreground sm:space-y-2.5 sm:text-[14px]">
               {DEMO_ANSWER.map((p) => (
                 <p key={p}>{p}</p>
@@ -214,33 +213,17 @@ const WORKFLOW = [
   {
     title: "Set your Baseline",
     desc: "Birth data, computed from NASA/JPL planetary positions.",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" />
-        <circle cx="12" cy="12" r="2" fill="currentColor" />
-        <path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    ),
+    icon: <CircleDot className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />,
   },
   {
     title: "Talk it through",
     desc: "A relationship, your family, or you — in your own words.",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-        <path d="M4.5 6.5A2 2 0 0 1 6.5 4.5h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6.2L8 19.2V15.5h-1.5a2 2 0 0 1-2-2v-7Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-        <path d="M8.5 8.5h7M8.5 11.5h4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    ),
+    icon: <MessageCircle className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />,
   },
   {
     title: "Get a grounded read",
     desc: "The pattern, named. The deciding left to you.",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.5" />
-        <path d="m15.5 8.5-2.2 5-4.8 2 2.2-5 4.8-2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      </svg>
-    ),
+    icon: <Compass className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />,
   },
 ];
 
@@ -252,13 +235,11 @@ function WorkflowArrow({ vertical }: { vertical?: boolean }) {
         vertical ? "h-8 py-1" : "h-6 w-6 pt-0 md:h-auto"
       }`}
     >
-      <svg
-        viewBox="0 0 24 24"
+      <ArrowRight
         className={`h-5 w-5 ${vertical ? "rotate-90 md:rotate-0" : "rotate-90 md:rotate-0"}`}
-        fill="none"
-      >
-        <path d="M4 12h14m0 0-5-5m5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+        strokeWidth={1.5}
+        aria-hidden="true"
+      />
     </div>
   );
 }
@@ -296,9 +277,7 @@ function Workflow() {
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2.5">
-      <svg viewBox="0 0 24 24" className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" fill="none" aria-hidden="true">
-        <path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" strokeWidth={2.2} aria-hidden="true" />
       {children}
     </li>
   );

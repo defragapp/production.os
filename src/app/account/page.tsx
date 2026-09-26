@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Section } from "@/components/ui/section";
@@ -16,9 +17,7 @@ import { formatD1Date } from "@/lib/utils";
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2.5">
-      <svg viewBox="0 0 16 16" className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M2.5 8.5l4 4 7-9" />
-      </svg>
+      <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" strokeWidth={2} aria-hidden="true" />
       <span>{children}</span>
     </li>
   );
@@ -157,7 +156,7 @@ export default function AccountPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Plan</span>
-                  <span className={`rounded-md px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.14em] ${isPlus ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-muted-foreground"}`}>
+                  <span className={`rounded-chip px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.14em] ${isPlus ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-muted-foreground"}`}>
                     {isPlus ? "Sovereign+" : "Free"}
                   </span>
                 </div>

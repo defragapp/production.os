@@ -32,8 +32,21 @@
     --destructive-foreground: 38 18% 96%;
     --border: 30 7% 14%;
     --input: 30 7% 16%;
-    --ring: 38 12% 85%;
+    --ring: 38 26% 86%;
     --radius: 0.5rem;
+
+    /* Surface elevation — one coherent layering model that replaces the old
+       ad-hoc bg-card/xx, bg-muted/xx and hsla(...,0.0x) fills. Every panel in
+       the app now steps through these three tiers. */
+    --surface-1: 30 7% 6.5%;
+    --surface-2: 30 7% 8.5%;
+    --surface-3: 30 6% 11%;
+
+    /* Radius scale — controls 8px, panels 12px, chips 6px; fully-round is
+       reserved for genuinely circular elements. */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
   }
 
   .dark {
@@ -53,7 +66,10 @@
     --destructive-foreground: 38 18% 96%;
     --border: 30 7% 14%;
     --input: 30 7% 16%;
-    --ring: 38 12% 85%;
+    --ring: 38 26% 86%;
+    --surface-1: 30 7% 6.5%;
+    --surface-2: 30 7% 8.5%;
+    --surface-3: 30 6% 11%;
   }
 }
 
@@ -110,26 +126,27 @@
   background: linear-gradient(90deg, transparent, hsla(38, 18%, 95%, 0.16), transparent);
 }
 
-/* Film grain — the single strongest "crafted, not templated" signal on
-   premium dark product sites. A fixed, non-interactive turbulence layer at
-   ~4% alpha: invisible as a pattern, felt as texture. It kills the flat
-   "empty black" look that pure background colors always have. */
+/* Film grain — a subtle "crafted, not templated" signal. Reduced to ~2.5%
+   alpha for the cleaner premium pass: still kills the flat "empty black" look,
+   but reads as almost imperceptible texture rather than visible noise. */
 .grain-overlay {
   position: fixed;
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
 }
 
 /* Corner vignette — deepens the edges so the lit center reads as a stage.
-   Fixed (not scrolling) so it behaves like lens falloff on the viewport. */
+   Softened for the cleaner pass (0.28 vs 0.38) so it frames without darkening
+   the corners noticeably. Fixed (not scrolling) so it behaves like lens
+   falloff on the viewport. */
 .vignette-overlay {
   position: fixed;
   inset: 0;
   z-index: 30;
   pointer-events: none;
-  background: radial-gradient(130% 100% at 50% 42%, transparent 58%, rgba(0, 0, 0, 0.38) 100%);
+  background: radial-gradient(130% 100% at 50% 42%, transparent 62%, rgba(0, 0, 0, 0.28) 100%);
 }
 
 /* Card hover lift — a 3px rise with a brighter inset edge. Micro-interaction
@@ -155,23 +172,27 @@
 }
 
 /* Glass panels — the translucent "lit surface" used across cards: hairline
-   cream edge, crisp top highlight, blur. 12px radius — the single card/panel
-   step in the scale (controls 8px, chips 6px), same as <Card rounded-xl>. */
+   cream edge, crisp top highlight, blur. Backed by the surface-1 elevation
+   token so every panel steps through the same layering model. 12px radius —
+   the single card/panel step in the scale (controls 8px, chips 6px), same as
+   <Card rounded-xl>. */
 .glass-panel {
   position: relative;
-  border-radius: 0.75rem;
-  background: linear-gradient(180deg, hsla(38, 18%, 95%, 0.06), hsla(38, 18%, 95%, 0.02));
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, hsla(38, 18%, 95%, 0.05), hsla(38, 18%, 95%, 0.015)),
+    hsl(var(--surface-1));
   box-shadow:
-    inset 0 0 0 1px hsla(38, 18%, 95%, 0.1),
-    inset 0 1px 0 hsla(38, 18%, 95%, 0.12),
+    inset 0 0 0 1px hsla(38, 18%, 95%, 0.09),
+    inset 0 1px 0 hsla(38, 18%, 95%, 0.1),
     0 24px 70px -28px rgba(0, 0, 0, 0.6);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 
-/* Cream text accent for a few key words per screen. The animated gold sheen
-   was removed by design (it drifted warm gold across headings); this is now a
-   static, gold-free cream treatment. */
+/* Cream text accent for a few key words per screen. A static, gold-free
+   gradient-clip that reads as lit cream rather than a colored highlight — the
+   warm "iridescent" treatment, used sparingly for emphasis. */
 .text-iridescent {
   background-image: linear-gradient(100deg, #f4efe4, #e7dfd0);
   -webkit-background-clip: text;
@@ -185,25 +206,19 @@
   display: none;
 }
 
-/* A gentle hover-in-air float for the product mock on the landing hero. */
-.demo-float {
-  animation: demo-float 7s ease-in-out infinite;
-}
-
-@keyframes demo-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .demo-float {
-    animation: none !important;
-  }
+/* Warm backlight behind the product mock on the landing hero. The mock itself
+   is deliberately STATIC now (the old hover-in-air float read as restless and
+   "techie"); this soft glow from behind is what makes the glass plate feel lit
+   and premium rather than moving. No animation, so no reduced-motion branch. */
+.demo-backlight {
+  position: absolute;
+  inset: -16% -12%;
+  z-index: -10;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 52% at 50% 44%, hsla(38, 55%, 76%, 0.34), transparent 68%),
+    radial-gradient(48% 44% at 74% 62%, hsla(24, 52%, 64%, 0.2), transparent 72%);
+  filter: blur(22px);
 }
 
 /* Landing reveals — content is visible by default; only when JS successfully
@@ -314,8 +329,8 @@
      seam or flicker on small screens; browsers without @property simply get
      the static edge highlight. The plate itself must be an OPAQUE deep-graphite
      gradient: a translucent fill lets the conic light bleed through the whole
-     face and smears into a rainbow blotch (the artifact that sank the first
-     attempt). Opaque warm-dark over the near-black page still reads as glass. */
+     face and smears into a blotch (the artifact that sank the first attempt).
+     Opaque warm-dark over the near-black page still reads as glass. */
   .btn-focal {
     position: relative;
     display: inline-flex;
@@ -333,8 +348,8 @@
           hsla(40, 30%, 86%, 0.22) 0deg,
           hsla(40, 30%, 86%, 0.22) 264deg,
           hsla(38, 85%, 78%, 0.85) 296deg,
-          hsla(160, 60%, 70%, 0.45) 320deg,
-          hsla(258, 65%, 74%, 0.5) 340deg,
+          hsla(18, 70%, 72%, 0.5) 320deg,
+          hsla(150, 45%, 66%, 0.4) 340deg,
           hsla(40, 30%, 86%, 0.22) 360deg
         ) border-box;
     box-shadow:
