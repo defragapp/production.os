@@ -17,7 +17,7 @@ import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineForm } from "@/components/baseline-form";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import type { Baseline, BaselineData } from "@/lib/types";
-import { formatD1Date } from "@/lib/utils";
+import { formatD1Date, formatDateOfBirth } from "@/lib/utils";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
@@ -169,7 +169,7 @@ function BaselineContent() {
                 <BaselineForm
                   key={`${row?.dob}-${row?.tob}-${row?.pob}`}
                   submitLabel="Recompute My Baseline"
-                  defaults={{ dob: row?.dob, pob: row?.pob, tob: row?.tob }}
+                  defaults={{ dob: row?.dob, pob: row?.pob, tob: row?.tob, timePrecision: meta?.timePrecision }}
                   onSaved={() => {
                     void loadBaseline();
                     setEditing(false);
@@ -200,7 +200,7 @@ function BaselineContent() {
                 <CardContent className="grid gap-4 sm:grid-cols-3">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Date of birth</p>
-                    <p className="mt-1 text-sm text-foreground">{row?.dob || "—"}</p>
+                    <p className="mt-1 text-sm text-foreground">{formatDateOfBirth(row?.dob)}</p>
                   </div>
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Time of birth</p>

@@ -89,9 +89,16 @@ export function PasskeySignInButton({ className }: { className?: string }) {
       const response = await startAuthentication({ optionsJSON: options });
       await finishLogin(requestId, response);
     } catch (e) {
-      // AbortError = user dismissed the prompt; treat as a soft, retryable state.
-      const msg = e instanceof Error ? e.message : "";
-      setError(msg && !/abort/i.test(msg) ? msg : "No passkey found on this device — sign in with your email and password.");
+      // Browser WebAuthn ceremonies reject with DOMExceptions whose `.message`
+      // is raw spec text (often a w3.org URL). Never surface those. Only errors
+      // we throw ourselves (`new Error` with human copy) are safe to display.
+      const err = e as { name?: unknown; message?: unknown };
+      const name = String(err?.name ?? "");
+      const text = String(err?.message ?? "");
+      const cancelled = /abort/i.test(name) || /cancel|not allowed|timed out/i.test(text);
+      if (name === "Error" && !cancelled && text) setError(text);
+      else if (cancelled) setError("No passkey found on this device — sign in with your email and password.");
+      else setError("We couldn't complete the passkey prompt. Please try again, or sign in with your email and password.");
       setBusy(false);
     }
   };
@@ -140,8 +147,15 @@ export function AddPasskeyButton({ onDone }: { onDone?: () => void }) {
       setMessage({ kind: "ok", text: "Passkey added. You can now sign in with Face ID, Touch ID, or your device." });
       onDone?.();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
-      setMessage({ kind: "error", text: msg && !/abort/i.test(msg) ? msg : "Passkey setup was cancelled." });
+      // Same rule as sign-in: never echo a raw browser WebAuthn message — only
+      // our own `new Error` copy is user-safe.
+      const err = e as { name?: unknown; message?: unknown };
+      const name = String(err?.name ?? "");
+      const text = String(err?.message ?? "");
+      const cancelled = /abort/i.test(name) || /cancel|not allowed|timed out/i.test(text);
+      if (name === "Error" && !cancelled && text) setMessage({ kind: "error", text });
+      else if (cancelled) setMessage({ kind: "error", text: "Passkey setup was cancelled." });
+      else setMessage({ kind: "error", text: "We couldn't set up the passkey. Please try again, or keep using your password." });
     } finally {
       setBusy(false);
     }

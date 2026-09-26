@@ -39,7 +39,7 @@ export function BaselineForm({
   onSaved: () => void;
   /** Optional terminal action after a successful save (e.g. "Done" on edit). */
   onDone?: () => void;
-  defaults?: { dob?: string | null; pob?: string | null; tob?: string | null };
+  defaults?: { dob?: string | null; pob?: string | null; tob?: string | null; timePrecision?: string | null };
 }) {
   // Split the ISO `YYYY-MM-DD` default (if any) into editable numeric parts.
   const defaultDob = defaults?.dob && /^\d{4}-\d{2}-\d{2}$/.test(defaults.dob) ? defaults.dob : "";
@@ -47,9 +47,16 @@ export function BaselineForm({
   const [dobMM, setDobMM] = useState(defaultDob.slice(5, 7));
   const [dobDD, setDobDD] = useState(defaultDob.slice(8, 10));
   const [pob, setPob] = useState(defaults?.pob ?? "");
-  const [tob, setTob] = useState(defaults?.tob ?? "");
-  const [unknownTime, setUnknownTime] = useState(false);
-  const [bucket, setBucket] = useState<string | null>(null);
+  // An approximate Baseline stores its `tob` as a bucket key ("morning"), not a
+  // clock time — feeding that into the time input renders an empty field and a
+  // date-only edit would re-submit "morning" tagged `exact`, corrupting the
+  // recompute. Detect the stored precision and open the form in the matching
+  // mode so editing never silently changes the time-of-birth basis.
+  const approximateDefault = defaults?.timePrecision === "approximate";
+  const validBucket = approximateDefault && defaults?.tob && TOB_BUCKETS.some((b) => b.key === defaults.tob) ? defaults.tob : null;
+  const [tob, setTob] = useState(approximateDefault ? "" : (defaults?.tob ?? ""));
+  const [unknownTime, setUnknownTime] = useState(approximateDefault);
+  const [bucket, setBucket] = useState<string | null>(validBucket);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

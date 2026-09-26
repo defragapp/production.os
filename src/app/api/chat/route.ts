@@ -8,6 +8,7 @@ import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereig
 import { buildConsentedPeers } from "@/lib/sovereign-connections";
 import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
 import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
+import { mergeChatHistories } from "@/lib/chat-history";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
 
 /** Max content length per message accepted from the client. */
@@ -18,21 +19,6 @@ const CHAT_RATE_LIMIT_MAX = 20;
 const CHAT_RATE_LIMIT_WINDOW_MS = 60_000;
 
 const encoder = new TextEncoder();
-
-/**
- * Merge a stored thread history with the client's cumulative message list.
- * The client resends the full conversation, so entries already present at the
- * tail of the stored history are skipped — only genuinely new ones append.
- */
-function mergeChatHistories(base: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
-  const merged: ChatMessage[] = [...base];
-  for (const msg of incoming) {
-    const last = merged[merged.length - 1];
-    if (last && last.role === msg.role && last.content === msg.content) continue;
-    merged.push(msg);
-  }
-  return merged;
-}
 
 function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages
