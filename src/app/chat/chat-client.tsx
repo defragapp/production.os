@@ -113,12 +113,15 @@ export function ChatClient() {
     (async () => {
       try {
         const authRes = await fetch("/api/auth");
-        const authData = await authRes.json() as { user?: { subscription_tier?: string | null } | null; usage?: { used: number; limit: number | null } };
+        const authData = await authRes.json() as { user?: { subscription_tier?: string | null; email_verified?: number | boolean } | null; usage?: { used: number; limit: number | null } };
         if (!authData.user) {
           router.push("/onboard?mode=login");
           return;
         }
         setTier(authData.user.subscription_tier === "sovereign+" ? "sovereign+" : "free");
+        // Surface the verification nudge up front instead of letting the
+        // user's first message dead-end in a 403.
+        if (!authData.user.email_verified) setShowVerify(true);
         if (authData.usage) setUsage(authData.usage);
         const baselineRes = await fetch("/api/baseline");
         if (baselineRes.ok) {

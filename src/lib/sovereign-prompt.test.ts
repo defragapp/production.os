@@ -46,6 +46,14 @@ describe("deriveBaseline", () => {
     const approxPrompt = buildSystemPrompt(deriveBaseline({ meta: { timePrecision: "approximate" } }));
     expect(approxPrompt).toContain("the user's birth time is approximate");
   });
+
+  it("never feeds the placeholder rising sign to the model", () => {
+    // nasa-jpl stores risingSign: "Unknown" until the ascendant is computed.
+    // Nothing derived or prompted may present that placeholder as a fact.
+    const raw = { astrology: { risingSign: "Unknown", sunSign: "Leo" } };
+    const prompt = buildSystemPrompt(deriveBaseline(raw));
+    expect(prompt.toLowerCase()).not.toContain("rising");
+  });
 });
 
 describe("buildSystemPrompt", () => {

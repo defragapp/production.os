@@ -83,6 +83,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
         <Label htmlFor="support-topic">Topic</Label>
         <select
           id="support-topic"
+          required
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           className="flex h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"

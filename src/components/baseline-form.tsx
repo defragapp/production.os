@@ -25,18 +25,24 @@ const BUCKET_TIMES: Record<string, string> = {
  * The Baseline entry form shared by onboarding and the /baseline page. Each
  * field explains why it is asked, and a time you don't know exactly can be
  * approximated with a window — the derivation is built on tendencies and the
- * site stays honest about the reduced precision.
+ * site stays honest about the reduced precision. When `defaults` is provided
+ * (editing an existing Baseline) the fields start prefilled.
  */
 export function BaselineForm({
   submitLabel = "Build My Baseline",
   onSaved,
+  onDone,
+  defaults,
 }: {
   submitLabel?: string;
   onSaved: () => void;
+  /** Optional terminal action after a successful save (e.g. "Done" on edit). */
+  onDone?: () => void;
+  defaults?: { dob?: string | null; pob?: string | null; tob?: string | null };
 }) {
-  const [dob, setDob] = useState("");
-  const [pob, setPob] = useState("");
-  const [tob, setTob] = useState("");
+  const [dob, setDob] = useState(defaults?.dob ?? "");
+  const [pob, setPob] = useState(defaults?.pob ?? "");
+  const [tob, setTob] = useState(defaults?.tob ?? "");
   const [unknownTime, setUnknownTime] = useState(false);
   const [bucket, setBucket] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,6 +54,11 @@ export function BaselineForm({
 
     if (unknownTime && !bucket) {
       setError("Choose the closest time window, or you can go back and enter your exact time.");
+      return;
+    }
+
+    if (!unknownTime && !tob) {
+      setError("Enter your exact time of birth, or approximate it with a time window.");
       return;
     }
 
@@ -67,6 +78,7 @@ export function BaselineForm({
       }
 
       onSaved();
+      onDone?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -92,7 +104,7 @@ export function BaselineForm({
       </div>
 
       <div className="space-y-2">
-        <Label>Time of birth</Label>
+        <Label htmlFor="bf-tob">Time of birth</Label>
         {!unknownTime ? (
           <>
             <Input

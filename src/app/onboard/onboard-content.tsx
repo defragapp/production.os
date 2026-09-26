@@ -45,6 +45,7 @@ export function OnboardContent() {
   const [turnstileSiteKey, setTurnstileSiteKey] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [tsFailed, setTsFailed] = useState(false);
+  const [tsChecked, setTsChecked] = useState(false);
   const [tsKey, setTsKey] = useState(0);
   const [phase, setPhase] = useState<"account" | "baseline">("account");
 
@@ -70,8 +71,9 @@ export function OnboardContent() {
           }
         }
         setTurnstileSiteKey(data.turnstileSiteKey || null);
+        setTsChecked(true);
       })
-      .catch(() => {});
+      .catch(() => { setTsChecked(true); });
   }, [router]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -387,7 +389,7 @@ export function OnboardContent() {
                         }}
                       />
                     )}
-                    {!turnstileSiteKey && !tsFailed && (
+                    {!turnstileSiteKey && tsChecked && !tsFailed && (
                       <p className="text-sm text-muted-foreground">Security check unavailable — continuing without it.</p>
                     )}
                   </div>
@@ -464,7 +466,7 @@ export function OnboardContent() {
                 onSaved={() => router.push(existingUser ? "/chat" : "/upgrade?from=baseline")}
               />
               <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">
-                You can update it later from your Baseline.
+                You can update this later on your Baseline page.
               </p>
             </CardContent>
           </Card>

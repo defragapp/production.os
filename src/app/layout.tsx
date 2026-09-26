@@ -84,8 +84,8 @@ export const metadata: Metadata = {
     images: [{ url: "/opengraph-image?v=2", width: 1200, height: 630, alt: "Sovereign OS" }],
   },
   icons: {
-    icon: { url: "/icon.svg?v=2", type: "image/svg+xml" },
-    shortcut: { url: "/icon.svg?v=2" },
+    icon: { url: "/icon.svg?v=3", type: "image/svg+xml" },
+    shortcut: { url: "/icon.svg?v=3" },
     apple: { url: "/apple-icon?v=2", sizes: "180x180", type: "image/png" },
   },
   twitter: {

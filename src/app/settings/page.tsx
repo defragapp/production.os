@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
 import { LoadingScreen } from "@/components/ui/loading";
 import type { RelationshipView } from "@/lib/types";
+import { formatD1Date } from "@/lib/utils";
 
 const ROLE_SUGGESTIONS = [
   "friend", "partner", "spouse", "mom", "dad", "sister", "brother", "sibling",
@@ -28,12 +29,8 @@ interface InviteRow {
   acceptedAt: string | null;
 }
 
-function shortDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  } catch {
-    return iso;
-  }
+function shortDate(iso: string | null): string {
+  return iso ? formatD1Date(iso, { month: "short", day: "numeric" }) : "—";
 }
 
 export default function SettingsPage() {
@@ -369,6 +366,13 @@ export default function SettingsPage() {
                     </div>
                   )}
 
+                  {/* Free tier gets the Sovereign+ gate instead of a form that
+                      can only fail on submit. */}
+                  {tier === "free" ? (
+                    <Button variant="outline" className="w-full" onClick={() => router.push("/upgrade")}>
+                      Upgrade to Sovereign+ to send invitations
+                    </Button>
+                  ) : (
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       type="email"
@@ -393,6 +397,7 @@ export default function SettingsPage() {
                       {inviteSending ? "Sending…" : "Invite"}
                     </Button>
                   </div>
+                  )}
                   {inviteError && <p className="text-xs text-destructive">{inviteError}</p>}
                   {inviteRequiresPlus && (
                     <p className="text-xs text-muted-foreground">

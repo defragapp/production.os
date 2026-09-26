@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
 import { LoadingScreen } from "@/components/ui/loading";
 import { AddPasskeyButton } from "@/components/passkey";
+import { formatD1Date } from "@/lib/utils";
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
@@ -121,14 +122,10 @@ export default function AccountPage() {
     : null;
 
   // D1's datetime('now') yields "YYYY-MM-DD HH:MM:SS" (UTC, no marker),
-  // which Safari refuses to parse — normalize before formatting.
-  const createdDate = user.created_at
-    ? new Date(/\d{4}-\d{2}-\d{2} /.test(user.created_at) ? `${user.created_at.replace(" ", "T")}Z` : user.created_at)
-    : null;
-  const memberSince =
-    createdDate && !Number.isNaN(createdDate.getTime())
-      ? createdDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-      : "—";
+  // which Safari refuses to parse — formatD1Date normalizes before formatting.
+  const memberSince = formatD1Date(user.created_at, {
+    year: "numeric", month: "long", day: "numeric",
+  });
 
   return (
     <>

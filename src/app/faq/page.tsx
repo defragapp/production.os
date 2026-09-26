@@ -67,7 +67,7 @@ export default function FaqPage() {
             >
               <summary className="flex cursor-pointer list-none items-center justify-between text-[15px] font-medium text-foreground transition-colors duration-200 hover:text-foreground/80 [&::-webkit-details-marker]:hidden md:text-base">
                 {item.q}
-                <span className="ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-sm text-muted-foreground transition-all duration-200 group-open:rotate-45 group-open:border-foreground/30 group-open:text-foreground">
+                <span aria-hidden="true" className="ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-sm text-muted-foreground transition-all duration-200 group-open:rotate-45 group-open:border-foreground/30 group-open:text-foreground">
                   +
                 </span>
               </summary>
@@ -83,7 +83,7 @@ export default function FaqPage() {
           <div className="hero-light" aria-hidden="true" />
           <div className="relative">
             <h2 className="font-display text-xl font-normal tracking-tight text-foreground md:text-2xl">
-              Question we didn&apos;t answer?
+              Questions we didn&apos;t answer?
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">Tell us — we read everything, and a person writes back.</p>
             <Link href="/support" className="btn-glass mt-6 inline-block px-6 py-2.5 text-sm font-medium text-foreground">
