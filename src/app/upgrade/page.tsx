@@ -89,7 +89,7 @@ function UpgradeContent() {
     <>
       <PageTexture />
       <Nav />
-      <main className="relative z-10 min-h-[calc(100vh-3.5rem)] overflow-hidden px-6 py-10">
+      <main id="main" className="relative z-10 min-h-[calc(100vh-3.5rem)] overflow-hidden px-6 py-10">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="mx-auto w-full max-w-3xl">
           <Stepper steps={STEPS} current={2} completed={hasBaseline ? 2 : 1} />

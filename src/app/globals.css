@@ -89,6 +89,35 @@
   }
 }
 
+/* Skip-to-content link (WCAG 2.4.1). Rendered first in the body so it is the
+   first thing keyboard/AT users can focus; parked off-canvas until focused,
+   when it drops into view as a high-contrast cream pill at the top-left. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-md);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-180%);
+  opacity: 0;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+.skip-link:focus {
+  transform: translateY(0);
+  opacity: 1;
+  outline: 2px solid hsl(38 30% 88%);
+  outline-offset: 2px;
+}
+
 /* Ambient light layer — STATIC, deliberately. An earlier animated "room-light"
    drift was removed because motion read as screen discoloration; removing ALL
    light, though, left every surface flat black and journal-quiet. This is the
@@ -212,13 +241,13 @@
    and premium rather than moving. No animation, so no reduced-motion branch. */
 .demo-backlight {
   position: absolute;
-  inset: -16% -12%;
+  inset: -18% -14%;
   z-index: -10;
   pointer-events: none;
   background:
-    radial-gradient(58% 52% at 50% 44%, hsla(38, 55%, 76%, 0.34), transparent 68%),
-    radial-gradient(48% 44% at 74% 62%, hsla(24, 52%, 64%, 0.2), transparent 72%);
-  filter: blur(22px);
+    radial-gradient(60% 54% at 50% 44%, hsla(38, 58%, 78%, 0.46), transparent 70%),
+    radial-gradient(50% 46% at 74% 62%, hsla(24, 55%, 66%, 0.28), transparent 74%);
+  filter: blur(26px);
 }
 
 /* Landing reveals — content is visible by default; only when JS successfully

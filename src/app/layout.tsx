@@ -117,6 +117,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased">
+        {/* WCAG 2.4.1 Bypass Blocks: one focusable escape hatch past the
+            header/nav straight into the page's <main id="main">. Off-canvas
+            until keyboard-focused, then it drops in as a cream pill. */}
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         {children}
         <TabBar />
         <InstallPrompt />

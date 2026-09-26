@@ -45,7 +45,7 @@ export default function FaqPage() {
     <>
       <PageTexture />
       <Nav />
-      <main className="relative mx-auto max-w-3xl px-6 py-14">
+      <main id="main" className="relative mx-auto max-w-3xl px-6 py-14">
         <PageHeader
           title="Questions, answered"
           description="What Sovereign is, how it works, and what it means for you."

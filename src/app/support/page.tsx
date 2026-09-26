@@ -21,7 +21,7 @@ export default async function SupportPage() {
     <>
       <PageTexture />
       <Nav />
-      <main className="relative overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
+      <main id="main" className="relative overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
         <section className="relative overflow-hidden">
           <div className="hero-light" aria-hidden="true" />
           <div className="mx-auto max-w-5xl px-6 pb-14 pt-16 md:pt-20">

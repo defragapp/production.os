@@ -15,7 +15,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <main className="relative mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 py-24 text-center">
+    <main id="main" className="relative mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 py-24 text-center">
       <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
         Something went wrong
       </p>

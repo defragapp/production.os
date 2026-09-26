@@ -52,7 +52,7 @@ export default function AboutPage() {
     <>
       <PageTexture />
       <Nav />
-      <main className="relative overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
+      <main id="main" className="relative overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
         <section className="relative overflow-hidden">
           <div className="hero-light" aria-hidden="true" />
           <div className="mx-auto max-w-3xl px-6 pb-16 pt-16 md:pt-24">

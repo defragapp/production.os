@@ -289,7 +289,7 @@ export function LandingClient() {
       <PageTexture />
       <Nav />
 
-      <main className="relative z-10">
+      <main id="main" className="relative z-10">
         {/* ── Hero ─────────────────────────────────────────── */}
         <section className="relative overflow-hidden px-5 pb-16 pt-10 sm:px-6 md:pb-24 md:pt-16 lg:pb-28 lg:pt-20">
           <div className="hero-light" aria-hidden="true" />

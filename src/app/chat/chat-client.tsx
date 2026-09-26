@@ -336,7 +336,7 @@ export function ChatClient() {
     return (
       <>
         <Nav />
-        <main className="flex min-h-screen items-center justify-center">
+        <main id="main" className="flex min-h-screen items-center justify-center">
           <LoadingScreen label="Loading your threads" />
         </main>
       </>
@@ -344,7 +344,7 @@ export function ChatClient() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col">
+    <main id="main" className="flex min-h-screen flex-col">
       <Nav />
 
       {billingSuccess && (

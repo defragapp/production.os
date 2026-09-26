@@ -14,7 +14,7 @@ export default function PrivacyPage() {
     <>
       <PageTexture />
       <Nav />
-      <main className="relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-14">
+      <main id="main" className="relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-14">
         <div className="section-rule absolute inset-x-0 top-0" aria-hidden="true" />
         <PageHeader title="Privacy Policy" description="Last updated: September 23, 2026" center={false} />
         <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">

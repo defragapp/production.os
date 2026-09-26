@@ -216,7 +216,7 @@ export default function InvitePage() {
     <>
       <PageTexture />
       <Nav />
-      <main className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+      <main id="main" className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-md">
           {token === undefined ? (
