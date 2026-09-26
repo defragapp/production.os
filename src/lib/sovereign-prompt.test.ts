@@ -70,4 +70,28 @@ describe("buildSystemPrompt", () => {
     // them as headings/labels, so the answer reads as prose, not a filled form.
     expect(prompt).toContain("not headings or tags to print");
   });
+
+  it("never feeds the model a leakable '(<planet> — <word>)' quality slug", () => {
+    // Regression pin: the old quality format embedded "(Jupiter — expansion)" /
+    // "(Saturn — structure)" directly in the Baseline text the model reads, and
+    // it reproduced those tags verbatim. The label is now folded into prose
+    // ("Jupiter expansion: ..."), and the directive forbids printing the tag.
+    const prompt = buildSystemPrompt(deriveBaseline({
+      astrology: {
+        sunSign: "Leo",
+        moonSign: "Cancer",
+        planets: {
+          sun: { theme: "visible expression, authorship, and creative direction" },
+          jupiter: { theme: "meaning, exploration, and wider possibility" },
+          saturn: { theme: "structure, responsibility, and durable progress" },
+        },
+      },
+    }));
+    // No parenthetical slug of the form "(<planet> — ...)" or "— <role>)".
+    expect(prompt).not.toMatch(/\((?:Sun|Moon|Mercury|Venus|Mars|Jupiter|Saturn)\s+—/);
+    expect(prompt).not.toMatch(/— (?:expansion|structure|core expression|inner response|processing|relating|initiative)\)/);
+    // The planet grounding is still present, just expressed as a prose label.
+    expect(prompt).toContain("Jupiter expansion:");
+    expect(prompt).toContain("Saturn structure:");
+  });
 });

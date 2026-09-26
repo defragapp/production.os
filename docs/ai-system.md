@@ -66,6 +66,12 @@ Interpretive / Unknown** states.
 - Model: `@cf/meta/llama-3.1-8b-instruct-fp8` (Cloudflare Workers AI).
 - First attempt routes through the **AI Gateway** (`sovereign-ai-gateway`); on failure it
   falls back to a direct Workers AI call.
+- Output budget: every call sends an explicit `max_tokens` (`DEFAULT_MAX_TOKENS = 1024`
+  in `sovereign-model.ts`). Cloudflare's implicit default was small enough to truncate a
+  typical Sovereign answer mid-sentence, so the ceiling is now set deliberately (and kept
+  bounded) so replies arrive complete without unbounded per-message compute.
+- Generation is **non-streaming**: one complete, validated answer is produced, then shipped
+  to the client as a single SSE `content` event. The model call itself is not token-streamed.
 - Answer integrity: if the model returns an empty/incomplete turn, the pipeline retries
   once; on repeat failure it returns an honest "couldn't finish" message — it never emits a
   fabricated placeholder.
@@ -82,7 +88,10 @@ Gates applied in order:
 4. Message is trimmed and length-capped (`MAX_MESSAGE_LENGTH`).
 
 The thread merges server-side (`mergeChatHistories`) and is sanitized (`sanitizeMessages`)
-before the safety layers run.
+before the safety layers run. The validated answer is delivered as a single SSE `content`
+event and rendered on the client by `markdown-lite.ts` → `components/rich-text.tsx`, which
+turns a lightweight markdown subset (headings, lists, bold, inline code) into safe React
+elements — no raw HTML, no third-party markdown dependency.
 
 ## 7. Safety architecture
 
@@ -103,6 +112,18 @@ Cross-cutting: the system prompt (in `sovereign-prompt.ts`) enforces *interpreti
 no diagnosis, no identity labels, no prediction, no claiming knowledge of another person's
 hidden emotions, no overvalidation, no relationship verdicts, reversible corrections, and a
 crisis protocol that acknowledges and redirects to professional resources.
+
+The prompt also keeps the reply in the reader's experience rather than exposing its own
+scaffolding:
+
+- **Evidence states stay internal.** *Observed / Baseline-supported / Interpretive / Unknown*
+  are epistemic postures to weave into prose, never headings or labels to print.
+- **Baseline quality tags are internal.** Each derived quality is labeled with a short
+  `<planet> <role>:` tag for the model's grounding only; the directive forbids echoing it
+  (an earlier `(Jupiter — expansion)` parenthetical leaked verbatim into answers — now fixed
+  and pinned by a regression test in `sovereign-prompt.test.ts`).
+- **Second-person voice.** Answers address "you / your Baseline," never third-person
+  ("the user," "their Baseline").
 
 ## 8. Privacy and consent invariants
 

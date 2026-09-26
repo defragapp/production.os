@@ -224,6 +224,14 @@ What is built:
   browser supports WebAuthn), and an "Add a passkey" control in a Security card
   on the account page. Password sign-in stays visible beneath it. A dismissed
   ceremony degrades to the password path — never a dead end.
+- **Friendly errors:** a WebAuthn ceremony rejects with a `DOMException` whose raw
+  `.name`/`.message` (`NotAllowedError`, `AbortError`, `SecurityError`, …; often a
+  w3.org URL) is meaningless to a user. Only errors the client throws itself (`new
+  Error` with human copy) are shown verbatim. A cancelled/`NotAllowedError` ceremony
+  maps to "No passkey found on this device — sign in with your email and password"
+  (login) or "Passkey setup was cancelled" (enroll); any other raw failure maps to a
+  generic retry hint. The browser's own string is never surfaced, and the password
+  fallback stays visible in every case.
 
 **Verified live:** `POST …/authenticate` returns well-formed options with
 `rpId: "sovereign.defrag.app"`; `POST …/register` 401s without a session; the

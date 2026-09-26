@@ -134,7 +134,7 @@ src/
 │   │   ├── auth/passkey/register/route.ts   # WebAuthn enrollment (POST options / PUT verify), session-gated
 │   │   ├── auth/passkey/authenticate/route.ts # WebAuthn login (POST options / PUT verify), issues session cookie
 │   │   ├── baseline/route.ts          # GET/POST natal baseline (NASA/JPL Horizons)
-│   │   ├── chat/route.ts              # Sovereign chat: SSE streaming via Workers AI + AI Gateway
+│   │   ├── chat/route.ts              # Sovereign chat: non-streaming generation, delivered as a single SSE event
 │   │   ├── checkout/route.ts          # POST → Stripe Checkout session (JWT-guarded)
 │   │   ├── threads/route.ts           # Chat history CRUD (D1) — paginated GET
 │   │   └── webhooks/stripe/route.ts   # Stripe webhook → subscription_tier
@@ -155,8 +155,9 @@ src/
 ├── components/
 │   ├── nav.tsx                        # Nav + sign-out (DELETE /api/auth)
 │   ├── passkey.tsx                    # "Continue with passkey" (login) + "Add a passkey" (account)
+│   ├── rich-text.tsx                  # Renders assistant answers from markdown-lite (headings, lists, bold, code)
 │   ├── turnstile.tsx                  # Turnstile widget (client, env-gated)
-│   └── ui/                            # shadcn/ui (accordion, button, card, input, label)
+│   └── ui/                            # shadcn/ui (accordion, button, card, input, label) + brand-mark.tsx (StrippedIcon/Emblem logo source of truth) + section.tsx (airy titled group)
 ├── lib/
 │   ├── auth.ts                        # WebCrypto PBKDF2 + JWT (HS256), reset tokens
 │   ├── passkeys.ts                    # WebAuthn (@simplewebauthn/server): register/authenticate, KV challenges
@@ -169,12 +170,15 @@ src/
 │   ├── sovereign-baseline.ts          # Provenance-aware BaselineSignal derivation
 │   ├── sovereign-reasoning.ts         # Classification, meaning detection, corrections, context, generation pipeline
 │   ├── sovereign-safety.ts            # Layer-1 deterministic validation, negation-aware, leakage guard, high-risk routing
-│   ├── sovereign-model.ts             # Non-streaming model adapter (gateway-first + direct fallback)
+│   ├── sovereign-model.ts             # Non-streaming model adapter (gateway-first + direct fallback; explicit max_tokens)
+│   ├── chat-history.ts                # Idempotent merge of stored + client-sent transcript (prevents duplicate-turn writes)
+│   ├── markdown-lite.ts               # Dependency-free markdown subset → tokens for assistant answers
+│   ├── limits.ts                      # FREE_TIER_DAILY_LIMIT (5 msgs/day) + related ceilings
 │   ├── stripe.ts                      # Stripe pricing tiers + webhook verification
 │   ├── turnstile.ts                   # verifyTurnstileToken (env-gated)
 │   ├── types.ts                       # Shared TypeScript types
-│   ├── utils.ts                       # cn() class merger
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules)
+│   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 19 files / 177 tests)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
 
@@ -190,9 +194,11 @@ src/
    classification (Levels 1–4, 11 domains), meaning-target detection with
    user-definition extraction, pattern/correction/unknown/authorization scanning,
    and windowed history that preserves corrections.
-3. **Non-streaming generation** (`createCloudflareModel`): full text via
-   `@cf/meta/llama-3.1-8b-instruct-fp8`, routed through AI Gateway
-   `sovereign-ai-gateway` with direct Workers AI fallback.
+3. **Non-streaming generation** (`createCloudflareModel`): a single complete
+   answer via `@cf/meta/llama-3.1-8b-instruct-fp8` (explicit `max_tokens`),
+   routed through AI Gateway `sovereign-ai-gateway` with direct Workers AI
+   fallback. The validated text is then delivered to the client as one SSE
+   `content` event (transport is SSE; the model call itself is not token-streamed).
 4. **Layer 1 validation** (`validateSovereignText`): a negation-aware lexicon over
    11 prohibited categories (diagnosis, identity-verdict, motive-certainty,
    hidden-emotion-certainty, relationship-verdict, system-blame,
@@ -214,8 +220,8 @@ correction, leakage) and §53 regressions are covered in
 - Routes run in the Cloudflare Workers runtime via the OpenNext adapter (compatibility flag `nodejs_compat`; no explicit `runtime = "edge"` exports).
 - Passwords are hashed with PBKDF2-HMAC-SHA256 at **100,000 iterations** (the Cloudflare Workers / workerd WebCrypto ceiling — values above 100k throw at runtime) and then keyed with an HMAC using the `PASSWORD_PEPPER` secret, so a leaked D1 dump is not crackable on its own. Stored hashes are versioned (`pbkdf2$<iter>$pepper$<hmac>`) and older/un-peppered rows are transparently upgraded on successful login. Login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed). See [`docs/auth.md`](docs/auth.md).
 - JWT session tokens are stored in an httpOnly, Secure, SameSite=Lax cookie (7-day expiry) and verified on every API call via middleware + route guards.
-- **Passkeys (WebAuthn) are live** and passkey-first for return logins: `@simplewebauthn/server` v13 (edge-compatible), a `passkeys` D1 table, and `/api/auth/passkey/{register,authenticate}` endpoints (POST options / PUT verify; challenges are single-use in KV). A "Continue with passkey" button tops the login card and an "Add a passkey" control lives on the account page; enrollment requires an existing session and the password stays as the fallback, so nobody is locked out. The browser ceremony must be validated on a real device. See [`docs/auth.md`](docs/auth.md) §9.
-- The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Responses stream as Server-Sent Events (SSE) and persist to D1 threads.
+- **Passkeys (WebAuthn) are live** and passkey-first for return logins: `@simplewebauthn/server` v13 (edge-compatible), a `passkeys` D1 table, and `/api/auth/passkey/{register,authenticate}` endpoints (POST options / PUT verify; challenges are single-use in KV). A "Continue with passkey" button tops the login card and an "Add a passkey" control lives on the account page; enrollment requires an existing session and the password stays as the fallback, so nobody is locked out. Raw WebAuthn `DOMException`s are mapped to friendly, actionable messages instead of being surfaced to the user. The browser ceremony must be validated on a real device. See [`docs/auth.md`](docs/auth.md) §9.
+- The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Generation is non-streaming (one complete, validated answer); it is delivered to the client as a single SSE `content` event and persisted to D1 threads.
 - The chat route windows conversation context to the most recent 20 messages (`MAX_CONTEXT_MESSAGES`) before inference, capping token spend while full history remains stored in D1.
 - The `GET /api/threads` list is paginated (`page`/`limit`, default 50, max 50) and returns `{ threads, total, page, pageSize }`; the `?id=` detail lookup is unchanged.
 - All routes set security headers (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy) plus a CSP in `next.config.ts`.

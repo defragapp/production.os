@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Link2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Section } from "@/components/ui/section";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
@@ -217,13 +217,12 @@ export default function SettingsPage() {
           {loading ? (
             <LoadingScreen className="py-20" label="Loading your settings" />
           ) : (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Profile</CardTitle>
-                  <CardDescription>How your name appears to connected people</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="space-y-6">
+              <Section
+                title="Profile"
+                description="How your name appears to connected people"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <div className="flex-1">
                     <label htmlFor="display-name" className="mb-1.5 block text-xs text-muted-foreground">
                       Display name
@@ -243,23 +242,18 @@ export default function SettingsPage() {
                       "Save"
                     )}
                   </Button>
-                </CardContent>
-                <p className="px-6 pb-4 text-xs leading-relaxed text-muted-foreground/70">
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground/70">
                   If you leave this blank, people you connect with see the name in front of the
                   &ldquo;@&rdquo; in your email. Either way, they never see your full email address
                   or your birth data.
                 </p>
-              </Card>
+              </Section>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Connections</CardTitle>
-                  <CardDescription>
-                    People you&apos;ve invited and who&apos;ve accepted. They only ever see your name,
-                    your role, and anything you explicitly share.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+              <Section
+                title="Connections"
+                description="People you've invited and who've accepted. They only ever see your name, your role, and anything you explicitly share."
+              >
                   {connections === null ? (
                     <p className="text-sm text-muted-foreground">Loading…</p>
                   ) : connections.length === 0 ? (
@@ -349,15 +343,13 @@ export default function SettingsPage() {
                       ))}
                     </ul>
                   )}
-                </CardContent>
-              </Card>
+              </Section>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Invitations</CardTitle>
-                  <CardDescription>Invite someone to connect. The link is valid for 7 days.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <Section
+                title="Invitations"
+                description="Invite someone to connect. The link is valid for 7 days."
+              >
+                <div className="space-y-4">
                   {tier === "free" && (
                     <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
                       Inviting people is part of{" "}
@@ -470,14 +462,11 @@ export default function SettingsPage() {
                       ))}
                     </ul>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Privacy</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+              <Section title="Privacy">
+                <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
                   <p>
                     Connections are two-sided but independent. What you share about yourself is a
                     decision you make for each relationship — and either of you can change it at any
@@ -485,8 +474,8 @@ export default function SettingsPage() {
                     your role, and the answer AI gives for questions about you both.
                   </p>
                   <p>Removing a connection stops all sharing in both directions immediately.</p>
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
 
               <Button variant="outline" className="w-full" onClick={() => router.push("/account")}>
                 Back to account

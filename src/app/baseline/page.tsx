@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Section } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
 import { Stepper } from "@/components/stepper";
@@ -113,23 +107,19 @@ function BaselineContent() {
               description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. Your data is never shared with third parties."
             />
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Birth Information</CardTitle>
-                <CardDescription>
-                  Set it once, then review or update it here any time.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <BaselineForm
-                  submitLabel="Build My Baseline"
-                  onSaved={() => {
-                    void loadBaseline();
-                  }}
-                  onDone={() => router.push(nextHref(invite))}
-                />
-              </CardContent>
-            </Card>
+            <Section
+              title="Birth Information"
+              description="Set it once, then review or update it here any time."
+              rule={false}
+            >
+              <BaselineForm
+                submitLabel="Build My Baseline"
+                onSaved={() => {
+                  void loadBaseline();
+                }}
+                onDone={() => router.push(nextHref(invite))}
+              />
+            </Section>
 
             <p className="mt-4 text-center text-sm text-muted-foreground">
               Your birth time and location compute planetary positions via NASA data — a precise time is
@@ -158,46 +148,42 @@ function BaselineContent() {
           />
 
           {editing ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Update Birth Information</CardTitle>
-                <CardDescription>
-                  Saving recomputes your whole Baseline from the new details.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <BaselineForm
-                  key={`${row?.dob}-${row?.tob}-${row?.pob}`}
-                  submitLabel="Recompute My Baseline"
-                  defaults={{ dob: row?.dob, pob: row?.pob, tob: row?.tob, timePrecision: meta?.timePrecision }}
-                  onSaved={() => {
-                    void loadBaseline();
-                    setEditing(false);
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  className="mt-3 w-full"
-                  onClick={() => setEditing(false)}
-                  disabled={false}
-                >
-                  Cancel
-                </Button>
-              </CardContent>
-            </Card>
+            <Section
+              title="Update Birth Information"
+              description="Saving recomputes your whole Baseline from the new details."
+              rule={false}
+            >
+              <BaselineForm
+                key={`${row?.dob}-${row?.tob}-${row?.pob}`}
+                submitLabel="Recompute My Baseline"
+                defaults={{ dob: row?.dob, pob: row?.pob, tob: row?.tob, timePrecision: meta?.timePrecision }}
+                onSaved={() => {
+                  void loadBaseline();
+                  setEditing(false);
+                }}
+              />
+              <Button
+                variant="ghost"
+                className="mt-3 w-full"
+                onClick={() => setEditing(false)}
+                disabled={false}
+              >
+                Cancel
+              </Button>
+            </Section>
           ) : (
             <>
-              <Card>
-                <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
-                  <div>
-                    <CardTitle className="text-base">Birth Information</CardTitle>
-                    <CardDescription>Only ever used to compute your Baseline — never shared.</CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm" className="shrink-0" onClick={() => setEditing(true)}>
+              <Section
+                title="Birth Information"
+                description="Only ever used to compute your Baseline — never shared."
+                actions={
+                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
                     Edit
                   </Button>
-                </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-3">
+                }
+                rule={false}
+              >
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Date of birth</p>
                     <p className="mt-1 text-sm text-foreground">{formatDateOfBirth(row?.dob)}</p>
@@ -215,8 +201,8 @@ function BaselineContent() {
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Place of birth</p>
                     <p className="mt-1 text-sm text-foreground">{row?.pob || "—"}</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
 
               {parsed && (
                 <div className="mt-4">

@@ -19,7 +19,8 @@ This doc is the ladder from "free and fine" to "paid and unbothered."
 - API token: stored **gitignored** in `.dev.vars` as `CF_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID`). **Never commit or echo its value.** Referenced below by name.
 
 > All free-plan figures below were refreshed from Cloudflare's docs (pages last
-> updated **2026-04-21**). Plans change — verify against the live plan in
+> updated **2026-09-26**, re-verified against this build's `DEFAULT_MAX_TOKENS =
+> 1024` and `FREE_TIER_DAILY_LIMIT = 5`). Plans change — verify against the live plan in
 > **dash.cloudflare.com → Account → Overview / your Worker → Metrics** before
 > acting on a number here. Sources: Workers `platform/limits`, D1 `platform/limits`
 > + `platform/pricing`, KV `platform/limits`, Workers AI `platform/pricing`.
@@ -51,14 +52,28 @@ This doc is the ladder from "free and fine" to "paid and unbothered."
 ### The order we will hit the wall (mental model for a spike)
 
 1. **Workers AI neurons (~10,000/day) — FIRST.** On our model a single chat is
-   roughly **20–25 neurons** (13,778 in / 26,128 per 1M tokens; a ~800-in +
-   ~400-out turn ≈ 21 neurons). That is only **~400–500 free AI completions per
-   day**. A few hundred enthusiastic users, or a bot swarm hammering `/api/chat`,
-   exhausts this *long before* 100k requests. → **AI Gateway caching + a tight
-   per-identity rate limit is the single highest-value guardrail** (see §3, §4).
+   roughly **21–38 neurons** (13,778 in / 26,128 per 1M tokens — i.e. ~73 input
+   tokens and ~38 output tokens per neuron; a ~800-in + ~400-out turn ≈ 21
+   neurons, a full-length ~1,024-token answer ≈ 38). Sovereign always sends an
+   explicit `max_tokens` of **1,024** (`DEFAULT_MAX_TOKENS` in
+   `src/lib/sovereign-model.ts`) so an answer never truncates mid-sentence, which
+   raises the worst-case per-turn cost well above the old ~400-token assumption.
+   That is only **~250–450 free AI completions per day** (≈260 if every reply runs
+   to the 1,024-token ceiling; ≈475 for short ~400-token replies). The earlier
+   "~400–500" figure assumed a ~400-token output cap and now **over-states
+   headroom** — plan against the low end. A few hundred enthusiastic users, or a
+   bot swarm hammering `/api/chat`, exhausts this *long before* 100k requests.
+   → **AI Gateway caching + a tight per-identity rate limit is the single
+   highest-value guardrail** (see §3, §4).
 2. **D1 writes (100k/day)** — every signup, chat-message persist, and counter
    bump writes rows. A signup burst of a few thousand is fine; a bot-driven mass
    signup is not. BFM + the auth rate-limit rule + Turnstile are the mitigation.
+   On the chat path specifically, the idempotent transcript merge
+   (`mergeChatHistories` in `src/lib/chat-history.ts`) keeps the stored
+   `message_history` blob growing **linearly** with the conversation: a previous
+   merge that only compared against the stored tail re-appended the entire prior
+   exchange on every turn, so each per-turn `UPDATE` wrote a quadratically
+   bloated blob. That write amplification is gone — one bounded UPDATE per turn.
 3. **KV writes (1,000/day diff keys)** — sessions, passkey challenges, webhook
    idempotency, dunning counters, tier-sync stamps. This is **low**; a busy day
    can approach it. Watch it; consider consolidating counters if it trends up.
@@ -104,10 +119,10 @@ on) — a plan change, **not a code change** (see §5).
 | **CPU 10ms** | Profile the login path; keep passkey-first (no PBKDF2) | Raise per-route work off the request (Queues for email) | Upgrade Paid → 30s–5min CPU |
 | **WAF rules** | — | Consolidate into the 1 free rule (done: auth+chat) | Upgrade → more rules + longer windows |
 
-The **in-app** free-tier gate (`src/lib/limits.ts`, `FREE_TIER_DAILY_LIMIT` enforced
-by a KV counter in `src/app/api/chat/route.ts`) already caps AI spend per user per
-day. That is the first line of defense against neurons (§1.1); the edge controls
-above are the second.
+The **in-app** free-tier gate (`src/lib/limits.ts`, `FREE_TIER_DAILY_LIMIT = 5`
+enforced by a KV counter in `src/app/api/chat/route.ts`) already caps AI spend per
+user per day. That is the first line of defense against neurons (§1.1); the edge
+controls above are the second.
 
 ---
 

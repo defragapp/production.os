@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Section } from "@/components/ui/section";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
@@ -149,13 +149,12 @@ export default function AccountPage() {
               {unverifiedNotice}
             </div>
           )}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Subscription</CardTitle>
-                <CardDescription>Where you stand right now</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
+          <div className="space-y-6">
+            <Section
+              title="Subscription"
+              description="Where you stand right now"
+            >
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Plan</span>
                   <span className={`rounded-md px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.14em] ${isPlus ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-muted-foreground"}`}>
@@ -207,14 +206,13 @@ export default function AccountPage() {
                     </Button>
                   </>
                 )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Profile</CardTitle>
-                <CardDescription>Your account information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
+              </div>
+            </Section>
+            <Section
+              title="Profile"
+              description="Your account information"
+            >
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Display name</span>
                   <span className="text-sm font-medium">
@@ -261,21 +259,20 @@ export default function AccountPage() {
                   <span className="text-sm text-muted-foreground">Member since</span>
                   <span className="text-sm font-medium">{memberSince}</span>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Security</CardTitle>
-                <CardDescription>Sign in faster — and safer — with a passkey</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
+              </div>
+            </Section>
+            <Section
+              title="Security"
+              description="Sign in faster — and safer — with a passkey"
+            >
+              <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Use Face ID, Touch ID, or your device&apos;s unlock. Your password stays as a backup,
                   so you can never get locked out.
                 </p>
                 <AddPasskeyButton />
-              </CardContent>
-            </Card>
+              </div>
+            </Section>
             <div className="space-y-2">
               <Button className="w-full" onClick={() => router.push("/chat")}>
                 Back to chat

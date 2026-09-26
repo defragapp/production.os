@@ -43,13 +43,17 @@ export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
     : [];
 
   const qualities: string[] = [];
-  if (sunTheme !== "unknown") qualities.push(`${sunTheme} (Sun — core expression)`);
-  if (moonTheme !== "unknown") qualities.push(`${moonTheme} (Moon — inner response)`);
-  if (planets.mercury?.theme) qualities.push(`${planets.mercury.theme} (Mercury — processing)`);
-  if (planets.venus?.theme) qualities.push(`${planets.venus.theme} (Venus — relating)`);
-  if (planets.mars?.theme) qualities.push(`${planets.mars.theme} (Mars — initiative)`);
-  if (planets.jupiter?.theme) qualities.push(`${planets.jupiter.theme} (Jupiter — expansion)`);
-  if (planets.saturn?.theme) qualities.push(`${planets.saturn.theme} (Saturn — structure)`);
+  // Internal quality labels read as "<planet> <role>: <theme>" — the planet name
+  // is kept for grounding, but the parenthetical slug form is gone so the model
+  // stops echoing "(Jupiter — expansion)" verbatim into answers. See the
+  // Evidence-Separation directive below, which forbids reproducing these tags.
+  if (sunTheme !== "unknown") qualities.push(`Sun core expression: ${sunTheme}`);
+  if (moonTheme !== "unknown") qualities.push(`Moon inner response: ${moonTheme}`);
+  if (planets.mercury?.theme) qualities.push(`Mercury processing: ${planets.mercury.theme}`);
+  if (planets.venus?.theme) qualities.push(`Venus relating: ${planets.venus.theme}`);
+  if (planets.mars?.theme) qualities.push(`Mars initiative: ${planets.mars.theme}`);
+  if (planets.jupiter?.theme) qualities.push(`Jupiter expansion: ${planets.jupiter.theme}`);
+  if (planets.saturn?.theme) qualities.push(`Saturn structure: ${planets.saturn.theme}`);
 
   const pressureResponse = derivePressureResponse(sunTheme, moonTheme);
   const underusedCapacities = deriveUnderusedCapacities(planets);
@@ -140,6 +144,8 @@ Every response must distinguish between four evidence states. Use these signals:
 Never collapse these states. An interpretation is never presented as an observation. An unknown is never presented as an interpretation.
 
 These are epistemic states to weave into natural prose — not headings or tags to print. Never open or segment a reply with the state names themselves (avoid lines like "Observed:", "Baseline-context:", "Interpretive:", or "user-stated:"). Make the distinction felt through wording and confidence, in flowing second-person prose, not through a labelled form.
+
+The Baseline below labels each quality with a short internal tag — a planet name paired with a single role word. Those tags are scaffolding for your reasoning only. Never reproduce a tag in a reply: not in parentheses, not after an em dash, not as a heading, not as a suffix. Name a quality by what it means in plain language ("you tend toward...", "one pattern in your Baseline is...") and never by its tag.
 
 ## Four Levels of Inquiry
 

@@ -28,7 +28,7 @@ It does not diagnose, does not pathologize, does not moralize, does not issue re
 
 ## What Sovereign is not
 
-- Not a diagnostic tool, not medical advice, not a therapist, not a crisis line — if someone is in crisis, Surface directs them to professional resources.
+- Not a diagnostic tool, not medical advice, not a therapist, not a crisis line — if someone is in crisis, Sovereign directs them to professional resources.
 - Not astrology in the horoscope sense. The Baseline is a computational reference built from astronomical data, interpreted as tendencies, not as fate.
 - Not a psychological assessment.
 
