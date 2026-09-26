@@ -497,7 +497,7 @@ export function ChatClient() {
             <div className="flex h-full items-center justify-center pt-20">
               <div className="text-center">
                 <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-muted/40">
-                  <Logo showWordmark={false} href="#" />
+                  <Logo showWordmark={false} href="#" markClassName="h-9 w-auto" />
                 </div>
                 <p className="font-display text-2xl font-normal tracking-tight text-foreground">
                   Ask anything.

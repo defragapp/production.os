@@ -81,12 +81,12 @@ export const metadata: Metadata = {
       "A private AI platform for understanding yourself, your people, and the systems you live within.",
     type: "website",
     locale: "en_US",
-    images: [{ url: "/opengraph-image?v=4", width: 1200, height: 630, alt: "Sovereign OS" }],
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
   },
   icons: {
-    icon: { url: "/icon.svg?v=5", type: "image/svg+xml" },
-    shortcut: { url: "/icon.svg?v=5" },
-    apple: { url: "/apple-icon?v=4", sizes: "180x180", type: "image/png" },
+    icon: { url: "/brand/icon.png?v=2", type: "image/png" },
+    shortcut: { url: "/brand/icon.png?v=2" },
+    apple: { url: "/brand/apple-icon.png?v=2", sizes: "180x180", type: "image/png" },
   },
   twitter: {
     card: "summary_large_image",

@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { BRAND_MARK_SHAPES } from "@/lib/brand-mark";
+import { EMBLEM_DATA_URI } from "@/lib/brand-emblem-data";
 
 export const alt = "Sovereign OS — Understand the patterns in your life";
 export const size = { width: 1200, height: 630 };
@@ -22,34 +22,13 @@ export default function OpengraphImage() {
           color: "#fafafa",
         }}
       >
-        <svg width="150" height="150" viewBox="0 0 64 64" fill="none">
-          {BRAND_MARK_SHAPES.map((shape, i) =>
-            shape.tag === "circle" ? (
-              <circle
-                key={i}
-                cx={shape.cx}
-                cy={shape.cy}
-                r={shape.r}
-                {...(shape.mode === "fill"
-                  ? { fill: "currentColor" }
-                  : { stroke: "currentColor", strokeWidth: shape.width })}
-              />
-            ) : (
-              <path
-                key={i}
-                d={shape.d}
-                {...(shape.mode === "fill"
-                  ? { fill: "currentColor" }
-                  : {
-                      stroke: "currentColor",
-                      strokeWidth: shape.width,
-                      strokeLinecap: "round",
-                      strokeLinejoin: "round",
-                    })}
-              />
-            ),
-          )}
-        </svg>
+        <img
+          src={EMBLEM_DATA_URI}
+          alt=""
+          width={230}
+          height={327}
+          style={{ width: 230, height: 327, objectFit: "contain" }}
+        />
         <div
           style={{
             display: "flex",
@@ -70,7 +49,7 @@ export default function OpengraphImage() {
             color: "#a1a1aa",
           }}
         >
-          Your personal intelligence layer
+          Understand the patterns in your life
         </div>
         <div
           style={{

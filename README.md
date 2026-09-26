@@ -126,6 +126,9 @@ locally before pushing to verify the exact CI pipeline output.
 open-next.config.ts            # OpenNext Cloudflare config (defaults)
 wrangler.jsonc                 # Worker config: D1, KV, AI, AI Gateway, static assets
 schema.sql                     # D1 schema (users, baselines, threads)
+assets/ace-of-cups.jpg         # Canonical brand artwork (source of truth for the mark)
+scripts/build-brand-assets.mjs # Regenerates public/brand/*.png from the source artwork (node scripts/build-brand-assets.mjs)
+public/brand/                  # Emitted raster mark: emblem-full, emblem-core, emblem-core-bold, icon, apple-icon
 src/
 ├── app/
 │   ├── api/
@@ -157,12 +160,11 @@ src/
 │   ├── passkey.tsx                    # "Continue with passkey" (login) + "Add a passkey" (account)
 │   ├── rich-text.tsx                  # Renders assistant answers from markdown-lite (headings, lists, bold, code)
 │   ├── turnstile.tsx                  # Turnstile widget (client, env-gated)
-│   └── ui/                            # shadcn/ui (accordion, button, card, input, label) + brand-mark.tsx (canonical Ace-of-Cups logo, renders lib/brand-mark.ts) + section.tsx (airy titled group)
+│   └── ui/                            # shadcn/ui (accordion, button, card, input, label) + logo.tsx (renders public/brand/emblem-core-bold.png) + section.tsx (airy titled group)
 ├── lib/
 │   ├── auth.ts                        # WebCrypto PBKDF2 + JWT (HS256), reset tokens
 │   ├── passkeys.ts                    # WebAuthn (@simplewebauthn/server): register/authenticate, KV challenges
 │   ├── base64url.ts                   # workerd-safe base64url <-> bytes (passkey keys)
-│   ├── brand-mark.ts                  # Single source of truth for the logo glyph (BRAND_MARK_SHAPES) reused by nav/favicon/iOS/social surfaces
 │   ├── email.ts                       # Resend transactional email
 │   ├── env.ts                         # AppEnv type + getEnv() helper
 │   ├── nasa-jpl.ts                    # NASA/JPL Horizons API → natal positions
@@ -179,7 +181,7 @@ src/
 │   ├── turnstile.ts                   # verifyTurnstileToken (env-gated)
 │   ├── types.ts                       # Shared TypeScript types
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 19 files / 177 tests)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 19 files / 181 tests)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
 
@@ -231,5 +233,6 @@ correction, leakage) and §53 regressions are covered in
 - Transactional emails are sent from `sovereign@defrag.app` via Resend (verified domain with DKIM/SPF, click and open tracking enabled). Fallback to console-log when `RESEND_API_KEY` is unset.
 - Five email templates ship in `src/lib/email.ts` (welcome, verify, password-reset, billing-success, trial-ending), each using the branded `emailShell`/`emailButton` design system.
 - Observability is enabled in `wrangler.jsonc` with head sampling at rate 0.1 (10% of traces).
+- **One brand mark, sourced from artwork.** The mark is the canonical Ace-of-Cups engraving in `assets/ace-of-cups.jpg`. `scripts/build-brand-assets.mjs` (run with `node scripts/build-brand-assets.mjs`) isolates the line-art into transparent PNGs and emits `public/brand/`: `emblem-core-bold.png` (nav/footer logo + social card — the engraving with hairlines thickened by a morphological dilate so it reads at header size instead of collapsing into a smudge), `emblem-core.png`/`emblem-full.png` (thin cuts), and `icon.png`/`apple-icon.png` (graphite plates for the tab favicon and iOS home-screen icon). Every surface draws from these files — there is no separate or hand-redrawn logo. The retired SVG glyph system (`lib/brand-mark.ts`, `icon.svg`, `apple-icon.tsx`) has been deleted; `icon.test.ts` guards that the PNGs exist and the surfaces reference them.
 - `npm audit` is clean (0 vulnerabilities). The `postcss` advisory previously inherited via `next@15` is resolved by a root `overrides` pinning `postcss@^8.5.28`; no Next 16 upgrade is required.
 - This project intentionally has no `open-next.config.ts` `buildCommand`: OpenNext runs `npm run build` internally, and overriding it causes infinite build recursion.

@@ -6,7 +6,7 @@ const orgJsonLd = {
   "@id": "https://sovereign.defrag.app/#organization",
   name: "Sovereign OS",
   url: "https://sovereign.defrag.app",
-  logo: "https://sovereign.defrag.app/icon.svg",
+  logo: "https://sovereign.defrag.app/brand/apple-icon.png",
   description:
     "A private AI platform for understanding yourself, your people, and the systems you live within.",
   contactPoint: {

@@ -148,7 +148,7 @@ function ProductDemo() {
       <div className="relative overflow-hidden rounded-xl border border-white/10 bg-card/60 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.07),0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Logo showWordmark={false} href="#" />
+            <Logo showWordmark={false} href="#" markClassName="h-7 w-auto" />
             <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               Sovereign OS
             </span>
