@@ -33,7 +33,14 @@ export function OnboardContent() {
   const searchParams = useSearchParams();
   const resetToken = searchParams.get("reset");
   const mode = searchParams.get("mode");
-  const isLogin = mode === "login";
+  const inviteToken = searchParams.get("invite");
+  // Search params only exist after hydration: SSR always renders the signup
+  // markup, so branching on `mode` during the first client paint trips React
+  // #418 (hydration text mismatch) and leaves the whole form inert.
+  const [mounted, setMounted] = useState(false);
+  const isLogin = mounted && mode === "login";
+
+  useEffect(() => { setMounted(true); }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,9 +69,12 @@ export function OnboardContent() {
         if (data.user) {
           setExistingUser(true);
           setEmail(data.user.email || "");
-          // Already signed in: send people to the workspace. Baseline is the
+          // Already signed in: send people to the workspace. An invitation in
+          // the URL takes priority — that's why they're here. Baseline is the
           // only first-time step, so an account without one just continues there.
-          if (data.hasBaseline) {
+          if (inviteToken) {
+            router.replace(`/invite?token=${encodeURIComponent(inviteToken)}`);
+          } else if (data.hasBaseline) {
             router.replace("/chat");
           } else {
             setPhase("baseline");
@@ -74,7 +84,7 @@ export function OnboardContent() {
         setTsChecked(true);
       })
       .catch(() => { setTsChecked(true); });
-  }, [router]);
+  }, [router, inviteToken]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,13 +113,21 @@ export function OnboardContent() {
       if (data.user?.email) setEmail(data.user.email);
 
       if (isLogin || existingUser) {
-        if (data.hasBaseline) {
+        // Invitation links carry the token through auth so the accept screen
+        // picks it up on the other side of signup/sign-in.
+        if (inviteToken) {
+          router.push(`/invite?token=${encodeURIComponent(inviteToken)}`);
+        } else if (data.hasBaseline) {
           router.push("/chat");
         } else {
           // Returning account that never built a Baseline — same first-time step.
           setExistingUser(true);
           setPhase("baseline");
         }
+      } else if (inviteToken) {
+        // New account arriving from an invitation: the accept screen gates on
+        // the baseline and deep-links back here, so hand off to it directly.
+        router.push(`/invite?token=${encodeURIComponent(inviteToken)}`);
       } else {
         // Account created — Baseline is the next, distinct step.
         setPhase("baseline");
@@ -175,6 +193,17 @@ export function OnboardContent() {
   };
 
   // ── Password reset (token) screen ─────────────────────────────
+  if (!mounted) {
+    return (
+      <>
+        <Nav />
+        <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+          <p className="text-muted-foreground">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
   if (resetToken) {
     return (
       <>
@@ -361,7 +390,6 @@ export function OnboardContent() {
                           type="checkbox"
                           checked={consent}
                           onChange={(e) => setConsent(e.target.checked)}
-                          required
                           className="mt-1 h-4 w-4 rounded border-border"
                         />
                         <Label htmlFor="consent" className="text-sm font-normal leading-relaxed">
@@ -463,7 +491,11 @@ export function OnboardContent() {
             <CardContent className="pt-6">
               <BaselineForm
                 submitLabel="Save Baseline & Continue"
-                onSaved={() => router.push(existingUser ? "/chat" : "/upgrade?from=baseline")}
+                onSaved={() => router.push(
+                  inviteToken
+                    ? `/invite?token=${encodeURIComponent(inviteToken)}`
+                    : existingUser ? "/chat" : "/upgrade?from=baseline"
+                )}
               />
               <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">
                 You can update this later on your Baseline page.

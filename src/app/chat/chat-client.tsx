@@ -139,7 +139,7 @@ export function ChatClient() {
           await openThread(items[0].id);
         }
       } catch {
-        router.push("/onboard");
+        router.push("/onboard?mode=login");
       } finally {
         setAuthChecked(true);
       }

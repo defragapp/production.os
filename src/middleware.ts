@@ -87,7 +87,9 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
-    return NextResponse.redirect(new URL("/onboard", request.url));
+    // No session: people are here to get back into their account, not to
+    // create a second one.
+    return NextResponse.redirect(new URL("/onboard?mode=login", request.url));
   }
 
   const payload = await verifyJWT(token, secret);
@@ -95,7 +97,7 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
-    return NextResponse.redirect(new URL("/onboard", request.url));
+    return NextResponse.redirect(new URL("/onboard?mode=login", request.url));
   }
 
   return noStore(NextResponse.next());

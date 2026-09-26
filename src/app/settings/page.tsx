@@ -82,7 +82,7 @@ export default function SettingsPage() {
         setDisplayNameDraft(data.user.display_name ?? "");
         await loadPeople();
       } catch {
-        if (!cancelled) router.push("/onboard");
+        if (!cancelled) router.push("/onboard?mode=login");
       }
     })();
     return () => {

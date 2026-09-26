@@ -181,7 +181,11 @@ function AcceptCard({
 
 export default function InvitePage() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
+  // SSR can't see the query string, so the first paint must be a neutral
+  // "loading" state. Rendering the missing-token error during SSR and then
+  // swapping to the invitation on the client is a text hydration mismatch
+  // (React #418) that invalidates the whole tree and leaves Accept inert.
+  const [token, setToken] = useState<string | null | undefined>(undefined);
   const [info, setInfo] = useState<InfoData | null>(null);
   const [acceptedAs, setAcceptedAs] = useState<string | null>(null);
 
@@ -215,7 +219,9 @@ export default function InvitePage() {
       <main className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-md">
-          {!token ? (
+          {token === undefined ? (
+            <PageHeader title="Invitation" description="Checking your invitation…" />
+          ) : token === null ? (
             <>
               <PageHeader title="Invitation" description="This invitation link doesn't look right." />
               <Card>

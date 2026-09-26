@@ -55,13 +55,13 @@ export default function AccountPage() {
       .then((d) => {
         const data = d as { user?: UserData; usage?: UsageData };
         if (!data.user) {
-          router.push("/onboard");
+          router.push("/onboard?mode=login");
           return;
         }
         setUser(data.user);
         setUsage(data.usage ?? null);
       })
-      .catch(() => router.push("/onboard"))
+      .catch(() => router.push("/onboard?mode=login"))
       .finally(() => setLoading(false));
   }, [router]);
 
