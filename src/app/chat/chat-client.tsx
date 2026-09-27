@@ -509,10 +509,19 @@ export function ChatClient() {
       {showVerify && (
         <div className="border-b border-border bg-surface-1 px-6 py-4">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-foreground">
-              <span className="font-medium">Verify your email to unlock AI chat.</span>{" "}
-              <span className="text-muted-foreground">Check your inbox for the verification link.</span>
-            </p>
+            <div>
+              <p className="text-sm text-foreground">
+                <span className="font-medium">Verify your email to unlock AI chat.</span>{" "}
+                <span className="text-muted-foreground">Check your inbox for the verification link.</span>
+              </p>
+              {/* A lost email can't be a dead end: name the second place to look
+                  and leave a human door open. */}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Not there? Check spam and promotions — or{" "}
+                <Link href="/support" className="underline underline-offset-2 hover:text-foreground">tell us and we&apos;ll sort it</Link>
+                .
+              </p>
+            </div>
             <div className="flex shrink-0 items-center gap-3">
               {resendState?.startsWith("error:") && (
                 <p className="text-xs text-destructive" role="alert">{resendState.slice(7)}</p>

@@ -37,7 +37,19 @@ export async function POST(request: NextRequest) {
   ).bind(tokenHash, expires, payload.sub).run();
 
   const origin = new URL(request.url).origin;
-  await sendTemplate(env, "verify", payload.email, { origin, token });
+  // sendTemplate reports the delivery outcome; a failed send must release the
+  // cooldown we just spent, or a mail hiccup locks a waiting user out of
+  // retrying for 10 minutes on a "success" that never arrived.
+  let delivered = false;
+  try {
+    delivered = await sendTemplate(env, "verify", payload.email, { origin, token });
+  } catch (e) {
+    console.error("[resend] verification email failed:", e);
+  }
+  if (!delivered) {
+    await env.SESSION_KV.delete(rlKey).catch(() => {});
+    return NextResponse.json({ error: "Couldn't send the email just now — try again." }, { status: 502 });
+  }
 
   return NextResponse.json({ ok: true });
 }

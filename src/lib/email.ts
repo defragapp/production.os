@@ -240,13 +240,16 @@ type TemplateVars<T extends TemplateName> = Parameters<typeof EMAIL_TEMPLATES[T]
 /**
  * Send a templated email through Resend.
  * Falls into console.log if no API key configured (log-only mode).
+ * Returns the delivery outcome: true on a successful Resend send or in
+ * log-only mode (nothing gated on it), false when a configured send failed —
+ * so callers that must not fake success (verification resend) can branch.
  */
 export async function sendTemplate<T extends TemplateName>(
   env: AppEnv,
   template: T,
   to: string,
   vars: TemplateVars<T>
-): Promise<void> {
+): Promise<boolean> {
   const tmpl = EMAIL_TEMPLATES[template];
   if (!tmpl) throw new Error(`Unknown email template: ${template}`);
 
@@ -269,11 +272,12 @@ export async function sendTemplate<T extends TemplateName>(
         }),
       });
       if (!response.ok) { const err = await response.json() as { message?: string }; throw new Error(`Resend error: ${err.message || response.statusText}`); }
-      return;
-    } catch (err) { console.error("[email] Resend failed, falling back to log:", err); }
+      return true;
+    } catch (err) { console.error("[email] Resend failed, falling back to log:", err); return false; }
   }
   console.log(`[email] From: ${fromEmail} → ${opts.to} | Subject: ${opts.subject}`);
   console.log(`[email] Body: ${opts.html.slice(0, 200)}...`);
+  return true;
 }
 
 export async function sendTransactionalEmail(env: AppEnv, opts: SendEmailOptions): Promise<void> {
