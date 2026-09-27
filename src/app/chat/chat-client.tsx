@@ -347,6 +347,9 @@ export function ChatClient() {
   return (
     <main id="main" className="flex min-h-screen flex-col">
       <Nav />
+      {/* App screen: the conversation itself is the content, so the page
+          title exists for assistive tech only (every page carries one h1). */}
+      <h1 className="sr-only">Chat with Sovereign</h1>
 
       {billingSuccess && (
         <div className="border-b border-border bg-background px-6 py-4">

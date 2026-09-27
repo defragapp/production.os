@@ -234,7 +234,7 @@ export function OnboardContent() {
                       placeholder="••••••••"
                     />
                   </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
                   {notice && <p className="text-sm text-foreground">{notice}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Resetting..." : "Reset password"}
@@ -302,7 +302,7 @@ export function OnboardContent() {
                       placeholder="you@example.com"
                     />
                   </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Sending..." : "Send reset link"}
                   </Button>
@@ -447,7 +447,7 @@ export function OnboardContent() {
                     </div>
                   )}
 
-                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Please wait..." : isLogin ? "Sign in" : "Create account"}

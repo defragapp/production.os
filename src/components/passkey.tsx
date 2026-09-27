@@ -113,7 +113,7 @@ export function PasskeySignInButton({ className }: { className?: string }) {
       <Button type="button" variant="outline" className={className ?? "w-full"} onClick={onClick} disabled={busy}>
         {busy ? "Waiting for your device…" : "Continue with passkey"}
       </Button>
-      {error && <p className="text-center text-sm text-muted-foreground">{error}</p>}
+      {error && <p role="alert" className="text-center text-sm text-muted-foreground">{error}</p>}
     </div>
   );
 }

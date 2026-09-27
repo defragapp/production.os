@@ -408,7 +408,7 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                   )}
-                  {inviteError && <p className="text-xs text-destructive">{inviteError}</p>}
+                  {inviteError && <p role="alert" className="text-xs text-destructive">{inviteError}</p>}
                   {inviteRequiresPlus && (
                     <p className="text-xs text-muted-foreground">
                       Invitations are part of Sovereign+.{" "}

@@ -164,7 +164,7 @@ function UpgradeContent() {
             </Card>
           </div>
           )}
-          {error && <p className="mt-4 text-center text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="mt-4 text-center text-sm text-destructive">{error}</p>}
           <div className="mt-6 flex justify-center gap-2">
             <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>
             <Button variant="ghost" onClick={() => router.push("/account")}>Account</Button>

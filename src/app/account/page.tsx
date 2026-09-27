@@ -175,7 +175,7 @@ export default function AccountPage() {
                       {portalLoading ? "Opening billing..." : "Manage subscription"}
                     </Button>
                     <p className="text-center text-xs text-muted-foreground/70">Cancel anytime — two clicks, no emails.</p>
-                    {portalError && <p className="text-xs text-destructive">{portalError}</p>}
+                    {portalError && <p role="alert" className="text-xs text-destructive">{portalError}</p>}
                   </>
                 ) : (
                   <>
@@ -250,7 +250,7 @@ export default function AccountPage() {
                       {resent === "sending" ? "Sending..." : resent === "sent" ? "Verification email sent ✓" : "Resend verification email"}
                     </Button>
                     {resent?.startsWith("error:") && (
-                      <p className="text-xs text-destructive">{resent.slice(7)}</p>
+                      <p role="alert" className="text-xs text-destructive">{resent.slice(7)}</p>
                     )}
                   </div>
                 )}

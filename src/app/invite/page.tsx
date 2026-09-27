@@ -144,7 +144,7 @@ function AcceptCard({
             </div>
 
             {error && (
-              <p className="text-sm leading-relaxed text-destructive">{error}</p>
+              <p role="alert" className="text-sm leading-relaxed text-destructive">{error}</p>
             )}
 
             {needsBaseline ? (
