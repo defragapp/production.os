@@ -80,14 +80,14 @@ export function InstallPrompt() {
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:pb-4">
-      <div className="mx-auto flex max-w-md items-center gap-3 rounded-xl border border-border bg-background/95 px-4 py-3 shadow-lg backdrop-blur-md">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Download className="h-4 w-4 text-foreground" aria-hidden="true" />
+    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:pb-4 pointer-events-none">
+      <div className="mx-auto flex max-w-md items-center gap-3 rounded-panel border border-border/70 bg-surface-1/95 p-3.5 shadow-2xl backdrop-blur-xl pointer-events-auto">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-surface-2 text-foreground">
+          <Download className="h-4 w-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-foreground">
-            {showIosHint ? "Add Sovereign to your Home Screen" : "Install the Sovereign app"}
+            {showIosHint ? "Add Sovereign to your Home Screen" : "Install Sovereign OS"}
           </p>
           <p className="truncate text-xs text-muted-foreground">
             {showIosHint ? (
@@ -96,7 +96,7 @@ export function InstallPrompt() {
                 then <span className="font-medium text-foreground">Add to Home Screen</span>.
               </>
             ) : (
-              "Full-screen, one-tap access — it works like a native app."
+              "Fast full-screen access — runs as a standalone app."
             )}
           </p>
         </div>
@@ -104,7 +104,7 @@ export function InstallPrompt() {
           <button
             type="button"
             onClick={doInstall}
-            className="btn-aurora shrink-0 rounded-md px-3 py-1.5 text-sm font-medium"
+            className="btn-aurora shrink-0 rounded-md px-3.5 py-1.5 text-xs font-semibold"
           >
             Install
           </button>
@@ -113,7 +113,7 @@ export function InstallPrompt() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss install hint"
-          className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-white/[0.05]"
         >
           <X className="h-4 w-4" />
         </button>

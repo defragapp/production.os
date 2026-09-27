@@ -88,10 +88,10 @@ export default function AboutPage() {
                 <li key={s.step} className="py-8">
                   <div className="grid gap-3 md:grid-cols-[280px_1fr] md:gap-8">
                     <div>
-                      <p className="mb-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground/60">
+                      <p className="mb-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground/80">
                         {s.step}
                       </p>
-                      <h2 className="font-display text-2xl font-normal leading-snug text-foreground md:text-[1.65rem] md:leading-[1.25]">
+                      <h2 className="text-balance font-display text-2xl font-normal leading-snug text-foreground md:text-[1.65rem] md:leading-[1.25]">
                         {s.title}
                       </h2>
                     </div>

@@ -83,12 +83,14 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
 
       <div className="space-y-2">
         <Label htmlFor="support-topic">Topic</Label>
+        {/* Native select chrome (light chevron box) clashes with the dark
+            field system — .select-custom paints the brand chevron. */}
         <select
           id="support-topic"
           required
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          className="flex h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          className="select-custom flex h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">Select a topic…</option>
           {TOPICS.map((t) => (

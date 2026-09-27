@@ -400,7 +400,7 @@ export function OnboardContent() {
                           type="checkbox"
                           checked={consent}
                           onChange={(e) => setConsent(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-border"
+                          className="consent-checkbox mt-1 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border border-input bg-transparent transition-colors checked:border-foreground checked:bg-foreground"
                         />
                         <Label htmlFor="consent" className="text-sm font-normal leading-relaxed">
                           I agree to the {""}

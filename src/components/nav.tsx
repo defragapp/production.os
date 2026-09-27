@@ -7,11 +7,11 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
 const navLink =
-  "rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors duration-[240ms] hover:text-foreground";
-const navLinkActive = "text-foreground";
+  "rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.04]";
+const navLinkActive = "text-foreground font-medium bg-white/[0.06] shadow-sm";
 
 const PLUS_BADGE =
-  "ml-1 inline-flex items-center rounded-md border border-foreground/25 bg-foreground/[0.06] px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground";
+  "ml-1 inline-flex items-center rounded-md border border-foreground/25 bg-foreground/[0.08] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground";
 
 export function Nav() {
   const router = useRouter();
@@ -50,7 +50,7 @@ export function Nav() {
     pathname === href ? ("page" as const) : undefined;
 
   return (
-    <header className="pt-safe relative sticky top-0 z-50 bg-background/70 backdrop-blur-md">
+    <header className="pt-safe relative sticky top-0 z-50 bg-background/80 backdrop-blur-xl transition-all border-b border-border/40">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
 
@@ -76,12 +76,10 @@ export function Nav() {
               <Link href="/about" className={linkClass("/about")} aria-current={ariaCurrent("/about")}>Philosophy</Link>
               <Link href="/faq" className={linkClass("/faq")} aria-current={ariaCurrent("/faq")}>FAQ</Link>
               <Link href="/support" className={linkClass("/support")} aria-current={ariaCurrent("/support")}>Support</Link>
-              {/* Returning users need a visible door back in — without it the
-                  only way to sign in is knowing /onboard?mode=login exists. */}
               <Link href="/onboard?mode=login" className={linkClass("/onboard")}>Sign in</Link>
               <Link
                 href="/onboard?mode=signup"
-                className="btn-focal ml-1 px-4 py-2 text-sm font-medium"
+                className="btn-focal ml-2 px-4 py-2 text-sm font-medium"
               >
                 Start free
               </Link>
@@ -95,33 +93,29 @@ export function Nav() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
-          className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:text-foreground hover:bg-white/[0.04] md:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
-      {/* Gradient hairline instead of a hard full-width border — reads as a
-          lit edge, matching the landing section rules. */}
-      <div aria-hidden="true" className="section-rule absolute inset-x-0 bottom-0" />
-
-      {/* Mobile menu */}
+      {/* Mobile menu drawer */}
       {mounted && (
         <nav
-          className={`overflow-hidden border-border bg-background/95 backdrop-blur-md transition-all duration-200 ease-out md:hidden ${
+          className={`overflow-hidden bg-surface-1/95 backdrop-blur-2xl transition-all duration-200 ease-out md:hidden border-b border-border/50 ${
             open
-              ? "visible max-h-96 border-t opacity-100"
-              : "invisible max-h-0 pointer-events-none opacity-0"
+              ? "visible max-h-[32rem] opacity-100 py-3 px-4 shadow-2xl"
+              : "invisible max-h-0 pointer-events-none opacity-0 py-0 px-4"
           }`}
           aria-hidden={!open}
         >
           {authed ? (
-            <div className="flex flex-col">
+            <div className="flex flex-col space-y-1">
               <Link
                 href="/chat"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/chat")}
-                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
-                  pathname === "/chat" ? "text-foreground" : "text-muted-foreground"
+                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/chat" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
                 Chat
@@ -130,21 +124,24 @@ export function Nav() {
                 href="/baseline"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/baseline")}
-                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
-                  pathname === "/baseline" ? "text-foreground" : "text-muted-foreground"
+                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/baseline" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
                 Baseline
               </Link>
               {tier === "sovereign+" ? (
-                <span className="px-3 py-3 text-sm font-medium text-foreground">Sovereign+</span>
+                <div className="px-3.5 py-2 flex items-center justify-between text-sm font-medium text-foreground">
+                  <span>Current tier</span>
+                  <span className={PLUS_BADGE}>Sovereign+</span>
+                </div>
               ) : (
                 <Link
                   href="/upgrade"
                   onClick={() => setOpen(false)}
                   aria-current={ariaCurrent("/upgrade")}
-                  className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
-                    pathname === "/upgrade" ? "text-foreground" : "text-muted-foreground"
+                  className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/upgrade" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                   }`}
                 >
                   Upgrade
@@ -154,8 +151,8 @@ export function Nav() {
                 href="/account"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/account")}
-                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
-                  pathname === "/account" ? "text-foreground" : "text-muted-foreground"
+                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/account" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
                 Account
@@ -164,56 +161,60 @@ export function Nav() {
                 href="/settings"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/settings")}
-                className={`rounded-md px-3 py-3 text-sm hover:bg-white/5 ${
-                  pathname === "/settings" ? "text-foreground" : "text-muted-foreground"
+                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/settings" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
                 Settings
               </Link>
-              <button
-                onClick={handleSignOut}
-                className="rounded-md px-3 py-3 text-left text-sm text-muted-foreground hover:bg-white/5"
-              >
-                Sign out
-              </button>
+              <div className="pt-2 mt-2 border-t border-border/50">
+                <button
+                  onClick={handleSignOut}
+                  className="w-full rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col">
+            <div className="flex flex-col space-y-1">
               <Link
                 href="/about"
                 onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 Philosophy
               </Link>
               <Link
                 href="/faq"
                 onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 FAQ
               </Link>
               <Link
                 href="/support"
                 onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 Support
               </Link>
               <Link
                 href="/onboard?mode=login"
                 onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 Sign in
               </Link>
-              <Link
-                href="/onboard?mode=signup"
-                onClick={() => setOpen(false)}
-                className="btn-focal mt-1 px-3 py-3 text-sm font-medium"
-              >
-                Start free
-              </Link>
+              <div className="pt-2">
+                <Link
+                  href="/onboard?mode=signup"
+                  onClick={() => setOpen(false)}
+                  className="btn-focal w-full px-4 py-2.5 text-sm font-medium text-center"
+                >
+                  Start free
+                </Link>
+              </div>
             </div>
           )}
         </nav>

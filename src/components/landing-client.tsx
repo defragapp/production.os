@@ -440,10 +440,10 @@ export function LandingClient() {
                 </Link>
               </div>
 
-              <div className="glass-panel card-lift relative flex flex-col p-7">
-                <p className="mb-1 flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="glass-panel card-lift relative flex flex-col p-7 border-foreground/30 shadow-[0_0_35px_-12px_rgba(244,239,228,0.12)]">
+                <p className="mb-1 flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-[0.16em] text-foreground font-semibold">
                   Sovereign+
-                  <span className="rounded-md border border-foreground/20 bg-foreground/[0.06] px-2 py-0.5 text-[10px] font-medium normal-case tracking-[0.14em] text-foreground">
+                  <span className="rounded-chip border border-foreground/30 bg-foreground/[0.08] px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-foreground uppercase">
                     Save 59%
                   </span>
                 </p>
@@ -458,7 +458,7 @@ export function LandingClient() {
                 </ul>
                 <Link
                   href="/onboard?mode=signup"
-                  className="btn-glass mt-7 px-7 py-3 text-center text-sm font-medium text-foreground"
+                  className="btn-focal mt-7 px-7 py-3 text-center text-sm font-semibold text-foreground"
                 >
                   Start with Sovereign+
                 </Link>

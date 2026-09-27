@@ -48,10 +48,10 @@ export function TabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="standalone-only fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/85 backdrop-blur-md pb-safe sm:hidden"
+      className="standalone-only fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-surface-1/90 backdrop-blur-xl pb-safe sm:hidden"
     >
       <ul
-        className="mx-auto grid max-w-md"
+        className="mx-auto grid max-w-md px-2"
         style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
       >
         {tabs.map(({ href, label, icon: Icon }) => {
@@ -61,12 +61,14 @@ export function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-[240ms] ${
-                  active ? "text-foreground" : "text-muted-foreground"
+                className={`flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-all duration-[200ms] rounded-lg my-1 ${
+                  active
+                    ? "text-foreground bg-white/[0.06]"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
-                <span>{label}</span>
+                <Icon className={`h-4.5 w-4.5 ${active ? "text-foreground" : "text-muted-foreground"}`} aria-hidden="true" />
+                <span className="font-mono text-[10px] tracking-tight">{label}</span>
               </Link>
             </li>
           );
