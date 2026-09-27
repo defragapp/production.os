@@ -95,7 +95,7 @@ function BaselineContent() {
         <Nav />
         <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-          <div className="w-full max-w-md">
+          <div className="msg-in w-full max-w-md">
             <Stepper steps={STEPS} current={1} />
             {fromChat && (
               <p className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
@@ -141,7 +141,7 @@ function BaselineContent() {
       <Nav />
       <main id="main" className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden px-6 py-10">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="mx-auto w-full max-w-2xl">
+        <div className="msg-in mx-auto w-full max-w-2xl">
           <PageHeader
             title="Your Baseline"
             description="The picture computed from NASA/JPL planetary data, and the birth information it came from."
@@ -183,12 +183,12 @@ function BaselineContent() {
                 }
                 rule={false}
               >
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Date of birth</p>
                     <p className="mt-1 text-sm text-foreground">{formatDateOfBirth(row?.dob)}</p>
                   </div>
-                  <div>
+                  <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Time of birth</p>
                     <p className="mt-1 text-sm text-foreground">
                       {row?.tob || "—"}
@@ -197,7 +197,7 @@ function BaselineContent() {
                       )}
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
                     <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Place of birth</p>
                     <p className="mt-1 text-sm text-foreground">{row?.pob || "—"}</p>
                   </div>

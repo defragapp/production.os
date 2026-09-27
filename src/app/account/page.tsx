@@ -141,7 +141,7 @@ export default function AccountPage() {
       <Nav />
       <main id="main" className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="w-full max-w-lg">
+        <div className="msg-in w-full max-w-lg">
           <PageHeader title="Account" description="Your plan, profile, and account preferences." />
           {unverifiedNotice && (
             <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-border bg-muted/30 text-foreground" : "border-border/80 bg-muted/40 text-foreground"}`}>
@@ -153,7 +153,7 @@ export default function AccountPage() {
               title="Subscription"
               description="Where you stand right now"
             >
-              <div className="space-y-3">
+              <div className="glass-panel space-y-3 p-5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Plan</span>
                   <span className={`rounded-chip px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.14em] ${isPlus ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-muted-foreground"}`}>
@@ -194,7 +194,9 @@ export default function AccountPage() {
                         </div>
                         <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
                           <div
-                            className="h-full rounded-full bg-foreground/60"
+                            className={`h-full rounded-full transition-[width] duration-500 ease-out ${
+                              usage.used >= usage.limit ? "bg-destructive/80" : "bg-foreground/60"
+                            }`}
                             style={{ width: `${Math.min((usage.used / usage.limit) * 100, 100)}%` }}
                           />
                         </div>
@@ -211,8 +213,8 @@ export default function AccountPage() {
               title="Profile"
               description="Your account information"
             >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="glass-panel divide-y divide-white/[0.05] px-5 py-1">
+                <div className="flex items-center justify-between gap-4 py-3.5">
                   <span className="text-sm text-muted-foreground">Display name</span>
                   <span className="text-sm font-medium">
                     {user.display_name || (
@@ -220,18 +222,18 @@ export default function AccountPage() {
                     )}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4 py-3.5">
                   <span className="text-sm text-muted-foreground">Email</span>
                   <span className="text-sm font-medium">{user.email}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4 py-3.5">
                   <span className="text-sm text-muted-foreground">Email status</span>
                   <span className={`text-sm font-medium ${emailVerified ? "text-foreground" : "text-muted-foreground"}`}>
                     {emailVerified ? "✓ Verified" : "Unverified"}
                   </span>
                 </div>
                 {!emailVerified && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 py-3.5">
                     <Button
                       variant="outline"
                       className="w-full"
@@ -254,7 +256,7 @@ export default function AccountPage() {
                     )}
                   </div>
                 )}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4 py-3.5">
                   <span className="text-sm text-muted-foreground">Member since</span>
                   <span className="text-sm font-medium">{memberSince}</span>
                 </div>
@@ -314,14 +316,14 @@ export default function AccountPage() {
 
       {showDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-account-title"
           onClick={cancelDelete}
         >
           <div
-            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"
+            className="msg-in w-full max-w-md rounded-panel border border-border bg-card p-6 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="delete-account-title" className="font-display text-xl font-normal tracking-tight text-foreground">

@@ -472,6 +472,11 @@ export function LandingClient() {
         <section className="relative overflow-hidden px-6 py-24 text-center md:py-32">
           <div className="hero-light" aria-hidden="true" />
           <Reveal className="relative mx-auto max-w-2xl">
+            {/* Lit emblem medallion — same focal treatment as the in-app empty
+                states, so the closing beat books the page with the brand. */}
+            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
+              <Logo showWordmark={false} href="#" markClassName="h-8 w-auto" />
+            </div>
             <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">Begin</p>
             <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl md:text-[2.75rem] md:leading-[1.15]">
               Start with one honest question.

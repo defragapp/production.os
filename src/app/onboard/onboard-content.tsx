@@ -333,7 +333,7 @@ export function OnboardContent() {
         <Nav />
         <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-          <div className="auth-card msg-in w-full max-w-md">
+          <div className="card-backlight msg-in w-full max-w-md">
             {/* The stepper only applies to new accounts; returning users
                 signing in aren't mid-funnel, so "1 of 3" is noise. */}
             {!isLogin && <Stepper steps={STEPS} current={0} />}

@@ -171,6 +171,19 @@ export function ChatClient() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Usage should self-heal without a page reload: if the daily window rolls
+  // over or the plan changes while this tab sits backgrounded, revalidating on
+  // re-focus unlocks the composer (or updates the meter) the moment you return.
+  useEffect(() => {
+    const revalidate = () => { void refreshUsage(); };
+    window.addEventListener("focus", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => {
+      window.removeEventListener("focus", revalidate);
+      document.removeEventListener("visibilitychange", revalidate);
+    };
+  }, [refreshUsage]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -614,7 +627,9 @@ export function ChatClient() {
               </span>
               <div className="h-[3px] w-24 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-foreground/50 transition-[width] duration-500 ease-out"
+                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${
+                    usage.used >= usage.limit ? "bg-destructive/80" : "bg-foreground/50"
+                  }`}
                   style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }}
                 />
               </div>

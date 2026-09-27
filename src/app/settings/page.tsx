@@ -212,7 +212,7 @@ export default function SettingsPage() {
       <Nav />
       <main id="main" className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-start justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="w-full max-w-2xl">
+        <div className="msg-in w-full max-w-2xl">
           <PageHeader
             title="Settings"
             description="Your profile, connections, and privacy controls."
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                   ) : (
                     <ul className="space-y-3">
                       {connections.map((c) => (
-                        <li key={c.relationId} className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                        <li key={c.relationId} className="rounded-panel border border-white/[0.07] bg-surface-1 p-4 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)] transition-colors duration-[240ms] hover:border-white/15">
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
                               <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -367,7 +367,7 @@ export default function SettingsPage() {
               >
                 <div className="space-y-4">
                   {tier === "free" && (
-                    <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                    <div className="glass-panel p-4 text-sm text-muted-foreground">
                       Inviting people is part of{" "}
                       <Button variant="link" className="h-auto p-0 text-sm font-medium text-foreground underline underline-offset-2" onClick={() => router.push("/upgrade")}>
                         Sovereign+
@@ -431,7 +431,7 @@ export default function SettingsPage() {
                   ) : (
                     <ul className="space-y-2">
                       {invites.map((inv) => (
-                        <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+                        <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-panel border border-white/[0.07] bg-surface-1 px-4 py-3 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)] transition-colors duration-[240ms] hover:border-white/15">
                           <div className="min-w-0">
                             <p className="text-sm text-foreground">
                               {inv.emailMasked}

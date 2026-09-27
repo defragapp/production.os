@@ -585,13 +585,13 @@ a,[role="button"] {
   }
 }
 
-/* Auth card: the same glass plate as the landing demo mock, lifted by a
-   static warm backlight so signing in feels like stepping onto the product
-   stage rather than filling a form in the dark. */
-.auth-card {
+/* Card backlight: a static warm glow lifted behind a focal card — used by
+   the auth panel and the Sovereign+ plan card so the primary choice reads as
+   the lit one on the page. Same lighting language as the landing demo mock. */
+.card-backlight {
   position: relative;
 }
-.auth-card::before {
+.card-backlight::before {
   content: "";
   position: absolute;
   inset: -18% -12%;

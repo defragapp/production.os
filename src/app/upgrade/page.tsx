@@ -91,7 +91,7 @@ function UpgradeContent() {
       <Nav />
       <main id="main" className="relative z-10 min-h-[calc(100vh-3.5rem)] overflow-hidden px-6 py-10">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="mx-auto w-full max-w-3xl">
+        <div className="msg-in mx-auto w-full max-w-3xl">
           <Stepper steps={STEPS} current={2} completed={hasBaseline ? 2 : 1} />
           {fromBaseline && (
             <p className="mb-4 text-center text-sm font-medium text-foreground">
@@ -107,7 +107,7 @@ function UpgradeContent() {
             }
           />
           {isPlus ? (
-            <Card className="border border-foreground/25">
+            <Card className="card-backlight card-lift border border-foreground/25">
               <CardHeader>
                 <CardTitle className="text-base">Sovereign+ subscription</CardTitle>
                 <CardDescription>Active on your account — billing runs through Stripe</CardDescription>
@@ -127,7 +127,7 @@ function UpgradeContent() {
             </Card>
           ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="flex flex-col">
+            <Card className="card-lift flex flex-col">
               <CardHeader><CardTitle className="text-base">Free</CardTitle><CardDescription>Five good answers a day</CardDescription></CardHeader>
               <CardContent className="flex flex-1 flex-col">
                 <p className="mb-4 font-display text-3xl font-normal">$0</p>
@@ -141,7 +141,7 @@ function UpgradeContent() {
                 </Button>
               </CardContent>
             </Card>
-            <Card className="border border-foreground/25">
+            <Card className="card-backlight card-lift relative border border-foreground/25 shadow-[0_0_35px_-12px_rgba(244,239,228,0.12)]">
               <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>No daily cap — go as deep as you want</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
