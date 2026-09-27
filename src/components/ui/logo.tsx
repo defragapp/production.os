@@ -15,7 +15,7 @@ import Link from "next/link";
 export function Logo({
   href = "/",
   className,
-  markClassName = "h-11 w-auto",
+  markClassName = "h-12 w-auto",
   showWordmark = true,
 }: {
   href?: string;
@@ -35,7 +35,7 @@ export function Logo({
         alt=""
         aria-hidden="true"
         className={`shrink-0 ${markClassName}`}
-        style={{ imageRendering: "auto" }}
+        style={{ imageRendering: "auto", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.45))" }}
       />
       {showWordmark && (
         <span className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-foreground">

@@ -133,20 +133,13 @@ function StartingPoints({
   );
 }
 
-/** The assistant's side of the thread: emblem avatar + one glass bubble. */
+/** The assistant's side of the thread: one clean glass bubble, no avatar. */
 function AssistantTurn({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2.5 sm:gap-3">
-      <span
-        aria-hidden="true"
-        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/emblem-core-bold.png" alt="" className="h-5 w-auto" />
-      </span>
+    <div className="w-full">
       {/* Sovereign's voice is set in the brand display serif — a reading, not
           a chat log. The user answers in sans; only one of you is an oracle. */}
-      <div className="glass-panel max-w-[88%] rounded-panel rounded-tl-sm px-4 py-3 font-display text-[16px] leading-[1.7] text-foreground sm:max-w-[80%]">
+      <div className="glass-panel max-w-[92%] rounded-panel rounded-tl-sm px-4 py-3 font-display text-[16px] leading-[1.7] text-foreground sm:max-w-[80%]">
         {children}
       </div>
     </div>
@@ -749,7 +742,7 @@ export function ChatClient() {
                         {/* Every finished reading is worth keeping — the share card
                             turns a passage into an artifact the person owns. */}
                         {!isStreaming && !streamingEmpty && !stoppedEmpty && msg.content.trim() && (
-                          <div className="pl-11">
+                          <div>
                             <ShareCardButton text={msg.content} />
                           </div>
                         )}

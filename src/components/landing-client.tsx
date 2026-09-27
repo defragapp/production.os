@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { ArrowRight, ArrowUp, Check, CircleDot, Compass, MessageCircle, Plus } from "lucide-react";
+import { ArrowRight, ArrowUp, Check, Plus } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
@@ -148,15 +148,9 @@ function ProductDemo() {
       <div className="relative">
       <div className="demo-backlight" aria-hidden="true" />
       <div className="relative overflow-hidden rounded-panel border border-border bg-surface-2 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.07),0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Logo showWordmark={false} href="#" markClassName="h-7 w-auto" />
-            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Sovereign OS
-            </span>
-          </div>
-          <span className="rounded-md border border-foreground/25 bg-foreground/[0.06] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-foreground">
-            Preview
+        <div className="mb-4 flex items-center">
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            Sovereign OS
           </span>
         </div>
 
@@ -177,16 +171,10 @@ function ProductDemo() {
           </div>
         </div>
 
-        {/* Sovereign's turn: emblem avatar + glass bubble, set in the serif */}
-        <div className="flex items-start gap-2.5">
-          <span
-            aria-hidden="true"
-            className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/emblem-core-bold.png" alt="" className="h-4 w-auto" />
-          </span>
-          <div className="glass-panel max-w-[92%] rounded-panel rounded-tl-sm px-3.5 py-2.5 text-left font-display text-[14px] leading-[1.65] text-foreground sm:px-4 sm:py-3 sm:text-[15px]">
+        {/* Sovereign's turn: a clean glass bubble in the display serif — no
+            avatar, no emblem in the thread. The reading is the point. */}
+        <div>
+          <div className="glass-panel w-full rounded-panel rounded-tl-sm px-3.5 py-2.5 text-left font-display text-[14px] leading-[1.65] text-foreground sm:px-4 sm:py-3 sm:text-[15px]">
             <div className="space-y-2 sm:space-y-2.5">
               {DEMO_ANSWER.map((p) => (
                 <p key={p}>{p}</p>
@@ -218,29 +206,6 @@ function ProductDemo() {
   );
 }
 
-/**
- * The product flow as a visual workflow: three nodes connected by arrows.
- * Horizontal on desktop, vertical on mobile. Copy is deliberately minimal —
- * the diagram carries the explanation, not paragraphs.
- */
-const WORKFLOW = [
-  {
-    title: "Set your Baseline",
-    desc: "Birth data, computed from NASA/JPL planetary positions.",
-    icon: <CircleDot className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />,
-  },
-  {
-    title: "Talk it through",
-    desc: "A relationship, your family, or you — in your own words.",
-    icon: <MessageCircle className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />,
-  },
-  {
-    title: "Get a grounded read",
-    desc: "The pattern, named. The deciding left to you.",
-    icon: <Compass className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />,
-  },
-];
-
 function WorkflowArrow({ vertical }: { vertical?: boolean }) {
   return (
     <div
@@ -254,34 +219,6 @@ function WorkflowArrow({ vertical }: { vertical?: boolean }) {
         strokeWidth={1.5}
         aria-hidden="true"
       />
-    </div>
-  );
-}
-
-function Workflow() {
-  return (
-    <div className="mx-auto flex max-w-5xl flex-col items-stretch md:flex-row md:items-center md:gap-3">
-      {WORKFLOW.map((step, i) => (
-        <div key={step.title} className="contents">
-          <Reveal delay={i * 90}>
-            <div className="glass-panel card-lift flex h-full flex-col items-start gap-4 p-6 md:p-7">
-              <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-foreground/20 bg-gradient-to-b from-foreground/[0.12] to-foreground/[0.02] text-foreground">
-                  {step.icon}
-                </span>
-                <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  0{i + 1}
-                </span>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-foreground md:text-xl">{step.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{step.desc}</p>
-              </div>
-            </div>
-          </Reveal>
-          {i < WORKFLOW.length - 1 && <WorkflowArrow vertical />}
-        </div>
-      ))}
     </div>
   );
 }
@@ -311,14 +248,6 @@ export function LandingClient() {
           <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
             <Reveal>
               <div className="text-left">
-                <Link
-                  href="/about"
-                  className="mb-6 inline-flex items-center gap-2.5 rounded-md border border-foreground/15 bg-foreground/[0.05] px-4 py-1.5 text-xs text-muted-foreground backdrop-blur-sm transition-colors hover:border-foreground/35 hover:text-foreground"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#e0b57c] shadow-[0_0_8px_rgba(224,181,124,0.8)]" aria-hidden="true" />
-                  Now in public beta
-                  <span aria-hidden="true" className="text-foreground/40">→</span>
-                </Link>
                 <h1 className="font-display text-[2rem] font-normal leading-[1.12] tracking-tight text-foreground sm:text-4xl md:text-[3rem] md:leading-[1.06] lg:text-[3.75rem] lg:leading-[1.04] xl:text-[4.125rem]">
                   Understand <span className="italic">yourself</span>, your people, and the systems you live within.
                 </h1>
@@ -349,31 +278,6 @@ export function LandingClient() {
 
             <Reveal delay={120} className="w-full justify-self-center lg:justify-self-end">
               <ProductDemo />
-            </Reveal>
-          </div>
-        </section>
-
-{/* ── How it works ─────────────────────────────────── */}
-        <div className="section-rule" aria-hidden="true" />
-        <section className="relative overflow-hidden px-6 py-20 md:py-28">
-          <div className="mx-auto max-w-5xl">
-            <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">How it works</p>
-              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
-                From your Baseline to a grounded read.
-              </h2>
-            </Reveal>
-            <Workflow />
-            {/* Honest provenance strip — real data sources, no fabricated logos. */}
-            <Reveal delay={160} className="mt-12">
-              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 md:text-[11px]">
-                {["NASA/JPL Horizons ephemeris", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
-                  <span key={source} className="flex items-center gap-5">
-                    {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
-                    {source}
-                  </span>
-                ))}
-              </div>
             </Reveal>
           </div>
         </section>
@@ -419,6 +323,18 @@ export function LandingClient() {
               <p className="mt-5 text-center text-sm text-muted-foreground/70">
                 Every read returns to your Baseline — and leaves the deciding to you.
               </p>
+            </Reveal>
+
+            {/* Honest provenance strip — real data sources, no fabricated logos. */}
+            <Reveal delay={120} className="mt-12">
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 md:text-[11px]">
+                {["NASA/JPL Horizons ephemeris", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
+                  <span key={source} className="flex items-center gap-5">
+                    {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
+                    {source}
+                  </span>
+                ))}
+              </div>
             </Reveal>
           </div>
         </section>

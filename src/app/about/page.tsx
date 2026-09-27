@@ -6,60 +6,23 @@ import { PageTexture } from "@/components/page-texture";
 export const metadata: Metadata = {
   title: "Our Philosophy",
   description:
-    "How Sovereign works and what it is for: a private AI platform for understanding yourself, your people, and the systems you live within — not a diagnosis, not astrology, not psychology.",
+    "Sovereign is a private AI mirror for understanding yourself, your people, and the systems you live within — not a diagnosis, not astrology, not a verdict.",
 };
 
-const STEPS = [
+// The three things a first-time visitor actually needs to trust: what it is,
+// what it isn't, and what stays theirs.
+const PRINCIPLES = [
   {
-    step: "01",
-    title: "Your Baseline is the anchor",
-    body: "It starts with one fact: when and where you were born. From that, Sovereign builds your Baseline — a plain-language picture of how you tend to communicate, feel, and decide. It's a reference point, not a verdict. Don't know your exact birth time? An estimate works too, and we'll mark it as one.",
+    title: "A mirror, not an oracle",
+    body: "It reflects what you bring and separates what happened from what it started to mean. It never tells you who you are.",
   },
   {
-    step: "02",
-    title: "You explore in your own words",
-    body: "Talk about what's actually happening — a fight with your partner, a snag at work, a feeling you can't name. Sovereign works only with what you bring. When it can't tell something apart, it says so instead of making something up.",
+    title: "Grounded, not fortune-telling",
+    body: "Your Baseline is computed from NASA/JPL planetary data — a plain-language reference, not stars ruling your future.",
   },
   {
-    step: "03",
-    title: "A relationship gets both perspectives",
-    body: "When someone you trust joins a relationship, each of you is read through your own Baseline — side by side. You see where you line up, where you clash, and what each of you brings into the room. They only see what you choose to show them. Nothing is shared without a yes.",
-  },
-  {
-    step: "04",
-    title: "The systems you live within",
-    body: "You don't deal with one person at a time. Families and groups run on unspoken roles, loyalties, and rules. Sovereign helps you see the ones you're standing inside — and your place in them — without turning the people around you into problems to diagnose.",
-  },
-];
-
-const BOUNDARIES = [
-  {
-    title: "No labels, no diagnoses",
-    body: "No condition, no category, no verdict. Sovereign is here for reflection and understanding — not clinical assessment, treatment, or advice of any kind.",
-  },
-  {
-    title: "A reference, not a prediction",
-    body: "Your Baseline is built from astronomical data — not astrology. Nothing is 'ruled by the stars,' and no outcome is written.",
-  },
-  {
-    title: "A mirror you control",
-    body: "Sovereign is not a licensed practice, a substitute for professional care, or an assessment tool. It reflects what you bring, for your own thinking.",
-  },
-];
-
-// The evidence-separation promise, said the way a person would say it out loud.
-const HONESTY = [
-  {
-    title: "It never passes a guess off as fact",
-    body: "What you told it, what your Baseline points to, and what it's only wondering about stay in different lanes. An interpretation never shows up dressed as something settled.",
-  },
-  {
-    title: "It says when it can't tell",
-    body: "A lot can't be known from the outside — especially what another person meant. Sovereign names that gap instead of filling it in for you. Not knowing out loud is the point.",
-  },
-  {
-    title: "The deciding stays yours",
-    body: "It won't tell you who you are, what to do, or how to feel about it. It lays out what it can genuinely see and hands the call back where it belongs.",
+    title: "Yours, privately",
+    body: "Your birth data is used only to build your Baseline, never sold or shared. The deciding always stays with you.",
   },
 ];
 
@@ -68,169 +31,49 @@ export default function AboutPage() {
     <>
       <PageTexture />
       <Nav />
-      <main id="main" className="relative overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
-        <section className="relative overflow-hidden">
+      <main
+        id="main"
+        className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden bg-background font-sans text-foreground selection:bg-muted"
+      >
+        <section className="relative w-full px-6 py-14 md:py-20">
           <div className="hero-light" aria-hidden="true" />
-          <div className="mx-auto max-w-3xl px-6 pb-16 pt-16 md:pt-24">
+          <div className="relative mx-auto w-full max-w-3xl">
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Sovereign OS · Our Philosophy
             </p>
             <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3.25rem]">
               A tool for <span className="italic">understanding</span>, not a verdict.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
-              Most self-understanding is sold as a verdict — here is who you are, here is your
-              future. Sovereign works the way a clear-eyed conversation works: a grounded starting
-              point, honest language, both sides of the story, and the deciding left to you.
+            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
+              Most self-understanding is sold as a verdict. Sovereign works like a clear-eyed
+              conversation: a grounded starting point, honest language, and the deciding left to you.
             </p>
-          </div>
-        </section>
 
-        <div className="section-rule" aria-hidden="true" />
-        <section className="px-6 py-16 md:py-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-7 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              The sovereign human
-            </p>
-            <p className="text-balance font-display text-2xl font-normal leading-[1.4] tracking-tight text-foreground md:text-[2rem] md:leading-[1.45]">
-              A sovereign human isn&apos;t someone who needs no one. It&apos;s someone who can stay
+            <p className="mt-8 text-balance border-l border-foreground/25 pl-5 font-display text-xl italic leading-relaxed tracking-tight text-foreground/90 md:text-2xl md:leading-[1.5]">
+              A sovereign human isn&apos;t someone who needs no one — it&apos;s someone who can stay
               connected to themselves while understanding the people and systems around them.
             </p>
-            <p className="mx-auto mt-9 max-w-2xl font-display text-xl italic leading-relaxed text-foreground/90 md:text-2xl">
-              Selfhood without isolation. Connection without self-erasure. Understanding without
-              certainty.
-            </p>
-            <p className="mx-auto mt-9 max-w-xl text-sm leading-7 text-muted-foreground md:text-[15px]">
-              That is the definition Sovereign itself runs on — the same line it works toward in every
-              conversation. We&apos;re not building an oracle that tells you who you are. We&apos;re
-              building the clearest mirror we can, and leaving the deciding to you.
-            </p>
-          </div>
-        </section>
 
-        <div className="section-rule" aria-hidden="true" />
-        <section className="px-6 py-16 md:py-20">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-10">
-              <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                How it works
-              </p>
-              <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base md:leading-7">
-                Four moves, in order: anchor on your Baseline, explore in your own words, widen to
-                the people around you, then widen again to the systems you both stand inside.
-              </p>
-            </div>
-
-            <ol className="divide-y divide-border/70">
-              {STEPS.map((s) => (
-                <li key={s.step} className="py-8">
-                  <div className="grid gap-3 md:grid-cols-[280px_1fr] md:gap-8">
-                    <div>
-                      <p className="mb-2 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground/80">
-                        {s.step}
-                      </p>
-                      <h2 className="text-balance font-display text-2xl font-normal leading-snug text-foreground md:text-[1.65rem] md:leading-[1.25]">
-                        {s.title}
-                      </h2>
-                    </div>
-                    <p className="max-w-prose text-sm leading-7 text-muted-foreground md:text-[15px]">{s.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <div className="section-rule" aria-hidden="true" />
-        <section className="px-6 py-16 md:py-20">
-          <div className="mx-auto max-w-4xl">
-            <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Integrity in the reasoning
-            </p>
-            <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground md:text-4xl">
-              How Sovereign keeps you honest.
-            </h2>
-            <p className="mb-10 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
-              A mirror is only worth looking into if it won&apos;t flatter you. Sovereign holds a hard
-              line between what it genuinely knows and what it&apos;s only wondering about — and
-              it&apos;d rather admit the limit than invent an answer.
-            </p>
-            <div className="grid gap-4 md:grid-cols-3 md:gap-5">
-              {HONESTY.map((h) => (
-                <div key={h.title} className="glass-panel card-lift p-6">
-                  <h3 className="mb-2 text-base font-semibold text-foreground">{h.title}</h3>
-                  <p className="text-sm leading-6 text-muted-foreground">{h.body}</p>
+            <div className="mt-10 grid gap-6 sm:grid-cols-3">
+              {PRINCIPLES.map((p) => (
+                <div key={p.title}>
+                  <h2 className="mb-1.5 text-sm font-semibold text-foreground">{p.title}</h2>
+                  <p className="text-sm leading-6 text-muted-foreground">{p.body}</p>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
 
-        <div className="section-rule" aria-hidden="true" />
-        <section className="bg-muted/30 px-6 py-16 md:py-20">
-          <div className="mx-auto max-w-4xl">
-            <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              What it is &mdash; and what it isn&apos;t
-            </p>
-            <h2 className="mb-10 font-display text-3xl font-normal tracking-tight text-foreground md:text-4xl">
-              Honest about what it is.
-            </h2>
-            <div className="grid gap-4 md:grid-cols-3 md:gap-5">
-              {BOUNDARIES.map((b) => (
-                <div key={b.title} className="glass-panel card-lift p-6">
-                  <h3 className="mb-2 text-base font-semibold text-foreground">{b.title}</h3>
-                  <p className="text-sm leading-6 text-muted-foreground">{b.body}</p>
-                </div>
-              ))}
+            <div className="mt-12 flex flex-wrap items-center gap-5">
+              <Link href="/onboard?mode=signup" className="btn-focal px-7 py-3 text-sm font-semibold">
+                Start free
+              </Link>
+              <Link
+                href="/faq"
+                className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground"
+              >
+                Read the FAQ →
+              </Link>
             </div>
-            <p className="mx-auto mt-12 max-w-xl text-center text-sm leading-6 text-muted-foreground">
-              If you are in crisis or feel you need professional help, please reach out to a
-              qualified professional in your region — Sovereign is not a substitute for that care.
-            </p>
-          </div>
-        </section>
-
-        <div className="section-rule" aria-hidden="true" />
-        <section className="px-6 py-16 md:py-20">
-          <div className="mx-auto max-w-3xl">
-            <div className="border-l border-foreground/25 pl-6 md:pl-8">
-              <h2 className="mb-4 font-display text-2xl font-normal text-foreground md:text-3xl">
-                Private by design.
-              </h2>
-              <p className="max-w-2xl text-[15px] leading-7 text-muted-foreground">
-                Your conversations belong to you. Nothing is shared, sold, or used to train someone
-                else&apos;s view of you. A relationship only ever appears when a person on the other side
-                accepts your invitation, and data stays scoped to each of you. You can close your account
-                and take your data with you — there is always a door.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-                <Link href="/privacy" className="text-foreground underline-offset-4 hover:underline">
-                  How we protect that
-                </Link>
-                <Link href="/support" className="text-foreground underline-offset-4 hover:underline">
-                  Ask us anything
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="section-rule" aria-hidden="true" />
-        <section className="relative overflow-hidden px-6 py-20 text-center md:py-24">
-          <div className="hero-light" aria-hidden="true" />
-          <div className="relative mx-auto max-w-xl">
-            <h2 className="font-display text-2xl font-normal tracking-tight text-foreground md:text-3xl">
-              The fastest way to understand this is to try it.
-            </h2>
-            <p className="mt-3 text-sm text-muted-foreground md:text-base">
-              Free to start — about a minute to set up.
-            </p>
-            <Link
-              href="/onboard?mode=signup"
-              className="btn-aurora mt-7 inline-block px-8 py-3.5 text-base font-medium"
-            >
-              Start free
-            </Link>
           </div>
         </section>
       </main>
