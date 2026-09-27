@@ -309,7 +309,7 @@ export function LandingClient() {
                   Understand <span className="italic">yourself</span>, your people, and the systems you live within.
                 </h1>
                 <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base lg:text-lg lg:leading-8">
-                  Sovereign is an AI that talks through what&apos;s happening in your life —
+                  Sovereign is an AI that helps you think through what&apos;s happening in your life —
                   personal, private, and grounded in a Baseline built from your birth data.
                 </p>
 
@@ -344,7 +344,7 @@ export function LandingClient() {
         <section className="relative overflow-hidden px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
             <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">How it works</p>
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">How it works</p>
               <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 From your Baseline to a grounded read.
               </h2>
@@ -352,7 +352,7 @@ export function LandingClient() {
             <Workflow />
             {/* Honest provenance strip — real data sources, no fabricated logos. */}
             <Reveal delay={160} className="mt-12">
-              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60 md:text-[11px]">
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 md:text-[11px]">
                 {["NASA/JPL Horizons ephemeris", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
                   <span key={source} className="flex items-center gap-5">
                     {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
@@ -369,7 +369,7 @@ export function LandingClient() {
         <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
             <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">What people ask</p>
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">What people ask</p>
               <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 Ask about any part of your life.
               </h2>
@@ -413,7 +413,7 @@ export function LandingClient() {
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden px-6 py-20 md:py-28">
           <Reveal className="mx-auto max-w-4xl">
-            <p className="mb-3 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">Plans</p>
+            <p className="mb-3 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">Plans</p>
             <h2 className="mb-3 text-center font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
               Free to start. Keep going when it gets deep.
             </h2>
@@ -448,8 +448,8 @@ export function LandingClient() {
                   </span>
                 </p>
                 <p className="mb-5 flex items-baseline gap-2 font-display text-3xl font-normal">
-                  $20
-                  <span className="font-sans text-sm text-muted-foreground">/mo · or $99/yr</span>
+                  $99
+                  <span className="font-sans text-sm text-muted-foreground">/yr · or $20/mo</span>
                 </p>
                 <ul className="flex-1 space-y-2.5 text-sm text-muted-foreground">
                   <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
@@ -457,10 +457,10 @@ export function LandingClient() {
                   <PlanFeature>Your full Baseline, same private engine</PlanFeature>
                 </ul>
                 <Link
-                  href="/upgrade"
+                  href="/onboard?mode=signup"
                   className="btn-glass mt-7 px-7 py-3 text-center text-sm font-medium text-foreground"
                 >
-                  Explore Sovereign+
+                  Start with Sovereign+
                 </Link>
               </div>
             </div>
@@ -472,7 +472,7 @@ export function LandingClient() {
         <section className="relative overflow-hidden px-6 py-24 text-center md:py-32">
           <div className="hero-light" aria-hidden="true" />
           <Reveal className="relative mx-auto max-w-2xl">
-            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">Begin</p>
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">Begin</p>
             <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl md:text-[2.75rem] md:leading-[1.15]">
               Start with one honest question.
             </h2>

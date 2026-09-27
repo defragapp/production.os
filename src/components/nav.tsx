@@ -76,6 +76,9 @@ export function Nav() {
               <Link href="/about" className={linkClass("/about")} aria-current={ariaCurrent("/about")}>Philosophy</Link>
               <Link href="/faq" className={linkClass("/faq")} aria-current={ariaCurrent("/faq")}>FAQ</Link>
               <Link href="/support" className={linkClass("/support")} aria-current={ariaCurrent("/support")}>Support</Link>
+              {/* Returning users need a visible door back in — without it the
+                  only way to sign in is knowing /onboard?mode=login exists. */}
+              <Link href="/onboard?mode=login" className={linkClass("/onboard")}>Sign in</Link>
               <Link
                 href="/onboard?mode=signup"
                 className="btn-focal ml-1 px-4 py-2 text-sm font-medium"
@@ -196,6 +199,13 @@ export function Nav() {
                 className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
               >
                 Support
+              </Link>
+              <Link
+                href="/onboard?mode=login"
+                onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-3 text-sm text-muted-foreground hover:bg-white/5"
+              >
+                Sign in
               </Link>
               <Link
                 href="/onboard?mode=signup"

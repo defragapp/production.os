@@ -1,12 +1,12 @@
 # Sovereign OS
 
-> A private AI platform for understanding yourself, your people, and the systems you live within. Sovereign computes a personal **Baseline** from the user's date, time, and place of birth using NASA/JPL planetary coordinates, then uses a reflection-first AI (not diagnosis, not astrology, not psychology) to help the user examine patterns in their own words — including relationship and family patterns, with consent-gated context from people who accept an invitation.
+> A private AI platform for understanding yourself, your people, and the systems you live within. Sovereign computes a personal **Baseline** from the user's date, time, and place of birth using NASA/JPL planetary coordinates, then uses a reflection-first AI (not diagnosis, not astrology, not psychology) to help the user examine patterns in their own words — including relationship and family patterns, with context from people who accept an invitation.
 
 ## What it is
 
-- **Your Baseline is the anchor.** One input — birth date, time, place — produces a computational picture of tendencies: how you tend to communicate, feel, and decide. It is a frame of reference, never a verdict, never destiny.
+- **Your Baseline is the anchor.** One input — birth date, time, place — produces a plain-language picture of tendencies: how you tend to communicate, feel, and decide. It is a frame of reference, never a verdict, never destiny.
 - **You explore in your own words.** The AI grounds every answer in the user's Baseline and in what the user actually said. It separates *observed* facts, *Baseline-supported* interpretation, *interpretive* readings (which require the user's confirmation), and *unknowns* it declares plainly.
-- **Relationships are consent-gated.** A person only enters a user's context if they accept an invitation and the relationship stays scoped to each person's own data. No one can see another person's raw Baseline.
+- **Relationships need a yes.** A person only enters a user's context if they accept an invitation, and the relationship stays scoped to each person's own data. No one can see another person's raw Baseline.
 - **Four levels of inquiry.** The AI works at four levels: Reflection (you), Meaning (what you mean by a loaded word like love, success, or safety), Relationship (what happens between two people), and System (roles, loyalties, and rules inside a family or group).
 
 ## The evidence discipline
@@ -23,7 +23,7 @@ It does not diagnose, does not pathologize, does not moralize, does not issue re
 
 - Create a free account and compute your Baseline (date, time, and place of birth).
 - Have grounded, structured conversations about yourself, a relationship, or your family.
-- Invite people you trust into consent-gated relationships and see where two Baselines align and clash.
+- Invite people you trust into relationships that both sides agreed to, and see where two Baselines align and clash.
 - Upgrade to Sovereign+ (subscription) for the full people/relationships feature set.
 
 ## What Sovereign is not
@@ -48,4 +48,4 @@ It does not diagnose, does not pathologize, does not moralize, does not issue re
 
 ## Privacy
 
-User birth data and conversations are private. Sovereign never sells data, never trains third-party models on user conversations, and every AI answer is generated per-user with no cross-user leakage. Relationships appear only through explicit, consent-gated invitations.
+User birth data and conversations are private. Sovereign never sells data, never trains third-party models on user conversations, and every AI answer is generated per-user — one person's conversations never feed another's answers. Relationships appear only through invitations the other person accepted.

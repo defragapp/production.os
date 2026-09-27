@@ -69,7 +69,7 @@ const faqJsonLd = {
       name: "What's the difference between Free and Sovereign+?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Free includes your full baseline and 5 AI messages per day. Sovereign+ removes the daily cap and lets you invite people into your relationships — monthly at $20, or annually at $99 (save 59%).",
+        text: "Free includes your full baseline and 5 AI messages per day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $99/year, or $20/month. You can cancel anytime.",
       },
     },
     {
