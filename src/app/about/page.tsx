@@ -47,6 +47,22 @@ const BOUNDARIES = [
   },
 ];
 
+// The evidence-separation promise, said the way a person would say it out loud.
+const HONESTY = [
+  {
+    title: "It never passes a guess off as fact",
+    body: "What you told it, what your Baseline points to, and what it's only wondering about stay in different lanes. An interpretation never shows up dressed as something settled.",
+  },
+  {
+    title: "It says when it can't tell",
+    body: "A lot can't be known from the outside — especially what another person meant. Sovereign names that gap instead of filling it in for you. Not knowing out loud is the point.",
+  },
+  {
+    title: "The deciding stays yours",
+    body: "It won't tell you who you are, what to do, or how to feel about it. It lays out what it can genuinely see and hands the call back where it belongs.",
+  },
+];
+
 export default function AboutPage() {
   return (
     <>
@@ -66,6 +82,28 @@ export default function AboutPage() {
               Most self-understanding is sold as a verdict — here is who you are, here is your
               future. Sovereign works the way a clear-eyed conversation works: a grounded starting
               point, honest language, both sides of the story, and the deciding left to you.
+            </p>
+          </div>
+        </section>
+
+        <div className="section-rule" aria-hidden="true" />
+        <section className="px-6 py-16 md:py-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="mb-7 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              The sovereign human
+            </p>
+            <p className="text-balance font-display text-2xl font-normal leading-[1.4] tracking-tight text-foreground md:text-[2rem] md:leading-[1.45]">
+              A sovereign human isn&apos;t someone who needs no one. It&apos;s someone who can stay
+              connected to themselves while understanding the people and systems around them.
+            </p>
+            <p className="mx-auto mt-9 max-w-2xl font-display text-xl italic leading-relaxed text-foreground/90 md:text-2xl">
+              Selfhood without isolation. Connection without self-erasure. Understanding without
+              certainty.
+            </p>
+            <p className="mx-auto mt-9 max-w-xl text-sm leading-7 text-muted-foreground md:text-[15px]">
+              That is the definition Sovereign itself runs on — the same line it works toward in every
+              conversation. We&apos;re not building an oracle that tells you who you are. We&apos;re
+              building the clearest mirror we can, and leaving the deciding to you.
             </p>
           </div>
         </section>
@@ -100,6 +138,31 @@ export default function AboutPage() {
                 </li>
               ))}
             </ol>
+          </div>
+        </section>
+
+        <div className="section-rule" aria-hidden="true" />
+        <section className="px-6 py-16 md:py-20">
+          <div className="mx-auto max-w-4xl">
+            <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Integrity in the reasoning
+            </p>
+            <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground md:text-4xl">
+              How Sovereign keeps you honest.
+            </h2>
+            <p className="mb-10 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
+              A mirror is only worth looking into if it won&apos;t flatter you. Sovereign holds a hard
+              line between what it genuinely knows and what it&apos;s only wondering about — and
+              it&apos;d rather admit the limit than invent an answer.
+            </p>
+            <div className="grid gap-4 md:grid-cols-3 md:gap-5">
+              {HONESTY.map((h) => (
+                <div key={h.title} className="glass-panel card-lift p-6">
+                  <h3 className="mb-2 text-base font-semibold text-foreground">{h.title}</h3>
+                  <p className="text-sm leading-6 text-muted-foreground">{h.body}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

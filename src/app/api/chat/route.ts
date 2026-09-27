@@ -70,7 +70,7 @@ async function handleChat(request: NextRequest) {
 
   // Gate: must have completed baseline (onboarding) — required for API access too.
   const userBaseline = await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(payload.sub).first<{ user_id: string }>();
-  if (!userBaseline) return new Response(JSON.stringify({ error: "Please complete your baseline before using AI chat.", code: "baseline_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+  if (!userBaseline) return new Response(JSON.stringify({ error: "Please complete your Baseline before using AI chat.", code: "baseline_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   // Gate: must have chosen a subscription tier (free or sovereign+).
   if (!user.subscription_tier) return new Response(JSON.stringify({ error: "Choose a plan to keep chatting — the free tier is always available.", code: "subscription_required" }), { status: 403, headers: { "Content-Type": "application/json" } });

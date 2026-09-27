@@ -62,7 +62,7 @@ export default function OpengraphImage() {
             color: "#fafafa",
           }}
         >
-          Set your baseline → Talk to your AI
+          Set your Baseline → Talk to your AI
         </div>
       </div>
     ),

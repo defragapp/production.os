@@ -212,8 +212,8 @@ export function BaselineForm({
                 <>
                   We&apos;ll compute with{" "}
                   <span className="text-foreground">{BUCKET_TIMES[bucket]}</span> on your birth
-                  day, and mark your baseline as approximate so it stays honest. You can set your
-                  exact time later from your baseline.
+                  day, and mark your Baseline as approximate so it stays honest. You can set your
+                  exact time later from your Baseline.
                 </>
               ) : (
                 <>
@@ -252,7 +252,7 @@ export function BaselineForm({
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Computing baseline..." : submitLabel}
+        {loading ? "Computing Baseline..." : submitLabel}
       </Button>
     </form>
   );

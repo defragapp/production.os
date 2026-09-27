@@ -430,8 +430,8 @@ export default function SettingsPage() {
                           <label className="mt-2 flex cursor-pointer items-center justify-between gap-3">
                             <span className="text-xs text-muted-foreground">
                               {c.shareBaseline
-                                ? `${c.personName} can read your baseline in your conversations about you both`
-                                : `${c.personName} isn't reading your baseline right now`}
+                                ? `${c.personName} can read your Baseline in your conversations about you both`
+                                : `${c.personName} isn't reading your Baseline right now`}
                             </span>
                             <input
                               type="checkbox"

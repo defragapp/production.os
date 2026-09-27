@@ -35,7 +35,7 @@ const jsonLd = {
   operatingSystem: "Web",
   url: "https://sovereign.defrag.app",
   description:
-    "Your personal intelligence layer. Sovereign OS computes a personal baseline from NASA/JPL planetary data and uses AI to surface the patterns shaping how you think, feel, and relate.",
+    "Your personal intelligence layer. Sovereign OS computes a personal Baseline from NASA/JPL planetary data and uses AI to surface the patterns shaping how you think, feel, and relate.",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
     { "@type": "Offer", name: "Sovereign+ Monthly", price: "20", priceCurrency: "USD" },
@@ -61,7 +61,7 @@ const faqJsonLd = {
       name: "What do you do with my birth data?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Your date, time, and place of birth are used for one thing only: computing your baseline from NASA/JPL planetary data. It is never sold or shared, and you can delete your entire account — data included — in one click from your Account page.",
+        text: "Your date, time, and place of birth are used for one thing only: computing your Baseline from NASA/JPL planetary data. It is never sold or shared, and you can delete your entire account — data included — in one click from your Account page.",
       },
     },
     {
@@ -69,7 +69,7 @@ const faqJsonLd = {
       name: "What's the difference between Free and Sovereign+?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Free includes your full baseline and 5 AI messages per day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $99/year, or $20/month. You can cancel anytime.",
+        text: "Free includes your full Baseline and 5 AI messages per day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $99/year, or $20/month. You can cancel anytime.",
       },
     },
     {

@@ -74,7 +74,7 @@ function AcceptCard({
       const data = await res.json() as { error?: string; code?: string };
       if (res.status === 428 && data.code === "baseline_required") {
         setNeedsBaseline(true);
-        setError("Finish setting up your baseline first. You're almost there.");
+        setError("Finish setting up your Baseline first. You're almost there.");
         return;
       }
       if (res.status === 403 && data.code === "email_mismatch") {
@@ -142,7 +142,7 @@ function AcceptCard({
             <div className="glass-panel px-4 py-3 text-sm leading-relaxed text-muted-foreground">
               You&apos;re signed in. When you accept,{" "}
               <span className="font-medium text-foreground">{inviterName}</span> becomes a connection
-              and you can choose how much of your baseline to share with them.
+              and you can choose how much of your Baseline to share with them.
             </div>
 
             {error && (

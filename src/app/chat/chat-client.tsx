@@ -576,7 +576,7 @@ export function ChatClient() {
               </p>
             ) : (
               <p className="text-sm font-medium text-foreground">
-                Welcome to Sovereign+ — your plan is active and your baseline is now fully unlocked.
+                Welcome to Sovereign+ — your plan is active and your Baseline is now fully unlocked.
               </p>
             )}
             <Button

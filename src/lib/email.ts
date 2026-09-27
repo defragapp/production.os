@@ -86,7 +86,7 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string };
       return emailShell(
         "Welcome to Sovereign OS",
-        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">Your account is ready. Complete your baseline to begin.</p>` +
+        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">Your account is ready. Complete your Baseline to begin.</p>` +
         `<div style="text-align:center">${emailButton(`${v.origin}/onboard`, "Set Your Baseline")}</div>`
       );
     },
@@ -98,7 +98,7 @@ const EMAIL_TEMPLATES = {
       const v = vars as { origin: string; token: string };
       return emailShell(
         "Verify your email",
-        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">Welcome to Sovereign OS. Confirm your email address to unlock your baseline and personal AI chat.</p>` +
+        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">Welcome to Sovereign OS. Confirm your email address to unlock your Baseline and personal AI chat.</p>` +
         `<div style="text-align:center">${emailButton(`${v.origin}/api/auth/verify?token=${v.token}`, "Verify Email")}</div>` +
         `<p style="color:#8a857b;font-size:13px;margin:16px 0 0;text-align:center">This link expires in 48 hours. If you didn't create an account, you can safely ignore this email.</p>`
       );
@@ -202,7 +202,7 @@ const EMAIL_TEMPLATES = {
         "Connection invitation",
         (name ? `<p style="color:#f4efe4;line-height:1.6;margin:0 0 12px;text-align:center">Hi ${name},</p>` : "") +
         `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 12px;text-align:center"><strong>${inviter}</strong> invited you to connect on Sovereign OS as their <strong>${role}</strong>.</p>` +
-        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">Accepting lets you both explore what happens between you — your charts are never shared, only consented interpretations.</p>` +
+        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">Accepting lets you both explore what happens between you. Your birth data is never shared — you each keep your own Baseline, and only what you choose to reveal crosses over.</p>` +
         `<div style="text-align:center">${emailButton(`${v.origin}/invite?token=${v.token}`, "Accept Invitation")}</div>` +
         `<p style="color:#8a857b;font-size:13px;margin:16px 0 0;text-align:center">This link expires in 7 days and only works for this email address.</p>`
       );

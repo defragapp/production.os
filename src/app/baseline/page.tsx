@@ -227,7 +227,7 @@ function BaselineContent() {
 
 export default function BaselinePage() {
   return (
-    <Suspense fallback={<LoadingScreen label="Loading your baseline" />}>
+    <Suspense fallback={<LoadingScreen label="Loading your Baseline" />}>
       <BaselineContent />
     </Suspense>
   );

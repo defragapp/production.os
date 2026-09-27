@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     template: "%s · Sovereign OS",
   },
   description:
-    "Sovereign is a private AI platform for understanding yourself, your people, and the systems you live within — starting with your baseline.",
+    "Sovereign is a private AI platform for understanding yourself, your people, and the systems you live within — starting with your Baseline.",
   applicationName: "Sovereign OS",
   manifest: "/manifest.webmanifest",
   authors: [{ name: "Sovereign OS" }],

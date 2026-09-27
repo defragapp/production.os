@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   const has = await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(payload.sub).first<{ user_id: string }>();
   if (!has) {
     return NextResponse.json(
-      { error: "Complete your baseline before accepting. It powers your side of the connection.", code: "baseline_required", token },
+      { error: "Complete your Baseline before accepting. It powers your side of the connection.", code: "baseline_required", token },
       { status: 428 },
     );
   }
