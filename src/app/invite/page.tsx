@@ -137,7 +137,7 @@ function AcceptCard({
           </>
         ) : (
           <>
-            <div className="rounded-md border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <div className="glass-panel px-4 py-3 text-sm leading-relaxed text-muted-foreground">
               You&apos;re signed in. When you accept,{" "}
               <span className="font-medium text-foreground">{inviterName}</span> becomes a connection
               and you can choose how much of your baseline to share with them.
@@ -218,7 +218,8 @@ export default function InvitePage() {
       <Nav />
       <main id="main" className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="w-full max-w-md">
+        {/* The invitation moment is a first touch: it arrives, it doesn't pop. */}
+        <div className="msg-in w-full max-w-md">
           {token === undefined ? (
             <PageHeader title="Invitation" description="Checking your invitation…" />
           ) : token === null ? (

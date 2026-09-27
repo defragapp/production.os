@@ -43,13 +43,21 @@ function formatThreadDate(iso: string): string {
   }
 }
 
+/** The server clips titles at a raw character count; soften that to a word
+ *  edge. `<` (not `<=`) because a title sitting exactly on the server's clip
+ *  length is a mid-word cut, not a message that happened to end there. */
+function clipWords(s: string, max: number): string {
+  if (s.length < max) return s;
+  const cut = s.slice(0, max);
+  return cut.slice(0, Math.max(cut.lastIndexOf(" "), 20)).trimEnd();
+}
+
 /** Chips stay one calm line: clip the server title at a word, not mid-word. */
 function chipLabel(t: ThreadSummary): string {
   const base = t.label?.trim();
   if (!base) return formatThreadDate(t.updated_at);
   if (base.length <= 36) return base;
-  const clipped = base.slice(0, 36);
-  return `${clipped.slice(0, Math.max(clipped.lastIndexOf(" "), 20)).trimEnd()}…`;
+  return `${clipWords(base, 36)}…`;
 }
 
 const SUGGESTIONS = [
@@ -69,10 +77,79 @@ function AssistantTurn({ children }: { children: React.ReactNode }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/emblem-core-bold.png" alt="" className="h-5 w-auto" />
       </span>
-      <div className="glass-panel max-w-[88%] rounded-panel rounded-tl-sm px-4 py-3 text-[15px] text-foreground sm:max-w-[80%]">
+      {/* Sovereign's voice is set in the brand display serif — a reading, not
+          a chat log. The user answers in sans; only one of you is an oracle. */}
+      <div className="glass-panel max-w-[88%] rounded-panel rounded-tl-sm px-4 py-3 font-display text-[16px] leading-[1.7] text-foreground sm:max-w-[80%]">
         {children}
       </div>
     </div>
+  );
+}
+
+/**
+ * Desktop thread library: a quiet, persistent rail so members can see and
+ * reach their whole history without it competing with the conversation.
+ * Below lg the same choices live in the chip strip above the thread.
+ */
+function ThreadLibrary({
+  threads,
+  activeId,
+  isStreaming,
+  onOpen,
+  onNew,
+}: {
+  threads: ThreadSummary[];
+  activeId: string | null;
+  isStreaming: boolean;
+  onOpen: (id: string) => void;
+  onNew: () => void;
+}) {
+  return (
+    <aside className="sticky top-[3.5rem] hidden h-[calc(100vh-3.5rem)] w-[264px] shrink-0 flex-col border-r border-border/70 bg-background/60 backdrop-blur-sm lg:flex">
+      <div className="px-3 pt-4">
+        <Button variant="outline" size="sm" onClick={onNew} disabled={isStreaming} className="w-full">
+          <Plus className="h-4 w-4" />
+          New thread
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-3 pb-6 pt-4">
+        <p className="px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+          Threads
+        </p>
+        {threads.length === 0 ? (
+          <p className="px-2 text-xs leading-relaxed text-muted-foreground/60">
+            Conversations you start will appear here.
+          </p>
+        ) : (
+          <nav aria-label="Thread library" className="space-y-1">
+            {threads.map((t) => {
+              const active = t.id === activeId;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onOpen(t.id)}
+                  disabled={isStreaming}
+                  aria-current={active ? "true" : undefined}
+                  className={`block w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-[240ms] ${
+                    active
+                      ? "border-white/10 bg-white/[0.05] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
+                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-white/[0.02] hover:text-foreground"
+                  }`}
+                >
+                  <p className="line-clamp-2 text-[13px] leading-snug">
+                    {t.label?.trim() || formatThreadDate(t.updated_at)}
+                  </p>
+                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/50">
+                    {formatThreadDate(t.updated_at)}
+                  </p>
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+    </aside>
   );
 }
 
@@ -114,9 +191,10 @@ export function ChatClient() {
       const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at, title: t.title }));
       setThreads((prev) => items.map((item) => ({
         ...item,
-        // Server-derived title wins; the optimistic client label only bridges
-        // the window before the first list refresh lands.
-        label: item.title?.trim() || prev.find((p) => p.id === item.id)?.label,
+        // Server-derived title wins (re-clipped at a word boundary); the
+        // optimistic client label only bridges the window before the first
+        // list refresh lands.
+        label: clipWords(item.title?.trim() || "", 48) || prev.find((p) => p.id === item.id)?.label,
       })));
       return items;
     } catch {
@@ -461,195 +539,206 @@ export function ChatClient() {
         </div>
       )}
 
-      <div className="border-b border-border bg-background px-4 py-3">
-        <div className="mx-auto flex max-w-3xl items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={startNewThread}
-            disabled={isStreaming}
-            className="shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            New thread
-          </Button>
-          {threads.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto">
-              {threads.map((t) => {
-                const active = t.id === threadId;
+      <div className="flex min-h-0 flex-1">
+        <ThreadLibrary
+          threads={threads}
+          activeId={threadId}
+          isStreaming={isStreaming}
+          onOpen={openThread}
+          onNew={startNewThread}
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="border-b border-border bg-background px-4 py-3">
+            <div className="mx-auto flex max-w-3xl items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={startNewThread}
+                disabled={isStreaming}
+                className="shrink-0 lg:hidden"
+              >
+                <Plus className="h-4 w-4" />
+                New thread
+              </Button>
+              {threads.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto lg:hidden">
+                  {threads.map((t) => {
+                    const active = t.id === threadId;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => openThread(t.id)}
+                        disabled={isStreaming}
+                        title={t.label || undefined}
+                        className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
+                          active
+                            ? "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
+                            : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                        }`}
+                      >
+                        {chipLabel(t)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPeopleOpen((v) => !v)}
+                disabled={isStreaming}
+                aria-expanded={peopleOpen}
+                className="ml-auto shrink-0"
+              >
+                <Users className="h-4 w-4" />
+                People
+              </Button>
+            </div>
+          </div>
+
+          {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
+
+          {/* role="log": screen readers announce each newly appended message as a
+              conversation, without re-reading the whole history. */}
+          <div className="flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
+            <div className="mx-auto max-w-3xl space-y-4">
+              {messages.length === 0 && (
+                <div className="flex h-full items-center justify-center pt-20">
+                  <div className="msg-in text-center">
+                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
+                      <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
+                    </div>
+                    <p className="font-display text-2xl font-normal tracking-tight text-foreground">
+                      Ask anything.
+                    </p>
+                    <p className="mt-2 text-muted-foreground">
+                      About yourself, a relationship, or your family.
+                    </p>
+                    <div className="mt-6 flex flex-col items-center gap-2">
+                      {SUGGESTIONS.map((s, i) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => sendMessage(s)}
+                          disabled={isStreaming}
+                          style={{ animationDelay: `${120 + i * 90}ms` }}
+                          className="msg-in rounded-full border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {messages.map((msg, idx) => {
+                const isLast = idx === messages.length - 1;
+                const streamingEmpty =
+                  msg.role === "assistant" && isLast && isStreaming && !msg.content;
+                // Stopped before the first token arrived — without this the bubble
+                // would render as empty space with no explanation.
+                const stoppedEmpty =
+                  msg.role === "assistant" && isLast && !isStreaming && !msg.content;
                 return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => openThread(t.id)}
-                    disabled={isStreaming}
-                    title={t.label || undefined}
-                    className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
-                      active
-                        ? "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
-                        : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                    }`}
+                  <div
+                    key={idx}
+                    className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    {chipLabel(t)}
-                  </button>
+                    {msg.role === "assistant" ? (
+                      <AssistantTurn>
+                        {streamingEmpty ? (
+                          <>
+                            <span aria-hidden="true" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                            </span>
+                            <span className="sr-only">Sovereign is thinking…</span>
+                          </>
+                        ) : stoppedEmpty ? (
+                          <p className="text-sm text-muted-foreground">Response stopped.</p>
+                        ) : (
+                          <RichText text={msg.content} />
+                        )}
+                      </AssistantTurn>
+                    ) : (
+                      <div className="max-w-[88%] rounded-panel rounded-br-sm bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_30px_-18px_rgba(0,0,0,0.8)] sm:max-w-[80%]">
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPeopleOpen((v) => !v)}
-            disabled={isStreaming}
-            aria-expanded={peopleOpen}
-            className="ml-auto shrink-0"
-          >
-            <Users className="h-4 w-4" />
-            People
-          </Button>
-        </div>
-      </div>
+          </div>
 
-      {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
-
-      {/* role="log": screen readers announce each newly appended message as a
-          conversation, without re-reading the whole history. */}
-      <div className="flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
-        <div className="mx-auto max-w-3xl space-y-4">
-          {messages.length === 0 && (
-            <div className="flex h-full items-center justify-center pt-20">
-              <div className="msg-in text-center">
-                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
-                  <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
-                </div>
-                <p className="font-display text-2xl font-normal tracking-tight text-foreground">
-                  Ask anything.
-                </p>
-                <p className="mt-2 text-muted-foreground">
-                  About yourself, a relationship, or your family.
-                </p>
-                <div className="mt-6 flex flex-col items-center gap-2">
-                  {SUGGESTIONS.map((s, i) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => sendMessage(s)}
-                      disabled={isStreaming}
-                      style={{ animationDelay: `${120 + i * 90}ms` }}
-                      className="msg-in rounded-full border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-          {messages.map((msg, idx) => {
-            const isLast = idx === messages.length - 1;
-            const streamingEmpty =
-              msg.role === "assistant" && isLast && isStreaming && !msg.content;
-            // Stopped before the first token arrived — without this the bubble
-            // would render as empty space with no explanation.
-            const stoppedEmpty =
-              msg.role === "assistant" && isLast && !isStreaming && !msg.content;
-            return (
-              <div
-                key={idx}
-                className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {msg.role === "assistant" ? (
-                  <AssistantTurn>
-                    {streamingEmpty ? (
-                      <>
-                        <span aria-hidden="true" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                        </span>
-                        <span className="sr-only">Sovereign is thinking…</span>
-                      </>
-                    ) : stoppedEmpty ? (
-                      <p className="text-sm text-muted-foreground">Response stopped.</p>
-                    ) : (
-                      <RichText text={msg.content} />
-                    )}
-                  </AssistantTurn>
-                ) : (
-                  <div className="max-w-[88%] rounded-panel rounded-br-sm bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_30px_-18px_rgba(0,0,0,0.8)] sm:max-w-[80%]">
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+          <div className="border-t px-4 pb-safe">
+            <div className="mx-auto max-w-3xl py-4">
+              {/* Overlay mode: the panel folds up as a floating popover so opening
+                  it never pushes the composer off-screen. */}
+              <BaselineDrawer data={baselineData} overlay />
+              <div className="mt-2">
+                {/* The cap, when you reach it, is one quiet card — not a meter you
+                    watch drain. No counter, no countdown while messages remain:
+                    premium restraint, in the exact spot the composer would falter. */}
+                {(showUpgrade || (usage.limit !== null && usage.used >= usage.limit)) && !usageBannerDismissed && (
+                  <div className="glass-panel msg-in mb-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-5 py-4">
+                    <div className="flex items-center gap-3.5">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/brand/emblem-core-bold.png" alt="" className="h-5 w-auto" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Today&apos;s reading is complete.</p>
+                        <p className="text-xs text-muted-foreground">Sovereign+ removes the daily cap — go as deep as you need.</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button size="sm" onClick={() => router.push("/upgrade")}>
+                        Upgrade
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setUsageBannerDismissed(true)}>
+                        Not now
+                      </Button>
+                    </div>
                   </div>
                 )}
-              </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      <div className="border-t px-4 pb-safe">
-        <div className="mx-auto max-w-3xl py-4">
-          {/* Overlay mode: the panel folds up as a floating popover so opening
-              it never pushes the composer off-screen. */}
-          <BaselineDrawer data={baselineData} overlay />
-          <div className="mt-2">
-          {/* The cap, when you reach it, is one quiet card — not a meter you
-              watch drain. No counter, no countdown while messages remain:
-              premium restraint, in the exact spot the composer would falter. */}
-          {(showUpgrade || (usage.limit !== null && usage.used >= usage.limit)) && !usageBannerDismissed && (
-            <div className="glass-panel msg-in mb-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-5 py-4">
-              <div className="flex items-center gap-3.5">
-                <span
-                  aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/brand/emblem-core-bold.png" alt="" className="h-5 w-auto" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Today&apos;s reading is complete.</p>
-                  <p className="text-xs text-muted-foreground">Sovereign+ removes the daily cap — go as deep as you need.</p>
+                <div className="composer-pill flex items-center gap-2 pl-5 pr-1.5 py-1.5">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    // The input never goes dead — at the cap, sending simply returns
+                    // the quiet gate card above, which is far more graceful than a
+                    // disabled field.
+                    placeholder="Ask Sovereign…"
+                    disabled={isStreaming}
+                    className="h-11 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  />
+                  {isStreaming ? (
+                    <Button onClick={stopStreaming} variant="outline" size="icon" className="h-11 w-11 shrink-0 rounded-full">
+                      <Square className="h-3.5 w-3.5" />
+                      <span className="sr-only">Stop</span>
+                    </Button>
+                  ) : (
+                    <Button onClick={() => sendMessage()} disabled={!input.trim()} size="icon" className="h-11 w-11 shrink-0 rounded-full">
+                      <ArrowUp className="h-4 w-4" />
+                      <span className="sr-only">Send</span>
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Button size="sm" onClick={() => router.push("/upgrade")}>
-                  Upgrade
-                </Button>
-                <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setUsageBannerDismissed(true)}>
-                  Not now
-                </Button>
-              </div>
             </div>
-          )}
-          <div className="composer-pill flex items-center gap-2 pl-5 pr-1.5 py-1.5">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              // The input never goes dead — at the cap, sending simply returns
-              // the quiet gate card above, which is far more graceful than a
-              // disabled field.
-              placeholder="Ask Sovereign…"
-              disabled={isStreaming}
-              className="h-11 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-            />
-            {isStreaming ? (
-              <Button onClick={stopStreaming} variant="outline" size="icon" className="h-11 w-11 shrink-0 rounded-full">
-                <Square className="h-3.5 w-3.5" />
-                <span className="sr-only">Stop</span>
-              </Button>
-            ) : (
-              <Button onClick={() => sendMessage()} disabled={!input.trim()} size="icon" className="h-11 w-11 shrink-0 rounded-full">
-                <ArrowUp className="h-4 w-4" />
-                <span className="sr-only">Send</span>
-              </Button>
-            )}
-          </div>
           </div>
         </div>
       </div>
