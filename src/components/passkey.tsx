@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { startRegistration, startAuthentication } from "@simplewebauthn/browser";
 import type {
   PublicKeyCredentialCreationOptionsJSON,
@@ -9,6 +9,7 @@ import type {
   AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
 import { Button } from "@/components/ui/button";
+import { safeInAppPath } from "@/lib/utils";
 
 async function readJson<T>(res: Response): Promise<T | null> {
   try {
@@ -30,6 +31,7 @@ function passkeysSupported(): boolean {
  */
 export function PasskeySignInButton({ className }: { className?: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supported = passkeysSupported();
@@ -49,7 +51,10 @@ export function PasskeySignInButton({ className }: { className?: string }) {
     });
     const data = await readJson<{ error?: string; hasBaseline?: boolean }>(verRes);
     if (!verRes.ok) throw new Error(data?.error || "Passkey sign-in failed.");
-    router.push(data?.hasBaseline ? "/chat" : "/baseline");
+    // Same intent carry-through as password sign-in: return to the page the
+    // middleware bounced the person from, not always the chat.
+    const next = data?.hasBaseline ? (safeInAppPath(searchParams.get("next")) ?? "/chat") : "/baseline";
+    router.push(next);
     router.refresh();
   };
 

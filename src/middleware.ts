@@ -83,13 +83,16 @@ export async function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  // Carry the original destination through the sign-in wall so a person sent
+  // to /settings from a support reply lands on /settings after signing in.
+  const nextIntent = `&next=${encodeURIComponent(pathname + request.nextUrl.search)}`;
   if (!token) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
     // No session: people are here to get back into their account, not to
     // create a second one.
-    return NextResponse.redirect(new URL("/onboard?mode=login", request.url));
+    return NextResponse.redirect(new URL(`/onboard?mode=login${nextIntent}`, request.url));
   }
 
   const payload = await verifyJWT(token, secret);
@@ -97,7 +100,7 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
-    return NextResponse.redirect(new URL("/onboard?mode=login", request.url));
+    return NextResponse.redirect(new URL(`/onboard?mode=login${nextIntent}`, request.url));
   }
 
   return noStore(NextResponse.next());

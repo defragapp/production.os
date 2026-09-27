@@ -6,6 +6,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Validates a post-sign-in redirect target (`?next=`). Only in-app absolute
+ * paths are allowed: protocol-relative (`//host`), backslash (`/\host`, which
+ * some browsers parse as `//host`), and anything else are rejected so an
+ * attacker can't use our own login page as an open redirect.
+ */
+export function safeInAppPath(target: string | null | undefined): string | null {
+  if (!target || !target.startsWith("/")) return null;
+  if (target.startsWith("//") || target.startsWith("/\\")) return null;
+  return target;
+}
+
+/**
  * Parses a timestamp stored by D1. `datetime('now')` yields
  * "YYYY-MM-DD HH:MM:SS" in UTC with no zone marker, which Safari refuses to
  * parse — anchor it as UTC before handing it to Date. ISO strings with their

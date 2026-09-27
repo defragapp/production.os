@@ -11,6 +11,7 @@ import { TurnstileWidget } from "@/components/turnstile";
 import { Stepper } from "@/components/stepper";
 import { BaselineForm } from "@/components/baseline-form";
 import { PasskeySignInButton } from "@/components/passkey";
+import { safeInAppPath } from "@/lib/utils";
 
 const STEPS = ["Account", "Baseline", "Plan"];
 
@@ -34,6 +35,9 @@ export function OnboardContent() {
   const resetToken = searchParams.get("reset");
   const mode = searchParams.get("mode");
   const inviteToken = searchParams.get("invite");
+  // Where the middleware bounced the person from (e.g. /settings via a
+  // support reply). Honored after sign-in so intent survives the wall.
+  const nextParam = searchParams.get("next");
   // Search params only exist after hydration: SSR always renders the signup
   // markup, so branching on `mode` during the first client paint trips React
   // #418 (hydration text mismatch) and leaves the whole form inert.
@@ -59,7 +63,6 @@ export function OnboardContent() {
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [resetSent, setResetSent] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth")
@@ -75,7 +78,7 @@ export function OnboardContent() {
           if (inviteToken) {
             router.replace(`/invite?token=${encodeURIComponent(inviteToken)}`);
           } else if (data.hasBaseline) {
-            router.replace("/chat");
+            router.replace(safeInAppPath(nextParam) ?? "/chat");
           } else {
             setPhase("baseline");
           }
@@ -84,7 +87,7 @@ export function OnboardContent() {
         setTsChecked(true);
       })
       .catch(() => { setTsChecked(true); });
-  }, [router, inviteToken]);
+  }, [router, inviteToken, nextParam]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +121,7 @@ export function OnboardContent() {
         if (inviteToken) {
           router.push(`/invite?token=${encodeURIComponent(inviteToken)}`);
         } else if (data.hasBaseline) {
-          router.push("/chat");
+          router.push(safeInAppPath(nextParam) ?? "/chat");
         } else {
           // Returning account that never built a Baseline — same first-time step.
           setExistingUser(true);
@@ -246,7 +249,11 @@ export function OnboardContent() {
   }
 
   // ── Forgot password flow ──────────────────────────────────────
-  if (showForgot) {
+  // `?recover=1` is the single source of truth (pushed, so browser Back
+  // unwinds the side trip and re-renders this gate from the URL) and
+  // `next` rides along so a bounced user's destination survives the detour.
+  const keepNext = nextParam ? `&next=${encodeURIComponent(nextParam)}` : "";
+  if (searchParams.get("recover") === "1") {
     if (resetSent) {
       return (
         <>
@@ -259,7 +266,7 @@ export function OnboardContent() {
                 If an account exists for <span className="font-medium text-foreground">{resetEmail}</span>, we&apos;ve
                 sent a link to reset your password.
               </p>
-              <Button variant="ghost" className="mt-6 w-full" onClick={() => { setShowForgot(false); setError(null); }}>
+              <Button variant="ghost" className="mt-6 w-full" onClick={() => { setError(null); router.replace(`/onboard?mode=login${keepNext}`); }}>
                 Back to sign in
               </Button>
             </div>
@@ -299,7 +306,7 @@ export function OnboardContent() {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Sending..." : "Send reset link"}
                   </Button>
-                  <Button variant="ghost" className="w-full" onClick={() => { setShowForgot(false); setError(null); }}>
+                  <Button variant="ghost" className="w-full" onClick={() => { setError(null); router.replace(`/onboard?mode=login${keepNext}`); }}>
                     Back
                   </Button>
                 </form>
@@ -376,7 +383,7 @@ export function OnboardContent() {
                     <div className="text-right">
                       <button
                         type="button"
-                        onClick={() => { setShowForgot(true); setError(null); }}
+                        onClick={() => { setError(null); router.push(`/onboard?mode=login&recover=1${keepNext}`); }}
                         className="text-sm text-muted-foreground hover:text-foreground hover:underline"
                       >
                         Forgot password?

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseD1Date, formatD1Date, formatDateOfBirth } from "./utils";
+import { parseD1Date, formatD1Date, formatDateOfBirth, safeInAppPath } from "./utils";
 
 /**
  * D1's datetime('now') returns "YYYY-MM-DD HH:MM:SS" in UTC with no zone
@@ -54,5 +54,28 @@ describe("formatDateOfBirth", () => {
   it("passes through a malformed value untouched", () => {
     expect(formatDateOfBirth("not-a-date")).toBe("not-a-date");
     expect(formatDateOfBirth("1990-6-5")).toBe("1990-6-5");
+  });
+});
+
+describe("safeInAppPath", () => {
+  it("accepts plain in-app paths, with or without a query string", () => {
+    expect(safeInAppPath("/settings")).toBe("/settings");
+    expect(safeInAppPath("/upgrade?from=baseline")).toBe("/upgrade?from=baseline");
+    expect(safeInAppPath("/chat")).toBe("/chat");
+  });
+
+  it("rejects missing or non-path values", () => {
+    expect(safeInAppPath(null)).toBeNull();
+    expect(safeInAppPath(undefined)).toBeNull();
+    expect(safeInAppPath("")).toBeNull();
+    expect(safeInAppPath("https://evil.example")).toBeNull();
+    expect(safeInAppPath("evil.example/path")).toBeNull();
+  });
+
+  it("rejects protocol-relative and backslash escapes that leave the site", () => {
+    expect(safeInAppPath("//evil.example")).toBeNull();
+    expect(safeInAppPath("/\\evil.example")).toBeNull();
+    // A third slash still parses as an authority, not a path.
+    expect(safeInAppPath("///evil.example")).toBeNull();
   });
 });

@@ -234,6 +234,15 @@ export default function InvitePage() {
                   <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
                     Back to Sovereign
                   </Button>
+                  {/* A broken invite link shouldn't dead-end: signing in or
+                      starting fresh still works without the token. */}
+                  <p className="mt-3 text-center text-sm text-muted-foreground">
+                    Already have an account?{" "}
+                    <Link href="/onboard?mode=login" className="text-foreground underline underline-offset-4">Sign in</Link>
+                    {" or "}
+                    <Link href="/onboard?mode=signup" className="text-foreground underline underline-offset-4">create one</Link>
+                    .
+                  </p>
                 </CardContent>
               </Card>
             </>
