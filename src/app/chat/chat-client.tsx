@@ -11,6 +11,7 @@ import { Logo } from "@/components/ui/logo";
 import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { RichText } from "@/components/rich-text";
+import { ShareCardButton } from "@/components/share-card";
 import type { ChatMessage, BaselineData, RelationshipView } from "@/lib/types";
 
 interface InviteView {
@@ -62,11 +63,75 @@ function chipLabel(t: ThreadSummary): string {
   return `${clipWords(base, 36)}…`;
 }
 
-const SUGGESTIONS = [
-  "What patterns am I repeating in my relationships?",
-  "Where am I holding tension with the people I love?",
-  "What should I look at more closely in my baseline?",
+// The four levels the AI already reasons across (Reflection, Meaning,
+// Relationship, System), turned into the questions a person actually arrives
+// with. Each seeds the composer rather than firing it — the opening is a
+// scaffold to make their own, never a canned prompt to send as-is.
+const STARTING_POINTS = [
+  {
+    level: "About me",
+    prompt: "Help me see a pattern in how I show up that I might not be naming.",
+  },
+  {
+    level: "What this means",
+    prompt: "I keep saying I want more space. Help me work out what I actually mean by it.",
+  },
+  {
+    level: "Between us",
+    prompt: "There's tension with someone I love. Help me separate what happened from what I've made it mean.",
+  },
+  {
+    level: "The whole system",
+    prompt: "Help me understand the dynamic in my family — the part everyone feels but no one says out loud.",
+  },
 ];
+
+/**
+ * "Start with what's real": the empty-state picker. On a phone it stacks; on
+ * the desktop rail the compact variant lists the four levels as a navigator.
+ */
+function StartingPoints({
+  onPick,
+  disabled,
+  compact,
+}: {
+  onPick: (prompt: string) => void;
+  disabled?: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? "space-y-1.5" : "mt-8 w-full"}>
+      {!compact && (
+        <p className="mb-3 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+          Start with what&apos;s real
+        </p>
+      )}
+      <div className={compact ? "space-y-1.5" : "mx-auto grid max-w-2xl grid-cols-1 gap-2.5 sm:grid-cols-2"}>
+        {STARTING_POINTS.map((p, i) => (
+          <button
+            key={p.level}
+            type="button"
+            onClick={() => onPick(p.prompt)}
+            disabled={disabled}
+            style={compact ? undefined : { animationDelay: `${120 + i * 70}ms` }}
+            className={`group block w-full text-left transition-all duration-[240ms] ${
+              compact
+                ? "rounded-lg border border-transparent px-3 py-2 hover:border-border/60 hover:bg-white/[0.03]"
+                : `msg-in rounded-panel border border-border/60 bg-white/[0.03] p-4 hover:-translate-y-[1px] hover:border-foreground/30 hover:bg-white/[0.05]`
+            }`}
+          >
+            <span className={`block font-mono uppercase tracking-[0.14em] text-muted-foreground/60 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
+              {p.level}
+            </span>
+            <span className={`mt-1.5 block font-display leading-snug text-foreground/90 ${compact ? "line-clamp-2 text-[13px]" : "text-[15px]"}`}>
+              {p.prompt}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** The assistant's side of the thread: emblem avatar + one glass bubble. */
 function AssistantTurn({ children }: { children: React.ReactNode }) {
@@ -99,12 +164,14 @@ function ThreadLibrary({
   isStreaming,
   onOpen,
   onNew,
+  onSeed,
 }: {
   threads: ThreadSummary[];
   activeId: string | null;
   isStreaming: boolean;
   onOpen: (id: string) => void;
   onNew: () => void;
+  onSeed: (prompt: string) => void;
 }) {
   return (
     <aside className="sticky top-[3.5rem] hidden h-[calc(100vh-3.5rem)] w-[264px] shrink-0 flex-col border-r border-border/70 bg-background/60 backdrop-blur-sm lg:flex">
@@ -119,9 +186,12 @@ function ThreadLibrary({
           Threads
         </p>
         {threads.length === 0 ? (
-          <p className="px-2 text-xs leading-relaxed text-muted-foreground/60">
-            Conversations you start will appear here.
-          </p>
+          <div className="px-1">
+            <p className="px-2 pb-2 text-xs leading-relaxed text-muted-foreground/60">
+              Start with what&apos;s real — pick a level, and make the question your own.
+            </p>
+            <StartingPoints compact onPick={onSeed} disabled={isStreaming} />
+          </div>
         ) : (
           <nav aria-label="Thread library" className="space-y-1">
             {threads.map((t) => {
@@ -175,6 +245,20 @@ export function ChatClient() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Seed the composer with a starting point and put the caret at the end, so
+  // the person finishes the sentence in their own words instead of sending ours.
+  const seedComposer = useCallback((prompt: string) => {
+    setInput(prompt);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(prompt.length, prompt.length);
+      }
+    });
+  }, []);
 
   const refreshUsage = useCallback(async () => {
     try {
@@ -328,8 +412,8 @@ export function ChatClient() {
     setIsStreaming(false);
   }, []);
 
-  const sendMessage = useCallback(async (promptOverride?: string) => {
-    const content = (promptOverride ?? input).trim();
+  const sendMessage = useCallback(async () => {
+    const content = input.trim();
     if (!content || isStreaming) return;
     const userMessage: ChatMessage = { role: "user", content };
     const newMessages = [...messages, userMessage];
@@ -557,6 +641,7 @@ export function ChatClient() {
           isStreaming={isStreaming}
           onOpen={openThread}
           onNew={startNewThread}
+          onSeed={seedComposer}
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-b border-border bg-background px-4 py-3">
@@ -624,22 +709,9 @@ export function ChatClient() {
                       Ask anything.
                     </p>
                     <p className="mt-2 text-muted-foreground">
-                      About yourself, a relationship, or your family.
+                      About yourself, what you&apos;re sitting with, the people in your life — or the whole system they make.
                     </p>
-                    <div className="mt-6 flex flex-col items-center gap-2">
-                      {SUGGESTIONS.map((s, i) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => sendMessage(s)}
-                          disabled={isStreaming}
-                          style={{ animationDelay: `${120 + i * 90}ms` }}
-                          className="msg-in rounded-full border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
+                    <StartingPoints onPick={seedComposer} disabled={isStreaming} />
                   </div>
                 </div>
               )}
@@ -657,22 +729,31 @@ export function ChatClient() {
                     className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     {msg.role === "assistant" ? (
-                      <AssistantTurn>
-                        {streamingEmpty ? (
-                          <>
-                            <span aria-hidden="true" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                            </span>
-                            <span className="sr-only">Sovereign is thinking…</span>
-                          </>
-                        ) : stoppedEmpty ? (
-                          <p className="text-sm text-muted-foreground">Response stopped.</p>
-                        ) : (
-                          <RichText text={msg.content} />
+                      <div className="flex flex-col gap-1.5">
+                        <AssistantTurn>
+                          {streamingEmpty ? (
+                            <>
+                              <span aria-hidden="true" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                              </span>
+                              <span className="sr-only">Sovereign is thinking…</span>
+                            </>
+                          ) : stoppedEmpty ? (
+                            <p className="text-sm text-muted-foreground">Response stopped.</p>
+                          ) : (
+                            <RichText text={msg.content} />
+                          )}
+                        </AssistantTurn>
+                        {/* Every finished reading is worth keeping — the share card
+                            turns a passage into an artifact the person owns. */}
+                        {!isStreaming && !streamingEmpty && !stoppedEmpty && msg.content.trim() && (
+                          <div className="pl-11">
+                            <ShareCardButton text={msg.content} />
+                          </div>
                         )}
-                      </AssistantTurn>
+                      </div>
                     ) : (
                       <div className="max-w-[88%] rounded-panel rounded-br-sm bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_30px_-18px_rgba(0,0,0,0.8)] sm:max-w-[80%]">
                         <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -721,6 +802,7 @@ export function ChatClient() {
                 )}
                 <div className="composer-pill flex items-center gap-2 pl-5 pr-1.5 py-1.5">
                   <Input
+                    ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
