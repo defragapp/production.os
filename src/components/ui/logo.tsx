@@ -7,10 +7,10 @@ import Link from "next/link";
  * chalice. It is the SAME artwork used as the web-tab icon, iOS home-screen
  * icon, and social card — never a separate/simplified logo.
  *
- * The "-bold" cut is the real engraving with its hairlines thickened (a
- * morphological dilate in the build — not a redraw) so the dove+chalice
- * silhouette actually reads at header size instead of collapsing into a smudge.
- * `markClassName` lets tight contexts (the hero chat mock) scale it down.
+ * The "-bold" cut is the real engraving downscaled to a working size and given
+ * thickened hairlines (a morphological dilate in the build — not a redraw) so
+ * the dove+chalice silhouette reads at header size instead of collapsing into a
+ * smudge. `markClassName` lets tight contexts (the hero chat mock) scale it down.
  */
 export function Logo({
   href = "/",
@@ -38,8 +38,8 @@ export function Logo({
         style={{ imageRendering: "auto", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.45))" }}
       />
       {showWordmark && (
-        <span className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-foreground">
-          Sovereign.OS
+        <span className="font-sans text-[13px] font-semibold uppercase leading-none tracking-[0.2em] text-foreground">
+          Sovereign<span className="text-muted-foreground">.OS</span>
         </span>
       )}
     </Link>
