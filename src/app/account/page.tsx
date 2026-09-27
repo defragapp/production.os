@@ -290,7 +290,7 @@ export default function AccountPage() {
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <Button variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-1" onClick={handleSignOut}>
-                  Sign Out
+                  Sign out
                 </Button>
                 <Button
                   variant="outline"
@@ -298,7 +298,7 @@ export default function AccountPage() {
                   onClick={openDelete}
                   disabled={deleting}
                 >
-                  {deleting ? "Deleting..." : "Delete Account"}
+                  {deleting ? "Deleting..." : "Delete account"}
                 </Button>
               </div>
             </div>

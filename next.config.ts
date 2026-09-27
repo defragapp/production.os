@@ -35,7 +35,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
-      "connect-src 'self' https://challenges.cloudflare.com https://api.stripe.com",
+      "connect-src 'self' https://challenges.cloudflare.com https://api.stripe.com https://cloudflareinsights.com",
       "frame-src 'self' https://challenges.cloudflare.com https://checkout.stripe.com https://js.stripe.com",
       "object-src 'none'",
       "base-uri 'self'",
