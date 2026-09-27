@@ -67,9 +67,17 @@ export async function POST(request: NextRequest) {
   let body: { email?: string; password?: string; turnstileToken?: string; intent?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
 
-  const turnstileValid = await verifyTurnstileToken(env, body.turnstileToken);
-  if (!turnstileValid) {
-    return NextResponse.json({ error: "Security verification failed. Please try again." }, { status: 400 });
+  // Turnstile guards account *creation* (signup) — that's where bot spam is a
+  // real threat. Sign-in is already protected by the password check, the
+  // IP+email rate limiter below, and email verification, so a widget that fails
+  // to load (ad-blocker, iOS-Safari ITP, strict network) or an expired token
+  // must never dead-end a returning user. Skip the check entirely for login.
+  const intent = body.intent === "login" ? "login" : "signup";
+  if (intent !== "login") {
+    const turnstileValid = await verifyTurnstileToken(env, body.turnstileToken);
+    if (!turnstileValid) {
+      return NextResponse.json({ error: "Security verification failed. Please try again." }, { status: 400 });
+    }
   }
 
   const ip = request.headers.get("cf-connecting-ip") || "unknown";

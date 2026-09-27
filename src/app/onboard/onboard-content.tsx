@@ -103,7 +103,7 @@ export function OnboardContent() {
       const authRes = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, intent: isLogin ? "login" : "signup", turnstileToken: turnstileSiteKey ? turnstileToken : undefined }),
+        body: JSON.stringify({ email, password, intent: isLogin ? "login" : "signup", turnstileToken: !isLogin && turnstileSiteKey ? turnstileToken : undefined }),
       });
 
       if (!authRes.ok) {
@@ -420,38 +420,45 @@ export function OnboardContent() {
                     </>
                   )}
 
-                  {/* Sign in and sign up are both protected by Turnstile. */}
-                  <div className="space-y-2 pt-1">
-                    {turnstileSiteKey && !tsFailed && (
-                      <TurnstileWidget
-                        key={tsKey}
-                        siteKey={turnstileSiteKey}
-                        onToken={setTurnstileToken}
-                        onError={() => {
-                          setTurnstileToken(null);
-                          setTsFailed(true);
-                        }}
-                      />
-                    )}
-                    {!turnstileSiteKey && tsChecked && !tsFailed && (
-                      <p className="text-sm text-muted-foreground">Security check unavailable — continuing without it.</p>
-                    )}
-                  </div>
+                  {/* Turnstile guards account creation only. Sign-in is covered
+                      by the password check + rate limiter + email verification,
+                      so a blocked/expired widget never stands between a
+                      returning user and their account. */}
+                  {!isLogin && (
+                    <>
+                      <div className="space-y-2 pt-1">
+                        {turnstileSiteKey && !tsFailed && (
+                          <TurnstileWidget
+                            key={tsKey}
+                            siteKey={turnstileSiteKey}
+                            onToken={setTurnstileToken}
+                            onError={() => {
+                              setTurnstileToken(null);
+                              setTsFailed(true);
+                            }}
+                          />
+                        )}
+                        {!turnstileSiteKey && tsChecked && !tsFailed && (
+                          <p className="text-sm text-muted-foreground">Security check unavailable — continuing without it.</p>
+                        )}
+                      </div>
 
-                  {tsFailed && (
-                    <div className="flex items-center justify-between gap-2 border-t pt-4 text-sm text-muted-foreground">
-                      <span>Security check unavailable. You can still continue &mdash; we&apos;ll verify your email.</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTsFailed(false);
-                          setTsKey((k) => k + 1);
-                        }}
-                        className="shrink-0 underline underline-offset-4 hover:text-foreground"
-                      >
-                        Retry
-                      </button>
-                    </div>
+                      {tsFailed && (
+                        <div className="flex items-center justify-between gap-2 border-t pt-4 text-sm text-muted-foreground">
+                          <span>Security check unavailable. You can still continue &mdash; we&apos;ll verify your email.</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTsFailed(false);
+                              setTsKey((k) => k + 1);
+                            }}
+                            className="shrink-0 underline underline-offset-4 hover:text-foreground"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
