@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { ArrowRight, Check, CircleDot, Compass, MessageCircle, Plus } from "lucide-react";
+import { ArrowRight, ArrowUp, Check, CircleDot, Compass, MessageCircle, Plus } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
@@ -125,10 +125,11 @@ const DEMO_ANSWER = [
 const DEMO_REFLECTION = "What would change if you let one person see the full weight of what you feel?";
 
 /**
- * The product, drawn in CSS: the same chat surfaces the app renders, with an
- * answer in the authentic voice Sovereign actually produces: observe the
- * pattern, name its cost, read the Baseline as a tendency, then leave one
- * honest question open.
+ * The product, drawn in CSS: the same surfaces and chrome the real chat
+ * renders today — pill thread chips, the emblem avatar beside a glass bubble
+ * set in the display serif, the composer pill — with an answer in the
+ * authentic voice Sovereign actually produces: observe the pattern, name its
+ * cost, read the Baseline as a tendency, then leave one honest question open.
  */
 function ProductDemo() {
   return (
@@ -159,29 +160,38 @@ function ProductDemo() {
           </span>
         </div>
 
-        <div className="mb-4 flex items-end gap-2">
-          <span className="mb-[1px] flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        {/* The real thread strip: pill chips, the active one lit */}
+        <div className="mb-4 flex items-center gap-1.5">
+          <span className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
             <Plus className="h-3 w-3" strokeWidth={1.8} aria-hidden="true" />
             New thread
           </span>
-          <span className="shrink-0 whitespace-nowrap border-b-2 border-foreground px-2 py-1.5 text-xs text-foreground">
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-foreground/30 bg-white/[0.07] px-3 py-1 text-[11px] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]">
             Pulling away when it gets real
           </span>
         </div>
 
         <div className="mb-3 flex justify-end">
-          <div className="max-w-[88%] rounded-panel bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground sm:px-4 sm:py-3 sm:text-[15px]">
+          <div className="max-w-[88%] rounded-panel rounded-br-sm bg-primary px-3.5 py-2.5 text-[13px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] sm:px-4 sm:py-3 sm:text-[14px]">
             Why do I keep pulling away once a relationship gets serious?
           </div>
         </div>
 
-        <div className="flex justify-start">
-          <div className="max-w-[96%] rounded-panel border border-border bg-surface-2 px-3.5 py-2.5 text-left sm:max-w-[92%] sm:px-4 sm:py-3">
-            <div className="space-y-2 text-[13px] leading-relaxed text-foreground sm:space-y-2.5 sm:text-[14px]">
+        {/* Sovereign's turn: emblem avatar + glass bubble, set in the serif */}
+        <div className="flex items-start gap-2.5">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/emblem-core-bold.png" alt="" className="h-4 w-auto" />
+          </span>
+          <div className="glass-panel max-w-[92%] rounded-panel rounded-tl-sm px-3.5 py-2.5 text-left font-display text-[14px] leading-[1.65] text-foreground sm:px-4 sm:py-3 sm:text-[15px]">
+            <div className="space-y-2 sm:space-y-2.5">
               {DEMO_ANSWER.map((p) => (
                 <p key={p}>{p}</p>
               ))}
-              <p className="border-t border-border/70 pt-2 text-foreground/90 italic">
+              <p className="border-t border-border/70 pt-2 italic text-foreground/90">
                 {DEMO_REFLECTION}
               </p>
             </div>
@@ -192,10 +202,14 @@ function ProductDemo() {
           <BaselineDrawer data={DEMO_BASELINE} overlay />
         </div>
 
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
-          <span className="flex-1 text-[12px] text-muted-foreground">Type your message...</span>
-          <span className="flex h-7 items-center justify-center rounded-md bg-foreground px-3 font-mono text-[11px] uppercase tracking-[0.1em] text-background">
-            Send
+        {/* The real composer: the pill, the placeholder, the round send */}
+        <div className="composer-pill mt-3 flex items-center gap-2 py-1.5 pl-5 pr-1.5">
+          <span className="flex h-11 flex-1 items-center text-[13px] text-muted-foreground">
+            Ask Sovereign…
+          </span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <ArrowUp className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">Send</span>
           </span>
         </div>
       </div>

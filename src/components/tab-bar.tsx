@@ -63,11 +63,13 @@ export function TabBar() {
                 aria-current={active ? "page" : undefined}
                 className={`flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-all duration-[200ms] rounded-lg my-1 ${
                   active
-                    ? "text-foreground bg-white/[0.06]"
+                    ? "text-foreground bg-white/[0.06] shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className={`h-4.5 w-4.5 ${active ? "text-foreground" : "text-muted-foreground"}`} aria-hidden="true" />
+                {/* h-5/w-5 — Tailwind has no 4.5 step here; an unknown class
+                    silently falls back to the icon's intrinsic 24px. */}
+                <Icon className={`h-5 w-5 ${active ? "text-foreground" : "text-muted-foreground"}`} aria-hidden="true" />
                 <span className="font-mono text-[10px] tracking-tight">{label}</span>
               </Link>
             </li>

@@ -114,7 +114,7 @@ export default function AboutPage() {
             </h2>
             <div className="grid gap-4 md:grid-cols-3 md:gap-5">
               {BOUNDARIES.map((b) => (
-                <div key={b.title} className="glass-panel p-6">
+                <div key={b.title} className="glass-panel card-lift p-6">
                   <h3 className="mb-2 text-base font-semibold text-foreground">{b.title}</h3>
                   <p className="text-sm leading-6 text-muted-foreground">{b.body}</p>
                 </div>
