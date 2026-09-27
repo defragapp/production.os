@@ -400,14 +400,21 @@ export function OnboardContent() {
                           type="checkbox"
                           checked={consent}
                           onChange={(e) => setConsent(e.target.checked)}
+                          aria-label="I agree to the Terms of Service and Privacy Policy"
+                          aria-describedby="consent-note"
                           className="consent-checkbox mt-1 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border border-input bg-transparent transition-colors checked:border-foreground checked:bg-foreground"
                         />
+                        {/* aria-label keeps the announced name concise (no double-read
+                            links); the full note rides via aria-describedby and the
+                            label still forwards clicks to toggle the box. */}
                         <Label htmlFor="consent" className="text-sm font-normal leading-relaxed">
-                          I agree to the {""}
-                          <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" and "}
-                          <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
-                          My birth data is used only to compute my Baseline, and it&apos;s never
-                          shared with anyone else.
+                          <span id="consent-note">
+                            I agree to the {""}
+                            <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" and "}
+                            <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+                            My birth data is used only to compute my Baseline, and it&apos;s never
+                            shared with anyone else.
+                          </span>
                         </Label>
                       </div>
                     </>

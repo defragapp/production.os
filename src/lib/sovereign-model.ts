@@ -48,7 +48,7 @@ export function createCloudflareModel(
           return { text: extractText(result), usedGateway: false };
         } catch (directErr) {
           console.error("[sovereign-model] direct run failed:", directErr);
-          throw new ModelError("AI service is temporarily unavailable. Please try again.");
+          throw new ModelError("Sovereign couldn't reach the AI just now — try again in a moment.");
         }
       }
     },

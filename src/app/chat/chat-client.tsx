@@ -233,7 +233,7 @@ export function ChatClient() {
           setShowUpgrade(true);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: err.error || "Free tier limit reached." };
+            u[u.length - 1] = { role: "assistant", content: err.error || "You've used today's free messages — upgrade to keep going." };
             return u;
           });
           return;
@@ -418,7 +418,7 @@ export function ChatClient() {
         <div className="border-b border-border bg-background px-6 py-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <p className="text-sm font-medium text-foreground">
-              You have reached the free tier limit. Upgrade to Sovereign+ for unlimited access.
+              You&apos;ve used all your free messages today. Sovereign+ removes the daily cap.
             </p>
             <div className="flex shrink-0 items-center gap-2">
               <Button size="sm" onClick={() => router.push("/upgrade")}>
@@ -433,7 +433,7 @@ export function ChatClient() {
         <div className="border-b border-border bg-background px-6 py-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <p className="text-sm font-medium text-foreground">
-              You&apos;ve used all {usage.limit} free messages today. Upgrade to Sovereign+ for unlimited access.
+              You&apos;ve used all {usage.limit} free messages today. Sovereign+ removes the daily cap.
             </p>
             <div className="flex shrink-0 items-center gap-2">
               <Button size="sm" onClick={() => router.push("/upgrade")}>
@@ -608,7 +608,7 @@ export function ChatClient() {
             <p className="mb-1.5 text-xs text-muted-foreground">
               {usage.limit - usage.used === 1 ? "Last free message today" : `${usage.limit - usage.used} free messages left today`}{" "}
               <Link href="/upgrade" className="font-medium text-foreground underline underline-offset-2">
-                unlock unlimited with Sovereign+
+                remove the daily cap with Sovereign+
               </Link>
             </p>
           )}
@@ -624,7 +624,7 @@ export function ChatClient() {
               }}
               placeholder={
                 usage.limit !== null && usage.used >= usage.limit
-                  ? "Free tier limit reached — upgrade for unlimited access"
+                  ? "Today's free messages are used up — upgrade to keep going"
                   : "Type your message..."
               }
               disabled={isStreaming || (usage.limit !== null && usage.used >= usage.limit && !showUpgrade)}

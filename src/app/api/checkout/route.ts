@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const rlRaw = await env.SESSION_KV.get(rlKey);
   const rlCount = parseInt(rlRaw || "0", 10);
   if (rlCount >= 10) {
-    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    return NextResponse.json({ error: "That was a little fast — try again in a moment." }, { status: 429 });
   }
   await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: 3600 });
 

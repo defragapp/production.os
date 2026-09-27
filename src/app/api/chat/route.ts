@@ -47,7 +47,7 @@ async function handleChat(request: NextRequest) {
   if (rlRaw) { try { rlStamps = JSON.parse(rlRaw) as number[]; } catch {} }
   rlStamps = rlStamps.filter((t) => rlNow - t < CHAT_RATE_LIMIT_WINDOW_MS);
   if (rlStamps.length >= CHAT_RATE_LIMIT_MAX) {
-    return new Response(JSON.stringify({ error: "Too many requests. Please wait a moment and try again." }), { status: 429, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "That's a few too many at once — give Sovereign a moment and try again." }), { status: 429, headers: { "Content-Type": "application/json" } });
   }
   await env.SESSION_KV.put(`rl:chat:${payload.sub}`, JSON.stringify([...rlStamps, rlNow]), { expirationTtl: 60 });
 
@@ -73,7 +73,7 @@ async function handleChat(request: NextRequest) {
   if (!userBaseline) return new Response(JSON.stringify({ error: "Please complete your baseline before using AI chat.", code: "baseline_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   // Gate: must have chosen a subscription tier (free or sovereign+).
-  if (!user.subscription_tier) return new Response(JSON.stringify({ error: "Please choose a subscription plan before using AI chat.", code: "subscription_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+  if (!user.subscription_tier) return new Response(JSON.stringify({ error: "Choose a plan to keep chatting — the free tier is always available.", code: "subscription_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
 
@@ -81,7 +81,7 @@ async function handleChat(request: NextRequest) {
     const count = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10);
     if (count >= FREE_TIER_DAILY_LIMIT) {
       return new Response(JSON.stringify({
-        error: "You've reached your free tier limit of " + FREE_TIER_DAILY_LIMIT + " messages per day. Upgrade to Sovereign+ for unlimited access.",
+        error: `You've used all ${FREE_TIER_DAILY_LIMIT} free messages today. Sovereign+ removes the daily cap — upgrade to keep the conversation going.`,
         upgradeRequired: true,
         limit: FREE_TIER_DAILY_LIMIT,
         used: count,
@@ -138,7 +138,7 @@ async function handleChat(request: NextRequest) {
     if (err instanceof ModelError) {
       return new Response(JSON.stringify({ error: err.message }), { status: 503, headers: { "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ error: "Something went wrong while generating a response. Please try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Sovereign couldn't finish that answer — try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
   const tGen = Date.now();
   console.log(`[chat] timing pre=${tPre - tStart}ms gen=${tGen - tPre}ms total_to_response=${tGen - tStart}ms`);
@@ -189,6 +189,6 @@ export async function POST(request: NextRequest) {
     const name = err instanceof Error ? err.name : typeof err;
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[chat] uncaught: ${name}: ${message}`);
-    return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Something went wrong on our side — try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }

@@ -4,6 +4,10 @@ function renderInline(text: string) {
   return tokenizeInline(text).map((t, i) =>
     t.type === "bold" ? (
       <strong key={i} className="font-semibold text-foreground">{t.value}</strong>
+    ) : t.type === "italic" ? (
+      /* The brand's assistant voice: Sovereign's italic emphasis — most often
+         its closing question — sets in Instrument Serif, same as the hero. */
+      <em key={i} className="font-display text-[1.075em] italic">{t.value}</em>
     ) : (
       <span key={i}>{t.value}</span>
     ),
@@ -11,8 +15,9 @@ function renderInline(text: string) {
 }
 
 /**
- * Renders an AI answer's lightweight markdown (bold runs + bullet lists) as
- * styled text without any HTML injection. Plain prose falls through untouched.
+ * Renders an AI answer's lightweight markdown (bold + italic runs, bullet
+ * lists) as styled text without any HTML injection. Plain prose falls through
+ * untouched.
  */
 export function RichText({ text }: { text: string }) {
   const blocks = splitBlocks(text);

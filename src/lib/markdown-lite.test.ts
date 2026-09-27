@@ -20,6 +20,26 @@ describe("tokenizeInline", () => {
       { type: "bold", value: "b" },
     ]);
   });
+  it("tokenizes single-asterisk italics", () => {
+    expect(tokenizeInline("It ends with *a question?*")).toEqual([
+      { type: "text", value: "It ends with " },
+      { type: "italic", value: "a question?" },
+    ]);
+  });
+  it("prefers bold over italic on ** runs", () => {
+    const t = tokenizeInline("**both** then *emphasis*");
+    expect(t).toEqual([
+      { type: "bold", value: "both" },
+      { type: "text", value: " then " },
+      { type: "italic", value: "emphasis" },
+    ]);
+  });
+  it("leaves spaced asterisks (arithmetic) as plain text", () => {
+    expect(tokenizeInline("2 * 3 * 4")).toEqual([{ type: "text", value: "2 * 3 * 4" }]);
+  });
+  it("leaves a lone unmatched asterisk as plain text", () => {
+    expect(tokenizeInline("a * b")).toEqual([{ type: "text", value: "a * b" }]);
+  });
 });
 
 describe("isBulletLine / stripBulletMarker", () => {
