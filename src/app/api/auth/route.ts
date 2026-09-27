@@ -103,7 +103,16 @@ export async function POST(request: NextRequest) {
   let userId: string;
   if (existing) {
     const valid = await verifyPassword(password, existing.password_salt, existing.password_hash, pepper);
-    if (!valid) return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    if (!valid) {
+      // A wrong password during *signup* isn't an "invalid login" — the account
+      // exists and the person just picked a password that doesn't match it.
+      // Say so plainly and point at the way out (sign in / forgot password),
+      // instead of a message that reads like their credentials were rejected.
+      if (intent === "signup") {
+        return NextResponse.json({ error: "An account with this email already exists — sign in with your password, or use Forgot password to set a new one." }, { status: 409 });
+      }
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
     userId = existing.id;
     // Upgrade-on-login: silently move hashes that predate the current policy
     // (legacy raw hex, sub-target iterations, or un-peppered) to the current
