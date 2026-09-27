@@ -22,6 +22,9 @@ export interface Invite {
   owner_user_id: string;
   email: string;
   role: string;
+  /** Owner's label for who the invitation is for ("Mom", "Alex"). Optional
+   *  because several queries select an explicit column subset without it. */
+  invitee_name?: string | null;
   token_hash: string;
   status: InviteStatus;
   created_at: string;

@@ -17,6 +17,8 @@ interface InviteView {
   id: string;
   emailMasked: string;
   role: string;
+  /** The inviter's label for who this is for ("Mom", "Alex") — may be absent. */
+  name?: string | null;
   status: string;
   createdAt: string;
   expiresAt: string;
@@ -827,7 +829,7 @@ function PeoplePanel({
           <>
             {connections.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No connections yet. Connections only appear here once someone you invited has joined.
+                No connections yet. They form when an invitation is accepted — one you sent, or one you received.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -852,7 +854,7 @@ function PeoplePanel({
               <ul className="mt-3 space-y-1.5">
                 {invites.map((i) => (
                   <li key={i.id} className="flex items-center gap-3 text-sm">
-                    <span className="text-muted-foreground">{i.emailMasked}</span>
+                    <span className="text-muted-foreground">{i.name || i.emailMasked}</span>
                     <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                       {i.role}
                     </span>
@@ -870,7 +872,7 @@ function PeoplePanel({
                 <Link href="/upgrade" className="font-medium text-foreground underline underline-offset-2">
                   Upgrade
                 </Link>{" "}
-                to invite someone.
+                to invite someone. And if someone invites you first — accepting is always free.
               </p>
             )}
 

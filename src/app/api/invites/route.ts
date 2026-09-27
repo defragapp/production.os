@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   if (error) return error;
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const invites = await env.DB.prepare(`SELECT id, email, role, status, created_at, expires_at, accepted_at FROM invites WHERE owner_user_id = ? ORDER BY created_at DESC`).bind(payload.sub).all<Pick<Invite, "id" | "email" | "role" | "status" | "created_at" | "expires_at" | "accepted_at">>();
+  const invites = await env.DB.prepare(`SELECT id, email, role, invitee_name, status, created_at, expires_at, accepted_at FROM invites WHERE owner_user_id = ? ORDER BY created_at DESC`).bind(payload.sub).all<Pick<Invite, "id" | "email" | "role" | "invitee_name" | "status" | "created_at" | "expires_at" | "accepted_at">>();
   // Emails still backed by a live relationship. Accepted invites to any other
   // address are ghosts — the person connected then deleted their account.
   const peerEmails = new Set<string>();
@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     id: inv.id,
     emailMasked: maskEmail(inv.email),
     role: inv.role,
+    name: inv.invitee_name ?? null,
     status: inv.status,
     lapsed: isLapsedInvite(inv.status, inv.email, peerEmails),
     createdAt: inv.created_at,
@@ -66,12 +67,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { email?: string; role?: string };
+  let body: { email?: string; role?: string; name?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
   const email = body.email?.trim().toLowerCase() || "";
   if (!isValidEmail(email)) return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
   if (email === user.email.toLowerCase()) return NextResponse.json({ error: "You can't invite yourself" }, { status: 400 });
   const role = normalizedLabel(body.role);
+  // Who this is for, in the inviter's words ("Mom", "Alex") — used to
+  // personalize the email and the share text. Not an identity anchor;
+  // the email address stays the one the accept check enforces.
+  const inviteeName = body.name?.trim().replace(/\s+/g, " ").slice(0, 80) || null;
 
   const pending = await env.DB.prepare("SELECT COUNT(*) AS total FROM invites WHERE owner_user_id = ? AND status = 'pending'").bind(payload.sub).first<{ total: number }>();
   if ((pending?.total ?? 0) >= MAX_PENDING_INVITES) {
@@ -86,12 +91,12 @@ export async function POST(request: NextRequest) {
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
   const id = generateUUID();
   await env.DB.prepare(
-    "INSERT INTO invites (id, owner_user_id, email, role, token_hash, status, expires_at) VALUES (?, ?, ?, ?, ?, 'pending', ?)",
-  ).bind(id, payload.sub, email, role, tokenHash, expiresAt).run();
+    "INSERT INTO invites (id, owner_user_id, email, role, invitee_name, token_hash, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)",
+  ).bind(id, payload.sub, email, role, inviteeName, tokenHash, expiresAt).run();
 
   const origin = new URL(request.url).origin;
   try {
-    await sendTemplate(env, "invite", email, { origin, inviterName: personName(user), role, token });
+    await sendTemplate(env, "invite", email, { origin, inviterName: personName(user), role, token, name: inviteeName ?? undefined });
   } catch (e) {
     console.error("[invites] invite email failed:", e);
   }
@@ -101,6 +106,7 @@ export async function POST(request: NextRequest) {
       id,
       emailMasked: maskEmail(email),
       role,
+      name: inviteeName,
       status: "pending",
       expiresAt,
       shareUrl: `${origin}/invite?token=${token}`,

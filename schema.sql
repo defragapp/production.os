@@ -36,11 +36,14 @@ CREATE INDEX IF NOT EXISTS idx_threads_user_id ON threads(user_id);
 
 -- Connection invitations (email delivery + a shareable link). Inviting is a
 -- Sovereign+ feature; receiving/accepting is available to every account.
+-- invitee_name is the owner's label for who this is for ("Mom", "Alex") — it
+-- personalizes the email and the share text. Nullable: rows predate the field.
 CREATE TABLE IF NOT EXISTS invites (
   id            TEXT PRIMARY KEY,
   owner_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   email         TEXT NOT NULL,
   role          TEXT NOT NULL DEFAULT 'friend',
+  invitee_name  TEXT,
   token_hash    TEXT NOT NULL,
   status        TEXT NOT NULL DEFAULT 'pending',   -- pending | accepted | revoked
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),

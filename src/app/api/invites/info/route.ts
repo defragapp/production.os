@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   if (!token) return NextResponse.json({ status: "invalid" });
 
   const tokenHash = await hashResetToken(token);
-  const invite = await env.DB.prepare("SELECT id, owner_user_id, email, role, status, created_at, expires_at, accepted_at FROM invites WHERE token_hash = ?").bind(tokenHash).first<Invite>();
+  const invite = await env.DB.prepare("SELECT id, owner_user_id, email, role, invitee_name, status, created_at, expires_at, accepted_at FROM invites WHERE token_hash = ?").bind(tokenHash).first<Invite>();
   if (!invite) return NextResponse.json({ status: "invalid" });
 
   if (invite.status === "revoked") return NextResponse.json({ status: "revoked" });
@@ -29,5 +29,6 @@ export async function GET(request: NextRequest) {
     emailMasked: maskEmail(invite.email),
     inviterName: owner ? personName(owner) : "Someone",
     role: invite.role,
+    name: invite.invitee_name ?? null,
   });
 }

@@ -18,6 +18,8 @@ interface InfoData {
   emailMasked?: string;
   inviterName?: string;
   role?: string;
+  /** The inviter's label for who this is for ("Mom", "Alex") — may be absent. */
+  name?: string | null;
 }
 
 function AcceptCard({
@@ -314,7 +316,11 @@ export default function InvitePage() {
             <>
               <PageHeader
                 title="You're invited"
-                description={`Connect with ${info.inviterName ?? "someone"} as their ${info.role ?? "friend"}.`}
+                description={
+                  info.name
+                    ? `Hi ${info.name} — connect with ${info.inviterName ?? "someone"} as their ${info.role ?? "friend"}.`
+                    : `Connect with ${info.inviterName ?? "someone"} as their ${info.role ?? "friend"}.`
+                }
               />
               {acceptedAs ? (
                 <Card>

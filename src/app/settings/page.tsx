@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Link2, Pencil, X } from "lucide-react";
+import { Check, Link2, Pencil, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Section } from "@/components/ui/section";
@@ -23,6 +23,8 @@ interface InviteRow {
   id: string;
   emailMasked: string;
   role: string;
+  /** The owner's label for who this is for ("Mom", "Alex") — may be absent. */
+  name?: string | null;
   status: string;
   lapsed?: boolean;
   createdAt: string;
@@ -45,6 +47,7 @@ export default function SettingsPage() {
   const [invites, setInvites] = useState<InviteRow[] | null>(null);
 
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState("");
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -54,9 +57,18 @@ export default function SettingsPage() {
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Which pending invite has its share menu open (null = none).
+  const [shareMenuId, setShareMenuId] = useState<string | null>(null);
+  // Computed in an effect: `navigator` doesn't exist during SSR, so reading it
+  // in render would be a hydration mismatch.
+  const [canDeviceShare, setCanDeviceShare] = useState(false);
   // Destructive actions confirm inline (a browser confirm() dialog would break
   // the visual language): "conn:<id>" or "inv:<id>" while awaiting the second click.
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCanDeviceShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
+  }, []);
 
   const loadPeople = useCallback(async () => {
     const [relRes, invRes] = await Promise.all([fetch("/api/relationships"), fetch("/api/invites")]);
@@ -127,7 +139,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/invites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role: inviteRole.trim() || undefined }),
+        body: JSON.stringify({ email, name: inviteName.trim() || undefined, role: inviteRole.trim() || undefined }),
       });
       const data = await res.json() as { error?: string; code?: string; invite?: InviteRow };
       if (!res.ok) {
@@ -136,8 +148,9 @@ export default function SettingsPage() {
         return;
       }
       setInviteEmail("");
+      setInviteName("");
       setInviteRole("");
-      setInviteSuccess(`Invitation sent to ${data.invite?.emailMasked ?? email}.`);
+      setInviteSuccess(`Invitation sent to ${data.invite?.name || data.invite?.emailMasked || email}.`);
       await loadPeople();
     } catch {
       setInviteError("Could not send the invitation.");
@@ -186,21 +199,94 @@ export default function SettingsPage() {
     await loadPeople();
   };
 
+  // Mint a fresh share link for a pending invite. Rotation is deliberate:
+  // a forwarded old link dies the moment a new share is prepared.
+  const mintShareLink = async (row: InviteRow): Promise<string> => {
+    const res = await fetch(`/api/invites/${encodeURIComponent(row.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rotate" }),
+    });
+    const data = await res.json() as { shareUrl?: string; error?: string };
+    if (!res.ok || !data.shareUrl) throw new Error(data.error || "Couldn't prepare the link");
+    return data.shareUrl;
+  };
+
+  // The message a shared link carries. Personal when the inviter named the
+  // person — "Hi Mom," from a known number beats a bare URL every time.
+  const shareSentence = (row: InviteRow) =>
+    `${row.name ? `Hi ${row.name}, ` : ""}${displayName || "A friend"} invited you to connect on Sovereign OS`;
+
   const copyShareLink = async (row: InviteRow) => {
     try {
-      const res = await fetch(`/api/invites/${encodeURIComponent(row.id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rotate" }),
-      });
-      const data = await res.json() as { shareUrl?: string; error?: string };
-      if (!res.ok || !data.shareUrl) throw new Error(data.error || "Couldn't copy the link");
-      await navigator.clipboard.writeText(data.shareUrl);
+      const url = await mintShareLink(row);
+      await navigator.clipboard.writeText(url);
       setCopiedId(row.id);
       setTimeout(() => setCopiedId(null), 2000);
+      setShareMenuId(null);
       await loadPeople();
     } catch {
       setInviteError("Couldn't copy the link. Try again, or ask them to check their email instead.");
+    }
+  };
+
+  // Native share sheet where the device has one (AirDrop, Messages, WhatsApp
+  // — whatever the phone offers). Dismissing the sheet is a cancel, not a
+  // failure — and desktop Chrome rejects an unavailable sheet with
+  // NotFoundError, not AbortError, so treat both as neutral.
+  const deviceShare = async (row: InviteRow) => {
+    setShareMenuId(null);
+    try {
+      const url = await mintShareLink(row);
+      await navigator.share({ title: "Sovereign OS", text: shareSentence(row), url });
+      await loadPeople();
+    } catch (e) {
+      const name = (e as Error)?.name;
+      if (name !== "AbortError" && name !== "NotFoundError") {
+        setInviteError("Couldn't share the link. Copy it instead?");
+      }
+    }
+  };
+
+  // Open the messages app through a detached link rather than assigning
+  // window.location.href: on a desktop with no sms: handler, a top-frame
+  // navigation tears the page down, so the catch below could never run.
+  const textShare = async (row: InviteRow) => {
+    setShareMenuId(null);
+    try {
+      const url = await mintShareLink(row);
+      const body = encodeURIComponent(`${shareSentence(row)}. Accept here: ${url}`);
+      const a = document.createElement("a");
+      a.href = `sms:?&body=${body}`;
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      await loadPeople();
+    } catch {
+      setInviteError("Couldn't open your messages app. Copy the link instead.");
+    }
+  };
+
+  const whatsappShare = async (row: InviteRow) => {
+    setShareMenuId(null);
+    try {
+      const url = await mintShareLink(row);
+      const opened = window.open(
+        `https://wa.me/?text=${encodeURIComponent(`${shareSentence(row)}. Accept here: ${url}`)}`,
+        "_blank",
+        "noopener",
+      );
+      // A popup blocker returns null instead of throwing — nothing opened, so
+      // say so rather than failing silently.
+      if (!opened) {
+        setInviteError("Your browser blocked the WhatsApp window. Copy the link instead.");
+        return;
+      }
+      await loadPeople();
+    } catch {
+      setInviteError("Couldn't open WhatsApp. Copy the link instead.");
     }
   };
 
@@ -263,7 +349,7 @@ export default function SettingsPage() {
                   ) : connections.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       {tier === "free"
-                        ? "No connections yet. Connections grow from invitations, which are part of Sovereign+."
+                        ? "No connections yet. They form when an invitation is accepted — one you sent, or one you received."
                         : "No connections yet. Send an invitation below and it becomes a connection once the person accepts."}
                     </p>
                   ) : (
@@ -372,7 +458,8 @@ export default function SettingsPage() {
                       <Button variant="link" className="h-auto p-0 text-sm font-medium text-foreground underline underline-offset-2" onClick={() => router.push("/upgrade")}>
                         Sovereign+
                       </Button>
-                      . Upgrade to invite someone into your relationships.
+                      . Upgrade to invite someone into your relationships. And if someone invites
+                      you first — accepting is always free.
                     </div>
                   )}
 
@@ -393,12 +480,20 @@ export default function SettingsPage() {
                       className="sm:flex-1"
                     />
                     <Input
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                      placeholder="Name (e.g. Mom)"
+                      aria-label="Name"
+                      maxLength={80}
+                      className="sm:w-36"
+                    />
+                    <Input
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
                       placeholder="Role (e.g. partner)"
                       aria-label="Role"
                       list="role-suggestions"
-                      className="sm:w-44"
+                      className="sm:w-40"
                     />
                     <datalist id="role-suggestions">
                       {ROLE_SUGGESTIONS.map((r) => <option key={r} value={r} />)}
@@ -434,6 +529,7 @@ export default function SettingsPage() {
                         <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-panel border border-white/[0.07] bg-surface-1 px-4 py-3 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)] transition-colors duration-[240ms] hover:border-white/15">
                           <div className="min-w-0">
                             <p className="text-sm text-foreground">
+                              {inv.name ? <>{inv.name} · </> : null}
                               {inv.emailMasked}
                               <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                                 {inv.role}
@@ -451,18 +547,72 @@ export default function SettingsPage() {
                           </div>
                           {inv.status === "pending" && (
                             <div className="flex shrink-0 items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => copyShareLink(inv)}
-                                aria-label="Copy invite link"
-                              >
-                                {copiedId === inv.id ? (
-                                  <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5" /> Copied</span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" /> Copy link</span>
+                              <div className="relative">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setShareMenuId(shareMenuId === inv.id ? null : inv.id)}
+                                  aria-haspopup="menu"
+                                  aria-expanded={shareMenuId === inv.id}
+                                  aria-label="Share invite link"
+                                >
+                                  {copiedId === inv.id ? (
+                                    <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5" /> Copied</span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5"><Share2 className="h-3.5 w-3.5" /> Share</span>
+                                  )}
+                                </Button>
+                                {shareMenuId === inv.id && (
+                                  <>
+                                    {/* Transparent click-away catcher under the menu. */}
+                                    <button
+                                      type="button"
+                                      aria-label="Close share menu"
+                                      className="fixed inset-0 z-30 cursor-default"
+                                      onClick={() => setShareMenuId(null)}
+                                    />
+                                    <div
+                                      role="menu"
+                                      className="absolute right-0 z-40 mt-2 w-56 rounded-xl border border-white/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
+                                    >
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        onClick={() => void textShare(inv)}
+                                      >
+                                        <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Send a text message
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        onClick={() => void whatsappShare(inv)}
+                                      >
+                                        <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> Share on WhatsApp
+                                      </button>
+                                      {canDeviceShare && (
+                                        <button
+                                          type="button"
+                                          role="menuitem"
+                                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                          onClick={() => void deviceShare(inv)}
+                                        >
+                                          <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> More ways…
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        onClick={() => void copyShareLink(inv)}
+                                      >
+                                        <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Copy link
+                                      </button>
+                                    </div>
+                                  </>
                                 )}
-                              </Button>
+                              </div>
                               {confirmAction === `inv:${inv.id}` ? (
                                 <>
                                   <Button

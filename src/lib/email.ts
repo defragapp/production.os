@@ -22,6 +22,16 @@ export function emailVerificationEnabled(env: AppEnv): boolean {
   return Boolean(env.RESEND_API_KEY);
 }
 
+/** HTML-escape a runtime string before it goes into a template body. */
+function esc(s: string | null | undefined): string {
+  return (s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Branded Sovereign OS email shell: dark graphite surface, mono wordmark header, cream body, quiet footer. Mirrors the deployed product theme (warm graphite + cream glass). */
 export function emailShell(title: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
@@ -182,10 +192,16 @@ const EMAIL_TEMPLATES = {
   invite: {
     subject: "You've been invited to connect",
     render: (vars: Record<string, unknown>): string => {
-      const v = vars as { origin: string; inviterName: string; role: string; token: string };
+      const v = vars as { origin: string; inviterName: string; role: string; token: string; name?: string };
+      // User-controlled strings (display name, role, invitee label) get HTML
+      // escaping — they arrive from the account owner's input, not a template.
+      const name = esc(v.name);
+      const inviter = esc(v.inviterName);
+      const role = esc(v.role);
       return emailShell(
         "Connection invitation",
-        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 12px;text-align:center"><strong>${v.inviterName}</strong> invited you to connect on Sovereign OS as their <strong>${v.role}</strong>.</p>` +
+        (name ? `<p style="color:#f4efe4;line-height:1.6;margin:0 0 12px;text-align:center">Hi ${name},</p>` : "") +
+        `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 12px;text-align:center"><strong>${inviter}</strong> invited you to connect on Sovereign OS as their <strong>${role}</strong>.</p>` +
         `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 16px;text-align:center">Accepting lets you both explore what happens between you — your charts are never shared, only consented interpretations.</p>` +
         `<div style="text-align:center">${emailButton(`${v.origin}/invite?token=${v.token}`, "Accept Invitation")}</div>` +
         `<p style="color:#8a857b;font-size:13px;margin:16px 0 0;text-align:center">This link expires in 7 days and only works for this email address.</p>`
