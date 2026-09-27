@@ -26,6 +26,7 @@ interface InviteView {
 interface ThreadSummary {
   id: string;
   updated_at: string;
+  title?: string;
   label?: string;
 }
 
@@ -40,6 +41,15 @@ function formatThreadDate(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+/** Chips stay one calm line: clip the server title at a word, not mid-word. */
+function chipLabel(t: ThreadSummary): string {
+  const base = t.label?.trim();
+  if (!base) return formatThreadDate(t.updated_at);
+  if (base.length <= 36) return base;
+  const clipped = base.slice(0, 36);
+  return `${clipped.slice(0, Math.max(clipped.lastIndexOf(" "), 20)).trimEnd()}…`;
 }
 
 const SUGGESTIONS = [
@@ -100,12 +110,14 @@ export function ChatClient() {
     try {
       const res = await fetch("/api/threads");
       if (!res.ok) return [];
-      const data = await res.json() as { threads?: ThreadSummary[] };
-      const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at }));
-      setThreads((prev) => {
-        const merged = items.map((item) => ({ ...item, label: prev.find((p) => p.id === item.id)?.label }));
-        return merged;
-      });
+      const data = await res.json() as { threads?: { id: string; updated_at: string; title?: string }[] };
+      const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at, title: t.title }));
+      setThreads((prev) => items.map((item) => ({
+        ...item,
+        // Server-derived title wins; the optimistic client label only bridges
+        // the window before the first list refresh lands.
+        label: item.title?.trim() || prev.find((p) => p.id === item.id)?.label,
+      })));
       return items;
     } catch {
       return [];
@@ -263,9 +275,12 @@ export function ChatClient() {
         const err = await response.json() as { error?: string; upgradeRequired?: boolean; code?: string };
         if (response.status === 402 && err.upgradeRequired) {
           setShowUpgrade(true);
+          // If the gate was dismissed earlier in the session, a fresh attempt
+          // to send earns a fresh look at it.
+          setUsageBannerDismissed(false);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: err.error || "You've used today's free messages — upgrade to keep going." };
+            u[u.length - 1] = { role: "assistant", content: err.error || "Today's reading is complete — Sovereign+ picks up where this leaves off." };
             return u;
           });
           return;
@@ -446,58 +461,20 @@ export function ChatClient() {
         </div>
       )}
 
-      {showUpgrade && (
-        <div className="border-b border-border bg-background px-6 py-4">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-            <p className="text-sm font-medium text-foreground">
-              You&apos;ve used all your free messages today. Sovereign+ removes the daily cap.
-            </p>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button size="sm" onClick={() => router.push("/upgrade")}>
-                Upgrade
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(usage.limit !== null && usage.used >= usage.limit && !showUpgrade && !usageBannerDismissed) && (
-        <div className="border-b border-border bg-background px-6 py-4">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-            <p className="text-sm font-medium text-foreground">
-              You&apos;ve used all {usage.limit} free messages today. Sovereign+ removes the daily cap.
-            </p>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button size="sm" onClick={() => router.push("/upgrade")}>
-                Upgrade
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setUsageBannerDismissed(true)}
-                aria-label="Dismiss"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="border-b border-border bg-background px-4 pt-3">
-        <div className="mx-auto flex max-w-3xl items-end gap-2">
+      <div className="border-b border-border bg-background px-4 py-3">
+        <div className="mx-auto flex max-w-3xl items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={startNewThread}
             disabled={isStreaming}
-            className="mb-[1px] shrink-0"
+            className="shrink-0"
           >
             <Plus className="h-4 w-4" />
             New thread
           </Button>
           {threads.length > 0 && (
-            <div className="flex items-end gap-1 overflow-x-auto">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
               {threads.map((t) => {
                 const active = t.id === threadId;
                 return (
@@ -506,13 +483,14 @@ export function ChatClient() {
                     type="button"
                     onClick={() => openThread(t.id)}
                     disabled={isStreaming}
-                    className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs transition-colors duration-[240ms] ${
+                    title={t.label || undefined}
+                    className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
                       active
-                        ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+                        ? "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
+                        : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
                     }`}
                   >
-                    {t.label || formatThreadDate(t.updated_at)}
+                    {chipLabel(t)}
                   </button>
                 );
               })}
@@ -524,7 +502,7 @@ export function ChatClient() {
             onClick={() => setPeopleOpen((v) => !v)}
             disabled={isStreaming}
             aria-expanded={peopleOpen}
-            className="mb-[1px] ml-auto shrink-0"
+            className="ml-auto shrink-0"
           >
             <Users className="h-4 w-4" />
             People
@@ -549,9 +527,6 @@ export function ChatClient() {
                 </p>
                 <p className="mt-2 text-muted-foreground">
                   About yourself, a relationship, or your family.
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground/60">
-                  Your Baseline is loaded — Sovereign will bring it into every answer.
                 </p>
                 <div className="mt-6 flex flex-col items-center gap-2">
                   {SUGGESTIONS.map((s, i) => (
@@ -618,32 +593,33 @@ export function ChatClient() {
               it never pushes the composer off-screen. */}
           <BaselineDrawer data={baselineData} overlay />
           <div className="mt-2">
-          {usage.limit !== null && (
-            <div className="mb-1 flex items-center justify-end gap-2.5">
-              <span className="text-xs text-muted-foreground/70">
-                {usage.used >= usage.limit
-                  ? `${usage.limit} of ${usage.limit} free messages used today`
-                  : `${usage.used} of ${usage.limit} free messages used today`}
-              </span>
-              <div className="h-[3px] w-24 overflow-hidden rounded-full bg-muted">
-                <div
-                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${
-                    usage.used >= usage.limit ? "bg-destructive/80" : "bg-foreground/50"
-                  }`}
-                  style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }}
-                />
+          {/* The cap, when you reach it, is one quiet card — not a meter you
+              watch drain. No counter, no countdown while messages remain:
+              premium restraint, in the exact spot the composer would falter. */}
+          {(showUpgrade || (usage.limit !== null && usage.used >= usage.limit)) && !usageBannerDismissed && (
+            <div className="glass-panel msg-in mb-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-5 py-4">
+              <div className="flex items-center gap-3.5">
+                <span
+                  aria-hidden="true"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/brand/emblem-core-bold.png" alt="" className="h-5 w-auto" />
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Today&apos;s reading is complete.</p>
+                  <p className="text-xs text-muted-foreground">Sovereign+ removes the daily cap — go as deep as you need.</p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button size="sm" onClick={() => router.push("/upgrade")}>
+                  Upgrade
+                </Button>
+                <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setUsageBannerDismissed(true)}>
+                  Not now
+                </Button>
               </div>
             </div>
-          )}
-          {/* Soft in-chat nudge in the band just before the hard wall (1–2 left).
-              Deliberately excludes the at-cap case, which the banner above already owns. */}
-          {usage.limit !== null && usage.used < usage.limit && usage.limit - usage.used <= 2 && !showUpgrade && (
-            <p className="mb-1.5 text-xs text-muted-foreground">
-              {usage.limit - usage.used === 1 ? "Last free message today" : `${usage.limit - usage.used} free messages left today`}{" "}
-              <Link href="/upgrade" className="font-medium text-foreground underline underline-offset-2">
-                remove the daily cap with Sovereign+
-              </Link>
-            </p>
           )}
           <div className="composer-pill flex items-center gap-2 pl-5 pr-1.5 py-1.5">
             <Input
@@ -655,12 +631,11 @@ export function ChatClient() {
                   sendMessage();
                 }
               }}
-              placeholder={
-                usage.limit !== null && usage.used >= usage.limit
-                  ? "Today's free messages are used up — upgrade to keep going"
-                  : "Type your message..."
-              }
-              disabled={isStreaming || (usage.limit !== null && usage.used >= usage.limit && !showUpgrade)}
+              // The input never goes dead — at the cap, sending simply returns
+              // the quiet gate card above, which is far more graceful than a
+              // disabled field.
+              placeholder="Ask Sovereign…"
+              disabled={isStreaming}
               className="h-11 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
             />
             {isStreaming ? (

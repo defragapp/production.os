@@ -81,7 +81,7 @@ async function handleChat(request: NextRequest) {
     const count = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10);
     if (count >= FREE_TIER_DAILY_LIMIT) {
       return new Response(JSON.stringify({
-        error: `You've used all ${FREE_TIER_DAILY_LIMIT} free messages today. Sovereign+ removes the daily cap — upgrade to keep the conversation going.`,
+        error: `Today's reading is complete — pick it back up tomorrow, or continue without limit with Sovereign+.`,
         upgradeRequired: true,
         limit: FREE_TIER_DAILY_LIMIT,
         used: count,

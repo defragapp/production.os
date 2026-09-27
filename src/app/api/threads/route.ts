@@ -31,9 +31,15 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10) || 1);
   const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10) || 50));
   const offset = (page - 1) * pageSize;
+  // Titles are derived from the first message at read time — the thread's
+  // opening line is its title, so no extra column or write path is needed and
+  // every device sees the same library labels immediately. json_valid guards
+  // the list against a single malformed row.
   const [countRow, result] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS total FROM threads WHERE user_id = ?").bind(payload.sub).first<{ total: number }>(),
-    env.DB.prepare("SELECT id, created_at, updated_at FROM threads WHERE user_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?").bind(payload.sub, pageSize, offset).all<{ id: string; created_at: string; updated_at: string }>(),
+    env.DB.prepare(
+      "SELECT id, created_at, updated_at, CASE WHEN json_valid(message_history) THEN trim(substr(coalesce(json_extract(message_history, '$[0].content'), ''), 1, 48)) ELSE '' END AS title FROM threads WHERE user_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?"
+    ).bind(payload.sub, pageSize, offset).all<{ id: string; created_at: string; updated_at: string; title: string }>(),
   ]);
   return NextResponse.json({ threads: result.results || [], total: countRow?.total ?? 0, page, pageSize });
 }
