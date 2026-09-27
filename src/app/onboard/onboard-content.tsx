@@ -219,7 +219,6 @@ export function OnboardContent() {
             {/* Password reset is an account-recovery side trip, not an
                 onboarding step — no stepper. */}
             <div className="mb-8 mt-2 text-center">
-              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
               <h1 className="font-display text-3xl font-normal tracking-tight">Set a new password</h1>
             </div>
             <Card>
@@ -263,7 +262,6 @@ export function OnboardContent() {
           <Nav />
           <main id="main" className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
             <div className="w-full max-w-md text-center">
-              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
               <h1 className="mb-4 font-display text-3xl font-normal tracking-tight">Check your email</h1>
               <p className="text-sm text-muted-foreground">
                 If an account exists for <span className="font-medium text-foreground">{resetEmail}</span>, we&apos;ve
@@ -285,7 +283,6 @@ export function OnboardContent() {
           <div className="w-full max-w-md">
             {/* Forgot-password is recovery, not onboarding — no stepper. */}
             <div className="mb-8 mt-2 text-center">
-              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
               <h1 className="font-display text-3xl font-normal tracking-tight">Reset password</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 Enter your email and we&apos;ll send you a link to reset your password.
@@ -338,7 +335,6 @@ export function OnboardContent() {
                 signing in aren't mid-funnel, so "1 of 3" is noise. */}
             {!isLogin && <Stepper steps={STEPS} current={0} />}
             <div className={`${isLogin ? "mt-2" : ""} mb-8 text-center`}>
-              <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
               <h1 className="font-display text-3xl font-normal tracking-tight">{title}</h1>
               <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
             </div>
@@ -505,7 +501,6 @@ export function OnboardContent() {
         <div className="w-full max-w-md">
           <Stepper steps={STEPS} current={1} />
           <div className="mb-8 text-center">
-            <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
             <h1 className="font-display text-3xl font-normal tracking-tight">Build your Baseline</h1>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
               A plain-language picture of how you tend to communicate, feel, and decide — built
