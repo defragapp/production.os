@@ -630,12 +630,12 @@ export function ChatClient() {
               disabled={isStreaming || (usage.limit !== null && usage.used >= usage.limit && !showUpgrade)}
             />
             {isStreaming ? (
-              <Button onClick={stopStreaming} variant="outline">
+              <Button onClick={stopStreaming} variant="outline" className="h-11">
                 <Square className="h-3.5 w-3.5" />
                 Stop
               </Button>
             ) : (
-              <Button onClick={() => sendMessage()} disabled={!input.trim()}>
+              <Button onClick={() => sendMessage()} disabled={!input.trim()} className="h-11">
                 Send
               </Button>
             )}
