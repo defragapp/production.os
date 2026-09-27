@@ -214,7 +214,7 @@ export function OnboardContent() {
                 onboarding step — no stepper. */}
             <div className="mb-8 mt-2 text-center">
               <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
-              <h1 className="font-display text-3xl font-normal tracking-tight">Set a New Password</h1>
+              <h1 className="font-display text-3xl font-normal tracking-tight">Set a new password</h1>
             </div>
             <Card>
               <CardContent className="pt-6">
@@ -234,7 +234,7 @@ export function OnboardContent() {
                   {error && <p className="text-sm text-destructive">{error}</p>}
                   {notice && <p className="text-sm text-foreground">{notice}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Resetting..." : "Reset Password"}
+                    {loading ? "Resetting..." : "Reset password"}
                   </Button>
                 </form>
               </CardContent>
@@ -260,7 +260,7 @@ export function OnboardContent() {
                 sent a link to reset your password.
               </p>
               <Button variant="ghost" className="mt-6 w-full" onClick={() => { setShowForgot(false); setError(null); }}>
-                Back to Sign In
+                Back to sign in
               </Button>
             </div>
           </main>
@@ -276,7 +276,7 @@ export function OnboardContent() {
             {/* Forgot-password is recovery, not onboarding — no stepper. */}
             <div className="mb-8 mt-2 text-center">
               <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
-              <h1 className="font-display text-3xl font-normal tracking-tight">Reset Password</h1>
+              <h1 className="font-display text-3xl font-normal tracking-tight">Reset password</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 Enter your email and we&apos;ll send you a link to reset your password.
               </p>
@@ -297,7 +297,7 @@ export function OnboardContent() {
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Sending..." : "Send Reset Link"}
+                    {loading ? "Sending..." : "Send reset link"}
                   </Button>
                   <Button variant="ghost" className="w-full" onClick={() => { setShowForgot(false); setError(null); }}>
                     Back
@@ -313,7 +313,7 @@ export function OnboardContent() {
 
   // ── Step 1: account (sign in / sign up) ───────────────────────
   if (phase === "account") {
-    const title = isLogin ? "Sign In" : "Create Your Account";
+    const title = isLogin ? "Sign in" : "Create your account";
     const description = isLogin
       ? "Welcome back. Sign in to continue where you left off."
       : "Start free. You can build your Baseline right after.";
@@ -443,7 +443,7 @@ export function OnboardContent() {
                   {error && <p className="text-sm text-destructive">{error}</p>}
 
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+                    {loading ? "Please wait..." : isLogin ? "Sign in" : "Create account"}
                   </Button>
                 </form>
 
@@ -482,7 +482,7 @@ export function OnboardContent() {
           <Stepper steps={STEPS} current={1} />
           <div className="mb-8 text-center">
             <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Sovereign OS</p>
-            <h1 className="font-display text-3xl font-normal tracking-tight">Build Your Baseline</h1>
+            <h1 className="font-display text-3xl font-normal tracking-tight">Build your Baseline</h1>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
               A plain-language picture of how you tend to communicate, feel, and decide — built
               from NASA/JPL planetary data. Takes about a minute.
@@ -492,7 +492,7 @@ export function OnboardContent() {
           <Card>
             <CardContent className="pt-6">
               <BaselineForm
-                submitLabel="Save Baseline & Continue"
+                submitLabel="Save Baseline & continue"
                 onSaved={() => router.push(
                   inviteToken
                     ? `/invite?token=${encodeURIComponent(inviteToken)}`

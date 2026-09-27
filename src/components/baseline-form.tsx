@@ -30,7 +30,7 @@ const BUCKET_TIMES: Record<string, string> = {
  * (editing an existing Baseline) the fields start prefilled.
  */
 export function BaselineForm({
-  submitLabel = "Build My Baseline",
+  submitLabel = "Build my Baseline",
   onSaved,
   onDone,
   defaults,

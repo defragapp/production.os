@@ -295,7 +295,7 @@ export default function InvitePage() {
                     {info.inviterName ?? "The person who invited you"} and you are already connected.
                   </div>
                   <Button className="w-full" onClick={() => router.push(connectedHref)}>
-                    Open Chat
+                    Open chat
                   </Button>
                 </CardContent>
               </Card>
@@ -314,7 +314,7 @@ export default function InvitePage() {
                       You and {acceptedAs} are now connected.
                     </div>
                     <Button className="w-full" onClick={() => router.push(connectedHref)}>
-                      Open Chat
+                      Open chat
                     </Button>
                   </CardContent>
                 </Card>

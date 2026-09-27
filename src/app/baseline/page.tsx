@@ -103,17 +103,17 @@ function BaselineContent() {
               </p>
             )}
             <PageHeader
-              title="Build Your Baseline"
-              description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. Your data is never shared with third parties."
+              title="Build your Baseline"
+              description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. It is used for one purpose only: computing your Baseline."
             />
 
             <Section
-              title="Birth Information"
+              title="Birth information"
               description="Set it once, then review or update it here any time."
               rule={false}
             >
               <BaselineForm
-                submitLabel="Build My Baseline"
+                submitLabel="Build my Baseline"
                 onSaved={() => {
                   void loadBaseline();
                 }}
@@ -123,7 +123,7 @@ function BaselineContent() {
 
             <p className="mt-4 text-center text-sm text-muted-foreground">
               Your birth time and location compute planetary positions via NASA data — a precise time is
-              ideal, and an approximation works too. This data is stored securely and never shared.
+              ideal, and an approximation works too. This data is used only to compute your Baseline.
             </p>
           </div>
         </main>
@@ -149,7 +149,7 @@ function BaselineContent() {
 
           {editing ? (
             <Section
-              title="Update Birth Information"
+              title="Update birth information"
               description="Saving recomputes your whole Baseline from the new details."
               rule={false}
             >
@@ -174,7 +174,7 @@ function BaselineContent() {
           ) : (
             <>
               <Section
-                title="Birth Information"
+                title="Birth information"
                 description="Only ever used to compute your Baseline — never shared."
                 actions={
                   <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
