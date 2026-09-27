@@ -54,6 +54,9 @@ export function PasskeySignInButton({ className }: { className?: string }) {
     // Same intent carry-through as password sign-in: return to the page the
     // middleware bounced the person from, not always the chat.
     const next = data?.hasBaseline ? (safeInAppPath(searchParams.get("next")) ?? "/chat") : "/baseline";
+    // Tell the persistent Nav chrome that the session changed, so it flips to
+    // the signed-in menu immediately instead of waiting for a full reload.
+    window.dispatchEvent(new Event("sovereign:auth"));
     router.push(next);
     router.refresh();
   };

@@ -1,8 +1,9 @@
 "use client";
+import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Square, Users, X } from "lucide-react";
+import { ArrowUp, Plus, Square, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Nav } from "@/components/nav";
@@ -46,6 +47,24 @@ const SUGGESTIONS = [
   "Where am I holding tension with the people I love?",
   "What should I look at more closely in my baseline?",
 ];
+
+/** The assistant's side of the thread: emblem avatar + one glass bubble. */
+function AssistantTurn({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5 sm:gap-3">
+      <span
+        aria-hidden="true"
+        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/emblem-core-bold.png" alt="" className="h-5 w-auto" />
+      </span>
+      <div className="glass-panel max-w-[88%] rounded-panel rounded-tl-sm px-4 py-3 text-[15px] text-foreground sm:max-w-[80%]">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function ChatClient() {
   const router = useRouter();
@@ -508,9 +527,9 @@ export function ChatClient() {
         <div className="mx-auto max-w-3xl space-y-4">
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center pt-20">
-              <div className="text-center">
-                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-muted/40">
-                  <Logo showWordmark={false} href="#" markClassName="h-9 w-auto" />
+              <div className="msg-in text-center">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
+                  <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
                 </div>
                 <p className="font-display text-2xl font-normal tracking-tight text-foreground">
                   Ask anything.
@@ -522,13 +541,14 @@ export function ChatClient() {
                   Your Baseline is loaded — Sovereign will bring it into every answer.
                 </p>
                 <div className="mt-6 flex flex-col items-center gap-2">
-                  {SUGGESTIONS.map((s) => (
+                  {SUGGESTIONS.map((s, i) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => sendMessage(s)}
                       disabled={isStreaming}
-                      className="rounded-md border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
+                      style={{ animationDelay: `${120 + i * 90}ms` }}
+                      className="msg-in rounded-full border border-border/70 bg-white/5 px-4 py-2 text-sm text-muted-foreground transition-all duration-[240ms] hover:-translate-y-[1px] hover:border-foreground/40 hover:text-foreground"
                     >
                       {s}
                     </button>
@@ -548,32 +568,30 @@ export function ChatClient() {
             return (
               <div
                 key={idx}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div
-                  className={`max-w-[92%] rounded-panel px-4 py-3 sm:max-w-[85%] ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border bg-surface-2 text-foreground"
-                  }`}
-                >
-                  {streamingEmpty ? (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground" aria-hidden="true">
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-current" />
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
-                      <span className="ml-1">Thinking…</span>
-                    </span>
-                  ) : stoppedEmpty ? (
-                    <p className="text-sm text-muted-foreground">Response stopped.</p>
-                  ) : msg.role === "assistant" ? (
-                    <div className="text-[15px]">
+                {msg.role === "assistant" ? (
+                  <AssistantTurn>
+                    {streamingEmpty ? (
+                      <>
+                        <span aria-hidden="true" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                        </span>
+                        <span className="sr-only">Sovereign is thinking…</span>
+                      </>
+                    ) : stoppedEmpty ? (
+                      <p className="text-sm text-muted-foreground">Response stopped.</p>
+                    ) : (
                       <RichText text={msg.content} />
-                    </div>
-                  ) : (
-                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{msg.content}</p>
-                  )}
-                </div>
+                    )}
+                  </AssistantTurn>
+                ) : (
+                  <div className="max-w-[88%] rounded-panel rounded-br-sm bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_30px_-18px_rgba(0,0,0,0.8)] sm:max-w-[80%]">
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -612,7 +630,7 @@ export function ChatClient() {
               </Link>
             </p>
           )}
-          <div className="flex gap-2">
+          <div className="composer-pill flex items-center gap-2 pl-5 pr-1.5 py-1.5">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -628,15 +646,17 @@ export function ChatClient() {
                   : "Type your message..."
               }
               disabled={isStreaming || (usage.limit !== null && usage.used >= usage.limit && !showUpgrade)}
+              className="h-11 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
             />
             {isStreaming ? (
-              <Button onClick={stopStreaming} variant="outline" className="h-11">
+              <Button onClick={stopStreaming} variant="outline" size="icon" className="h-11 w-11 shrink-0 rounded-full">
                 <Square className="h-3.5 w-3.5" />
-                Stop
+                <span className="sr-only">Stop</span>
               </Button>
             ) : (
-              <Button onClick={() => sendMessage()} disabled={!input.trim()} className="h-11">
-                Send
+              <Button onClick={() => sendMessage()} disabled={!input.trim()} size="icon" className="h-11 w-11 shrink-0 rounded-full">
+                <ArrowUp className="h-4 w-4" />
+                <span className="sr-only">Send</span>
               </Button>
             )}
           </div>

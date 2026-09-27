@@ -32,14 +32,23 @@ export function Nav() {
 
   useEffect(() => {
     setMounted(true);
-    fetch("/api/auth")
-      .then((r) => r.json())
-      .then((d) => {
-        const data = d as { user?: { subscription_tier?: string | null } | null };
-        setAuthed(!!data.user);
-        setTier(data.user?.subscription_tier === "sovereign+" ? "sovereign+" : data.user?.subscription_tier === "free" ? "free" : null);
-      })
-      .catch(() => setAuthed(false));
+    const load = () =>
+      fetch("/api/auth")
+        .then((r) => r.json())
+        .then((d) => {
+          const data = d as { user?: { subscription_tier?: string | null } | null };
+          setAuthed(!!data.user);
+          setTier(data.user?.subscription_tier === "sovereign+" ? "sovereign+" : data.user?.subscription_tier === "free" ? "free" : null);
+        })
+        .catch(() => setAuthed(false));
+    load();
+    // Auth is client-side (fetch + cookie), so a soft navigation after login
+    // never remounts this persistent layout component. Any sign-in/passkey
+    // success dispatches `sovereign:auth` to pull the chrome in sync
+    // immediately — otherwise the header keeps showing logged-out links
+    // while the user is already inside the app.
+    window.addEventListener("sovereign:auth", load);
+    return () => window.removeEventListener("sovereign:auth", load);
   }, []);
 
   const linkClass = (href: string) =>

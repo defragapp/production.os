@@ -114,6 +114,9 @@ export function OnboardContent() {
       const data = await readJsonSafe<{ user?: { email?: string }; hasBaseline?: boolean }>(authRes);
       if (!data) throw new Error("Unexpected response from the server. Please try again.");
       if (data.user?.email) setEmail(data.user.email);
+      // Session cookie is set — sync the persistent Nav chrome before the soft
+      // navigation, which alone would not remount it (logged-out menu bug).
+      window.dispatchEvent(new Event("sovereign:auth"));
 
       if (isLogin || existingUser) {
         // Invitation links carry the token through auth so the accept screen
@@ -330,7 +333,7 @@ export function OnboardContent() {
         <Nav />
         <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-          <div className="w-full max-w-md">
+          <div className="auth-card msg-in w-full max-w-md">
             {/* The stepper only applies to new accounts; returning users
                 signing in aren't mid-funnel, so "1 of 3" is noise. */}
             {!isLogin && <Stepper steps={STEPS} current={0} />}
