@@ -35,7 +35,7 @@ const jsonLd = {
   operatingSystem: "Web",
   url: "https://sovereign.defrag.app",
   description:
-    "Your personal intelligence layer. Sovereign OS computes a personal Baseline from NASA/JPL planetary data and uses AI to surface the patterns shaping how you think, feel, and relate.",
+    "Sovereign is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
     { "@type": "Offer", name: "Sovereign+ Monthly", price: "20", priceCurrency: "USD" },
@@ -53,7 +53,7 @@ const faqJsonLd = {
       name: "Is this therapy or medical advice?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "No. Sovereign OS is a tool for self-reflection and pattern awareness. It does not diagnose, treat, or replace professional mental health, medical, or financial advice. If you are struggling, please reach out to a qualified professional.",
+        text: "No. Sovereign OS is a tool for self-reflection and understanding. It does not diagnose, treat, or replace professional mental health, medical, or financial advice. If you are struggling, please reach out to a qualified professional.",
       },
     },
     {

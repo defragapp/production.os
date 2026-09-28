@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { EMBLEM_DATA_URI } from "@/lib/brand-emblem-data";
 
-export const alt = "Sovereign OS — Understand the patterns in your life";
+export const alt = "Sovereign OS — Understand who you are, and why your relationships work";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -49,7 +49,7 @@ export default function OpengraphImage() {
             color: "#a1a1aa",
           }}
         >
-          Understand the patterns in your life
+          Understand who you are, and why relationships work
         </div>
         <div
           style={{

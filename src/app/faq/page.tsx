@@ -24,7 +24,7 @@ const FAQS = [
   },
   {
     q: "Where does my Baseline come from?",
-    a: "From your birth date, time, and place. We compute the planets' positions from NASA/JPL ephemeris data and combine them with two long-standing reference systems (numerology and Human Design) into one readable profile that the AI brings into your conversations.",
+    a: "From your birth date, time, and place. We compute the planets' positions from NASA/JPL planetary data and combine them with two long-standing reference systems (numerology and Human Design) into one readable profile that the AI brings into your conversations.",
   },
   {
     q: "What do you do with my birth data?",

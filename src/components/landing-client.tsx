@@ -93,30 +93,48 @@ const DEMO_BASELINE: BaselineData = {
   },
 };
 
-const TRUST_NOTES = ["Private by design", "NASA/JPL data", "Free to start"];
+const TRUST_NOTES = ["Private by design", "Built from your Baseline", "Free to start"];
 
 const EXPLORE = [
   {
-    title: "Yourself",
-    desc: "What drives you — and why your own qualities can turn on you under pressure.",
-    question: "Why do I freeze the moment I get put on the spot?",
+    title: "You",
+    lead: "Who you are when the pressure is off — and who takes over when it's on.",
+    desc: "See your strengths clearly, understand why you react the way you do when you're overwhelmed, and find your way back to yourself.",
+    question: "Who am I, underneath all this?",
   },
   {
-    title: "A relationship",
-    desc: "What's actually happening between two people, beyond each person's version.",
-    question: "Why do we have the same fight every time money comes up?",
+    title: "Relationships",
+    lead: "See both sides of the conversation without losing your own.",
+    desc: "Step out of the cycle where one person presses and the other withdraws. Understand what each of you is really protecting, so you can respond with a clear head.",
+    question: "Why does that one conversation always go sideways?",
   },
   {
-    title: "Your family",
-    desc: "The roles, loyalties, and silent rules everyone is playing out.",
-    question: "Why does my family go quiet the instant someone gets angry?",
+    title: "Family & groups",
+    lead: "Stop carrying roles in the room that were never yours to hold.",
+    desc: "Unpack the unwritten rules, the roles you inherited, and the quiet expectations in your family or team — without blame, and without turning anyone into the villain.",
+    question: "What role did I inherit that I'm tired of playing?",
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    title: "Map your Baseline",
+    desc: "Enter your birth details once. Sovereign builds an enduring reference for how you naturally process, communicate, and react under pressure.",
+  },
+  {
+    title: "Bring a real situation",
+    desc: "A tense conversation, an unspoken family dynamic, a decision you keep turning over. Start wherever it's actually live for you.",
+  },
+  {
+    title: "Get clear perspective",
+    desc: "See what's really going on beneath the surface, what each side is protecting, and the one question that helps you choose your next move.",
   },
 ];
 
 // The anatomy of a Sovereign answer is stated once, in a line — not a process diagram.
 
 const DEMO_ANSWER = [
-  "You've named the pattern: closeness gets real, and you pull back before it can be depended on.",
+  "Here's what keeps happening: closeness gets real, and you pull back before it can be depended on.",
   "Your Baseline carries a Moon in Cancer — tenderness, and a reflex to guard what it loves. A tendency, not a verdict.",
 ];
 
@@ -151,8 +169,9 @@ const ANSWER_ANATOMY = [
  * The product, drawn in CSS: the same surfaces and chrome the real chat
  * renders today — pill thread chips, an avatar-free glass bubble set in the
  * display serif, the composer pill — with an answer in the
- * authentic voice Sovereign actually produces: observe the pattern, name its
- * cost, read the Baseline as a tendency, then leave one honest question open.
+ * authentic voice Sovereign actually produces: notice what keeps happening,
+ * name what it costs, read the Baseline as a tendency, then leave one honest
+ * question open.
  */
 function ProductDemo() {
   return (
@@ -255,19 +274,19 @@ export function LandingClient() {
             <Reveal>
               <div className="text-left">
                 <h1 className="font-display text-[2rem] font-normal leading-[1.12] tracking-tight text-foreground sm:text-4xl md:text-[3rem] md:leading-[1.06] lg:text-[3.75rem] lg:leading-[1.04] xl:text-[4.125rem]">
-                  Understand <span className="italic">yourself</span>, your people, and the systems you live within.
+                  Understand <span className="italic">who you are</span> — and why your relationships work the way they do.
                 </h1>
                 <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base lg:text-lg lg:leading-8">
-                  Sovereign is an AI that helps you think through what&apos;s happening in your life —
-                  personal, private, and grounded in a Baseline built from your birth data.
+                  Sovereign is a private space to explore your life, make sense of the moments that keep
+                  repeating, and find a clearer way forward. Grounded in your birth data, built for real life.
                 </p>
 
                 <div className="mt-7 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                   <Link href="/onboard?mode=signup" className="btn-focal px-7 py-3 text-sm font-semibold">
                     Start free
                   </Link>
-                  <Link href="/about" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground">
-                    Read the philosophy →
+                  <Link href="#how" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground">
+                    See how it works →
                   </Link>
                 </div>
 
@@ -288,24 +307,52 @@ export function LandingClient() {
           </div>
         </section>
 
+        {/* ── How it works ─────────────────────────────────── */}
+        <div className="section-rule" aria-hidden="true" />
+        <section id="how" className="relative overflow-hidden scroll-mt-24 px-6 py-20 md:py-28">
+          <div className="mx-auto max-w-5xl">
+            <Reveal className="mb-10 text-center md:mb-12">
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">How it works</p>
+              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
+                Three steps. It starts with wherever you are.
+              </h2>
+            </Reveal>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              {HOW_IT_WORKS.map((step, i) => (
+                <Reveal key={step.title} delay={i * 90}>
+                  <div className="glass-panel card-lift flex h-full flex-col p-6 md:p-7">
+                    <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/40 font-mono text-sm text-foreground/80">
+                      {i + 1}
+                    </span>
+                    <h3 className="font-display text-xl font-normal text-foreground md:text-2xl">{step.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{step.desc}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── What you can explore ─────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
             <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">What people ask</p>
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">What you can look at</p>
               <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
-                Ask about any part of your life.
+                Yourself, your relationships, the rooms you move through.
               </h2>
-              <p className="mt-3 text-sm text-muted-foreground md:text-base">The questions people actually bring look like this.</p>
+              <p className="mt-3 text-sm text-muted-foreground md:text-base">Sovereign works wherever your life is actually happening.</p>
             </Reveal>
 
             <div className="grid gap-4 md:grid-cols-3">
               {EXPLORE.map((item, i) => (
                 <Reveal key={item.title} delay={i * 90}>
                   <div className="glass-panel card-lift flex h-full flex-col p-6 md:p-7">
-                    <h3 className="font-display text-xl font-normal text-foreground md:text-2xl">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{item.desc}</p>
+                    <h3 className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80">{item.title}</h3>
+                    <p className="mt-3 font-display text-xl font-normal leading-snug text-foreground md:text-[1.6rem]">{item.lead}</p>
+                    <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{item.desc}</p>
                     <p className="mt-4 break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-sm leading-relaxed text-foreground/90 md:mt-auto md:text-[15px]">
                       “{item.question}”
                     </p>
@@ -321,7 +368,7 @@ export function LandingClient() {
                 Every answer returns to your Baseline — and leaves the deciding to you.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 md:text-[11px]">
-                {["NASA/JPL Horizons ephemeris", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
+                {["NASA/JPL planetary data", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
                   <span key={source} className="flex items-center gap-5">
                     {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
                     {source}

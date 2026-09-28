@@ -50,11 +50,11 @@ const APPLE_STARTUP_IMAGES: Startup[] = [
 export const metadata: Metadata = {
   metadataBase: new URL("https://sovereign.defrag.app"),
   title: {
-    default: "Sovereign OS — Understand the patterns in your life",
+    default: "Sovereign OS — Understand who you are, and why your relationships work",
     template: "%s · Sovereign OS",
   },
   description:
-    "Sovereign is a private AI platform for understanding yourself, your people, and the systems you live within — starting with your Baseline.",
+    "Sovereign is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
   applicationName: "Sovereign OS",
   manifest: "/manifest.webmanifest",
   authors: [{ name: "Sovereign OS" }],
@@ -69,16 +69,16 @@ export const metadata: Metadata = {
     startupImage: APPLE_STARTUP_IMAGES,
   },
   keywords: [
-    "AI patterns",
+    "self understanding",
     "self reflection",
     "relationships",
     "baseline",
     "sovereign",
   ],
   openGraph: {
-    title: "Sovereign OS — Understand the patterns in your life",
+    title: "Sovereign OS — Understand who you are, and why your relationships work",
     description:
-      "A private AI platform for understanding yourself, your people, and the systems you live within.",
+      "A private space to understand yourself and the people around you — grounded in your Baseline.",
     type: "website",
     locale: "en_US",
     images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
@@ -92,7 +92,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Sovereign OS",
     description:
-      "Understand yourself, your people, and the systems you live within.",
+      "Understand who you are, and why your relationships work the way they do.",
   },
   robots: {
     index: true,

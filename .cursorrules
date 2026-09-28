@@ -1,0 +1,70 @@
+# SOVEREIGN.OS — IDE AGENT DIRECTIVE: HUMAN-FIRST RELATIONAL ENGINE
+
+You are working on the production Sovereign OS codebase (Next.js App Router,
+Tailwind CSS, Cloudflare Workers via OpenNext, D1/KV, Stripe). The product is a
+private AI space for understanding yourself and your relationships, grounded in a
+personal "Baseline" computed from birth data.
+
+## 1. PRESERVATION (no destructive overwrites)
+
+- Do NOT rewrite whole pages from scratch, delete working component files, or wipe
+  existing layouts. Evolve in place through small, verified edits.
+- Retain all working routes (`/`, `/about`, `/faq`, `/support`, `/onboard`,
+  `/baseline`, `/chat`, `/upgrade`, `/account`, `/settings`), D1/KV bindings, Stripe
+  billing flows, and auth logic.
+- Make surgical, additive refinements to copy, styling, and micro-components only.
+- Validate before every deploy: `npm run typecheck && npm run lint && npm test`.
+
+## 2. STRICT VOCABULARY GUARDRAILS (public UI, marketing, and AI responses)
+
+BANNED — never appear in user-facing copy or AI output:
+- "the pattern" / "patterns" (as a noun for what the AI surfaces) → use
+  "what keeps happening", "the dynamic", "the situation".
+- "friction" → "tension", "pressure", "misunderstanding", "going sideways".
+- "activation loop", "field geometry", "firewall", "entropy", "telemetry",
+  "vector pressure", "ephemeris", "astrological transit" → keep this machinery in
+  the backend only; never expose it in copy. Say "NASA/JPL planetary data", not
+  "ephemeris".
+- Pathology/label words: "narcissist", "toxic", "borderline", "gaslighting",
+  "pathology", "diagnosis" → strictly prohibited in AI responses and marketing.
+  (The legal "it does not diagnose" safety disclaimer is allowed and required.)
+- Never call the AI's output a "read" or "reading" — it is an "answer".
+
+REQUIRED TONE:
+- Simple, direct, deeply human, grounded, adult, dignified. No academic or
+  tech-demo register.
+- Phrases to reach for: "at your core", "under pressure", "what both sides are
+  protecting", "unspoken family roles", "what isn't yours to carry", "a clear
+  response", "staying grounded".
+- Sentence case for all headings, buttons, nav, CTAs. Proper nouns keep capitals:
+  Baseline, Sovereign, Sovereign+, NASA, JPL, Stripe.
+- Honest claims only — heuristics + LLM reasoning, never "clinically validated".
+
+## 3. CORE PSYCHOLOGICAL BEHAVIOR (AI response generation — internal)
+
+The engine continues to reason from these frameworks, but the OUTPUT reads like a
+perceptive, grounded conversation — never like a framework name-drop:
+1. Bowen Family Systems — differentiation (stay connected without abandoning
+   yourself or forcing change); name unassigned/over-functioning roles
+   (peacekeeper, fixer, emotional translator).
+2. IFS — treat defensive reactions as protective parts, not flaws; find the
+   strength underneath (over-explaining ≈ desire for truth; withdrawing ≈
+   sensitivity, needing quiet).
+3. Push-pull polarity — when one presses, the other steps back; both are
+   regulating. Always bilateral: validate what each protects, never a villain.
+4. North Node — gently point toward the most mature expression (clean boundaries,
+   speaking without defensiveness).
+5. Reflective Question Rule — every insight culminates in ONE calibrated question
+   that sparks realization, not guilt.
+
+These are internal reasoning aids. Backend identifiers (PatternCandidate,
+scanPatternCandidates, ctx.patterns, safety regex `patterns`) are engine code and
+MUST NOT be renamed by copy passes.
+
+## 4. UI SYSTEM
+
+- Dark-first obsidian/minimalist palette via existing tokens (see BRAND.md and
+  `globals.css`): warm graphite background, cream foreground, restrained accents.
+- Reuse existing classes (`glass-panel`, `card-lift`, `section-rule`, `btn-focal`,
+  `btn-aurora`, `btn-glass`, `font-display`) — extend, don't reinvent.
+- Clean TypeScript + Tailwind. No unnecessary dependencies.

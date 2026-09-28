@@ -211,7 +211,7 @@ function BaselineContent() {
               )}
 
               <p className="mt-4 text-center text-xs text-muted-foreground/70">
-                Computed {formatD1Date(row?.updated_at)} from NASA/JPL Horizons ephemeris.
+                Computed {formatD1Date(row?.updated_at)} from NASA/JPL planetary data.
               </p>
               <div className="mt-6 flex justify-center gap-2">
                 <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>
