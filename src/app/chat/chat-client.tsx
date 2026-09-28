@@ -337,7 +337,12 @@ export function ChatClient() {
   }, [router, refreshThreads, openThread]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Only follow the conversation once it exists. On an empty thread this
+    // would scroll past the "Ask anything" empty state to its bottom, hiding
+    // the emblem and headline above the fold.
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Usage should self-heal without a page reload: if the daily window rolls
@@ -549,7 +554,12 @@ export function ChatClient() {
   }
 
   return (
-    <main id="main" className="flex min-h-screen flex-col">
+    // Bounded app shell: the conversation is the scroll surface and the
+    // composer stays pinned to the bottom on every viewport. `min-h-screen`
+    // let the page grow, so on phones the tall empty state pushed the input
+    // below the fold — `h-[100dvh]` keeps the shell to the screen and lets
+    // the inner `overflow-y-auto` own scrolling. dvh tracks mobile browser chrome.
+    <main id="main" className="flex h-[100dvh] flex-col">
       <Nav />
       {/* App screen: the conversation itself is the content, so the page
           title exists for assistive tech only (every page carries one h1). */}
@@ -693,8 +703,11 @@ export function ChatClient() {
           <div className="flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
             <div className="mx-auto max-w-3xl space-y-4">
               {messages.length === 0 && (
-                <div className="flex h-full items-center justify-center pt-20">
-                  <div className="msg-in text-center">
+                <div className="flex min-h-full flex-col px-2 py-10">
+                  {/* my-auto centers the empty state when it fits, and collapses
+                      to a top alignment when it overflows — unlike items-center,
+                      which clips the emblem/headline out of reach on short phones. */}
+                  <div className="msg-in my-auto w-full text-center">
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
                       <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
                     </div>
