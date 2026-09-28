@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
-import { PageTexture } from "@/components/page-texture";
+import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
@@ -77,12 +77,7 @@ function UpgradeContent() {
   }
 
   return (
-    <>
-      <PageTexture />
-      <Nav />
-      <main id="main" className="relative z-10 min-h-[calc(100vh-3.5rem)] overflow-hidden px-6 py-10">
-        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="msg-in mx-auto w-full max-w-3xl">
+    <PageShell center={false} wide="prose">
           <PageHeader
             title={isPlus ? "You're on Sovereign+" : "Pick your plan"}
             description={
@@ -154,9 +149,7 @@ function UpgradeContent() {
             <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>
             <Button variant="ghost" onClick={() => router.push("/account")}>Account</Button>
           </div>
-        </div>
-      </main>
-    </>
+    </PageShell>
   );
 }
 

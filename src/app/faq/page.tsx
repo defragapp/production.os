@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
-import { PageTexture } from "@/components/page-texture";
+import { PageShell } from "@/components/page-shell";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -42,10 +41,7 @@ const FAQS = [
 
 export default function FaqPage() {
   return (
-    <>
-      <PageTexture />
-      <Nav />
-      <main id="main" className="relative mx-auto max-w-3xl px-6 py-14">
+    <PageShell center={false} wide="wide">
         <PageHeader
           title="Questions, answered"
           description="What Sovereign is, how it works, and what it means for you."
@@ -91,7 +87,6 @@ export default function FaqPage() {
             </Link>
           </div>
         </section>
-      </main>
-    </>
+    </PageShell>
   );
 }

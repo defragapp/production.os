@@ -3,8 +3,11 @@
  * Used by every authenticated route so headers stay consistent. The brand is
  * already carried by the nav, so the eyebrow is opt-in — pass a real category
  * (not the product name) only when it adds meaning; otherwise the header is a
- * clean serif title.
+ * clean serif title. The eyebrow always comes from <Eyebrow> — one crown style
+ * for the whole platform.
  */
+import { Eyebrow } from "@/components/ui/eyebrow";
+
 export function PageHeader({
   eyebrow,
   title,
@@ -22,11 +25,7 @@ export function PageHeader({
     <div className={`mb-8 ${center ? "text-center" : ""}`}>
       {(eyebrow || badge) && (
         <div className={`flex items-center gap-2 mb-2 ${center ? "justify-center" : "justify-start"}`}>
-          {eyebrow && (
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground/80">
-              {eyebrow}
-            </p>
-          )}
+          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
           {badge}
         </div>
       )}

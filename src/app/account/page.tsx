@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Section } from "@/components/ui/section";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
-import { PageTexture } from "@/components/page-texture";
+import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
 import { AddPasskeyButton } from "@/components/passkey";
 import { formatD1Date } from "@/lib/utils";
@@ -137,11 +137,7 @@ export default function AccountPage() {
 
   return (
     <>
-      <PageTexture />
-      <Nav />
-      <main id="main" className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
-        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="msg-in w-full max-w-lg">
+      <PageShell>
           <PageHeader title="Account" description="Your plan, profile, and account preferences." />
           {unverifiedNotice && (
             <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-border bg-muted/30 text-foreground" : "border-border/80 bg-muted/40 text-foreground"}`}>
@@ -156,7 +152,7 @@ export default function AccountPage() {
               <div className="glass-panel space-y-3 p-5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Plan</span>
-                  <span className={`rounded-chip px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.14em] ${isPlus ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-muted-foreground"}`}>
+                  <span className={`rounded-chip px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.16em] ${isPlus ? "bg-primary text-primary-foreground" : "border border-border bg-muted text-muted-foreground"}`}>
                     {isPlus ? "Sovereign+" : "Free"}
                   </span>
                 </div>
@@ -311,8 +307,7 @@ export default function AccountPage() {
               </Link>
             </div>
           </div>
-        </div>
-      </main>
+      </PageShell>
 
       {showDelete && (
         <div

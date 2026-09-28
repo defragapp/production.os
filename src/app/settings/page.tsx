@@ -6,9 +6,8 @@ import { Check, Link2, Pencil, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Section } from "@/components/ui/section";
-import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
-import { PageTexture } from "@/components/page-texture";
+import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
 import type { RelationshipView } from "@/lib/types";
 import { formatD1Date } from "@/lib/utils";
@@ -293,12 +292,7 @@ export default function SettingsPage() {
   const loading = tier === null && connections === null && invites === null;
 
   return (
-    <>
-      <PageTexture />
-      <Nav />
-      <main id="main" className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-start justify-center overflow-hidden p-6">
-        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="msg-in w-full max-w-2xl">
+    <PageShell center={false} wide="prose">
           <PageHeader
             title="Settings"
             description="Your profile, connections, and privacy controls."
@@ -360,7 +354,7 @@ export default function SettingsPage() {
                             <div className="min-w-0">
                               <p className="flex flex-wrap items-center gap-2 text-sm">
                                 <span className="font-medium text-foreground">{c.personName}</span>
-                                <span className="rounded border border-border bg-background/60 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                                <span className="rounded border border-border bg-background/60 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                                   {c.myLabel}
                                 </span>
                               </p>
@@ -531,7 +525,7 @@ export default function SettingsPage() {
                             <p className="text-sm text-foreground">
                               {inv.name ? <>{inv.name} · </> : null}
                               {inv.emailMasked}
-                              <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                              <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                                 {inv.role}
                               </span>
                             </p>
@@ -664,8 +658,6 @@ export default function SettingsPage() {
               </Button>
             </div>
           )}
-        </div>
-      </main>
-    </>
+    </PageShell>
   );
 }

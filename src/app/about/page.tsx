@@ -38,7 +38,7 @@ export default function AboutPage() {
         <section className="relative w-full px-6 py-14 md:py-20">
           <div className="hero-light" aria-hidden="true" />
           <div className="relative mx-auto w-full max-w-3xl">
-            <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
               Our Philosophy
             </p>
             <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3.25rem]">
@@ -57,7 +57,7 @@ export default function AboutPage() {
             <div className="mt-10 grid gap-6 sm:grid-cols-3">
               {PRINCIPLES.map((p) => (
                 <div key={p.title}>
-                  <h2 className="mb-1.5 text-sm font-semibold text-foreground">{p.title}</h2>
+                  <h2 className="mb-1.5 font-display text-base font-normal tracking-tight text-foreground">{p.title}</h2>
                   <p className="text-sm leading-6 text-muted-foreground">{p.body}</p>
                 </div>
               ))}

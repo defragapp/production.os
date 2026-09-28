@@ -120,7 +120,7 @@ function StartingPoints({
                 : `msg-in rounded-panel border border-border/60 bg-white/[0.03] p-4 hover:-translate-y-[1px] hover:border-foreground/30 hover:bg-white/[0.05]`
             }`}
           >
-            <span className={`block font-mono uppercase tracking-[0.14em] text-muted-foreground/60 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
+            <span className={`block font-mono uppercase tracking-[0.16em] text-muted-foreground/60 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
               {p.level}
             </span>
             <span className={`mt-1.5 block font-display leading-snug text-foreground/90 ${compact ? "line-clamp-2 text-[13px]" : "text-[15px]"}`}>
@@ -205,7 +205,7 @@ function ThreadLibrary({
                   <p className="line-clamp-2 text-[13px] leading-snug">
                     {t.label?.trim() || formatThreadDate(t.updated_at)}
                   </p>
-                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/50">
+                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
                     {formatThreadDate(t.updated_at)}
                   </p>
                 </button>
@@ -911,7 +911,7 @@ function PeoplePanel({
                 {connections.map((c) => (
                   <li key={c.relationId} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     <span className="font-medium text-foreground">{c.personName}</span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                       {c.myLabel}
                     </span>
                     <span className="text-xs text-muted-foreground/70">
@@ -930,10 +930,10 @@ function PeoplePanel({
                 {invites.map((i) => (
                   <li key={i.id} className="flex items-center gap-3 text-sm">
                     <span className="text-muted-foreground">{i.name || i.emailMasked}</span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                       {i.role}
                     </span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/60">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60">
                       {i.acceptedAt ? "accepted" : i.status === "revoked" ? "revoked" : "invited"}
                     </span>
                   </li>

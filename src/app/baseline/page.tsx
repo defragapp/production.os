@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { Section } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
+import { PageShell } from "@/components/page-shell";
 import { Stepper } from "@/components/stepper";
 import { PageHeader } from "@/components/page-header";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineForm } from "@/components/baseline-form";
 import { BaselineDrawer } from "@/components/baseline-drawer";
@@ -91,43 +93,37 @@ function BaselineContent() {
   // ── First-time setup: no Baseline yet ──────────────────────────
   if (!row?.nasa_jpl_json_data && !editing) {
     return (
-      <>
-        <Nav />
-        <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
-          <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-          <div className="msg-in w-full max-w-md">
-            <Stepper steps={STEPS} current={1} />
-            {fromChat && (
-              <p className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
-                You need your Baseline before you can chat with the AI — it takes about a minute.
-              </p>
-            )}
-            <PageHeader
-              title="Build your Baseline"
-              description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. It is used for one purpose only: computing your Baseline."
-            />
+      <PageShell className="max-w-md">
+        <Stepper steps={STEPS} current={1} />
+        {fromChat && (
+          <p className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
+            You need your Baseline before you can chat with the AI — it takes about a minute.
+          </p>
+        )}
+        <PageHeader
+          title="Build your Baseline"
+          description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. It is used for one purpose only: computing your Baseline."
+        />
 
-            <Section
-              title="Birth information"
-              description="Set it once, then review or update it here any time."
-              rule={false}
-            >
-              <BaselineForm
-                submitLabel="Build my Baseline"
-                onSaved={() => {
-                  void loadBaseline();
-                }}
-                onDone={() => router.push(nextHref(invite))}
-              />
-            </Section>
+        <Section
+          title="Birth information"
+          description="Set it once, then review or update it here any time."
+          rule={false}
+        >
+          <BaselineForm
+            submitLabel="Build my Baseline"
+            onSaved={() => {
+              void loadBaseline();
+            }}
+            onDone={() => router.push(nextHref(invite))}
+          />
+        </Section>
 
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Your birth time and location compute planetary positions via NASA data — a precise time is
-              ideal, and an approximation works too. This data is used only to compute your Baseline.
-            </p>
-          </div>
-        </main>
-      </>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Your birth time and location compute planetary positions via NASA data — a precise time is
+          ideal, and an approximation works too. This data is used only to compute your Baseline.
+        </p>
+      </PageShell>
     );
   }
 
@@ -137,15 +133,11 @@ function BaselineContent() {
     | undefined;
 
   return (
-    <>
-      <Nav />
-      <main id="main" className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden px-6 py-10">
-        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="msg-in mx-auto w-full max-w-2xl">
-          <PageHeader
-            title="Your Baseline"
-            description="The picture computed from NASA/JPL planetary data, and the birth information it came from."
-          />
+    <PageShell center={false} wide="prose">
+      <PageHeader
+        title="Your Baseline"
+        description="The picture computed from NASA/JPL planetary data, and the birth information it came from."
+      />
 
           {editing ? (
             <Section
@@ -185,11 +177,11 @@ function BaselineContent() {
               >
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Date of birth</p>
+                    <Eyebrow scale="sm" className="mb-1">Date of birth</Eyebrow>
                     <p className="mt-1 text-sm text-foreground">{formatDateOfBirth(row?.dob)}</p>
                   </div>
                   <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Time of birth</p>
+                    <Eyebrow scale="sm" className="mb-1">Time of birth</Eyebrow>
                     <p className="mt-1 text-sm text-foreground">
                       {row?.tob || "—"}
                       {meta?.timePrecision === "approximate" && (
@@ -198,7 +190,7 @@ function BaselineContent() {
                     </p>
                   </div>
                   <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Place of birth</p>
+                    <Eyebrow scale="sm" className="mb-1">Place of birth</Eyebrow>
                     <p className="mt-1 text-sm text-foreground">{row?.pob || "—"}</p>
                   </div>
                 </div>
@@ -219,9 +211,7 @@ function BaselineContent() {
               </div>
             </>
           )}
-        </div>
-      </main>
-    </>
+    </PageShell>
   );
 }
 

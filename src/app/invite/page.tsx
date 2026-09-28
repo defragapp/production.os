@@ -6,9 +6,8 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
-import { PageTexture } from "@/components/page-texture";
+import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
 
 type InviteStatus = "invalid" | "revoked" | "accepted" | "expired" | "pending";
@@ -215,13 +214,7 @@ export default function InvitePage() {
   const connectedHref = "/chat";
 
   return (
-    <>
-      <PageTexture />
-      <Nav />
-      <main id="main" className="relative z-10 flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
-        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        {/* The invitation moment is a first touch: it arrives, it doesn't pop. */}
-        <div className="msg-in w-full max-w-md">
+    <PageShell className="max-w-md">
           {token === undefined ? (
             <PageHeader title="Invitation" description="Checking your invitation…" />
           ) : token === null ? (
@@ -343,8 +336,6 @@ export default function InvitePage() {
               )}
             </>
           )}
-        </div>
-      </main>
-    </>
+    </PageShell>
   );
 }

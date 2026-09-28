@@ -7,6 +7,7 @@ import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
 import { BaselineDrawer } from "@/components/baseline-drawer";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import type { BaselineData } from "@/lib/types";
 
 /**
@@ -214,9 +215,7 @@ function ProductDemo() {
       <div className="demo-backlight" aria-hidden="true" />
       <div className="relative overflow-hidden rounded-panel border border-border bg-surface-2 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.07),0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center">
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            Sovereign OS
-          </span>
+          <Eyebrow>Sovereign OS</Eyebrow>
         </div>
 
         {/* The real thread strip: pill chips, the active one lit */}
@@ -326,9 +325,9 @@ function PerspectiveSwitch() {
       </div>
 
       <div className="mt-6 border-t border-border/70 pt-5 text-center">
-        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
+        <Eyebrow scale="sm" className="mb-1.5">
           {PERSPECTIVE.commonLabel}
-        </p>
+        </Eyebrow>
         <p className="mx-auto max-w-xl font-display text-[15px] leading-[1.7] text-foreground/90 md:text-[16px]">
           {PERSPECTIVE.commonText}
         </p>
@@ -392,7 +391,7 @@ export function LandingClient() {
         <section id="how" className="relative overflow-hidden scroll-mt-24 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
             <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">How it works</p>
+              <Eyebrow className="mb-3">How it works</Eyebrow>
               <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 Three steps. It starts with wherever you are.
               </h2>
@@ -419,7 +418,7 @@ export function LandingClient() {
         <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
             <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">What you can look at</p>
+              <Eyebrow className="mb-3">What you can look at</Eyebrow>
               <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 Yourself, your relationships, the rooms you move through.
               </h2>
@@ -430,7 +429,7 @@ export function LandingClient() {
               {EXPLORE.map((item, i) => (
                 <Reveal key={item.title} delay={i * 90}>
                   <div className="glass-panel card-lift flex h-full flex-col p-6 md:p-7">
-                    <h3 className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80">{item.title}</h3>
+                    <Eyebrow as="h3" scale="sm" className="mb-3">{item.title}</Eyebrow>
                     <p className="mt-3 font-display text-xl font-normal leading-snug text-foreground md:text-[1.6rem]">{item.lead}</p>
                     <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground md:text-[15px]">{item.desc}</p>
                     <p className="mt-4 break-words rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-sm leading-relaxed text-foreground/90 md:mt-auto md:text-[15px]">
@@ -464,7 +463,7 @@ export function LandingClient() {
         <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-3xl">
             <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">What an answer looks like</p>
+              <Eyebrow className="mb-3">What an answer looks like</Eyebrow>
               <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 Not a verdict. A way of thinking back to you.
               </h2>
@@ -484,7 +483,7 @@ export function LandingClient() {
                 <div className="space-y-5">
                   {ANSWER_ANATOMY.map((part) => (
                     <div key={part.label}>
-                      <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">{part.label}</p>
+                      <Eyebrow scale="sm" className="mb-1.5">{part.label}</Eyebrow>
                       <p className="font-display text-[15px] leading-[1.7] text-foreground/90 md:text-[16px]">{part.body}</p>
                     </div>
                   ))}
@@ -502,7 +501,7 @@ export function LandingClient() {
         <section className="relative overflow-hidden px-6 py-20 md:py-28">
           <div className="mx-auto max-w-3xl">
             <Reveal className="mb-10 text-center md:mb-12">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">{PERSPECTIVE.eyebrow}</p>
+              <Eyebrow className="mb-3">{PERSPECTIVE.eyebrow}</Eyebrow>
               <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
                 {PERSPECTIVE.heading}
               </h2>
@@ -518,7 +517,7 @@ export function LandingClient() {
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden px-6 py-20 md:py-28">
           <Reveal className="mx-auto max-w-4xl">
-            <p className="mb-3 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">Plans</p>
+            <Eyebrow className="mb-3">Plans</Eyebrow>
             <h2 className="mb-3 text-center font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
               Free to start. Keep going when it gets deep.
             </h2>
@@ -548,7 +547,7 @@ export function LandingClient() {
               <div className="glass-panel card-lift relative flex flex-col p-7 border-foreground/30 shadow-[0_0_35px_-12px_rgba(244,239,228,0.12)]">
                 <p className="mb-1 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.16em] text-foreground font-semibold">
                   Sovereign+
-                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Best value</span>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Best value</span>
                 </p>
                 <p className="mb-5 flex items-baseline gap-2 font-display text-3xl font-normal">
                   $99
@@ -580,7 +579,7 @@ export function LandingClient() {
             <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
               <Logo showWordmark={false} href="#" markClassName="h-8 w-auto" />
             </div>
-            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">Begin</p>
+            <Eyebrow className="mb-3">Begin</Eyebrow>
             <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl md:text-[2.75rem] md:leading-[1.15]">
               Start with one honest question.
             </h2>
