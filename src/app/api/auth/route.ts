@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createJWT, generateSalt, generateUUID, hashPassword,
-  verifyJWT, verifyPassword, passwordNeedsRehash, PBKDF2_ITERATIONS, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY,
+  verifyPassword, passwordNeedsRehash, PBKDF2_ITERATIONS, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, tokenVersionOf,
 } from "@/lib/auth";
 import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
+import { bumpTokenVersion, verifySession } from "@/lib/session";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { syncStripeTier } from "@/lib/stripe";
 import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
+import { readUsage } from "@/lib/usage";
 import type { User } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
-  const payload = await verifyJWT(token, secret);
-  if (!payload) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
+
+  // This route is public on purpose — it is the session probe every page calls —
+  // so it cannot lean on the middleware gate and must make the whole check
+  // itself, including the token_version (revocation) comparison. A signature-only
+  // check would keep reporting a live session for a cookie that was just revoked.
+  const signedOut = { user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null };
+  const session = await verifySession(env, request);
+  if (!session) return NextResponse.json(signedOut, { status: 200 });
+  const payload = session.payload;
   // Same defensive lookup as /api/chat: stale D1 snapshots may lack the
   // email_verified column. Fall back rather than 500ing the session check.
   let user: User | null;
   try {
-    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
+    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, memory_mode, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
   } catch {
     try {
       user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
@@ -48,17 +55,27 @@ export async function GET(request: NextRequest) {
   }
 
   const hasBaseline = !!(await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(payload.sub).first());
-  // Daily AI chat usage for the UI (free tier only). Mirror or await the same
-  // KV counter the /api/chat route uses so the gauge matches the enforcement.
-  const todayKey = `chat-limit:${payload.sub}:${new Date().toISOString().slice(0, 10)}`;
-  const used = parseInt((await env.SESSION_KV.get(todayKey)) || "0", 10) || 0;
+  // Daily AI usage for the UI (free tier only — the gauge and the upgrade
+  // banner are the only consumers, and both are inert when limit is null).
+  // Read from the same D1 counter /api/chat enforces against, so the gauge can
+  // never disagree with the gate.
   const isFree = user.subscription_tier === "free";
-  const usage = { used, limit: isFree ? FREE_TIER_DAILY_LIMIT : null };
+  const usage = { used: isFree ? await readUsage(env, payload.sub) : 0, limit: isFree ? FREE_TIER_DAILY_LIMIT : null };
   return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null, usage, hasBaseline });
 }
 
 const LOGIN_RATE_LIMIT_TTL = 300;
 const LOGIN_RATE_LIMIT_MAX = 10;
+
+/**
+ * IP-only guard on account *creation*. The ip+email limiter below is defeated
+ * by simply rotating the email address — which is the exact shape of signup
+ * abuse (mass account creation, and verification-email bombing against third
+ * parties). Applied to signup only, never to sign-in, so a shared network
+ * (office, campus, carrier NAT) can never lock a household out of its accounts.
+ */
+const SIGNUP_IP_RATE_LIMIT_TTL = 3600;
+const SIGNUP_IP_RATE_LIMIT_MAX = 6;
 
 export async function POST(request: NextRequest) {
   const env = await getEnv();
@@ -87,13 +104,25 @@ export async function POST(request: NextRequest) {
   if (rlCount >= LOGIN_RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
   await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: LOGIN_RATE_LIMIT_TTL });
 
+  if (intent !== "login") {
+    const signupKey = `signup-ip-rl:${ip}`;
+    const signupCount = parseInt((await env.SESSION_KV.get(signupKey)) || "0", 10);
+    if (signupCount >= SIGNUP_IP_RATE_LIMIT_MAX) {
+      return NextResponse.json(
+        { error: "Too many accounts have been created from this network today. Try again later, or contact us and we'll sort it out." },
+        { status: 429 },
+      );
+    }
+    await env.SESSION_KV.put(signupKey, String(signupCount + 1), { expirationTtl: SIGNUP_IP_RATE_LIMIT_TTL });
+  }
+
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
   const pepper = env.PASSWORD_PEPPER;
   if (email && !isValidEmail(email)) return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
   if (!email || !password) return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
-  const existing = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<User & { password_hash: string; password_salt: string }>();
+  const existing = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<User & { password_hash: string; password_salt: string; token_version?: number | null }>();
   // Explicit sign-in must never provision an account. Without this, a "Sign In"
   // submit for an unknown (or just-deleted) email silently created one and
   // signed the visitor in as its owner.
@@ -152,14 +181,31 @@ export async function POST(request: NextRequest) {
       await sendTemplate(env, "welcome", email, { origin });
     }
   }
-  const token = await createJWT(userId, email, secret);
+  // Carry the account's live session generation into the new cookie. A token
+  // minted at a stale version would fail its own revocation check; a new
+  // account starts at the column default of 1. Normalising through
+  // `tokenVersionOf` keeps the minted claim byte-identical to what the verifier
+  // will compute for it.
+  const tokenVersion = tokenVersionOf({ tv: existing?.token_version ?? undefined });
+  const token = await createJWT(userId, email, secret, tokenVersion);
   const hasBaseline = !!(await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(userId).first());
   const response = NextResponse.json({ user: { id: userId, email }, hasBaseline });
   response.cookies.set(SESSION_COOKIE_NAME, token, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 7 * 24 * 60 * 60 });
   return response;
 }
 
-export async function DELETE() {
+/**
+ * Sign out.
+ *
+ * Clearing the cookie only affects the device that asked; the signed token
+ * itself stays valid everywhere else until it expires. So sign-out also rotates
+ * the account's session generation, which invalidates every cookie issued
+ * before this moment — including a copy an attacker may be holding.
+ */
+export async function DELETE(request: NextRequest) {
+  const env = await getEnv();
+  const session = await verifySession(env, request);
+  if (session) await bumpTokenVersion(env, session.payload.sub);
   const response = NextResponse.json({ ok: true });
   response.cookies.set(SESSION_COOKIE_NAME, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
   return response;

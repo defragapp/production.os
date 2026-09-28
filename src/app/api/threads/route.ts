@@ -4,6 +4,30 @@ import { getEnv } from "@/lib/env";
 import type { Thread, ChatMessage } from "@/lib/types";
 import { mergeThreadHistory } from "@/lib/threads";
 
+/**
+ * Write bounds for a thread.
+ *
+ * The transcript lives in a single JSON TEXT column and the client resends the
+ * whole thing on every turn, so without a ceiling one client can grow a row
+ * without limit — and pay for it in D1 write volume on every subsequent turn.
+ * 200 messages is far more than a real session; 100k characters is roughly a
+ * long book chapter. Exceeding either is a "start a new thread", not an error
+ * the person can fix by retrying, hence 413 with a code the UI can branch on.
+ */
+const MAX_THREAD_MESSAGES = 200;
+const MAX_THREAD_CHARS = 100_000;
+
+function threadTooLong(count: number): NextResponse {
+  return NextResponse.json(
+    {
+      error: `A thread holds up to ${MAX_THREAD_MESSAGES} messages. Start a new thread to keep going.`,
+      code: count > MAX_THREAD_MESSAGES ? "thread_too_many_messages" : "thread_too_large",
+      limit: MAX_THREAD_MESSAGES,
+    },
+    { status: 413 },
+  );
+}
+
 async function getAuthPayload(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
@@ -52,17 +76,25 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
   if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) return NextResponse.json({ error: "messages array is required" }, { status: 400 });
   const userFacingMessages = body.messages.filter((m) => m.role !== "system");
+  if (userFacingMessages.length > MAX_THREAD_MESSAGES) return threadTooLong(userFacingMessages.length);
+  const incomingJson = JSON.stringify(userFacingMessages);
+  if (incomingJson.length > MAX_THREAD_CHARS) return threadTooLong(userFacingMessages.length);
   if (body.threadId) {
     const existing = await env.DB.prepare("SELECT message_history FROM threads WHERE id = ? AND user_id = ?").bind(body.threadId, payload.sub).first<Thread>();
     if (!existing) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     let existingMessages: ChatMessage[] = [];
     try { existingMessages = JSON.parse(existing.message_history) as ChatMessage[]; } catch {}
     const merged = mergeThreadHistory(existingMessages, userFacingMessages);
+    // The cap is enforced on the merged result too, or a client could grow a
+    // bounded-looking payload into an unbounded stored row turn after turn.
+    if (merged.length > MAX_THREAD_MESSAGES || JSON.stringify(merged).length > MAX_THREAD_CHARS) {
+      return threadTooLong(merged.length);
+    }
     await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ?").bind(JSON.stringify(merged), body.threadId).run();
     return NextResponse.json({ threadId: body.threadId, messageCount: merged.length });
   }
   const newThreadId = generateUUID();
-  await env.DB.prepare("INSERT INTO threads (id, user_id, message_history) VALUES (?, ?, ?)").bind(newThreadId, payload.sub, JSON.stringify(userFacingMessages)).run();
+  await env.DB.prepare("INSERT INTO threads (id, user_id, message_history) VALUES (?, ?, ?)").bind(newThreadId, payload.sub, incomingJson).run();
   return NextResponse.json({ threadId: newThreadId, messageCount: userFacingMessages.length });
 }
 

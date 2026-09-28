@@ -10,6 +10,12 @@
     "cf-typegen": "wrangler types --env cloudflare",
     "db:migrate": "wrangler d1 execute production-os-db --local --file=./schema.sql",
     "db:migrate:remote": "wrangler d1 execute production-os-db --remote --file=./schema.sql",
+    "db:migrate:0001": "wrangler d1 execute production-os-db --local --file=./migrations/0001_token_version.sql",
+    "db:migrate:0001:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0001_token_version.sql",
+    "db:migrate:0002": "wrangler d1 execute production-os-db --local --file=./migrations/0002_chat_usage.sql",
+    "db:migrate:0002:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0002_chat_usage.sql",
+    "db:migrate:0003": "wrangler d1 execute production-os-db --local --file=./migrations/0003_journeys.sql",
+    "db:migrate:0003:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0003_journeys.sql",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run"

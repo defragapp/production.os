@@ -11,6 +11,13 @@ export const metadata: Metadata = {
     "Get in touch with the Sovereign team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.",
 };
 
+// Force dynamic: the page reads the Turnstile site key from the Cloudflare
+// bindings. Prerendering it meant a production build had to resolve remote
+// bindings just to emit the support page — a build that only succeeded because
+// of the local OpenNext dev hook, and one that would hang or fail in any
+// hermetic build environment.
+export const dynamic = "force-dynamic";
+
 export default async function SupportPage() {
   let turnstileSiteKey: string | undefined;
   try {

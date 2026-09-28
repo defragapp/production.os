@@ -7,7 +7,8 @@ import type { User } from "@/lib/types";
 /**
  * DELETE /api/auth/account — self-serve account deletion (right to erasure).
  * Cancels active Stripe billing (best-effort), then deletes the user row.
- * baselines and threads are removed via ON DELETE CASCADE.
+ * baselines, threads, invites, relationships, passkeys, journeys, and
+ * journey_events are all removed via ON DELETE CASCADE on the user row.
  */
 export async function DELETE(request: NextRequest) {
   const env = await getEnv();

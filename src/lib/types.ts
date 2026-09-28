@@ -4,6 +4,12 @@
 
 export type SubscriptionTier = "free" | "sovereign+";
 
+/** Where a person's conversation memory lives. 'server' persists threads and
+ *  journeys in D1 (multi-device continuity, the default); 'local' runs
+ *  zero-retention inference — nothing new is written server-side and the
+ *  client keeps the journey in an encrypted on-device vault. */
+export type MemoryMode = "server" | "local";
+
 export interface User {
   id: string;
   email: string;
@@ -11,6 +17,9 @@ export interface User {
   subscription_tier: SubscriptionTier;
   email_verified?: number;
   display_name?: string | null;
+  /** Optional: pre-migration D1 snapshots lack the column, and the defensive
+   *  user lookups fall back to selects without it. */
+  memory_mode?: MemoryMode;
   created_at: string;
   updated_at: string;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateSalt, hashPassword, verifyPassword, createJWT, verifyJWT, passwordNeedsRehash, PBKDF2_ITERATIONS } from "./auth";
+import { generateSalt, hashPassword, verifyPassword, createJWT, verifyJWT, passwordNeedsRehash, PBKDF2_ITERATIONS, tokenVersionOf } from "./auth";
 
 describe("password hashing", () => {
   it("generates unique 32-char hex salts", () => {
@@ -76,25 +76,53 @@ describe("JWT", () => {
   const secret = "test-secret-value";
 
   it("round-trips a signed token", async () => {
-    const token = await createJWT("user-1", "a@example.com", secret);
+    const token = await createJWT("user-1", "a@example.com", secret, 1);
     const payload = await verifyJWT(token, secret);
     expect(payload?.sub).toBe("user-1");
     expect(payload?.email).toBe("a@example.com");
   });
 
+  it("carries the session generation as `tv`", async () => {
+    const token = await createJWT("user-1", "a@example.com", secret, 4);
+    const payload = await verifyJWT(token, secret);
+    expect(payload?.tv).toBe(4);
+    expect(tokenVersionOf(payload!)).toBe(4);
+  });
+
   it("rejects a tampered token", async () => {
-    const token = await createJWT("user-1", "a@example.com", secret);
+    const token = await createJWT("user-1", "a@example.com", secret, 1);
     const [h, p, s] = token.split(".");
     const tampered = `${h}.${p}.${s.slice(0, -2)}xx`;
     expect(await verifyJWT(tampered, secret)).toBeNull();
   });
 
   it("rejects a token signed with a different secret", async () => {
-    const token = await createJWT("user-1", "a@example.com", "other-secret");
+    const token = await createJWT("user-1", "a@example.com", "other-secret", 1);
     expect(await verifyJWT(token, secret)).toBeNull();
   });
 
   it("rejects malformed tokens", async () => {
     expect(await verifyJWT("not-a-jwt", secret)).toBeNull();
+  });
+});
+
+describe("session generation", () => {
+  // Tokens minted before the token_version migration carry no `tv` claim. They
+  // must read as generation 1 — the same value the column default backfills —
+  // or every already-signed-in person would be logged out by the upgrade.
+  it("reads a missing `tv` claim as generation 1", () => {
+    expect(tokenVersionOf({})).toBe(1);
+    expect(tokenVersionOf({ tv: undefined })).toBe(1);
+  });
+
+  it("ignores a malformed `tv` claim instead of trusting it", () => {
+    // A hand-crafted token cannot smuggle a non-numeric version past the check.
+    expect(tokenVersionOf({ tv: Number.NaN })).toBe(1);
+    expect(tokenVersionOf({ tv: Number.POSITIVE_INFINITY })).toBe(1);
+  });
+
+  it("honours a real generation", () => {
+    expect(tokenVersionOf({ tv: 2 })).toBe(2);
+    expect(tokenVersionOf({ tv: 0 })).toBe(0);
   });
 });

@@ -647,5 +647,89 @@ a,[role="button"] {
     0 16px 40px -24px rgba(0, 0, 0, 0.8);
 }
 
+/* ── Journey canvas ──────────────────────────────────────────────
+   The progress track, milestone nodes, and the emblem "wash" that lives
+   behind the canvas. Everything is keyed off --journey-progress (0..1),
+   which the chat shell sets from the server-derived visual_progress — so
+   the scene visibly settles and warms as real milestones unlock. The
+   reveal is deterministic (driven by state, never by the model), and every
+   animation bows to prefers-reduced-motion: states still resolve, only
+   without the easing/keyframes. */
+.journey-bar {
+  position: relative;
+}
+
+/* The lit track that fills left→right. strokeDashoffset is set inline per
+   frame; this transition makes each unlock ease in rather than snap. */
+.journey-progress-line {
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Slow halo on the node the person is currently standing on. */
+.journey-current-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: journey-ring 2.4s ease-in-out infinite;
+}
+@keyframes journey-ring {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.12);
+  }
+}
+
+/* One-shot pop on a milestone that just unlocked this turn. */
+.milestone-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: milestone-pop 0.7s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+@keyframes milestone-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Emblem wash + warm bloom behind the path. Opacity ramps with
+   --journey-progress so the environment comes to life as the person
+   advances, masking the inference wait with motion that means something. */
+.journey-emblem-wash::before {
+  content: "";
+  position: absolute;
+  inset: -6px -2px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 92% at 50% 50%,
+      hsla(38, 60%, 76%, calc(0.05 + 0.16 * var(--journey-progress, 0))),
+      transparent 72%);
+  opacity: calc(0.45 + 0.55 * var(--journey-progress, 0));
+  transition: opacity 0.9s ease;
+}
+.journey-emblem-wash > svg {
+  position: relative;
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-progress-line {
+    transition: none;
+  }
+  .journey-current-ring,
+  .milestone-pop {
+    animation: none !important;
+  }
+}
+
 
 

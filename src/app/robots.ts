@@ -1,5 +1,14 @@
 import type { MetadataRoute } from "next";
 
+/**
+ * Crawling policy — the machine-readable half of Terms section 5.
+ *
+ * Public marketing and legal pages are open to search engines and AI assistants
+ * (and `/llms.txt` + `/llms-full.txt` invite them deliberately). Everything that
+ * requires a session, everything under `/api/`, and the onboarding funnel are not
+ * offered to crawlers. Terms section 5 says the same thing in prose; if one
+ * changes, change both.
+ */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {

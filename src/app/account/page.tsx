@@ -49,6 +49,8 @@ export default function AccountPage() {
   const [resent, setResent] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportNote, setExportNote] = useState<string | null>(null);
 
   useEffect(() => {
     setVerifyStatus(new URLSearchParams(window.location.search).get("verify"));
@@ -70,6 +72,37 @@ export default function AccountPage() {
   const handleSignOut = async () => {
     await fetch("/api/auth", { method: "DELETE" });
     router.push("/");
+  };
+
+  /**
+   * Download everything we hold, as one file. Streams the response into a blob
+   * rather than navigating, so a 429 (too many exports this hour) surfaces as a
+   * message instead of a new tab full of JSON error.
+   */
+  const handleExport = async () => {
+    setExporting(true);
+    setExportNote(null);
+    try {
+      const res = await fetch("/api/auth/export");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || "We couldn't build your export just now. Please try again.");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sovereign-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setExportNote("Saved — that file is everything we hold about you.");
+    } catch (err) {
+      setExportNote(err instanceof Error ? err.message : "Something went wrong — please try again.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   // Escape closes the destructive-action dialog without deleting anything.
@@ -268,6 +301,29 @@ export default function AccountPage() {
                   so you can never get locked out.
                 </p>
                 <AddPasskeyButton />
+              </div>
+            </Section>
+            <Section
+              title="Your data"
+              description="Everything we hold, in one file you keep"
+            >
+              <div className="space-y-3">
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Your Baseline, every conversation, the people you&apos;ve connected with, and the
+                  invitations you&apos;ve sent. Passwords aren&apos;t in it — we can&apos;t read them
+                  either. No request needed; it downloads straight away.
+                </p>
+                <Button variant="outline" className="w-full" onClick={handleExport} disabled={exporting}>
+                  {exporting ? "Building your file..." : "Download my data"}
+                </Button>
+                {exportNote && (
+                  <p
+                    role="status"
+                    className={`text-xs ${exportNote.startsWith("Saved") ? "text-muted-foreground" : "text-destructive"}`}
+                  >
+                    {exportNote}
+                  </p>
+                )}
               </div>
             </Section>
             <div className="space-y-2">

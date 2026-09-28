@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
-initOpenNextCloudflareForDev();
+// Dev-only: `initOpenNextCloudflareForDev` wires a `getPlatformProxy()` into
+// route loaders so `next dev` can read D1/KV/AI bindings. Under `next build`
+// the same call makes static-page generation spin up workerd and contend for
+// the `.wrangler/state` SQLite lock (SQLITE_BUSY) for routes that need no
+// bindings at build time — every public/legal page is a pure render and
+// `/support` is `force-dynamic`. Gate it to development so prod builds never
+// launch a Worker.
+if (process.env.NODE_ENV === "development") {
+  initOpenNextCloudflareForDev();
+}
 
 const securityHeaders = [
   {

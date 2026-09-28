@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
     await env.SESSION_KV.delete(`reset-token:${tokenHash}`);
     const salt = generateSalt();
     const passwordHash = await hashPassword(body.newPassword, salt, PBKDF2_ITERATIONS, env.PASSWORD_PEPPER);
-    await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, updated_at = datetime('now') WHERE id = ?").bind(passwordHash, salt, userId).run();
+    // A password reset must revoke every existing session in the same
+    // statement — otherwise a stolen or shared cookie would survive the very
+    // act meant to shut it out. Anyone holding one is signed out.
+    await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, token_version = token_version + 1, updated_at = datetime('now') WHERE id = ?").bind(passwordHash, salt, userId).run();
     return NextResponse.json({ ok: true, message: "Password reset successfully" });
   }
   return NextResponse.json({ error: "Provide either { email } or { token, newPassword }" }, { status: 400 });

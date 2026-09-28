@@ -121,11 +121,19 @@ export function generateUUID(): string {
 
 // ── JWT ──────────────────────────────────────────────────────────────
 
-interface JWTPayload {
+export interface JWTPayload {
   sub: string;
   email: string;
   iat: number;
   exp: number;
+  /**
+   * Session generation. Compared against `users.token_version` on every
+   * authenticated request so signing out (or resetting a password) revokes
+   * cookies that would otherwise stay valid for their full 7-day life. Absent
+   * on tokens minted before the token_version migration, where it reads as 1 —
+   * the same value the column default backfilled.
+   */
+  tv?: number;
 }
 
 function base64UrlEncode(data: ArrayBuffer | Uint8Array): string {
@@ -149,10 +157,17 @@ async function getJwtKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", toArrayBuffer(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
 
-/** Create a signed JWT. Expires in 7 days. */
-export async function createJWT(userId: string, email: string, secret: string): Promise<string> {
+/**
+ * Create a signed JWT. Expires in 7 days.
+ *
+ * `tokenVersion` is REQUIRED (no default) on purpose: every issuer must pass the
+ * account's live `users.token_version`. Defaulting it here would silently mint
+ * a token that fails its own revocation check after any reset — locking the
+ * person out of the account they just authenticated into.
+ */
+export async function createJWT(userId: string, email: string, secret: string, tokenVersion: number): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const payload: JWTPayload = { sub: userId, email, iat: now, exp: now + 7 * 24 * 60 * 60 };
+  const payload: JWTPayload = { sub: userId, email, iat: now, exp: now + 7 * 24 * 60 * 60, tv: tokenVersion };
   const header = { alg: "HS256", typ: "JWT" };
   const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
   const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
@@ -175,6 +190,16 @@ export async function verifyJWT(token: string, secret: string): Promise<JWTPaylo
   const payload: JWTPayload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64)));
   if (payload.exp < Math.floor(Date.now() / 1000)) return null;
   return payload;
+}
+
+/**
+ * The session generation a token claims. Tokens minted before the
+ * token_version migration carry no `tv` claim; they read as 1, matching the
+ * column default that backfilled existing rows.
+ */
+export function tokenVersionOf(payload: Pick<JWTPayload, "tv">): number {
+  const tv = payload.tv;
+  return typeof tv === "number" && Number.isFinite(tv) ? tv : 1;
 }
 
 // ── Password reset tokens ────────────────────────────────────────────

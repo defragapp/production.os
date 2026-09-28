@@ -53,9 +53,12 @@ npm install
 
 The following resources are already created on your account and their IDs are pre-filled in `wrangler.jsonc`:
 
-- **D1 database:** `production-os-db` (`f4274cce-4444-4501-85a9-58c28bff27ac`)
-- **KV namespace:** `SESSION_KV` (`8ccb87e3a5554f849d69053df7275a29`)
+- **D1 database:** `production-os-db`
+- **KV namespace:** `SESSION_KV`
 - **AI Gateway:** `sovereign-ai-gateway`
+
+The binding IDs themselves live in `wrangler.jsonc` (required at deploy time) and
+are deliberately not repeated in documentation.
 
 ### 3. Run the D1 migration
 

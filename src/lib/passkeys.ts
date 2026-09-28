@@ -22,7 +22,8 @@ import type {
   AuthenticatorTransportFuture,
 } from "@simplewebauthn/server";
 import { NextRequest, NextResponse } from "next/server";
-import { createJWT, verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
+import { createJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, tokenVersionOf } from "@/lib/auth";
+import { verifySession } from "@/lib/session";
 import { bufToB64url, b64urlToBuf } from "@/lib/base64url";
 import type { AppEnv } from "@/lib/env";
 
@@ -53,17 +54,17 @@ async function takeChallenge(env: AppEnv, key: string): Promise<string | null> {
 export interface SessionUser {
   userId: string;
   email: string;
+  /** Live `users.token_version`, carried so an issued cookie matches (see lib/session.ts). */
+  tokenVersion?: number;
 }
 
 export async function getAuthedUser(request: NextRequest): Promise<SessionUser | null> {
   const env = await (await import("@/lib/env")).getEnv();
-  const secret = env[JWT_SECRET_ENV_KEY];
-  if (!secret) return null;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  const payload = await verifyJWT(token, secret);
-  if (!payload) return null;
-  return { userId: payload.sub, email: String(payload.email ?? "") };
+  // These routes are public in middleware (`/api/auth/*`), so the full session
+  // check — signature AND the revocation generation — has to happen here.
+  const session = await verifySession(env, request);
+  if (!session) return null;
+  return { userId: session.payload.sub, email: String(session.payload.email ?? "") };
 }
 
 // ── stored credential CRUD ──────────────────────────────────────────────
@@ -223,8 +224,8 @@ export async function completeAuthentication(
   )
     .bind(verification.authenticationInfo.newCounter, row.credential_id)
     .run();
-  const email = await env.DB.prepare("SELECT email FROM users WHERE id = ?").bind(row.user_id).first<{ email: string }>();
-  return { ok: true, user: { userId: row.user_id, email: email?.email ?? "" } };
+  const email = await env.DB.prepare("SELECT email, token_version FROM users WHERE id = ?").bind(row.user_id).first<{ email: string; token_version: number | null }>();
+  return { ok: true, user: { userId: row.user_id, email: email?.email ?? "", tokenVersion: tokenVersionOf({ tv: email?.token_version ?? undefined }) } };
 }
 
 // ── session issuance (mirrors /api/auth POST exactly) ───────────────────
@@ -234,7 +235,7 @@ export async function attachSessionCookie(
   user: SessionUser,
 ): Promise<NextResponse> {
   const secret = env[JWT_SECRET_ENV_KEY];
-  const token = await createJWT(user.userId, user.email, secret);
+  const token = await createJWT(user.userId, user.email, secret, user.tokenVersion ?? 1);
   response.cookies.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: true,

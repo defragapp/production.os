@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <PageShell center={false} wide="prose" rule>
-        <PageHeader title="Terms of Service" description="Last updated: September 23, 2026" center={false} />
+        <PageHeader title="Terms of Service" description="Last updated: September 28, 2026" center={false} />
         <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
           <section>
             <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">1. Acceptance of Terms</h2>
@@ -38,7 +38,7 @@ export default function TermsPage() {
             <p>You agree not to misuse the Service or attempt to undermine it, including:</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>Accessing or attempting to access another user&apos;s account, Baseline, conversation, or data without authorization;</li>
-              <li>Scraping, crawling, spidering, harvesting, or automatically collecting the Service, its pages, its outputs, or its data by any means, whether manual or automated;</li>
+              <li><strong className="text-foreground">Scraping our private surfaces.</strong> Automatically collecting any area that requires an account, any other person&apos;s data, or any output of the Engine — by any means, manual or automated. Our public pages (this one, our philosophy, the FAQ, and support) are published for search engines and AI assistants to read and index, and doing so is welcome. Everything behind a session is not.</li>
               <li>Reverse-engineering, decompiling, disassembling, or otherwise attempting to derive the source code, algorithms, prompts, derivation logic, or operation of the Service&apos;s AI engine (&quot;the Engine&quot;);</li>
               <li>Copying, reproducing, redistributing, or building competing or derivative products or services from the Service or its outputs;</li>
               <li>Using Service outputs to train, fine-tune, seed, or otherwise develop any other AI, machine-learning, or predictive system — including using your own conversation history for such purposes;</li>
@@ -48,7 +48,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">6. Your Content &amp; Limited License</h2>
-            <p>You retain ownership of the information you provide. By providing it, you grant Sovereign OS a limited, non-exclusive license to store, process, and transmit that information solely to operate the Service (including computing your Baseline and delivering AI responses) and to comply with legal obligations. You may request deletion of your data at any time through your account or <a href="/support" className="underline hover:text-foreground">Support</a>.</p>
+            <p>You retain ownership of the information you provide. By providing it, you grant Sovereign OS a limited, non-exclusive license to store, process, and transmit that information solely to operate the Service (including computing your Baseline and delivering AI responses) and to comply with legal obligations. You can download a copy of everything we hold, or delete it, yourself from your <a href="/account" className="underline hover:text-foreground">Account</a> page at any time.</p>
           </section>
 
           <section>

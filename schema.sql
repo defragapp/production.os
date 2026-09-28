@@ -10,6 +10,14 @@ CREATE TABLE IF NOT EXISTS users (
   stripe_customer_id  TEXT,
   subscription_tier    TEXT NOT NULL DEFAULT 'free',
   display_name        TEXT,
+  -- Bumped on sign-out and password reset so outstanding session cookies can be
+  -- revoked before their 7-day expiry. Embedded in the JWT as `tv` and compared
+  -- on every authenticated request (see lib/session.ts).
+  token_version       INTEGER NOT NULL DEFAULT 1,
+  -- Memory preference: 'server' persists threads in D1 (multi-device
+  -- continuity, the default). 'local' means zero-retention inference — /api/chat
+  -- skips the threads write and the client keeps an encrypted IndexedDB copy.
+  memory_mode         TEXT NOT NULL DEFAULT 'server',
   created_at          TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -24,10 +32,13 @@ CREATE TABLE IF NOT EXISTS baselines (
   updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Fresh databases include the new columns inline. Existing databases pick them
+-- up through migration 0003 (ALTER TABLE has no IF NOT EXISTS in SQLite/D1).
 CREATE TABLE IF NOT EXISTS threads (
   id               TEXT PRIMARY KEY,
   user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   message_history  TEXT NOT NULL DEFAULT '[]',
+  journey_id       TEXT REFERENCES journeys(id) ON DELETE SET NULL,
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -86,3 +97,56 @@ CREATE TABLE IF NOT EXISTS passkeys (
   last_used_at   TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id);
+
+-- Free-tier daily AI usage. Replaces the previous KV read-modify-write counter,
+-- which had no compare-and-swap and so could be bypassed by concurrent requests.
+-- The row is claimed with a single atomic upsert (see api/chat/route.ts) so the
+-- daily cap is exact under concurrency. One row per user per UTC day.
+CREATE TABLE IF NOT EXISTS chat_usage (
+  user_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day      TEXT NOT NULL,                 -- YYYY-MM-DD (UTC)
+  used     INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
+
+-- Goal-driven journeys (Batch 2, P2). A journey is AI-inferred first and
+-- user-editable second: rows may exist before the person ever names a goal
+-- (`goal` nullable until they rename it). One active journey per user is the
+-- steady state; history is preserved by pausing/completing rather than
+-- deleting. `steps_json` is the step catalog with per-step status;
+-- `milestones_json` is the append-only list of unlocked milestone ids.
+CREATE TABLE IF NOT EXISTS journeys (
+  id               TEXT PRIMARY KEY,
+  user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  goal             TEXT,
+  current_step     TEXT NOT NULL,
+  steps_json       TEXT NOT NULL DEFAULT '[]',
+  milestones_json  TEXT NOT NULL DEFAULT '[]',
+  visual_progress  REAL NOT NULL DEFAULT 0,
+  status           TEXT NOT NULL DEFAULT 'active', -- active | paused | complete
+  created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_journeys_user ON journeys(user_id, status);
+
+-- Append-only audit trail + replay log: each unlock is a row, so the canvas
+-- can be redrawn at any point in time and "why did it unlock that?" is
+-- answerable. `source` distinguishes derived unlocks from user confirmations.
+CREATE TABLE IF NOT EXISTS journey_events (
+  id          TEXT PRIMARY KEY,
+  journey_id  TEXT NOT NULL REFERENCES journeys(id) ON DELETE CASCADE,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  milestone   TEXT NOT NULL,
+  source      TEXT NOT NULL DEFAULT 'derived',  -- derived | user-confirmed
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_journey_events_journey ON journey_events(journey_id, created_at);
+
+-- Memory-mode preference (Batch 2 schema, Batch 3 behaviour). 'server' keeps
+-- today's behaviour (threads persisted in D1, multi-device continuity).
+-- 'local' means zero-retention inference: /api/chat skips the threads write
+-- and the client keeps an encrypted IndexedDB copy instead.
+-- Fresh databases include memory_mode/journey_id inline above; pre-migration
+-- D1 files pick them up through migrations/0003_journeys.sql.
+
+

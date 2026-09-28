@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Link2, Pencil, Share2, X } from "lucide-react";
+import { Check, Globe, Link2, Lock, Pencil, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Section } from "@/components/ui/section";
@@ -52,6 +52,12 @@ export default function SettingsPage() {
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [displaySaved, setDisplaySaved] = useState(false);
 
+  // Memory mode lives here too, not just in /chat: it is a durable account
+  // preference, so the canonical control belongs in Settings.
+  const [memoryMode, setMemoryMode] = useState<"server" | "local">("server");
+  const [memorySaving, setMemorySaving] = useState(false);
+  const [memoryNote, setMemoryNote] = useState<string | null>(null);
+
   const [connections, setConnections] = useState<RelationshipView[] | null>(null);
   const [invites, setInvites] = useState<InviteRow[] | null>(null);
 
@@ -96,7 +102,7 @@ export default function SettingsPage() {
     (async () => {
       try {
         const res = await fetch("/api/auth");
-        const data = await res.json() as { user?: { display_name?: string | null; subscription_tier?: string } | null };
+        const data = await res.json() as { user?: { display_name?: string | null; subscription_tier?: string; memory_mode?: string } | null };
         if (!data.user) {
           router.push("/onboard?mode=login");
           return;
@@ -105,6 +111,7 @@ export default function SettingsPage() {
         setTier(data.user.subscription_tier === "sovereign+" ? "sovereign+" : "free");
         setDisplayName(data.user.display_name ?? "");
         setDisplayNameDraft(data.user.display_name ?? "");
+        setMemoryMode(data.user.memory_mode === "local" ? "local" : "server");
         await loadPeople();
       } catch {
         if (!cancelled) router.push("/onboard?mode=login");
@@ -131,6 +138,37 @@ export default function SettingsPage() {
     } catch {
       setDisplayName(displayName);
       setDisplayNameDraft(displayName);
+    }
+  };
+
+  // Server owns the preference; this view adopts it optimistically and hands
+  // the previous value back if the write never lands.
+  const switchMemoryMode = async (mode: "server" | "local") => {
+    if (mode === memoryMode || memorySaving) return;
+    setMemorySaving(true);
+    setMemoryNote(null);
+    const prev = memoryMode;
+    setMemoryMode(mode);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memoryMode: mode }),
+      });
+      if (!res.ok) {
+        setMemoryMode(prev);
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setMemoryNote(data.error || "Couldn't change memory mode — try again in a moment.");
+      } else {
+        setMemoryNote(mode === "local"
+          ? "Device-Only is on. New conversations are encrypted on this device and never reach our servers — history no longer follows you between devices."
+          : "Server memory is back on. New conversations will sync across your devices.");
+      }
+    } catch {
+      setMemoryMode(prev);
+      setMemoryNote("Couldn't change memory mode — check your connection and try again.");
+    } finally {
+      setMemorySaving(false);
     }
   };
 
@@ -650,6 +688,57 @@ export default function SettingsPage() {
                         </li>
                       ))}
                     </ul>
+                  )}
+                </div>
+              </Section>
+
+              <Section title="Memory">
+                <div className="space-y-3">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Choose where your conversations live. Server memory keeps every thread in your
+                    account so you can start on one device and finish on another. Device-Only keeps
+                    new conversations encrypted on this device with a key that never leaves it — they
+                    never reach our servers, and they don’t follow you between devices.
+                  </p>
+                  <div role="radiogroup" aria-label="Memory mode" className="grid gap-2 sm:grid-cols-2">
+                    {([
+                      { value: "server", icon: Globe, title: "All devices", body: "Synced to your account across every device." },
+                      { value: "local", icon: Lock, title: "On this device only", body: "Encrypted locally; never stored on our servers." },
+                    ] as const).map(({ value, icon: Icon, title, body }) => {
+                      const active = memoryMode === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          disabled={memorySaving}
+                          onClick={() => void switchMemoryMode(value)}
+                          className={`rounded-panel border p-3 text-left transition-colors ${
+                            active
+                              ? "border-foreground/40 bg-white/[0.06]"
+                              : "border-border/60 hover:border-border hover:bg-white/[0.03]"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Icon className={`h-4 w-4 ${active ? "text-foreground" : "text-muted-foreground"}`} aria-hidden="true" />
+                            <span className="text-sm font-medium text-foreground">{title}</span>
+                            {active && <Check className="ml-auto h-4 w-4 text-foreground" aria-hidden="true" />}
+                          </span>
+                          <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{body}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {memoryNote && (
+                    <p role="status" className="text-xs text-muted-foreground">{memoryNote}</p>
+                  )}
+                  {memoryMode === "local" && (
+                    <p className="text-xs text-muted-foreground">
+                      Already have conversations on your account?{" "}
+                      <a href="/account" className="underline underline-offset-2 hover:text-foreground">Download your data</a>{" "}
+                      before switching, so nothing you care about is left behind.
+                    </p>
                   )}
                 </div>
               </Section>

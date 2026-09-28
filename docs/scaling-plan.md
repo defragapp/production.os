@@ -13,8 +13,8 @@ runtime auto-scales traffic with **no capacity planning** — a press spike does
 per-capita metered limits** (AI neurons, D1 writes, KV writes, Worker requests).
 This doc is the ladder from "free and fine" to "paid and unbothered."
 
-- Account ID: `8b1954d216d65077c6480d62583fe2c2`  (name: *Sovereign.os Platform Build*)
-- Worker: `production-os` · Zone: `defrag.app` (`45a59d754ece9221fc97c92c461eb01f`) · App origin: `sovereign.defrag.app`
+- Account ID: `<CF_ACCOUNT_ID>`  (name: *Sovereign.os Platform Build*)
+- Worker: `production-os` · Zone: `defrag.app` (`<CF_ZONE_ID>`) · App origin: `sovereign.defrag.app`
 - D1: `production-os-db` · KV: `SESSION_KV` · Workers AI model: `@cf/meta/llama-3.1-8b-instruct-fp8` via AI Gateway `sovereign-ai-gateway`
 - API token: stored **gitignored** in `.dev.vars` as `CF_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID`). **Never commit or echo its value.** Referenced below by name.
 
@@ -136,7 +136,7 @@ Re-runnable; all idempotent.
 | **Always Use HTTPS** | ✅ `on` | `PATCH /zones/{Z}/settings/always_use_https` |
 | **Min TLS** | ✅ `1.2` | `PATCH .../settings/min_tls_version` |
 | **Security Level** | ✅ `high` (left stricter than the planned `medium`) | `PATCH .../settings/security_level` |
-| **WAF rate-limit rule** | ✅ 1 free rule: `(path contains "/api/auth" or path == "/api/chat")`, 20 req / 10 s, block 10 s, `cf.colo.id`+`ip.src` | `PUT /zones/{Z}/rulesets/{RS_ID}` (ruleset `Sovereign Rate Limits`, id `39c1ece9d26446179d81f0d792d9346a`) |
+| **WAF rate-limit rule** | ✅ 1 free rule: `(path contains "/api/auth" or path == "/api/chat")`, 20 req / 10 s, block 10 s, `cf.colo.id`+`ip.src` | `PUT /zones/{Z}/rulesets/{RS_ID}` (ruleset `Sovereign Rate Limits` — id via `GET /zones/<CF_ZONE_ID>/rulesets` by name; never commit the literal id) |
 | **DNSSEC** | 🟡 enabled, **status `pending`** — DS record created, not yet at registrar | see §4.1 |
 | **Custom firewall rules** | ✅ present ("Sovereign Security Rules": block high threat score / confirmed bots, CVE-2025-29927 block, verified-bot skip) | pre-existing |
 | **Bot Fight Mode (free)** | ⚠️ **dashboard only** — the legacy `settings/bots` API is retired on this zone (no bot-named zone setting exists). Toggle at **Zone → Security → Bots → Bot Fight Mode: On**. | §4.2 |
@@ -211,8 +211,8 @@ Context to give Lee once (never paste the token itself — tell Lee to read it f
 the local `.dev.vars` / env; **do not echo its value**):
 
 > **Standing context for Lee**
-> Cloudflare Account `8b1954d216d65077c6480d62583fe2c2`; Worker `production-os`;
-> Zone `defrag.app` (id `45a59d754ece9221fc97c92c461eb01f`); app origin
+> Cloudflare Account `<CF_ACCOUNT_ID>`; Worker `production-os`;
+> Zone `defrag.app` (id `<CF_ZONE_ID>`); app origin
 > `sovereign.defrag.app`; D1 `production-os-db`; KV namespace `SESSION_KV`;
 > AI Gateway `sovereign-ai-gateway`; model `@cf/meta/llama-3.1-8b-instruct-fp8`.
 > Authenticate with `CF_API_TOKEN` from `.dev.vars`. All calls use
@@ -234,12 +234,12 @@ Then, per situation:
 > single rule blocks `(http.request.uri.path contains "/api/auth" or
 > http.request.uri.path eq "/api/chat")` at [N] requests per 10s with a [M]s block,
 > characteristics `cf.colo.id` and `ip.src`. Use `PUT
-> /zones/45a59d754ece9221fc97c92c461eb01f/rulesets/{ruleset_id}` (POST is not allowed
+> /zones/<CF_ZONE_ID>/rulesets/{ruleset_id}` (POST is not allowed
 > for in-place edits; `cf.colo.id` is mandatory). On Workers Paid, extend the window
 > toward the 20 req / 60s originally intended.
 
 **C. "Enable AI Gateway caching + tighten rate limit"** (needs AI-Gateway token scope)
-> For AI Gateway `sovereign-ai-gateway` on account `8b1954d216d65077c6480d62583fe2c2`,
+> For AI Gateway `sovereign-ai-gateway` on account `<CF_ACCOUNT_ID>`,
 > enable response caching (`PUT .../ai/gateway/configurations/sovereign-ai-gateway/cache/settings`
 > `{"cache":{"max_age":3600,"stale_while_revalidate":86400}}`) and a per-IP rate limit
 > (`.../ratelimit/settings`) sized to keep daily neuron use under [budget]. Confirm
@@ -247,7 +247,7 @@ Then, per situation:
 
 **D. "Toggle Under Attack for a window"** (bot swarm on a press day)
 > Set Zone `defrag.app` **Security Level → I'm Under Attack** now (`PATCH
-> /zones/45a59d754ece9221fc97c92c461eb01f/settings/security_level {"value":"under_attack"}`),
+> /zones/<CF_ZONE_ID>/settings/security_level {"value":"under_attack"}`),
 > and schedule/remember to return it to `high` after [window]. Warn that this adds a
 > interstitial JS challenge to all visitors.
 

@@ -14,7 +14,7 @@ Everything recommended here is available on the **Free** plan unless noted.
 > ladder, and ready-to-paste prompts for Cloudflare agent "Lee" for the moment
 > traffic approaches a limit.
 
-- Account ID: `8b1954d216d65077c6480d62583fe2c2`
+- Account ID: `<CF_ACCOUNT_ID>`
 - Worker: `production-os` · Zone: `defrag.app` · App origin: `sovereign.defrag.app`
 - D1: `production-os-db` · KV: `SESSION_KV` · AI Gateway: `sovereign-ai-gateway`
 

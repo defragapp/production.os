@@ -8,6 +8,32 @@ import type { Baseline } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Rate limits for Baseline computation.
+ *
+ * Every call fans out to the NASA/JPL Horizons API for ten planetary bodies and
+ * then upserts a D1 row, so an unthrottled loop is both a cost problem and a
+ * reliability one (we are a guest on someone else's public service). A session
+ * is required, but a valid session is not a licence to hammer it. Burst and
+ * hourly caps mirror the shape used by /api/chat and /api/support.
+ */
+const BASELINE_BURST_MAX = 5;
+const BASELINE_BURST_WINDOW_MS = 60_000;
+const BASELINE_HOURLY_MAX = 20;
+const BASELINE_HOURLY_WINDOW_MS = 60 * 60 * 1000;
+
+/** True when `key` has already hit `max` inside `windowMs`; otherwise records this call. */
+async function overLimit(env: AppEnv, key: string, max: number, windowMs: number): Promise<boolean> {
+  const now = Date.now();
+  let stamps: number[] = [];
+  const raw = await env.SESSION_KV.get(key);
+  if (raw) { try { stamps = JSON.parse(raw) as number[]; } catch { stamps = []; } }
+  stamps = stamps.filter((t) => now - t < windowMs);
+  if (stamps.length >= max) return true;
+  await env.SESSION_KV.put(key, JSON.stringify([...stamps, now]), { expirationTtl: Math.ceil(windowMs / 1000) });
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
@@ -29,6 +55,14 @@ export async function POST(request: NextRequest) {
   const payload = await verifyJWT(token, secret);
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   let body: { tob?: string; pob?: string; dob?: string; tobAccuracy?: string };
+
+  if (await overLimit(env, `rl:baseline:burst:${payload.sub}`, BASELINE_BURST_MAX, BASELINE_BURST_WINDOW_MS)) {
+    return NextResponse.json({ error: "That's a few too many at once — give it a moment and try again." }, { status: 429 });
+  }
+  if (await overLimit(env, `rl:baseline:hourly:${payload.sub}`, BASELINE_HOURLY_MAX, BASELINE_HOURLY_WINDOW_MS)) {
+    return NextResponse.json({ error: "You've recomputed your Baseline a lot this hour. Give it a little while and try again." }, { status: 429 });
+  }
+
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
   const { tob, pob, dob, tobAccuracy } = body;
   if (!pob || !dob) return NextResponse.json({ error: "Date of birth and place of birth are required" }, { status: 400 });

@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
+import { JWT_SECRET_ENV_KEY } from "@/lib/auth";
+import { verifySession } from "@/lib/session";
 import { getEnv } from "@/lib/env";
+
+/** The one canonical origin every public URL resolves to. */
+const CANONICAL_HOST = "sovereign.defrag.app";
+
+/**
+ * Hosts that must NOT be folded into the canonical domain:
+ * local dev, and Cloudflare preview deployments (`*.workers.dev`), which exist
+ * precisely so a build can be exercised before it is the real thing.
+ */
+function isNonCanonicalAllowed(host: string): boolean {
+  return host === "localhost" || host === "127.0.0.1" || host.endsWith(".workers.dev");
+}
 
 /**
  * Server-side auth gate.
@@ -31,8 +44,8 @@ export async function middleware(request: NextRequest) {
   // ── Canonical domain: fold the legacy app.defrag.app identity into
   //    sovereign.defrag.app so every page/API has one canonical URL. ────
   const host = request.headers.get("host")?.replace(/:\d+$/, "").toLowerCase();
-  if (host && host !== "localhost" && host !== "127.0.0.1" && host !== "sovereign.defrag.app") {
-    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, "https://sovereign.defrag.app");
+  if (host && host !== CANONICAL_HOST && !isNonCanonicalAllowed(host)) {
+    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${CANONICAL_HOST}`);
     return NextResponse.redirect(url, 308);
   }
 
@@ -42,8 +55,7 @@ export async function middleware(request: NextRequest) {
     publicPages.includes(pathname) ||
     pathname.startsWith("/apple-icon") ||
     pathname.startsWith("/icon") ||
-    pathname.startsWith("/opengraph-image") ||
-    pathname.startsWith("/twitter-image")
+    pathname.startsWith("/opengraph-image")
   ) {
     return noStore(NextResponse.next());
   }
@@ -73,30 +85,25 @@ export async function middleware(request: NextRequest) {
   }
 
   const env = await getEnv();
-  const secret = env[JWT_SECRET_ENV_KEY];
-  if (!secret) {
-    // If JWT_SECRET isn't configured, fail closed
+  if (!env[JWT_SECRET_ENV_KEY]) {
+    // Fail closed when the signing secret is absent — a session cannot be
+    // verified, so nothing behind the wall may be served.
     if (isApi) {
       return noStore(NextResponse.json({ error: "Server configuration error" }, { status: 500 }));
     }
     return NextResponse.redirect(new URL("/onboard", request.url));
   }
 
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   // Carry the original destination through the sign-in wall so a person sent
   // to /settings from a support reply lands on /settings after signing in.
   const nextIntent = `&next=${encodeURIComponent(pathname + request.nextUrl.search)}`;
-  if (!token) {
-    if (isApi) {
-      return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
-    }
-    // No session: people are here to get back into their account, not to
-    // create a second one.
-    return NextResponse.redirect(new URL(`/onboard?mode=login${nextIntent}`, request.url));
-  }
-
-  const payload = await verifyJWT(token, secret);
-  if (!payload) {
+  // Signature + live session generation. `verifySession` also checks the
+  // token's `tv` against users.token_version, so signing out or resetting a
+  // password revokes every cookie issued before it — a bare JWT check could not
+  // do that. A missing cookie and a revoked/expired one are the same situation
+  // for the person: sign in again.
+  const session = await verifySession(env, request);
+  if (!session) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }

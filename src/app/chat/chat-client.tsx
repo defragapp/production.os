@@ -3,7 +3,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUp, Plus, Square, Users, X } from "lucide-react";
+import { ArrowUp, Globe, Lock, Plus, Shield, Square, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Nav } from "@/components/nav";
@@ -12,7 +12,10 @@ import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { RichText } from "@/components/rich-text";
 import { ShareCardButton } from "@/components/share-card";
-import type { ChatMessage, BaselineData, RelationshipView } from "@/lib/types";
+import { JourneyBar } from "@/components/journey-canvas";
+import { useJourney } from "@/lib/journey-store";
+import type { JourneyState } from "@/lib/sovereign-journey";
+import type { ChatMessage, BaselineData, MemoryMode, RelationshipView } from "@/lib/types";
 
 interface InviteView {
   id: string;
@@ -236,9 +239,20 @@ export function ChatClient() {
   const [resendState, setResendState] = useState<string | null>(null);
   const [tier, setTier] = useState<"free" | "sovereign+" | null>(null);
   const [peopleOpen, setPeopleOpen] = useState(false);
+  const [memoryMode, setMemoryMode] = useState<MemoryMode>("server");
+  const [userScope, setUserScope] = useState("");
+  const [memoryMenuOpen, setMemoryMenuOpen] = useState(false);
+  const [memorySwitching, setMemorySwitching] = useState(false);
+  const [memoryNote, setMemoryNote] = useState<string | null>(null);
+  const [journeyDismissed, setJourneyDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // The journey bar earns its place back with progress, not nagging: dismissal
+  // is session-local, and the next confirmed unlock quietly re-reveals it.
+  const revealJourney = useCallback(() => setJourneyDismissed(false), []);
+  const { view: journey, applyStateFrame, applyControl } = useJourney(memoryMode, userScope, revealJourney);
 
   // Seed the composer with a starting point and put the caret at the end, so
   // the person finishes the sentence in their own words instead of sending ours.
@@ -303,12 +317,16 @@ export function ChatClient() {
     (async () => {
       try {
         const authRes = await fetch("/api/auth");
-        const authData = await authRes.json() as { user?: { subscription_tier?: string | null; email_verified?: number | boolean } | null; usage?: { used: number; limit: number | null } };
+        const authData = await authRes.json() as { user?: { id?: string; email?: string; subscription_tier?: string | null; email_verified?: number | boolean; memory_mode?: string } | null; usage?: { used: number; limit: number | null } };
         if (!authData.user) {
           router.push("/onboard?mode=login");
           return;
         }
         setTier(authData.user.subscription_tier === "sovereign+" ? "sovereign+" : "free");
+        // Device-Only vaults are keyed per account: the email is stable, unique,
+        // and already in the session — no extra lookup to scope local records.
+        setUserScope(authData.user.email ?? authData.user.id ?? "");
+        setMemoryMode(authData.user.memory_mode === "local" ? "local" : "server");
         // Surface the verification nudge up front instead of letting the
         // user's first message dead-end in a 403.
         if (!authData.user.email_verified) setShowVerify(true);
@@ -410,6 +428,38 @@ export function ChatClient() {
     setIsStreaming(false);
   }, []);
 
+  // One-click memory-mode switch, offered right where the choice matters.
+  // The server owns the preference; this tab adopts it optimistically and
+  // hands the note back if the write never lands.
+  const switchMemoryMode = useCallback(async (mode: MemoryMode) => {
+    setMemoryMenuOpen(false);
+    if (mode === memoryMode) return;
+    setMemorySwitching(true);
+    const prev = memoryMode;
+    setMemoryMode(mode);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memoryMode: mode }),
+      });
+      if (!res.ok) {
+        setMemoryMode(prev);
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setMemoryNote(data.error || "Couldn't change memory mode — try again in a moment.");
+      } else {
+        setMemoryNote(mode === "local"
+          ? "Device-Only is on. New conversations stay on this device — history no longer follows you between devices."
+          : "Server memory is back on. New conversations will sync across your devices.");
+      }
+    } catch {
+      setMemoryMode(prev);
+      setMemoryNote("Couldn't change memory mode — check your connection and try again.");
+    } finally {
+      setMemorySwitching(false);
+    }
+  }, [memoryMode]);
+
   const sendMessage = useCallback(async () => {
     const content = input.trim();
     if (!content || isStreaming) return;
@@ -502,6 +552,15 @@ export function ChatClient() {
                 setThreadId(parsed.threadId);
                 continue;
               }
+              // The confirmed `{ state }` frame lands before any answer text:
+              // the canvas converges while the person is still reading nothing
+              // but the typing dots, and every later frame keeps it honest.
+              if (parsed.state) {
+                const js = parsed.state as JourneyState;
+                const jid = typeof parsed.journeyId === "string" ? (parsed.journeyId as string) : null;
+                void applyStateFrame(js, jid);
+                continue;
+              }
               if (parsed.content) {
                 setMessages((prev) => {
                   const u = [...prev];
@@ -540,7 +599,7 @@ export function ChatClient() {
       refreshUsage();
       setIsStreaming(false);
     }
-  }, [input, isStreaming, messages, threadId, refreshThreads, refreshUsage, router]);
+  }, [input, isStreaming, messages, threadId, refreshThreads, refreshUsage, router, applyStateFrame]);
 
   if (!authChecked) {
     return (
@@ -559,7 +618,7 @@ export function ChatClient() {
     // let the page grow, so on phones the tall empty state pushed the input
     // below the fold — `h-[100dvh]` keeps the shell to the screen and lets
     // the inner `overflow-y-auto` own scrolling. dvh tracks mobile browser chrome.
-    <main id="main" className="flex h-[100dvh] flex-col">
+    <main id="main" className="flex h-[100dvh] flex-col" style={{ "--journey-progress": String(journey?.visual_progress ?? 0) } as React.CSSProperties}>
       <Nav />
       {/* App screen: the conversation itself is the content, so the page
           title exists for assistive tech only (every page carries one h1). */}
@@ -682,13 +741,70 @@ export function ChatClient() {
                   })}
                 </div>
               )}
+              {/* Device-Only vs. Server memory, one click away right where
+                  the choice is felt. The icon is the whole story at a glance:
+                  a globe for cross-device, a lock for this-device-only. */}
+              <div className="relative shrink-0 ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMemoryMenuOpen((v) => !v)}
+                  disabled={isStreaming || memorySwitching}
+                  aria-haspopup="menu"
+                  aria-expanded={memoryMenuOpen}
+                  title={memoryMode === "local" ? "Device-Only memory" : "Server memory"}
+                  className={memoryMode === "local" ? "gap-1.5" : "gap-1.5 lg:px-2.5"}
+                >
+                  {memorySwitching ? <span className="h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" aria-hidden="true" /> : memoryMode === "local" ? <Lock className="h-4 w-4" aria-hidden="true" /> : <Globe className="h-4 w-4" aria-hidden="true" />}
+                  <span className="hidden lg:inline">{memorySwitching ? "Switching…" : memoryMode === "local" ? "On device" : "All devices"}</span>
+                  <span className="sr-only">Memory mode: {memoryMode === "local" ? "Device-Only" : "Server"}. Change it.</span>
+                </Button>
+                {memoryMenuOpen && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close memory menu"
+                      className="fixed inset-0 z-30 cursor-default"
+                      onClick={() => setMemoryMenuOpen(false)}
+                    />
+                    <div
+                      role="menu"
+                      className="absolute right-0 z-40 mt-2 w-64 rounded-xl border border-white/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
+                    >
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={memoryMode === "server"}
+                        onClick={() => void switchMemoryMode("server")}
+                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                      >
+                        <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <span><span className="block font-medium text-foreground">All devices</span><span className="block mt-0.5 text-xs">Conversations sync across your devices.</span></span>
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={memoryMode === "local"}
+                        onClick={() => void switchMemoryMode("local")}
+                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                      >
+                        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <span><span className="block font-medium text-foreground">On this device only</span><span className="block mt-0.5 text-xs">New chats are never stored on our servers.</span></span>
+                      </button>
+                      <Link href="/settings" className="block rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground" onClick={() => setMemoryMenuOpen(false)}>
+                        Details in <Shield className="inline h-3 w-3 -mt-0.5" aria-hidden="true" /> Settings
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPeopleOpen((v) => !v)}
                 disabled={isStreaming}
                 aria-expanded={peopleOpen}
-                className="ml-auto shrink-0"
+                className="shrink-0"
               >
                 <Users className="h-4 w-4" />
                 People
@@ -697,6 +813,31 @@ export function ChatClient() {
           </div>
 
           {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
+
+          {/* The journey, surfaced the way Q1 locked it: inferred from the
+              conversation, shown only once it exists, dismissible in one click
+              — and re-revealed only by a fresh unlock, never by nagging. */}
+          {journey && !journeyDismissed && (
+            <div className="border-b border-border bg-background/60 px-4 py-3 backdrop-blur-sm">
+              <div className="mx-auto max-w-3xl">
+                <JourneyBar
+                  journey={{
+                    id: journey.id,
+                    goal: journey.goal,
+                    status: journey.status,
+                    steps: journey.steps,
+                    progress: journey.visual_progress,
+                    newlyUnlocked: journey.newlyUnlocked,
+                    inquiryLevel: journey.inquiryLevel,
+                  }}
+                  onRename={(goal) => { void applyControl({ id: journey.id, rename: goal }); }}
+                  onPauseResume={() => { void applyControl({ id: journey.id, pause: journey.status !== "paused" }); }}
+                  onDismiss={() => setJourneyDismissed(true)}
+                  onStepBack={(stepId) => { void applyControl({ id: journey.id, overrideStep: stepId }); }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* role="log": screen readers announce each newly appended message as a
               conversation, without re-reading the whole history. */}
@@ -843,6 +984,17 @@ export function ChatClient() {
       </div>
       {/* Keeps the composer clear of the fixed standalone tab bar (no-op in the browser). */}
       <div className="tab-bar-spacer standalone-only sm:hidden" aria-hidden="true" />
+
+      {memoryNote && (
+        <div role="status" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 sm:bottom-8">
+          <div className="msg-in glass-panel pointer-events-auto flex max-w-md items-start gap-3 px-4 py-3 text-sm text-foreground">
+            <p className="flex-1 leading-snug">{memoryNote}</p>
+            <button type="button" onClick={() => setMemoryNote(null)} aria-label="Dismiss notice" className="shrink-0 text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
