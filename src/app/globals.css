@@ -787,15 +787,34 @@ a,[role="button"] {
    Layout Instability API exempts. The veil grows/shrinks from a fixed top
    anchor (its start position never moves), so expand/collapse inside it is
    shift-free too. `verify:release` extracts this contiguous plain-CSS region
-   verbatim into the CLS harness — keep it free of @apply/tailwind. */
+   verbatim into the CLS harness — keep it free of @apply/tailwind.
+
+   Second measured truth (Gate 9 hit-tests it): an overlay that owns no static
+   space of its own covers whatever happens to be underneath. The veil is
+   therefore anchored to the transcript wrapper — never to the chat column, so
+   it cannot swallow the New thread / memory / People strip above it — and the
+   transcript reserves exactly the compact band's height from the first frame.
+   z-index matters: `.msg-in` leaves an identity transform on every message row
+   (`animation-fill-mode: both`), which makes those rows stacking contexts that
+   would otherwise paint straight THROUGH the panel.
+
+   Third measured truth: the expanded step list is 427px tall, so on a 390x640
+   screen it spilled 59px past the transcript's own box and its "Not there
+   yet?" buttons intercepted taps meant for the composer. The veil is therefore
+   capped to the box it is anchored in and scrolls its own overflow. */
 .journey-veil {
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  overflow: hidden;
+  z-index: 20;
+  max-height: 100%;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
   visibility: hidden;
   opacity: 0;
+  border-bottom: 1px solid hsl(var(--border) / 0.55);
+  box-shadow: 0 14px 26px -22px rgb(0 0 0 / 0.9);
   transform: translateY(-100%);
   transition:
     transform 0.28s cubic-bezier(0.25, 0.1, 0.25, 1),
@@ -815,6 +834,26 @@ a,[role="button"] {
   .journey-veil {
     transition: none;
   }
+}
+
+/* One contract, two consumers — the numbers may not drift apart.
+   The compact veil band measures 44px (the coarse-pointer tap floor) + 12px +
+   12px of wrapper padding + its own 1px border + the veil's 1px bottom border
+   = 71px on a phone (69px on desktop), so 4.375rem is the ceiling. The
+   transcript reserves exactly `1.5rem (its own py-6) + 4.375rem` = 94px of
+   static clearance at the top. Clearance exists from the first painted frame
+   whether or not a journey does, so the reveal costs no shift AND the first
+   message of a short thread can never sit behind the collapsed panel — with
+   23px to spare at 390x844, measured. Expanding the band is opt-in (and
+   auto-collapses when the composer takes focus on a phone), so the reserved
+   clearance is the only height the veil ever covers by itself. */
+.journey-veil-compact {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.journey-clearance {
+  padding-top: calc(1.5rem + 4.375rem);
 }
 
 

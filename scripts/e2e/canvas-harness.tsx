@@ -26,6 +26,11 @@ function stepsWithDone(doneCount: number): JourneyStep[] {
 
 let mounted: Root | null = null;
 let revealRoot: Root | null = null;
+// The veil's bar is a controlled component in the app (chat-client owns
+// compact vs full), so the fixture drives it imperatively — expanding the
+// panel is a state change worth measuring exactly like the reveal is.
+let revealExpanded = true;
+let revealDone = 3;
 
 // Live layout-shift accounting for the CLS fixture. Registered at module
 // load, so it observes every shift the harness page produces from here on.
@@ -43,6 +48,7 @@ const w = globalThis as unknown as {
   __mountNaive?: (el: HTMLElement, doneCount: number) => void;
   __naiveClear?: () => void;
   __revealOpen?: (open: boolean) => void;
+  __revealExpand?: (expanded?: boolean) => void;
   __clsReset?: () => void;
   __clsRead?: () => { total: number; count: number };
   __appendRows?: (n: number) => void;
@@ -62,6 +68,8 @@ w.__mountJourney = (el, doneCount) => {
         newlyUnlocked: [],
         inquiryLevel: 3,
       }}
+      expanded
+      onToggleExpanded={() => {}}
       onRename={() => {}}
       onPauseResume={() => {}}
       onDismiss={() => {}}
@@ -71,17 +79,22 @@ w.__mountJourney = (el, doneCount) => {
 };
 
 /** The CLS fixture: mirrors the committed chat shell — an opaque header strip,
- *  a relatively-positioned column that holds the absolutely-positioned
- *  `.journey-veil` (closed: clipped away at its own top edge) over a
- *  bottom-pinned transcript scroller, and a composer row below. Nothing here
- *  ever unmounts on open/close, exactly like the committed page. */
+ *  a relatively-positioned transcript wrapper that holds the
+ *  absolutely-positioned `.journey-veil` (closed: clipped away at its own top
+ *  edge) over a scroller whose top carries the same static `.journey-clearance`
+ *  the page reserves, and a composer row below. Nothing here ever unmounts on
+ *  open/close, exactly like the committed page. The bar starts in its full
+ *  (expanded) form, which is the worst case for coverage and the one worth
+ *  measuring; `__revealExpand` exercises the compact ↔ full transition. */
 w.__mountReveal = (el, doneCount) => {
+  revealDone = doneCount;
+  revealExpanded = true;
   el.innerHTML = `
     <div style="height:56px;flex-shrink:0;background:#111"></div>
     <div id="naive-slot"></div>
     <div id="shell" style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column">
       <div id="reveal-slot" class="journey-veil"><div style="padding:12px 16px"><div id="reveal-bar"></div></div></div>
-      <div id="transcript" style="flex:1;min-height:0;overflow-y:auto;background:#0d0c0b">
+      <div id="transcript" class="journey-clearance" style="flex:1;min-height:0;overflow-y:auto;background:#0d0c0b">
         <div class="t-row" style="height:44px;margin:8px 12px;background:#1c1a18;border-radius:8px"></div>
         <div class="t-row" style="height:44px;margin:8px 12px;background:#1c1a18;border-radius:8px"></div>
         <div class="t-row" style="height:44px;margin:8px 12px;background:#1c1a18;border-radius:8px"></div>
@@ -92,16 +105,26 @@ w.__mountReveal = (el, doneCount) => {
   // innerHTML was just rewritten, so any previous container is detached and
   // its root is gone with it — every fixture build gets a root on the new bar.
   revealRoot = createRoot(bar);
+  renderRevealBar();
+};
+
+function renderRevealBar() {
+  if (!revealRoot) return;
   revealRoot.render(
     <JourneyBar
       journey={{
         id: "local",
         goal: "Work through the tension with my partner",
         status: "active",
-        steps: stepsWithDone(doneCount),
-        progress: doneCount / 5,
+        steps: stepsWithDone(revealDone),
+        progress: revealDone / 5,
         newlyUnlocked: [],
         inquiryLevel: 3,
+      }}
+      expanded={revealExpanded}
+      onToggleExpanded={() => {
+        revealExpanded = !revealExpanded;
+        renderRevealBar();
       }}
       onRename={() => {}}
       onPauseResume={() => {}}
@@ -134,6 +157,8 @@ w.__mountNaive = (el, doneCount) => {
           newlyUnlocked: [],
           inquiryLevel: 3,
         }}
+        expanded
+        onToggleExpanded={() => {}}
         onRename={() => {}}
         onPauseResume={() => {}}
         onDismiss={() => {}}
@@ -151,6 +176,13 @@ w.__naiveClear = () => {
 w.__revealOpen = (open) => {
   const slot = document.querySelector("#reveal-slot");
   if (slot) slot.classList.toggle("journey-veil-open", open);
+};
+
+/** Compact ↔ full, the way the live page toggles it. Only the veil's own bottom
+ *  edge may move; the transcript is out of its way by construction. */
+w.__revealExpand = (expanded) => {
+  revealExpanded = typeof expanded === "boolean" ? expanded : !revealExpanded;
+  renderRevealBar();
 };
 
 w.__clsReset = () => { shifts.length = 0; };

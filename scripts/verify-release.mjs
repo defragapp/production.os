@@ -2,7 +2,7 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, eleven gates, all must be green before a commit or deploy:
+ * One command, fourteen gates, all must be green before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
  *   3. vitest run                          — unit + pure-reducer tests
@@ -22,8 +22,15 @@
  *                                            survive, one-tap Try again re-sends without
  *                                            duplicating the turn or touching thread history.
  *  11. failed-turn keyboard contract      — Tab order + :focus-visible ring on the recovery row.
+ *  12. transcript clearance               — the first message is never behind the collapsed veil
+ *                                            (hit-tested, 390×844 / 390×640 / 1440×900, scrollTop 0).
+ *  13. live veil interactions             — expand → "Not there yet?" step override → collapse on
+ *                                            the real /chat page, CLS ≤ 0.01, console-clean, and the
+ *                                            panel never spills onto the composer.
+ *  14. mid-stream SSE drop                — a stream that closes before `content` + `[DONE]` arms
+ *                                            the same one-tap retry and recovers on re-run.
  *
- * Gates 1-8 and 10-11 fail closed. The preview-backed passes (9-11) boot the
+ * Gates 1-8 and 10-14 fail closed. The preview-backed passes (9-14) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -108,6 +115,23 @@ async function gateStaticAnalysis() {
   record("milestone announcements stay polite, one-shot, label-mapped", announceWired, announceWired ? "" : "the sr-only status region or its label mapping is gone");
   const navStable = /authed !== null/.test(nav) && nav.includes("nav-fade") && css.includes(".nav-fade {");
   record("header nav reveals (never swaps) its auth-aware variant", navStable, navStable ? "" : "nav.tsx would again swap link sets in place (tablet CLS regression)");
+  // The occlusion contract (Gate 12/13 measure the behaviour; this proves the
+  // page still reserves the space and keeps the panel above transformed rows).
+  const canvas = fs.readFileSync(path.join(srcDir, "components/journey-canvas.tsx"), "utf8");
+  const clearanceWired =
+    css.includes(".journey-clearance {") &&
+    css.includes(".journey-veil-compact {") &&
+    /\.journey-veil \{[^}]*z-index:\s*20/.test(css) &&
+    /\.journey-veil \{[^}]*max-height:\s*100%/.test(css) &&
+    chat.includes("journey-clearance") &&
+    chat.includes("relative flex min-h-0 flex-1 flex-col") &&
+    chat.includes("journeyExpanded");
+  record("transcript still reserves the compact band (static clearance + anchored veil)", clearanceWired,
+    clearanceWired ? "" : "the veil lost its anchor wrapper, its z-index, its height cap, or the transcript's static clearance");
+  const compactToggle = canvas.includes("journey-veil-compact") && canvas.includes("onToggleExpanded") && canvas.includes('id="journey-steps"');
+  record("journey bar ships compact + expanded forms behind one toggle", compactToggle, compactToggle ? "" : "JourneyBar's compact band or its step container was removed");
+  const truncation = /sawDone/.test(chat) && /sawContent/.test(chat) && /!sawDone \|\| !sawContent/.test(chat) && chat.includes('kind: "incomplete"');
+  record("a truncated SSE is treated as an incomplete turn, not a success", truncation, truncation ? "" : "the stream no longer checks for content + [DONE] before declaring the turn fine");
 }
 
 async function gateBuild() {
@@ -312,6 +336,19 @@ async function gateCls(url) {
     const again = await page.evaluate(() => window.__clsRead());
     record("cls: veil re-arrival after dismissal ≤ 0.01", again.total <= 0.01, `CLS=${again.total.toFixed(4)}`);
 
+    // The compact ↔ expanded swap the page now exposes: the panel changes its
+    // own height inside an absolutely-positioned box, so the transcript under
+    // it must not move at all — in either direction.
+    await page.evaluate(() => { window.__clsReset(); window.__revealExpand(false); });
+    await sleep(450);
+    const toCompact = await page.evaluate(() => window.__clsRead());
+    record("cls: veil expanded → compact swap ≤ 0.01", toCompact.total <= 0.01, `CLS=${toCompact.total.toFixed(4)}`);
+
+    await page.evaluate(() => { window.__clsReset(); window.__revealExpand(true); });
+    await sleep(450);
+    const toFull = await page.evaluate(() => window.__clsRead());
+    record("cls: veil compact → expanded swap ≤ 0.01", toFull.total <= 0.01, `CLS=${toFull.total.toFixed(4)}`);
+
     await page.close();
   } finally {
     await browser.close();
@@ -423,6 +460,23 @@ new PerformanceObserver((list) => {
   for (const e of list.getEntries()) if (!e.hadRecentInput) window.__cls.total += e.value;
 }).observe({ type: "layout-shift", buffered: true });`;
 
+/** Live /chat sweep probe, run once per veil state: geometry, the reveal's own
+ *  health, and every coarse-pointer control the page currently exposes. */
+const LIVE_CHAT_PROBE = `(() => ({
+  cls: window.__cls ? window.__cls.total : -1,
+  overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  coarse: window.matchMedia("(pointer: coarse)").matches,
+  veil: (() => {
+    const v = document.querySelector(".journey-veil");
+    if (!v) return null;
+    const r = v.getBoundingClientRect();
+    return { open: v.classList.contains("journey-veil-open"), h: Math.round(r.height), top: Math.round(r.top) };
+  })(),
+  nodes: [...document.querySelectorAll('.journey-veil button, .journey-veil input, .memory-pill, [role="switch"], [role="radio"]')]
+    .filter((n) => n.getClientRects().length > 0)
+    .map((b) => ({ tag: (b.getAttribute("aria-label") || b.className || b.tagName).slice(0, 24), h: Math.round(b.getBoundingClientRect().height) })),
+}))()`;
+
 async function gateAuthenticated(port, booted) {
   heading("Gate 9-11 · authenticated walk, draft-recovery on 503, keyboard contract");
   if (!booted) {
@@ -491,29 +545,26 @@ async function gateAuthenticated(port, booted) {
         try {
           await page.goto(`http://localhost:${port}/chat`, { waitUntil: "domcontentloaded", timeout: 20000 });
           await sleep(1600);
-          const m = await page.evaluate(() => ({
-            cls: window.__cls ? window.__cls.total : -1,
-            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-            coarse: window.matchMedia("(pointer: coarse)").matches,
-            veil: (() => {
-              const v = document.querySelector(".journey-veil");
-              if (!v) return null;
-              const r = v.getBoundingClientRect();
-              return { open: v.classList.contains("journey-veil-open"), h: Math.round(r.height), top: Math.round(r.top) };
-            })(),
-            nodes: [...document.querySelectorAll('.journey-veil button, .journey-veil input, .memory-pill, [role="switch"], [role="radio"]')]
-              .filter((n) => n.getClientRects().length > 0)
-              .map((b) => ({ tag: b.className.slice(0, 24) || b.tagName, h: Math.round(b.getBoundingClientRect().height) })),
-          }));
+          const m = await page.evaluate(LIVE_CHAT_PROBE);
           if (m.cls > 0.01) clsFailures.push(`chat-veil-reveal@390 CLS=${m.cls.toFixed(4)}`);
           if (m.overflow > 1) problems.push(`overflow ${m.overflow}px at 390 on the live veil reveal`);
           if (!m.coarse) veilFindings.push("(pointer: coarse) did not match under hasTouch emulation");
           if (!m.veil) veilFindings.push("no .journey-veil element exists on live /chat");
           else if (!m.veil.open || m.veil.h < 40) veilFindings.push(`veil mounted but not revealed (open=${m.veil.open}, height=${m.veil.h}px)`);
-          if (m.nodes.length < 4) veilFindings.push(`only ${m.nodes.length} live controls measured — assertion would be theatre`);
+          if (m.nodes.length < 2) veilFindings.push(`the compact state exposed only ${m.nodes.length} live control(s) to measure`);
           coarseMeasured = Math.max(coarseMeasured, m.nodes.length);
           const under = m.nodes.filter((s) => s.h < 44);
-          if (under.length > 0) coarseFindings.push(`${under.length} control(s) under 44px: ${under.map((u) => `${u.tag}=${u.h}px`).join(", ")}`);
+          if (under.length > 0) coarseFindings.push(`compact: ${under.length} control(s) under 44px: ${under.map((u) => `${u.tag}=${u.h}px`).join(", ")}`);
+          // Measure the expanded panel too — its rename / pause / dismiss /
+          // step-back controls are the ones a person actually taps, and the
+          // compact band alone would let a regression in them pass unseen.
+          await page.getByRole("button", { name: "Show journey steps" }).click();
+          await sleep(700);
+          const x = await page.evaluate(LIVE_CHAT_PROBE);
+          if (x.nodes.length < 4) veilFindings.push(`the expanded panel exposed only ${x.nodes.length} live control(s) to measure`);
+          coarseMeasured = Math.max(coarseMeasured, x.nodes.length);
+          const underX = x.nodes.filter((s) => s.h < 44);
+          if (underX.length > 0) coarseFindings.push(`expanded: ${underX.length} control(s) under 44px: ${underX.map((u) => `${u.tag}=${u.h}px`).join(", ")}`);
         } catch (e) {
           veilFindings.push(`live veil measurement failed: ${String(e).slice(0, 80)}`);
         }
@@ -626,6 +677,213 @@ async function gateAuthenticated(port, booted) {
   }
 }
 
+/** In-page readability probe. Geometry alone is not proof of readability: the
+ *  honest signal is which node Chrome reports for the centre of the first
+ *  message, because whatever wins that hit-test is what the person can neither
+ *  read nor tap. Returns null when the page has no veil + transcript to judge. */
+const VEIL_PROBE = `(() => {
+  const veil = document.querySelector(".journey-veil");
+  const sc = document.querySelector('[role="log"]');
+  const first = document.querySelector('[role="log"] > div > div');
+  if (!veil || !sc || !first) return null;
+  const v = veil.getBoundingClientRect();
+  const w = veil.parentElement.getBoundingClientRect();
+  const f = first.getBoundingClientRect();
+  const ta = document.querySelector('textarea[aria-label="Message Sovereign"]');
+  const hit = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return "null";
+    return el.closest && el.closest(".journey-veil") ? "veil" : el.nodeName;
+  };
+  const rows = [...document.querySelectorAll("#journey-steps ol li")];
+  return {
+    veil: { top: Math.round(v.top), bottom: Math.round(v.bottom), h: Math.round(v.height) },
+    wrapperBottom: Math.round(w.bottom),
+    spillPx: Math.round(v.bottom - w.bottom),
+    veilScrolls: veil.scrollHeight > veil.clientHeight + 1,
+    firstTop: Math.round(f.top),
+    gapPx: Math.round(f.top - v.bottom),
+    firstHit: hit(Math.round(f.left + f.width / 2), Math.round((f.top + f.bottom) / 2)),
+    composerHit: ta ? hit(Math.round(ta.getBoundingClientRect().left + 40), Math.round(ta.getBoundingClientRect().top + ta.getBoundingClientRect().height / 2)) : "none",
+    steps: rows.length,
+    currentRow: rows.findIndex((li) => (li.textContent || "").indexOf("(current step)") !== -1),
+    band: (document.querySelector(".journey-veil figure") || { getAttribute: () => "" }).getAttribute("aria-label").replace(/\\s+/g, " ").slice(0, 48),
+    cls: window.__cls ? Number(window.__cls.total.toFixed(4)) : -1,
+  };
+})()`;
+
+async function gateErgonomics(port, booted) {
+  heading("Gate 12-14 · transcript clearance under the veil, live veil interactions, mid-stream drop");
+  const skip = (why) => {
+    record("first message never behind the collapsed veil (3 viewports)", true, `SKIPPED — ${why}`);
+    record("live veil expand → step override → collapse is shift-free", true, `SKIPPED — ${why}`);
+    record("mid-stream drop: truncated SSE arms one-tap retry", true, `SKIPPED — ${why}`);
+    record("mid-stream drop: retry answers and leaves no duplicate turn", true, `SKIPPED — ${why}`);
+  };
+  if (!booted) return skip("preview server did not come up in this environment");
+  const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
+  if (!jwtSecret) return skip("no JWT_SECRET in .dev.vars");
+  const seeded = await seedLocalD1();
+  if (!seeded.ok) return skip(seeded.why);
+  const token = mintSessionToken(jwtSecret);
+
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ channel: "chrome", headless: true });
+  // hasTouch without isMobile: this pass measures live CLS, and Chrome's mobile
+  // view mode suppresses layout-shift entries entirely.
+  const openChat = async (width, height, { touch = true } = {}) => {
+    const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: touch });
+    await ctx.addCookies([{ name: "sovereign_session", value: token, domain: "localhost", path: "/", httpOnly: false, secure: false, sameSite: "Lax" }]);
+    await ctx.addInitScript(CLS_OBSERVER_SCRIPT);
+    const page = await ctx.newPage();
+    const errs = [];
+    page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+    page.on("pageerror", (e) => errs.push(String(e)));
+    await page.goto(`http://localhost:${port}/chat`, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.waitForSelector('textarea[aria-label="Message Sovereign"]', { timeout: 12000 });
+    await sleep(1800);
+    // Message #1 is the worst case, so look at the transcript from the top.
+    await page.evaluate(() => { const sc = document.querySelector('[role="log"]'); if (sc) sc.scrollTop = 0; });
+    await sleep(200);
+    return { ctx, page, errs };
+  };
+
+  // ── Gate 12 · the collapsed veil must own nothing but its reserved band ──
+  const occlusion = [];
+  let viewportsJudged = 0;
+  for (const vp of [{ w: 390, h: 844 }, { w: 390, h: 640 }, { w: 1440, h: 900, touch: false }]) {
+    const { ctx, page, errs } = await openChat(vp.w, vp.h, { touch: vp.touch !== false });
+    const m = await page.evaluate(VEIL_PROBE);
+    if (!m) {
+      occlusion.push(`${vp.w}x${vp.h}: live /chat has no veil + transcript to judge`);
+    } else {
+      viewportsJudged += 1;
+      if (m.steps > 0) occlusion.push(`${vp.w}x${vp.h}: the panel arrives EXPANDED (${m.steps} step rows) — only the compact band has reserved clearance`);
+      if (m.veil.bottom > m.firstTop) occlusion.push(`${vp.w}x${vp.h}: the collapsed veil covers message #1 (veil bottom ${m.veil.bottom} > first top ${m.firstTop}, gap ${m.gapPx}px)`);
+      if (m.firstHit === "veil") occlusion.push(`${vp.w}x${vp.h}: message #1 hit-tests INTO the veil (unreadable)`);
+      if (m.composerHit === "veil") occlusion.push(`${vp.w}x${vp.h}: the composer hit-tests into the veil (untypable)`);
+      if (m.cls > 0.01) occlusion.push(`${vp.w}x${vp.h}: arrival CLS=${m.cls.toFixed(4)}`);
+    }
+    if (errs.length) occlusion.push(`${vp.w}x${vp.h}: console/page errors ${errs.slice(0, 2).join(" | ")}`);
+    await ctx.close();
+  }
+  record("first message never behind the collapsed veil (3 viewports)", occlusion.length === 0 && viewportsJudged === 3, occlusion.slice(0, 3).join(" | ") || "cleared the reserved band at 390x844, 390x640, 1440x900");
+
+  // ── Gate 13 · expand, override a step, collapse — on the real page ──────
+  const interactions = [];
+  let worstCycleCls = -1;
+  for (const vp of [{ w: 390, h: 844 }, { w: 390, h: 640 }]) {
+    // Re-apply the fixture first: a step override is a real write to LOCAL D1,
+    // and a second pass that starts from an already-stepped-back journey could
+    // never observe the current step moving backwards again.
+    await seedLocalD1();
+    const { ctx, page, errs } = await openChat(vp.w, vp.h);
+    await page.evaluate(() => { window.__cls.total = 0; });
+    await page.getByRole("button", { name: "Show journey steps" }).click();
+    await sleep(700);
+    const exp = await page.evaluate(VEIL_PROBE);
+    if (!exp) {
+      interactions.push(`${vp.w}x${vp.h}: the compact band's toggle rendered no panel`);
+      await ctx.close();
+      continue;
+    }
+    if (exp.steps !== 5) interactions.push(`${vp.w}x${vp.h}: expanding revealed ${exp.steps} step rows (expected 5)`);
+    // The panel is allowed to cover conversation when asked; it is never
+    // allowed to reach past its own box onto the composer's chrome.
+    if (exp.spillPx > 0) interactions.push(`${vp.w}x${vp.h}: the expanded panel spills ${exp.spillPx}px past the transcript box${exp.veilScrolls ? "" : " (and does not scroll internally)"}`);
+    if (exp.composerHit === "veil") interactions.push(`${vp.w}x${vp.h}: the expanded panel intercepts composer taps`);
+    const beforeRow = exp.currentRow;
+    const override = page.locator('#journey-steps button:has-text("Not there yet?")').first();
+    if ((await override.count()) === 0) {
+      interactions.push(`${vp.w}x${vp.h}: no step-override control in the live panel`);
+    } else {
+      await override.click();
+      await sleep(1100);
+      const after = await page.evaluate(VEIL_PROBE);
+      if (after.steps !== 5) interactions.push(`${vp.w}x${vp.h}: the step override broke the row list (${after.steps} rows)`);
+      if (!(after.currentRow < beforeRow)) interactions.push(`${vp.w}x${vp.h}: override left the current step at row ${after.currentRow} (was ${beforeRow})`);
+    }
+    await page.getByRole("button", { name: "Hide steps" }).click();
+    await sleep(700);
+    const back = await page.evaluate(VEIL_PROBE);
+    if (back.steps !== 0) interactions.push(`${vp.w}x${vp.h}: "Hide steps" left the panel expanded`);
+    if (back.veil.bottom > back.firstTop) interactions.push(`${vp.w}x${vp.h}: after collapsing, message #1 is still under the veil`);
+    if (vp.h === 844) {
+      // Typing room: on a phone the caret steals the panel back automatically.
+      await page.getByRole("button", { name: "Show journey steps" }).click();
+      await sleep(600);
+      const opened = await page.evaluate(VEIL_PROBE);
+      await page.focus('textarea[aria-label="Message Sovereign"]');
+      await sleep(700);
+      const folded = await page.evaluate(VEIL_PROBE);
+      if (opened.steps === 0) interactions.push("composer-focus check could not expand the panel");
+      if (folded.steps > 0) interactions.push(`${vp.w}x${vp.h}: the panel stayed expanded when the composer took focus`);
+    }
+    worstCycleCls = Math.max(worstCycleCls, back.cls);
+    if (errs.length) interactions.push(`${vp.w}x${vp.h}: console/page errors ${errs.slice(0, 2).join(" | ")}`);
+    await ctx.close();
+  }
+  record("live veil expand → step override → collapse is shift-free", interactions.length === 0 && worstCycleCls >= 0 && worstCycleCls <= 0.01, interactions.slice(0, 3).join(" | ") || `whole cycle CLS=${worstCycleCls.toFixed(4)}`);
+
+  // ── Gate 14 · a stream that opens and dies mid-turn ───────────────────
+  const armFindings = [];
+  const recoverFindings = [];
+  const probe = `Stream probe ${Math.random().toString(36).slice(2, 8)}`;
+  const { ctx, page, errs } = await openChat(390, 844);
+  const sse = (frames) => page.route("**/api/chat", (r) => {
+    if (r.request().method() !== "POST") return r.continue();
+    return r.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: frames });
+  });
+  const userBubbles = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("p.whitespace-pre-wrap")]
+        .filter((p) => p.closest("div.justify-end"))
+        .map((p) => (p.textContent || "").trim()));
+  const lastAnswer = () =>
+    page.evaluate(() => {
+      const ps = [...document.querySelectorAll("p.whitespace-pre-wrap")].filter((p) => !p.closest("div.justify-end"));
+      return ps.length ? (ps[ps.length - 1].textContent || "").trim() : "";
+    });
+  try {
+    await sse(`data: {"threadId":"${FIXTURE_THREAD_ID}"}\n\n`);
+    await page.fill('textarea[aria-label="Message Sovereign"]', probe);
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    const row = await page.waitForSelector("text=got cut off", { timeout: 8000 }).catch(() => null);
+    if (!row) armFindings.push("a stream that closed before [DONE] was accepted as a finished turn");
+    const bubble = await lastAnswer();
+    if (!bubble.includes("stopped before it arrived")) armFindings.push(`the dead turn left no readable answer bubble (got ${JSON.stringify(bubble.slice(0, 40))})`);
+    const midBubbles = await userBubbles();
+    if (midBubbles.filter((t) => t.includes(probe)).length !== 1) armFindings.push(`the dropped turn duplicated the user bubble (${midBubbles.length} user bubbles)`);
+    const retryBox = await page.locator('button:has-text("Try again")').boundingBox();
+    if (!retryBox || retryBox.height < 44 || retryBox.width < 44) armFindings.push(`Try again is under the tap floor (${retryBox ? `${Math.round(retryBox.width)}x${Math.round(retryBox.height)}` : "missing"})`);
+
+    // Re-run the same turn against a complete stream: the answer must land and
+    // the recovery row must stand down, with still exactly one copy of the
+    // person's words in the transcript.
+    await page.unroute("**/api/chat");
+    await sse([
+      `data: {"threadId":"${FIXTURE_THREAD_ID}"}\n\n`,
+      `data: {"content":"Recovered on the retry — this answer arrived whole."}\n\n`,
+      `data: [DONE]\n\n`,
+    ].join(""));
+    await page.click('button:has-text("Try again")');
+    await sleep(1600);
+    const done = await lastAnswer();
+    const afterBubbles = await userBubbles();
+    if (!done.includes("Recovered on the retry")) recoverFindings.push(`retry did not deliver an answer (bubble=${JSON.stringify(done.slice(0, 40))})`);
+    if (done.includes("stopped before it arrived")) recoverFindings.push("the dead-turn placeholder survived a successful retry");
+    if ((await page.locator("text=got cut off").count()) > 0) recoverFindings.push("the recovery row stayed after a successful retry");
+    if (afterBubbles.filter((t) => t.includes(probe)).length !== 1) recoverFindings.push(`retry duplicated the turn (${afterBubbles.length} user bubbles)`);
+  } catch (e) {
+    recoverFindings.push(`flow failed: ${String(e).slice(0, 90)}`);
+  }
+  if (errs.length) armFindings.push(`console/page errors ${errs.slice(0, 2).join(" | ")}`);
+  record("mid-stream drop: truncated SSE arms one-tap retry", armFindings.length === 0, armFindings.slice(0, 2).join(" | "));
+  record("mid-stream drop: retry answers and leaves no duplicate turn", recoverFindings.length === 0, recoverFindings.slice(0, 3).join(" | "));
+  await ctx.close();
+  await browser.close();
+}
+
 function fetchWithTimeout(url, ms) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -652,6 +910,7 @@ async function main() {
   try {
     await gateRoutes(8788, booted);
     await gateAuthenticated(8788, booted);
+    await gateErgonomics(8788, booted);
   } finally {
     if (child) child.kill("SIGKILL");
   }
@@ -678,4 +937,4 @@ if (!process.env.SOVEREIGN_VERIFY_IMPORT_ONLY) {
 }
 
 // Exported for isolated gate development in .audit-tmp scratch runners.
-export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, CLS_OBSERVER_SCRIPT };
+export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, gateErgonomics };

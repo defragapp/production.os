@@ -244,16 +244,20 @@ export function ChatClient() {
   const [memorySwitching, setMemorySwitching] = useState(false);
   const [memoryNote, setMemoryNote] = useState<string | null>(null);
   const [journeyDismissed, setJourneyDismissed] = useState(false);
-  // The JourneyBar lives in a permanently-mounted grid row that animates
-  // 0fr → 1fr. Starting collapsed and opening one frame after mount is what
-  // turns "it appeared" from a jump into a transition — the transcript glides
-  // down instead of snapping, and layout shift stays at zero.
+  // The veil is an overlay, so its taller view is a choice, never a surprise:
+  // the journey arrives as the compact summary band (exactly the space the
+  // transcript reserves above its first row) and the canvas + step list only
+  // appear when tapped. `journeyVisible` is the reveal itself — deferred one
+  // frame after the bar mounts so the veil always transitions from a painted
+  // closed state, which is what keeps its arrival at CLS 0.0000.
   const [journeyVisible, setJourneyVisible] = useState(false);
-  // The exact text of a turn that couldn't be delivered (a dropped connection,
-  // a 429, a 503). Holding it lets us offer a one-tap "Try again" that re-sends
-  // the same message without duplicating it in the transcript — the user's
-  // words are never lost.
-  const [failedTurn, setFailedTurn] = useState<string | null>(null);
+  const [journeyExpanded, setJourneyExpanded] = useState(false);
+  // The exact text of a turn that couldn't be delivered, plus why: `unreachable`
+  // never got an answer at all (dropped connection, 429, 503), `incomplete` means
+  // the stream opened and then died before an answer arrived. Holding it lets us
+  // offer a one-tap "Try again" that re-sends the same message without
+  // duplicating it in the transcript — the user's words are never lost.
+  const [failedTurn, setFailedTurn] = useState<{ text: string; kind: "unreachable" | "incomplete" } | null>(null);
   const [offline, setOffline] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -607,7 +611,7 @@ export function ChatClient() {
         // Any other non-OK (503 inference failure, 429 burst limit, 500, an
         // unexpected proxy error): the turn is recoverable. Keep the words and
         // offer a one-tap retry instead of silently dropping them.
-        setFailedTurn(sentText);
+        setFailedTurn({ text: sentText, kind: "unreachable" });
         setMessages((prev) => {
           const u = [...prev];
           u[u.length - 1] = { role: "assistant", content: err.error || "Something went wrong — your message is safe, tap Try again." };
@@ -619,6 +623,12 @@ export function ChatClient() {
       const decoder = new TextDecoder();
       if (!reader) return;
       let buffer = "";
+      // A stream that opens and then dies is the train-tunnel failure: the
+      // request looked like it worked while the turn quietly evaporated. The
+      // committed route always ends `content` → `[DONE]`, so either flag still
+      // false at EOF means the answer never really arrived.
+      let sawDone = false;
+      let sawContent = false;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -628,7 +638,10 @@ export function ChatClient() {
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);
-            if (data === "[DONE]") continue;
+            if (data === "[DONE]") {
+              sawDone = true;
+              continue;
+            }
             try {
               const parsed = JSON.parse(data);
               if (parsed.threadId) {
@@ -646,6 +659,7 @@ export function ChatClient() {
                 continue;
               }
               if (parsed.content) {
+                sawContent = true;
                 setMessages((prev) => {
                   const u = [...prev];
                   u[u.length - 1] = {
@@ -658,6 +672,20 @@ export function ChatClient() {
             } catch {}
           }
         }
+      }
+      if (!sawDone || !sawContent) {
+        // Truncated or empty: the words are safe and the turn is re-runnable.
+        // Anything that did paint stays on screen — it is their context now —
+        // and the retry replays up to the user turn, so nothing duplicates.
+        setFailedTurn({ text: sentText, kind: "incomplete" });
+        setMessages((prev) => {
+          const u = [...prev];
+          const last = u[u.length - 1];
+          if (last && last.role === "assistant" && last.content.trim()) return prev;
+          u[u.length - 1] = { role: "assistant", content: "Sovereign's answer stopped before it arrived — your message is safe, tap Try again." };
+          return u;
+        });
+        return;
       }
       if (createdThreadId) {
         const final = await refreshThreads();
@@ -674,7 +702,7 @@ export function ChatClient() {
       }
       console.error("Chat error:", err);
       // A dropped mobile connection is the prime "lost words" case — recover it.
-      setFailedTurn(sentText);
+      setFailedTurn({ text: sentText, kind: "unreachable" });
       setMessages((prev) => {
         const u = [...prev];
         u[u.length - 1] = { role: "assistant", content: "Couldn't reach Sovereign — your message is safe, tap Try again." };
@@ -919,113 +947,127 @@ export function ChatClient() {
 
           {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
 
-          {/* The journey, surfaced the way Q1 locked it: inferred from the
-              conversation, shown only once it exists, dismissible in one click
-              — and re-revealed only by a fresh unlock, never by nagging.
-              The wrapper never unmounts; it is an absolutely-positioned veil
-              over the transcript's top edge that arrives via transform/opacity.
-              Nothing in flow ever moves (measured: any in-flow height change,
-              animated or not, is a layout shift in Chrome), so the transcript
-              never jumps under the thumb and CLS stays exactly zero. */}
-          <div className={`journey-veil bg-background/80 backdrop-blur-sm ${journeyVisible && journey && !journeyDismissed ? "journey-veil-open" : ""}`}>
-            <div className="px-4 py-3">
-              <div className="mx-auto max-w-3xl">
-                {journey && !journeyDismissed && (
-                  <JourneyBar
-                    journey={{
-                      id: journey.id,
-                      goal: journey.goal,
-                      status: journey.status,
-                      steps: journey.steps,
-                      progress: journey.visual_progress,
-                      newlyUnlocked: journey.newlyUnlocked,
-                      inquiryLevel: journey.inquiryLevel,
-                    }}
-                    onRename={(goal) => { void applyControl({ id: journey.id, rename: goal }); }}
-                    onPauseResume={() => { void applyControl({ id: journey.id, pause: journey.status !== "paused" }); }}
-                    onDismiss={() => setJourneyDismissed(true)}
-                    onStepBack={(stepId) => { void applyControl({ id: journey.id, overrideStep: stepId }); }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* One polite, one-shot line per fresh unlock — the bar itself never
               lives in an aria-live region, so frames don't spam assistive tech. */}
           <p className="sr-only" role="status" aria-live="polite">{milestoneAnnouncement}</p>
 
-          {/* role="log": screen readers announce each newly appended message as a
-              conversation, without re-reading the whole history. */}
-          <div className="flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
-            <div className="mx-auto max-w-3xl space-y-4">
-              {messages.length === 0 && (
-                <div className="flex min-h-full flex-col px-2 py-10">
-                  {/* my-auto centers the empty state when it fits, and collapses
-                      to a top alignment when it overflows — unlike items-center,
-                      which clips the emblem/headline out of reach on short phones. */}
-                  <div className="msg-in my-auto w-full text-center">
-                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
-                      <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
-                    </div>
-                    <p className="font-display text-2xl font-normal tracking-tight text-foreground">
-                      Ask anything.
-                    </p>
-                    <p className="mt-2 text-muted-foreground">
-                      About yourself, what you&apos;re sitting with, the people in your life — or the whole system they make.
-                    </p>
-                    <StartingPoints onPick={seedComposer} disabled={isStreaming} />
-                  </div>
+          {/* The transcript owns the veil. Measured before this wrapper existed:
+              anchored to the chat column, an open panel covered y=66..440 —
+              New thread, memory mode and People sat underneath it (a real tap on
+              People landed on the panel's own Dismiss button), and the first
+              message of a short thread painted straight through the journey
+              text. Anchoring the overlay to the scroll area's box confines it to
+              conversation space, where the reserved clearance below already
+              keeps the first row out from under it. */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {/* The journey, surfaced the way Q1 locked it: inferred from the
+                conversation, shown only once it exists, dismissible in one click
+                — and re-revealed only by a fresh unlock, never by nagging. The
+                wrapper never unmounts; it is an absolutely-positioned veil that
+                arrives via transform/opacity, so nothing in flow ever moves and
+                CLS stays exactly zero (measured: any in-flow height change, even
+                animated 0fr→1fr, is a shift in Chrome). */}
+            <div className={`journey-veil bg-background/80 backdrop-blur-sm ${journeyVisible && journey && !journeyDismissed ? "journey-veil-open" : ""}`}>
+              <div className="px-4 py-3">
+                <div className="mx-auto max-w-3xl">
+                  {journey && !journeyDismissed && (
+                    <JourneyBar
+                      journey={{
+                        id: journey.id,
+                        goal: journey.goal,
+                        status: journey.status,
+                        steps: journey.steps,
+                        progress: journey.visual_progress,
+                        newlyUnlocked: journey.newlyUnlocked,
+                        inquiryLevel: journey.inquiryLevel,
+                      }}
+                      expanded={journeyExpanded}
+                      onToggleExpanded={() => setJourneyExpanded((v) => !v)}
+                      onRename={(goal) => { void applyControl({ id: journey.id, rename: goal }); }}
+                      onPauseResume={() => { void applyControl({ id: journey.id, pause: journey.status !== "paused" }); }}
+                      onDismiss={() => setJourneyDismissed(true)}
+                      onStepBack={(stepId) => { void applyControl({ id: journey.id, overrideStep: stepId }); }}
+                    />
+                  )}
                 </div>
-              )}
-              {messages.map((msg, idx) => {
-                const isLast = idx === messages.length - 1;
-                const streamingEmpty =
-                  msg.role === "assistant" && isLast && isStreaming && !msg.content;
-                // Stopped before the first token arrived — without this the bubble
-                // would render as empty space with no explanation.
-                const stoppedEmpty =
-                  msg.role === "assistant" && isLast && !isStreaming && !msg.content;
-                return (
-                  <div
-                    key={idx}
-                    className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {msg.role === "assistant" ? (
-                      <div className="flex flex-col gap-1.5">
-                        <AssistantTurn>
-                          {streamingEmpty ? (
-                            <>
-                              <span aria-hidden="true" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                                <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
-                              </span>
-                              <span className="sr-only">Sovereign is thinking…</span>
-                            </>
-                          ) : stoppedEmpty ? (
-                            <p className="text-sm text-muted-foreground">Response stopped.</p>
-                          ) : (
-                            <RichText text={msg.content} />
-                          )}
-                        </AssistantTurn>
-                        {/* Every finished answer is worth keeping — the share card
-                            turns a passage into an artifact the person owns. */}
-                        {!isStreaming && !streamingEmpty && !stoppedEmpty && msg.content.trim() && (
-                          <div>
-                            <ShareCardButton text={msg.content} />
-                          </div>
-                        )}
+              </div>
+            </div>
+
+            {/* role="log": screen readers announce each newly appended message as a
+                conversation, without re-reading the whole history. `journey-clearance`
+                is static from the first frame (see globals.css): it is what lets the
+                panel cover nothing but the space it owns, without the reveal costing
+                a point of layout shift. */}
+            <div className="journey-clearance flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
+              <div className="mx-auto max-w-3xl space-y-4">
+                {messages.length === 0 && (
+                  <div className="flex min-h-full flex-col px-2 py-10">
+                    {/* my-auto centers the empty state when it fits, and collapses
+                        to a top alignment when it overflows — unlike items-center,
+                        which clips the emblem/headline out of reach on short phones. */}
+                    <div className="msg-in my-auto w-full text-center">
+                      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
+                        <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
                       </div>
-                    ) : (
-                      <div className="max-w-[88%] rounded-panel rounded-br-sm bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_30px_-18px_rgba(0,0,0,0.8)] sm:max-w-[80%]">
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                      </div>
-                    )}
+                      <p className="font-display text-2xl font-normal tracking-tight text-foreground">
+                        Ask anything.
+                      </p>
+                      <p className="mt-2 text-muted-foreground">
+                        About yourself, what you&apos;re sitting with, the people in your life — or the whole system they make.
+                      </p>
+                      <StartingPoints onPick={seedComposer} disabled={isStreaming} />
+                    </div>
                   </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
+                )}
+                {messages.map((msg, idx) => {
+                  const isLast = idx === messages.length - 1;
+                  const streamingEmpty =
+                    msg.role === "assistant" && isLast && isStreaming && !msg.content;
+                  // Stopped before the first token arrived — without this the bubble
+                  // would render as empty space with no explanation.
+                  const stoppedEmpty =
+                    msg.role === "assistant" && isLast && !isStreaming && !msg.content;
+                  return (
+                    <div
+                      key={idx}
+                      className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      {msg.role === "assistant" ? (
+                        <div className="flex flex-col gap-1.5">
+                          <AssistantTurn>
+                            {streamingEmpty ? (
+                              <>
+                                <span aria-hidden="true" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                                  <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                                  <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                                  <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
+                                </span>
+                                <span className="sr-only">Sovereign is thinking…</span>
+                              </>
+                            ) : stoppedEmpty ? (
+                              <p className="text-sm text-muted-foreground">Response stopped.</p>
+                            ) : (
+                              <RichText text={msg.content} />
+                            )}
+                          </AssistantTurn>
+                          {/* Every finished answer is worth keeping — the share card
+                              turns a passage into an artifact the person owns. */}
+                          {!isStreaming && !streamingEmpty && !stoppedEmpty && msg.content.trim() && (
+                            <div>
+                              <ShareCardButton text={msg.content} />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="max-w-[88%] rounded-panel rounded-br-sm bg-primary px-4 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_10px_30px_-18px_rgba(0,0,0,0.8)] sm:max-w-[80%]">
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
           </div>
 
@@ -1082,7 +1124,9 @@ export function ChatClient() {
                 {failedTurn && !isStreaming && (
                   <div className="msg-in mb-2 flex items-center justify-between gap-3 rounded-panel border border-destructive/30 bg-destructive/[0.06] px-4 py-2.5">
                     <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-                      Your message is safe. We couldn&apos;t reach Sovereign just now.
+                      {failedTurn.kind === "incomplete"
+                        ? "Sovereign's answer got cut off. Your message is safe."
+                        : "Your message is safe. We couldn't reach Sovereign just now."}
                     </p>
                     <Button size="sm" onClick={() => void retryLastTurn()} className="min-h-[44px] shrink-0">
                       <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden="true" />
@@ -1109,6 +1153,13 @@ export function ChatClient() {
                     placeholder="Ask Sovereign…"
                     rows={1}
                     disabled={isStreaming}
+                    // On a phone the panel is the difference between reading room
+                    // and typing room, so an expanded step list folds away the
+                    // moment the caret goes to work. Desktop keeps whatever the
+                    // person opened.
+                    onFocus={() => {
+                      if (window.matchMedia("(max-width: 640px)").matches) setJourneyExpanded(false);
+                    }}
                     className="max-h-44 min-h-11 flex-1 resize-none border-0 bg-transparent px-0 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {isStreaming ? (

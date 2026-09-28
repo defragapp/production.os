@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { INQUIRY_LEVEL_LABELS, DEFAULT_JOURNEY_STEPS, type JourneyStep } from "@/lib/sovereign-journey";
 
 export interface JourneyBarData {
@@ -14,6 +15,12 @@ export interface JourneyBarData {
 
 interface JourneyBarProps {
   journey: JourneyBarData;
+  /** The veil overlays the transcript, so the full canvas + step list is the
+   *  one thing that can cover words the person is reading. It therefore starts
+   *  as a single 44px summary band — exactly the space the transcript reserves
+   *  — and the taller view is only ever shown because it was asked for. */
+  expanded: boolean;
+  onToggleExpanded: () => void;
   onRename: (goal: string) => void;
   onPauseResume: () => void;
   onDismiss: () => void;
@@ -64,7 +71,7 @@ export function JourneyCanvas({ steps, progress, newlyUnlocked }: {
   );
 }
 
-export function JourneyBar({ journey, onRename, onPauseResume, onDismiss, onStepBack }: JourneyBarProps) {
+export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPauseResume, onDismiss, onStepBack }: JourneyBarProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(journey.goal ?? "");
   const renameTriggerRef = useRef<HTMLButtonElement>(null);
@@ -78,8 +85,32 @@ export function JourneyBar({ journey, onRename, onPauseResume, onDismiss, onStep
   const doneCount = journey.steps.filter((s) => s.status === "done").length;
   const total = journey.steps.length;
   const currentIdx = journey.steps.findIndex((s) => s.status === "current");
+  const groupLabel = `Your progress${journey.goal ? ` on ${journey.goal}` : ""}: step ${doneCount + 1} of ${total}, ${doneCount} milestones reached. Currently: ${INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}.`;
+  if (!expanded) {
+    // Compact band: one row, never a second line, so the overlay's footprint is
+    // the reserved clearance and nothing else. Renaming, pausing, and dismissing
+    // live one tap away in the full view.
+    return (
+      <figure role="group" aria-label={groupLabel} className="journey-bar journey-veil-compact gap-2 rounded-panel border border-border/60 bg-white/[0.03] px-3">
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          aria-expanded={false}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <span aria-hidden="true" className="shrink-0 rounded-full border border-border/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            {INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{journey.goal ?? "Untitled journey"}</span>
+          <span aria-hidden="true" className="shrink-0 font-mono text-[10px] text-muted-foreground">{doneCount}/{total}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">Show journey steps</span>
+        </button>
+      </figure>
+    );
+  }
   return (
-    <figure role="group" aria-label={`Your progress${journey.goal ? ` on ${journey.goal}` : ""}: step ${doneCount + 1} of ${total}, ${doneCount} milestones reached. Currently: ${INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}.`} className="journey-bar rounded-panel border border-border/60 bg-white/[0.03] px-4 pb-3 pt-3">
+    <figure role="group" aria-label={groupLabel} className="journey-bar rounded-panel border border-border/60 bg-white/[0.03] px-4 pb-3 pt-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-border/60 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground" aria-label={`Inquiry level: ${INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}`}>
           {INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}
@@ -96,25 +127,28 @@ export function JourneyBar({ journey, onRename, onPauseResume, onDismiss, onStep
           </button>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+          <button type="button" onClick={onToggleExpanded} aria-expanded aria-controls="journey-steps" className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Hide steps</button>
           <button type="button" onClick={onPauseResume} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">{journey.status === "paused" ? "Resume" : "Pause"}</button>
           <button type="button" onClick={onDismiss} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Dismiss</button>
         </div>
       </div>
-      <div className="journey-emblem-wash relative">
-        <JourneyCanvas steps={journey.steps} progress={journey.progress} newlyUnlocked={journey.newlyUnlocked} />
+      <div id="journey-steps">
+        <div className="journey-emblem-wash relative">
+          <JourneyCanvas steps={journey.steps} progress={journey.progress} newlyUnlocked={journey.newlyUnlocked} />
+        </div>
+        <ol className="mt-1 space-y-1">
+          {journey.steps.map((s, i) => (
+            <li key={s.id} className="flex items-center gap-2 text-xs">
+              <span aria-hidden="true" className={`inline-block h-1.5 w-1.5 rounded-full ${s.status === "done" ? "bg-foreground" : s.status === "current" ? "border border-foreground bg-transparent" : "bg-muted-foreground/30"}`} />
+              <span className={s.status === "locked" ? "text-muted-foreground/70" : s.status === "current" ? "font-medium text-foreground" : "text-muted-foreground"}>{s.label}</span>
+              {s.status !== "locked" && i > 0 && i <= currentIdx && (
+                <button type="button" onClick={() => onStepBack(s.id)} title="I am not there yet" className="ml-1 rounded-sm text-[11px] text-muted-foreground/70 hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Not there yet?</button>
+              )}
+              <span className="sr-only">{s.status === "done" ? " (reached)" : s.status === "current" ? " (current step)" : " (locked)"}</span>
+            </li>
+          ))}
+        </ol>
       </div>
-      <ol className="mt-1 space-y-1">
-        {journey.steps.map((s, i) => (
-          <li key={s.id} className="flex items-center gap-2 text-xs">
-            <span aria-hidden="true" className={`inline-block h-1.5 w-1.5 rounded-full ${s.status === "done" ? "bg-foreground" : s.status === "current" ? "border border-foreground bg-transparent" : "bg-muted-foreground/30"}`} />
-            <span className={s.status === "locked" ? "text-muted-foreground/70" : s.status === "current" ? "font-medium text-foreground" : "text-muted-foreground"}>{s.label}</span>
-            {s.status !== "locked" && i > 0 && i <= currentIdx && (
-              <button type="button" onClick={() => onStepBack(s.id)} title="I am not there yet" className="ml-1 rounded-sm text-[11px] text-muted-foreground/70 hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Not there yet?</button>
-            )}
-            <span className="sr-only">{s.status === "done" ? " (reached)" : s.status === "current" ? " (current step)" : " (locked)"}</span>
-          </li>
-        ))}
-      </ol>
     </figure>
   );
 }
