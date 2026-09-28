@@ -59,7 +59,7 @@ export default function TermsPage() {
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">7. Intellectual Property</h2>
             <p>© 2026 Sovereign OS. All rights reserved. The Service — including the Engine, its derivation logic, the Baseline output format, the AI system prompt, its trade dress, and the &quot;Sovereign OS&quot; and &quot;Sovereign+&quot; wordmarks (used as common-law trademarks) and the chalice mark — is licensed to you for your personal use, not sold. Nothing in these Terms grants you any right, title, or license (by implication, estoppel, or otherwise) in the Service or its intellectual property. You may not use the Sovereign OS wordmark or mark to endorse or imply any association without our prior written consent.</p>
-            <p className="mt-2">What you bring to a conversation is yours. What the Service generates — its Baseline derivations, its reads, and the method by which it produces them — belongs to Sovereign OS. You may use your transcripts and outputs for your own personal record-keeping, but not to extract, redistribute, or reconstruct the Service itself.</p>
+            <p className="mt-2">What you bring to a conversation is yours. What the Service generates — its Baseline derivations, its answers, and the method by which it produces them — belongs to Sovereign OS. You may use your transcripts and outputs for your own personal record-keeping, but not to extract, redistribute, or reconstruct the Service itself.</p>
           </section>
 
           <section>

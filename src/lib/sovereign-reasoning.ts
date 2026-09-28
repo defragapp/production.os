@@ -637,7 +637,7 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
     }
   }
   if (ctx.interpretations.length) {
-    lines.push("USER INTERPRETATIONS (their reading, not yours):");
+    lines.push("USER INTERPRETATIONS (their interpretation, not yours):");
     for (const i of ctx.interpretations) lines.push(`- ${i.content}`);
   }
   if (ctx.meaningTargets.length) {

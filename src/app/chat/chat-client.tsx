@@ -137,7 +137,7 @@ function StartingPoints({
 function AssistantTurn({ children }: { children: React.ReactNode }) {
   return (
     <div className="w-full">
-      {/* Sovereign's voice is set in the brand display serif — a reading, not
+      {/* Sovereign's voice is set in the brand display serif — an answer, not
           a chat log. The user answers in sans; only one of you is an oracle. */}
       <div className="glass-panel max-w-[92%] rounded-panel rounded-tl-sm px-4 py-3 font-display text-[16px] leading-[1.7] text-foreground sm:max-w-[80%]">
         {children}
@@ -437,7 +437,7 @@ export function ChatClient() {
           setUsageBannerDismissed(false);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: err.error || "Today's reading is complete — Sovereign+ picks up where this leaves off." };
+            u[u.length - 1] = { role: "assistant", content: err.error || "You've used today's answers — Sovereign+ picks up where this leaves off." };
             return u;
           });
           return;
@@ -739,7 +739,7 @@ export function ChatClient() {
                             <RichText text={msg.content} />
                           )}
                         </AssistantTurn>
-                        {/* Every finished reading is worth keeping — the share card
+                        {/* Every finished answer is worth keeping — the share card
                             turns a passage into an artifact the person owns. */}
                         {!isStreaming && !streamingEmpty && !stoppedEmpty && msg.content.trim() && (
                           <div>
@@ -779,7 +779,7 @@ export function ChatClient() {
                         <img src="/brand/emblem-core-bold.png" alt="" className="h-5 w-auto" />
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-foreground">Today&apos;s reading is complete.</p>
+                        <p className="text-sm font-medium text-foreground">You&apos;ve used today&apos;s answers.</p>
                         <p className="text-xs text-muted-foreground">Sovereign+ removes the daily cap — go as deep as you need.</p>
                       </div>
                     </div>

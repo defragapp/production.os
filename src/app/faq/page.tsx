@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: "What is Sovereign OS?",
-    a: "An AI that helps you think through what's happening in your life — with yourself, in a relationship, or at home. It separates what actually happened from what it started to mean to you, and leaves the deciding to you. It's not fortune-telling: every read is grounded in a personal Baseline computed from your birth date, time, and place using NASA/JPL planetary data.",
+    a: "An AI that helps you think through what's happening in your life — with yourself, in a relationship, or at home. It separates what actually happened from what it started to mean to you, and leaves the deciding to you. It's not fortune-telling: every answer is grounded in a personal Baseline computed from your birth date, time, and place using NASA/JPL planetary data.",
   },
   {
     q: "Is this therapy or medical advice?",

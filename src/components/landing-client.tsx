@@ -113,7 +113,7 @@ const EXPLORE = [
   },
 ];
 
-// The anatomy of a Sovereign read is stated once, in a line — not a process diagram.
+// The anatomy of a Sovereign answer is stated once, in a line — not a process diagram.
 
 const DEMO_ANSWER = [
   "You've named the pattern: closeness gets real, and you pull back before it can be depended on.",
@@ -121,6 +121,31 @@ const DEMO_ANSWER = [
 ];
 
 const DEMO_REFLECTION = "What would change if you let one person see the full weight of what you feel?";
+
+/**
+ * The proof, not the promise: a representative Sovereign answer broken into
+ * the three things it always keeps apart — plus the question it hands back.
+ * Relationship framing, because that's the part no solo journaling app does.
+ * Labelled illustrative: it is an example, never a fabricated testimonial.
+ */
+const ANSWER_ANATOMY = [
+  {
+    label: "What you brought",
+    body: "You both say the fight is about the number. The useful signal isn't the amount — it's that it keeps returning to the same trigger.",
+  },
+  {
+    label: "What your Baseline suggests · a tendency, not a verdict",
+    body: "Your chart leans toward deciding through other people's angles — you feel what a choice costs someone before you feel what it costs you. Over time that can turn into yielding, then resenting the yield.",
+  },
+  {
+    label: "What's only worth examining",
+    body: "One possibility is that the money stands in for a quieter argument about who holds authority here. It's also allowed to be only about the money.",
+  },
+  {
+    label: "The question it leaves with you",
+    body: "When the number comes up, what are you each actually asking for?",
+  },
+];
 
 /**
  * The product, drawn in CSS: the same surfaces and chrome the real chat
@@ -170,7 +195,7 @@ function ProductDemo() {
         </div>
 
         {/* Sovereign's turn: a clean glass bubble in the display serif — no
-            avatar, no emblem in the thread. The reading is the point. */}
+            avatar, no emblem in the thread. The answer is the point. */}
         <div>
           <div className="glass-panel w-full rounded-panel rounded-tl-sm px-3.5 py-2.5 text-left font-display text-[14px] leading-[1.65] text-foreground sm:px-4 sm:py-3 sm:text-[15px]">
             <div className="space-y-2 sm:space-y-2.5">
@@ -289,11 +314,11 @@ export function LandingClient() {
               ))}
             </div>
 
-            {/* How a read works — one quiet line + honest provenance, not a
+            {/* How an answer works — one quiet line + honest provenance, not a
                 boxy process diagram. */}
             <Reveal delay={120} className="mt-12">
               <p className="mx-auto max-w-xl text-center font-display text-lg italic leading-relaxed text-foreground/85 md:text-xl">
-                Every read returns to your Baseline — and leaves the deciding to you.
+                Every answer returns to your Baseline — and leaves the deciding to you.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 md:text-[11px]">
                 {["NASA/JPL Horizons ephemeris", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
@@ -302,6 +327,44 @@ export function LandingClient() {
                     {source}
                   </span>
                 ))}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+{/* ── What an answer looks like ──────────────────── */}
+        <div className="section-rule" aria-hidden="true" />
+        <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
+          <div className="mx-auto max-w-3xl">
+            <Reveal className="mb-10 text-center md:mb-12">
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">What an answer looks like</p>
+              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
+                Not a verdict. A way of thinking back to you.
+              </h2>
+              <p className="mt-3 text-sm text-muted-foreground md:text-base">
+                Every answer keeps three things apart — what happened, what your Baseline suggests,
+                and what&apos;s only worth examining — then hands the last word back to you.
+              </p>
+            </Reveal>
+
+            <Reveal delay={100}>
+              <div className="glass-panel rounded-panel p-6 md:p-9">
+                <div className="mb-6 flex justify-end">
+                  <div className="max-w-[85%] rounded-panel rounded-br-sm bg-primary px-4 py-2.5 text-[14px] leading-relaxed text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+                    Why do we have the same fight every time money comes up?
+                  </div>
+                </div>
+                <div className="space-y-5">
+                  {ANSWER_ANATOMY.map((part) => (
+                    <div key={part.label}>
+                      <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">{part.label}</p>
+                      <p className="font-display text-[15px] leading-[1.7] text-foreground/90 md:text-[16px]">{part.body}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-6 border-t border-border/70 pt-4 text-xs text-muted-foreground/70">
+                  An illustrative example — the shape of a real answer, not a transcript of one.
+                </p>
               </div>
             </Reveal>
           </div>
