@@ -756,5 +756,66 @@ a,[role="button"] {
   }
 }
 
+/* The header nav is mounted only once the session is known (its logged-out
+   and authenticated variants differ in width, and swapping them in a
+   justify-between row slides every visible link). It therefore arrives with
+   an opacity-only fade — the one property pair the Layout Instability API
+   exempts, so the chrome can appear without spending any shift budget. */
+.nav-fade {
+  animation: nav-fade 0.2s ease-out;
+}
+@keyframes nav-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-fade {
+    animation: none;
+  }
+}
+
+/* ── Zero-CLS JourneyBar veil ────────────────────────────────
+   Measured truth (see verify:release Gate 8): ANY in-flow height change above
+   a visible element is a layout shift in Chrome — animated or not, scroll
+   re-pinning or not. The only true zero-CLS reveal is one that changes no
+   in-flow geometry at all. So the bar lives in an absolutely-positioned veil
+   over the transcript's top edge and arrives via transform/opacity, which the
+   Layout Instability API exempts. The veil grows/shrinks from a fixed top
+   anchor (its start position never moves), so expand/collapse inside it is
+   shift-free too. `verify:release` extracts this contiguous plain-CSS region
+   verbatim into the CLS harness — keep it free of @apply/tailwind. */
+.journey-veil {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition:
+    transform 0.28s cubic-bezier(0.25, 0.1, 0.25, 1),
+    opacity 0.22s ease,
+    visibility 0s linear 0.28s;
+}
+.journey-veil-open {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition:
+    transform 0.28s cubic-bezier(0.25, 0.1, 0.25, 1),
+    opacity 0.22s ease,
+    visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-veil {
+    transition: none;
+  }
+}
+
 
 

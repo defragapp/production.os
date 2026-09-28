@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { INQUIRY_LEVEL_LABELS, type JourneyStep } from "@/lib/sovereign-journey";
+import { useRef, useState } from "react";
+import { INQUIRY_LEVEL_LABELS, DEFAULT_JOURNEY_STEPS, type JourneyStep } from "@/lib/sovereign-journey";
 
 export interface JourneyBarData {
   id: string | null;
@@ -25,6 +25,11 @@ const VIEW_H = 96;
 const TRACK_Y = 48;
 const PAD_X = 36;
 const STEP_MILESTONES = ["signal-surfaced", "meaning-clarified", "parts-separated", "frame-widened", "footing-found"];
+/** Milestone id → the human step it represents. Used by the chat shell's
+ *  screen-reader announcement, which speaks step labels, not internal ids. */
+export const MILESTONE_STEP_LABELS: Record<string, string> = Object.fromEntries(
+  STEP_MILESTONES.map((m, i) => [m, DEFAULT_JOURNEY_STEPS[i]?.label ?? m]),
+);
 
 function nodeX(i: number, n: number): number {
   if (n <= 1) return VIEW_W / 2;
@@ -62,6 +67,14 @@ export function JourneyCanvas({ steps, progress, newlyUnlocked }: {
 export function JourneyBar({ journey, onRename, onPauseResume, onDismiss, onStepBack }: JourneyBarProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(journey.goal ?? "");
+  const renameTriggerRef = useRef<HTMLButtonElement>(null);
+  const cancelRename = () => {
+    // Escape abandons the edit cleanly and hands focus back to the control it
+    // came from, so the keyboard never lands on an element that just unmounted.
+    setDraft(journey.goal ?? "");
+    setEditing(false);
+    requestAnimationFrame(() => renameTriggerRef.current?.focus());
+  };
   const doneCount = journey.steps.filter((s) => s.status === "done").length;
   const total = journey.steps.length;
   const currentIdx = journey.steps.findIndex((s) => s.status === "current");
@@ -73,17 +86,18 @@ export function JourneyBar({ journey, onRename, onPauseResume, onDismiss, onStep
         </span>
         {editing ? (
           <form className="flex min-w-0 flex-1 items-center gap-2" onSubmit={(e) => { e.preventDefault(); onRename(draft.trim()); setEditing(false); }}>
-            <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={200} placeholder="Name this journey..." aria-label="Journey name" className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground" />
-            <button type="submit" className="text-xs font-medium text-foreground underline underline-offset-2">Save</button>
+            <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); cancelRename(); } }} maxLength={200} placeholder="Name this journey..." aria-label="Journey name" className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" />
+            <button type="submit" className="rounded-sm text-xs font-medium text-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Save</button>
+            <button type="button" onClick={cancelRename} className="rounded-sm text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Cancel</button>
           </form>
         ) : (
-          <button type="button" onClick={() => { setDraft(journey.goal ?? ""); setEditing(true); }} title="Rename journey" className="min-w-0 flex-1 truncate text-left text-sm font-medium text-foreground hover:underline hover:underline-offset-2">
+          <button ref={renameTriggerRef} type="button" onClick={() => { setDraft(journey.goal ?? ""); setEditing(true); }} title="Rename journey" className="min-w-0 flex-1 truncate rounded-sm text-left text-sm font-medium text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             {journey.goal ?? "Untitled journey"}
           </button>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
-          <button type="button" onClick={onPauseResume} className="hover:text-foreground hover:underline hover:underline-offset-2">{journey.status === "paused" ? "Resume" : "Pause"}</button>
-          <button type="button" onClick={onDismiss} className="hover:text-foreground hover:underline hover:underline-offset-2">Dismiss</button>
+          <button type="button" onClick={onPauseResume} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">{journey.status === "paused" ? "Resume" : "Pause"}</button>
+          <button type="button" onClick={onDismiss} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Dismiss</button>
         </div>
       </div>
       <div className="journey-emblem-wash relative">
@@ -95,7 +109,7 @@ export function JourneyBar({ journey, onRename, onPauseResume, onDismiss, onStep
             <span aria-hidden="true" className={`inline-block h-1.5 w-1.5 rounded-full ${s.status === "done" ? "bg-foreground" : s.status === "current" ? "border border-foreground bg-transparent" : "bg-muted-foreground/30"}`} />
             <span className={s.status === "locked" ? "text-muted-foreground/70" : s.status === "current" ? "font-medium text-foreground" : "text-muted-foreground"}>{s.label}</span>
             {s.status !== "locked" && i > 0 && i <= currentIdx && (
-              <button type="button" onClick={() => onStepBack(s.id)} title="I am not there yet" className="ml-1 text-[11px] text-muted-foreground/70 hover:text-foreground hover:underline hover:underline-offset-2">Not there yet?</button>
+              <button type="button" onClick={() => onStepBack(s.id)} title="I am not there yet" className="ml-1 rounded-sm text-[11px] text-muted-foreground/70 hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Not there yet?</button>
             )}
             <span className="sr-only">{s.status === "done" ? " (reached)" : s.status === "current" ? " (current step)" : " (locked)"}</span>
           </li>

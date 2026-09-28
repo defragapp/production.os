@@ -16,7 +16,12 @@ const PLUS_BADGE =
 export function Nav() {
   const router = useRouter();
   const pathname = usePathname();
-  const [authed, setAuthed] = useState(false);
+  // `null` means "session not known yet". The two variants have different
+  // widths, and swapping one for the other inside a justify-between row slides
+  // every already-visible link (measured: 0.0069 × 2 at tablet width on every
+  // authenticated page). Mounting only once the answer arrives means the nav
+  // appears at the trailing edge of the row — new content, nothing moved.
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [tier, setTier] = useState<"free" | "sovereign+" | null>(null);
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
@@ -63,8 +68,9 @@ export function Nav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Desktop nav (see the `authed` note above: revealed, never swapped). */}
+        {authed !== null && (
+        <nav className="nav-fade hidden items-center gap-1 md:flex">
           {authed ? (
             <>
               <Link href="/chat" className={linkClass("/chat")} aria-current={ariaCurrent("/chat")}>Chat</Link>
@@ -95,6 +101,7 @@ export function Nav() {
             </>
           )}
         </nav>
+        )}
 
         {/* Mobile toggle */}
         <button

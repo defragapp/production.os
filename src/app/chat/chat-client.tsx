@@ -3,16 +3,15 @@ import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUp, Globe, Lock, Plus, Shield, Square, Users, X } from "lucide-react";
+import { ArrowUp, Globe, Lock, Plus, RefreshCw, Shield, Square, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { RichText } from "@/components/rich-text";
 import { ShareCardButton } from "@/components/share-card";
-import { JourneyBar } from "@/components/journey-canvas";
+import { JourneyBar, MILESTONE_STEP_LABELS } from "@/components/journey-canvas";
 import { useJourney } from "@/lib/journey-store";
 import type { JourneyState } from "@/lib/sovereign-journey";
 import type { ChatMessage, BaselineData, MemoryMode, RelationshipView } from "@/lib/types";
@@ -245,9 +244,24 @@ export function ChatClient() {
   const [memorySwitching, setMemorySwitching] = useState(false);
   const [memoryNote, setMemoryNote] = useState<string | null>(null);
   const [journeyDismissed, setJourneyDismissed] = useState(false);
+  // The JourneyBar lives in a permanently-mounted grid row that animates
+  // 0fr → 1fr. Starting collapsed and opening one frame after mount is what
+  // turns "it appeared" from a jump into a transition — the transcript glides
+  // down instead of snapping, and layout shift stays at zero.
+  const [journeyVisible, setJourneyVisible] = useState(false);
+  // The exact text of a turn that couldn't be delivered (a dropped connection,
+  // a 429, a 503). Holding it lets us offer a one-tap "Try again" that re-sends
+  // the same message without duplicating it in the transcript — the user's
+  // words are never lost.
+  const [failedTurn, setFailedTurn] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Milestones are announced once per identity, not once per state frame —
+  // assistive tech hears a fresh unlock, never a re-read of the whole bar.
+  const announcedMilestones = useRef<Set<string>>(new Set());
+  const [milestoneAnnouncement, setMilestoneAnnouncement] = useState("");
 
   // The journey bar earns its place back with progress, not nagging: dismissal
   // is session-local, and the next confirmed unlock quietly re-reveals it.
@@ -363,6 +377,74 @@ export function ChatClient() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (journey && !journeyDismissed) {
+      // Defer the reveal by a frame so the veil always transitions from a
+      // painted closed state — opening in the same tick as the bar's mount
+      // would render as a jump instead of the slide.
+      const raf = requestAnimationFrame(() => setJourneyVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setJourneyVisible(false);
+  }, [journey, journeyDismissed]);
+
+  useEffect(() => {
+    const fresh = (journey?.newlyUnlocked ?? []).filter((m) => !announcedMilestones.current.has(m));
+    if (journey && fresh.length > 0) {
+      for (const m of fresh) announcedMilestones.current.add(m);
+      const labels = fresh.map((m) => MILESTONE_STEP_LABELS[m] ?? m).join(", ");
+      setMilestoneAnnouncement(`Milestone unlocked: ${labels}.`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journey?.newlyUnlocked]);
+
+  // ── Never lose a user's words ──────────────────────────────────
+  // A draft survives reloads and a dropped cell connection: it is mirrored to
+  // per-account local storage as the person types, restored on mount, and
+  // cleared only once a turn is actually handed to the server (send) — so a
+  // crash, refresh, or offline send never strands a half-written thought.
+  const draftKey = userScope ? `sovereign-chat-draft:${userScope}` : null;
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) setInput(saved);
+    } catch {}
+    // Restore once when the account scope becomes known.
+  }, [draftKey]);
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      if (input) localStorage.setItem(draftKey, input);
+      else localStorage.removeItem(draftKey);
+    } catch {}
+  }, [input, draftKey]);
+
+  // The composer grows with the thought, up to a sane ceiling, so a long
+  // reflection stays readable on a 390px phone without the pill climbing over
+  // the header or pushing the JourneyBar off-screen. Height resets on send
+  // because `input` returns to empty.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 176)}px`;
+  }, [input]);
+
+  // A calm, non-intrusive offline signal, so a person never taps send into a
+  // dead connection. `navigator.onLine` seeds it; the events keep it honest.
+  useEffect(() => {
+    const goOnline = () => setOffline(false);
+    const goOffline = () => setOffline(true);
+    setOffline(!navigator.onLine);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
   // Usage should self-heal without a page reload: if the daily window rolls
   // over or the plan changes while this tab sits backgrounded, revalidating on
   // re-focus unlocks the composer (or updates the meter) the moment you return.
@@ -460,25 +542,23 @@ export function ChatClient() {
     }
   }, [memoryMode]);
 
-  const sendMessage = useCallback(async () => {
-    const content = input.trim();
-    if (!content || isStreaming) return;
-    const userMessage: ChatMessage = { role: "user", content };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput("");
-    setIsStreaming(true);
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+  // The single request/SSE core. Both a fresh send and a failed-turn retry flow
+  // through here, so a retry replays the exact same history — never a duplicate
+  // user message. `requestMessages` already ends at the user turn to answer.
+  const performTurn = useCallback(async (requestMessages: ChatMessage[]) => {
+    const sentText = [...requestMessages].reverse().find((m) => m.role === "user")?.content ?? "";
     const startedNewThread = threadId === null;
     let createdThreadId: string | null = null;
     const controller = new AbortController();
     abortRef.current = controller;
+    setIsStreaming(true);
+    setMessages([...requestMessages, { role: "assistant", content: "" }]);
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          messages: requestMessages.map((m) => ({ role: m.role, content: m.content })),
           threadId: threadId || undefined,
         }),
         signal: controller.signal,
@@ -524,9 +604,13 @@ export function ChatClient() {
           setTimeout(() => router.push("/onboard?mode=login"), 1200);
           return;
         }
+        // Any other non-OK (503 inference failure, 429 burst limit, 500, an
+        // unexpected proxy error): the turn is recoverable. Keep the words and
+        // offer a one-tap retry instead of silently dropping them.
+        setFailedTurn(sentText);
         setMessages((prev) => {
           const u = [...prev];
-          u[u.length - 1] = { role: "assistant", content: err.error || "Something went wrong — please try again." };
+          u[u.length - 1] = { role: "assistant", content: err.error || "Something went wrong — your message is safe, tap Try again." };
           return u;
         });
         return;
@@ -579,7 +663,7 @@ export function ChatClient() {
         const final = await refreshThreads();
         const stored = final.find((t) => t.id === createdThreadId);
         if (stored && (startedNewThread || !stored.label)) {
-          const label = threadLabel([...newMessages, { role: "assistant", content: "" }]);
+          const label = threadLabel([...requestMessages, { role: "assistant", content: "" }]);
           setThreads((prev) => prev.map((t) => (t.id === createdThreadId ? { ...t, label } : t)));
         }
       }
@@ -589,9 +673,11 @@ export function ChatClient() {
         return;
       }
       console.error("Chat error:", err);
+      // A dropped mobile connection is the prime "lost words" case — recover it.
+      setFailedTurn(sentText);
       setMessages((prev) => {
         const u = [...prev];
-        u[u.length - 1] = { role: "assistant", content: "Couldn't reach Sovereign — check your connection and try again." };
+        u[u.length - 1] = { role: "assistant", content: "Couldn't reach Sovereign — your message is safe, tap Try again." };
         return u;
       });
     } finally {
@@ -599,7 +685,26 @@ export function ChatClient() {
       refreshUsage();
       setIsStreaming(false);
     }
-  }, [input, isStreaming, messages, threadId, refreshThreads, refreshUsage, router, applyStateFrame]);
+  }, [threadId, refreshThreads, refreshUsage, router, applyStateFrame]);
+
+  const sendMessage = useCallback(async () => {
+    const content = input.trim();
+    if (!content || isStreaming) return;
+    setFailedTurn(null);
+    setInput("");
+    await performTurn([...messages, { role: "user", content }]);
+  }, [input, isStreaming, messages, performTurn]);
+
+  // One-tap recovery: replay the transcript up to (and including) the failed
+  // user message — dropping the trailing error bubble — so the retry never
+  // duplicates the turn in the thread history.
+  const retryLastTurn = useCallback(async () => {
+    if (!failedTurn || isStreaming) return;
+    setFailedTurn(null);
+    const lastUserIdx = messages.map((m) => m.role).lastIndexOf("user");
+    if (lastUserIdx === -1) return;
+    await performTurn(messages.slice(0, lastUserIdx + 1));
+  }, [failedTurn, isStreaming, messages, performTurn]);
 
   if (!authChecked) {
     return (
@@ -705,7 +810,7 @@ export function ChatClient() {
           onNew={startNewThread}
           onSeed={seedComposer}
         />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="border-b border-border bg-background px-4 py-3">
             <div className="mx-auto flex max-w-3xl items-center gap-2">
               <Button
@@ -816,28 +921,39 @@ export function ChatClient() {
 
           {/* The journey, surfaced the way Q1 locked it: inferred from the
               conversation, shown only once it exists, dismissible in one click
-              — and re-revealed only by a fresh unlock, never by nagging. */}
-          {journey && !journeyDismissed && (
-            <div className="border-b border-border bg-background/60 px-4 py-3 backdrop-blur-sm">
+              — and re-revealed only by a fresh unlock, never by nagging.
+              The wrapper never unmounts; it is an absolutely-positioned veil
+              over the transcript's top edge that arrives via transform/opacity.
+              Nothing in flow ever moves (measured: any in-flow height change,
+              animated or not, is a layout shift in Chrome), so the transcript
+              never jumps under the thumb and CLS stays exactly zero. */}
+          <div className={`journey-veil bg-background/80 backdrop-blur-sm ${journeyVisible && journey && !journeyDismissed ? "journey-veil-open" : ""}`}>
+            <div className="px-4 py-3">
               <div className="mx-auto max-w-3xl">
-                <JourneyBar
-                  journey={{
-                    id: journey.id,
-                    goal: journey.goal,
-                    status: journey.status,
-                    steps: journey.steps,
-                    progress: journey.visual_progress,
-                    newlyUnlocked: journey.newlyUnlocked,
-                    inquiryLevel: journey.inquiryLevel,
-                  }}
-                  onRename={(goal) => { void applyControl({ id: journey.id, rename: goal }); }}
-                  onPauseResume={() => { void applyControl({ id: journey.id, pause: journey.status !== "paused" }); }}
-                  onDismiss={() => setJourneyDismissed(true)}
-                  onStepBack={(stepId) => { void applyControl({ id: journey.id, overrideStep: stepId }); }}
-                />
+                {journey && !journeyDismissed && (
+                  <JourneyBar
+                    journey={{
+                      id: journey.id,
+                      goal: journey.goal,
+                      status: journey.status,
+                      steps: journey.steps,
+                      progress: journey.visual_progress,
+                      newlyUnlocked: journey.newlyUnlocked,
+                      inquiryLevel: journey.inquiryLevel,
+                    }}
+                    onRename={(goal) => { void applyControl({ id: journey.id, rename: goal }); }}
+                    onPauseResume={() => { void applyControl({ id: journey.id, pause: journey.status !== "paused" }); }}
+                    onDismiss={() => setJourneyDismissed(true)}
+                    onStepBack={(stepId) => { void applyControl({ id: journey.id, overrideStep: stepId }); }}
+                  />
+                )}
               </div>
             </div>
-          )}
+          </div>
+
+          {/* One polite, one-shot line per fresh unlock — the bar itself never
+              lives in an aria-live region, so frames don't spam assistive tech. */}
+          <p className="sr-only" role="status" aria-live="polite">{milestoneAnnouncement}</p>
 
           {/* role="log": screen readers announce each newly appended message as a
               conversation, without re-reading the whole history. */}
@@ -947,8 +1063,35 @@ export function ChatClient() {
                     </div>
                   </div>
                 )}
-                <div className="composer-pill flex items-center gap-2 pl-5 pr-1.5 py-1.5">
-                  <Input
+                {/* Offline is surfaced calmly, never as a blocking modal — the
+                    draft is already held, so a person can keep writing and send
+                    the moment the connection returns. */}
+                {offline && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="mb-2 flex items-center gap-2 rounded-lg border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" />
+                    You&apos;re offline — keep typing, we&apos;ll hold your words until the connection returns.
+                  </div>
+                )}
+                {/* A turn that couldn't be delivered leaves the user's words and
+                    a single, obvious way to send them again — no retyping, no
+                    duplicate in the history. */}
+                {failedTurn && !isStreaming && (
+                  <div className="msg-in mb-2 flex items-center justify-between gap-3 rounded-panel border border-destructive/30 bg-destructive/[0.06] px-4 py-2.5">
+                    <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+                      Your message is safe. We couldn&apos;t reach Sovereign just now.
+                    </p>
+                    <Button size="sm" onClick={() => void retryLastTurn()} className="min-h-[44px] shrink-0">
+                      <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                      Try again
+                    </Button>
+                  </div>
+                )}
+                <div className="composer-pill flex items-end gap-2 pl-5 pr-1.5 py-1.5">
+                  <textarea
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -958,12 +1101,15 @@ export function ChatClient() {
                         sendMessage();
                       }
                     }}
-                    // The input never goes dead — at the cap, sending simply returns
-                    // the quiet gate card above, which is far more graceful than a
-                    // disabled field.
+                    // The composer never goes dead — at the cap, sending simply
+                    // returns the quiet gate card above, which is far more
+                    // graceful than a disabled field. Multi-line by design: a
+                    // long thought stays readable and auto-grows (see effect).
+                    aria-label="Message Sovereign"
                     placeholder="Ask Sovereign…"
+                    rows={1}
                     disabled={isStreaming}
-                    className="h-11 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                    className="max-h-44 min-h-11 flex-1 resize-none border-0 bg-transparent px-0 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {isStreaming ? (
                     <Button onClick={stopStreaming} variant="outline" size="icon" className="h-11 w-11 shrink-0 rounded-full">
