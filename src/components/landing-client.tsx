@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { cn } from "@/lib/utils";
 import type { BaselineData } from "@/lib/types";
 
 /**
@@ -213,7 +214,7 @@ function ProductDemo() {
       />
       <div className="relative">
       <div className="demo-backlight" aria-hidden="true" />
-      <div className="relative overflow-hidden rounded-panel border border-border bg-surface-2 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.07),0_24px_80px_-24px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-5">
+      <div className="relative overflow-hidden rounded-panel border border-white/10 bg-gradient-to-b from-surface-3 to-surface-1 p-4 shadow-[inset_0_1px_0_rgba(251,247,239,0.14),inset_0_0_0_1px_rgba(251,247,239,0.02),0_30px_90px_-30px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex items-center">
           <Eyebrow>Sovereign OS</Eyebrow>
         </div>
@@ -278,6 +279,47 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
       <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" strokeWidth={2.2} aria-hidden="true" />
       {children}
     </li>
+  );
+}
+
+/**
+ * The landing's section crown — the single place the warm-gold signature accent
+ * lives. A short lit hairline, a gold-tinted eyebrow, the serif title, and an
+ * optional deck. Routing every section header through this one component keeps
+ * the accent restrained and identical wherever it appears; `align="left"` drives
+ * the platform's one asymmetric section. Kept local to the landing on purpose:
+ * inner routes use <PageHeader>, which stays quiet (no gold) so the marketing
+ * surface holds the exclusive register.
+ */
+function SectionCrown({
+  eyebrow,
+  title,
+  deck,
+  align = "center",
+  className,
+}: {
+  eyebrow: string;
+  title: React.ReactNode;
+  deck?: React.ReactNode;
+  align?: "center" | "left";
+  className?: string;
+}) {
+  const isCenter = align === "center";
+  return (
+    <div className={cn("mb-10 md:mb-12", isCenter ? "text-center" : "text-left", className)}>
+      <span className={cn("crown-gold mb-4", isCenter && "mx-auto")} aria-hidden="true" />
+      <Eyebrow accent className="mb-3">
+        {eyebrow}
+      </Eyebrow>
+      <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
+        {title}
+      </h2>
+      {deck && (
+        <p className={cn("mt-3 text-sm text-muted-foreground md:text-base", isCenter && "mx-auto max-w-2xl")}>
+          {deck}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -390,11 +432,11 @@ export function LandingClient() {
         <div className="section-rule" aria-hidden="true" />
         <section id="how" className="relative overflow-hidden scroll-mt-24 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
-            <Reveal className="mb-10 text-center md:mb-12">
-              <Eyebrow className="mb-3">How it works</Eyebrow>
-              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
-                Three steps. It starts with wherever you are.
-              </h2>
+            <Reveal>
+              <SectionCrown
+                eyebrow="How it works"
+                title="Three steps. It starts with wherever you are."
+              />
             </Reveal>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -417,12 +459,12 @@ export function LandingClient() {
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-5xl">
-            <Reveal className="mb-10 text-center md:mb-12">
-              <Eyebrow className="mb-3">What you can look at</Eyebrow>
-              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
-                Yourself, your relationships, the rooms you move through.
-              </h2>
-              <p className="mt-3 text-sm text-muted-foreground md:text-base">Sovereign works wherever your life is actually happening.</p>
+            <Reveal>
+              <SectionCrown
+                eyebrow="What you can look at"
+                title="Yourself, your relationships, the rooms you move through."
+                deck="Sovereign works wherever your life is actually happening."
+              />
             </Reveal>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -462,15 +504,17 @@ export function LandingClient() {
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden bg-muted/30 px-6 py-20 md:py-28">
           <div className="mx-auto max-w-3xl">
-            <Reveal className="mb-10 text-center md:mb-12">
-              <Eyebrow className="mb-3">What an answer looks like</Eyebrow>
-              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
-                Not a verdict. A way of thinking back to you.
-              </h2>
-              <p className="mt-3 text-sm text-muted-foreground md:text-base">
-                Every answer keeps three things apart — what happened, what your Baseline suggests,
-                and what&apos;s only worth examining — then hands the last word back to you.
-              </p>
+            <Reveal>
+              <SectionCrown
+                eyebrow="What an answer looks like"
+                title="Not a verdict. A way of thinking back to you."
+                deck={
+                  <>
+                    Every answer keeps three things apart — what happened, what your Baseline suggests,
+                    and what&apos;s only worth examining — then hands the last word back to you.
+                  </>
+                }
+              />
             </Reveal>
 
             <Reveal delay={100}>
@@ -497,15 +541,20 @@ export function LandingClient() {
         </section>
 
         {/* ── Between two people ───────────────────────────── */}
+        {/* The one asymmetric section: the platform's rhythm is centered, so
+            breaking it here lands on the relationship moat — and the split
+            layout *is* the message (two sides, held together). */}
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden px-6 py-20 md:py-28">
-          <div className="mx-auto max-w-3xl">
-            <Reveal className="mb-10 text-center md:mb-12">
-              <Eyebrow className="mb-3">{PERSPECTIVE.eyebrow}</Eyebrow>
-              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
-                {PERSPECTIVE.heading}
-              </h2>
-              <p className="mt-3 text-sm text-muted-foreground md:text-base">{PERSPECTIVE.deck}</p>
+          <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14">
+            <Reveal>
+              <SectionCrown
+                align="left"
+                className="mb-0"
+                eyebrow={PERSPECTIVE.eyebrow}
+                title={PERSPECTIVE.heading}
+                deck={PERSPECTIVE.deck}
+              />
             </Reveal>
             <Reveal delay={100}>
               <PerspectiveSwitch />
@@ -517,7 +566,8 @@ export function LandingClient() {
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden px-6 py-20 md:py-28">
           <Reveal className="mx-auto max-w-4xl">
-            <Eyebrow className="mb-3">Plans</Eyebrow>
+            <span className="crown-gold mx-auto mb-4" aria-hidden="true" />
+            <Eyebrow accent className="mb-3 text-center">Plans</Eyebrow>
             <h2 className="mb-3 text-center font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
               Free to start. Keep going when it gets deep.
             </h2>
@@ -579,7 +629,7 @@ export function LandingClient() {
             <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
               <Logo showWordmark={false} href="#" markClassName="h-8 w-auto" />
             </div>
-            <Eyebrow className="mb-3">Begin</Eyebrow>
+            <Eyebrow accent className="mb-3">Begin</Eyebrow>
             <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl md:text-[2.75rem] md:leading-[1.15]">
               Start with one honest question.
             </h2>

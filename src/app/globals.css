@@ -173,6 +173,19 @@
   background: linear-gradient(90deg, transparent, hsla(38, 18%, 95%, 0.16), transparent);
 }
 
+/* Signature accent — the platform's single warm-gold mark. Everything else on
+   the page stays inside the cream/graphite scale; this one short lit hairline
+   appears ONLY above a section crown (paired with a gold-tinted <Eyebrow>), so
+   the gold thread reads as the deliberate brand signature rather than decor.
+   Static, no motion; the soft glow is what makes the hairline feel lit. */
+.crown-gold {
+  display: block;
+  width: 2.75rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsla(38, 74%, 72%, 0.9), transparent);
+  box-shadow: 0 0 14px 1px hsla(38, 70%, 64%, 0.36);
+}
+
 /* Film grain — a subtle "crafted, not templated" signal. Reduced to ~2.5%
    alpha for the cleaner premium pass: still kills the flat "empty black" look,
    but reads as almost imperceptible texture rather than visible noise. */
