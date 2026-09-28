@@ -124,8 +124,8 @@ const DEMO_REFLECTION = "What would change if you let one person see the full we
 
 /**
  * The product, drawn in CSS: the same surfaces and chrome the real chat
- * renders today — pill thread chips, the emblem avatar beside a glass bubble
- * set in the display serif, the composer pill — with an answer in the
+ * renders today — pill thread chips, an avatar-free glass bubble set in the
+ * display serif, the composer pill — with an answer in the
  * authentic voice Sovereign actually produces: observe the pattern, name its
  * cost, read the Baseline as a tendency, then leave one honest question open.
  */

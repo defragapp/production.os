@@ -39,7 +39,7 @@ export default function AboutPage() {
           <div className="hero-light" aria-hidden="true" />
           <div className="relative mx-auto w-full max-w-3xl">
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Sovereign OS · Our Philosophy
+              Our Philosophy
             </p>
             <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3.25rem]">
               A tool for <span className="italic">understanding</span>, not a verdict.

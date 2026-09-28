@@ -25,9 +25,6 @@ export default async function SupportPage() {
         <section className="relative overflow-hidden">
           <div className="hero-light" aria-hidden="true" />
           <div className="mx-auto max-w-5xl px-6 pb-14 pt-16 md:pt-20">
-            <p className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Sovereign OS · Support
-            </p>
             <h1 className="font-display text-4xl font-normal leading-[1.1] tracking-tight text-foreground md:text-5xl">
               We read everything.
             </h1>
@@ -47,7 +44,7 @@ export default async function SupportPage() {
 
           <aside className="space-y-4">
             <div className="glass-panel p-6">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-3 text-sm font-semibold text-foreground">
                 What happens next
               </p>
               <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
@@ -60,7 +57,7 @@ export default async function SupportPage() {
               </ul>
             </div>
             <div className="glass-panel p-6">
-              <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-2 text-sm font-semibold text-foreground">
                 Prefer email?
               </p>
               <p className="text-sm leading-6 text-muted-foreground">

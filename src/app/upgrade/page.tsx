@@ -145,7 +145,7 @@ function UpgradeContent() {
               <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>No daily cap — go as deep as you want</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
-                <p className="mb-4 inline-flex w-fit items-center rounded-chip border border-foreground/20 bg-foreground/[0.06] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-foreground">Save 59% · Best value</p>
+                <p className="mb-4 text-sm text-muted-foreground">Best value when billed yearly</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
                   <PlanFeature>Invite people into your relationships</PlanFeature>

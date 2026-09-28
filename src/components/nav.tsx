@@ -11,7 +11,7 @@ const navLink =
 const navLinkActive = "text-foreground font-medium bg-white/[0.06] shadow-sm";
 
 const PLUS_BADGE =
-  "ml-1 inline-flex items-center rounded-md border border-foreground/25 bg-foreground/[0.08] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground";
+  "ml-1 inline-flex items-center rounded-full bg-foreground/[0.06] px-2.5 py-1 text-[11px] font-medium text-foreground/85";
 
 export function Nav() {
   const router = useRouter();

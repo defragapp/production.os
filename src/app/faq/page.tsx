@@ -54,9 +54,9 @@ export default function FaqPage() {
 
         <Link
           href="/upgrade"
-          className="mx-auto mb-10 block text-center font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground transition-colors duration-[240ms] hover:text-foreground"
+          className="mx-auto mb-10 block text-center text-sm text-muted-foreground underline-offset-4 transition-colors duration-[240ms] hover:text-foreground hover:underline"
         >
-          Compare Free vs Sovereign+ →
+          Compare Free and Sovereign+ →
         </Link>
 
         <div className="glass-panel px-6 md:px-8">
