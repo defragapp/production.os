@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { ArrowRight, ArrowUp, Check, Plus } from "lucide-react";
+import { ArrowUp, Check, Plus } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
@@ -113,9 +113,7 @@ const EXPLORE = [
   },
 ];
 
-// The anatomy of a Sovereign read — shown once, as a diagram, instead of
-// three times as full prose columns.
-const READ_FLOW = ["Your question", "The pattern", "Your Baseline", "A question back"];
+// The anatomy of a Sovereign read is stated once, in a line — not a process diagram.
 
 const DEMO_ANSWER = [
   "You've named the pattern: closeness gets real, and you pull back before it can be depended on.",
@@ -206,23 +204,6 @@ function ProductDemo() {
   );
 }
 
-function WorkflowArrow({ vertical }: { vertical?: boolean }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center text-muted-foreground/50 ${
-        vertical ? "h-8 py-1" : "h-6 w-6 pt-0 md:h-auto"
-      }`}
-    >
-      <ArrowRight
-        className={`h-5 w-5 ${vertical ? "rotate-90 md:rotate-0" : "rotate-90 md:rotate-0"}`}
-        strokeWidth={1.5}
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
-
 /** Pricing feature line with a quiet check marker — bare text lists read as
     unfinished next to premium pricing tables. */
 function PlanFeature({ children }: { children: React.ReactNode }) {
@@ -308,26 +289,13 @@ export function LandingClient() {
               ))}
             </div>
 
-            {/* Anatomy of a read — one diagram instead of three prose columns. */}
+            {/* How a read works — one quiet line + honest provenance, not a
+                boxy process diagram. */}
             <Reveal delay={120} className="mt-12">
-              <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-2">
-                {READ_FLOW.map((node, i) => (
-                  <div key={node} className="flex flex-col items-center gap-3 md:flex-row md:gap-2">
-                    <span className="rounded-md border border-foreground/25 bg-foreground/[0.05] px-5 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground/80 md:text-xs">
-                      {node}
-                    </span>
-                    {i < READ_FLOW.length - 1 && <WorkflowArrow vertical />}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-5 text-center text-sm text-muted-foreground/70">
+              <p className="mx-auto max-w-xl text-center font-display text-lg italic leading-relaxed text-foreground/85 md:text-xl">
                 Every read returns to your Baseline — and leaves the deciding to you.
               </p>
-            </Reveal>
-
-            {/* Honest provenance strip — real data sources, no fabricated logos. */}
-            <Reveal delay={120} className="mt-12">
-              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 md:text-[11px]">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 md:text-[11px]">
                 {["NASA/JPL Horizons ephemeris", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
                   <span key={source} className="flex items-center gap-5">
                     {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
@@ -371,11 +339,9 @@ export function LandingClient() {
               </div>
 
               <div className="glass-panel card-lift relative flex flex-col p-7 border-foreground/30 shadow-[0_0_35px_-12px_rgba(244,239,228,0.12)]">
-                <p className="mb-1 flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-[0.16em] text-foreground font-semibold">
+                <p className="mb-1 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.16em] text-foreground font-semibold">
                   Sovereign+
-                  <span className="rounded-chip border border-foreground/30 bg-foreground/[0.08] px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-foreground uppercase">
-                    Save 59%
-                  </span>
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Best value</span>
                 </p>
                 <p className="mb-5 flex items-baseline gap-2 font-display text-3xl font-normal">
                   $99
