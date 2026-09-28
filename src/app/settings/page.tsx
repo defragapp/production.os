@@ -9,6 +9,7 @@ import { Section } from "@/components/ui/section";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
+import { Alert } from "@/components/ui/alert";
 import type { RelationshipView } from "@/lib/types";
 import { formatD1Date } from "@/lib/utils";
 
@@ -33,6 +34,15 @@ interface InviteRow {
 
 function shortDate(iso: string | null): string {
   return iso ? formatD1Date(iso, { month: "short", day: "numeric" }) : "—";
+}
+
+// Two-letter monogram for a connection's avatar, matching the chat People
+// panel. Falls back to the first two characters for single-token names.
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "•";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export default function SettingsPage() {
@@ -351,7 +361,11 @@ export default function SettingsPage() {
                       {connections.map((c) => (
                         <li key={c.relationId} className="rounded-panel border border-white/[0.07] bg-surface-1 p-4 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)] transition-colors duration-[240ms] hover:border-white/15">
                           <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface-2 text-xs font-medium text-foreground">
+                                {initials(c.personName)}
+                              </span>
+                              <div className="min-w-0">
                               <p className="flex flex-wrap items-center gap-2 text-sm">
                                 <span className="font-medium text-foreground">{c.personName}</span>
                                 <span className="rounded border border-border bg-background/60 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -368,6 +382,7 @@ export default function SettingsPage() {
                                     : "hasn't shared their baseline with you yet"
                                   : "no baseline shared yet"}
                               </p>
+                              </div>
                             </div>
                             <div className="flex shrink-0 items-center gap-1.5">
                               <button
@@ -497,7 +512,7 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                   )}
-                  {inviteError && <p role="alert" className="text-xs text-destructive">{inviteError}</p>}
+                  {inviteError && <Alert>{inviteError}</Alert>}
                   {inviteRequiresPlus && (
                     <p className="text-xs text-muted-foreground">
                       Invitations are part of Sovereign+.{" "}
@@ -508,9 +523,7 @@ export default function SettingsPage() {
                     </p>
                   )}
                   {inviteSuccess && (
-                    <p className="inline-flex items-center gap-1.5 text-xs text-foreground">
-                      <Check className="h-3.5 w-3.5" /> {inviteSuccess}
-                    </p>
+                    <Alert tone="notice">{inviteSuccess}</Alert>
                   )}
 
                   {/* A free user can't have invitations and is behind the paywall,

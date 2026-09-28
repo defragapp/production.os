@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,7 +61,28 @@ export function BaselineForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const mmRef = useRef<HTMLInputElement>(null);
+  const ddRef = useRef<HTMLInputElement>(null);
+  const yyRef = useRef<HTMLInputElement>(null);
+
   const onlyDigits = (v: string, max: number) => v.replace(/[^0-9]/g, "").slice(0, max);
+
+  // Auto-advance once a segment is complete, and step back on an empty
+  // backspace — so the date can be typed straight through without the mouse.
+  const backOnEmpty = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    value: string,
+    prev: React.RefObject<HTMLInputElement | null>,
+  ) => {
+    if (e.key === "Backspace" && value === "") {
+      const target = prev.current;
+      if (target) {
+        e.preventDefault();
+        target.focus();
+        target.select();
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,34 +141,41 @@ export function BaselineForm({
           <div className="space-y-1.5">
             <Label htmlFor="bf-dob-mm" className="block text-xs font-normal text-muted-foreground">Month</Label>
             <Input
+              ref={mmRef}
               id="bf-dob-mm"
               inputMode="numeric"
               autoComplete="bday-month"
               maxLength={2}
               placeholder="MM"
               value={dobMM}
-              onChange={(e) => { setDobMM(onlyDigits(e.target.value, 2)); setError(null); }}
+              onChange={(e) => { const v = onlyDigits(e.target.value, 2); setDobMM(v); if (v.length === 2) ddRef.current?.focus(); setError(null); }}
+              onKeyDown={(e) => backOnEmpty(e, dobMM, mmRef)}
               aria-describedby="bf-dob-hint"
               className="w-[4.5rem] text-center tabular-nums"
             />
           </div>
+          <span aria-hidden="true" className="flex h-11 select-none items-center text-muted-foreground/40">/</span>
           <div className="space-y-1.5">
             <Label htmlFor="bf-dob-dd" className="block text-xs font-normal text-muted-foreground">Day</Label>
             <Input
+              ref={ddRef}
               id="bf-dob-dd"
               inputMode="numeric"
               autoComplete="bday-day"
               maxLength={2}
               placeholder="DD"
               value={dobDD}
-              onChange={(e) => { setDobDD(onlyDigits(e.target.value, 2)); setError(null); }}
+              onChange={(e) => { const v = onlyDigits(e.target.value, 2); setDobDD(v); if (v.length === 2) yyRef.current?.focus(); setError(null); }}
+              onKeyDown={(e) => backOnEmpty(e, dobDD, mmRef)}
               aria-describedby="bf-dob-hint"
               className="w-[4.5rem] text-center tabular-nums"
             />
           </div>
+          <span aria-hidden="true" className="flex h-11 select-none items-center text-muted-foreground/40">/</span>
           <div className="space-y-1.5">
             <Label htmlFor="bf-dob-yy" className="block text-xs font-normal text-muted-foreground">Year</Label>
             <Input
+              ref={yyRef}
               id="bf-dob-yy"
               inputMode="numeric"
               autoComplete="bday-year"
@@ -155,6 +183,7 @@ export function BaselineForm({
               placeholder="YYYY"
               value={dobYY}
               onChange={(e) => { setDobYY(onlyDigits(e.target.value, 4)); setError(null); }}
+              onKeyDown={(e) => backOnEmpty(e, dobYY, ddRef)}
               aria-describedby="bf-dob-hint"
               className="w-[5.5rem] text-center tabular-nums"
             />

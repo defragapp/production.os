@@ -347,7 +347,7 @@ export function OnboardContent() {
             {/* Segmented access switcher — one premium control replaces the old
                 bottom "New to Sovereign? / Have an account?" text link, so the
                 two modes read as siblings rather than one being an afterthought. */}
-            <div className="mb-6 flex justify-center">
+            <div className="mb-5 flex justify-center">
               <div
                 role="group"
                 aria-label="Choose how to continue"
@@ -380,12 +380,15 @@ export function OnboardContent() {
               </div>
             </div>
             {/* The stepper only applies to new accounts; returning users
-                signing in aren't mid-funnel, so "1 of 2" is noise. */}
-            {!isLogin && <Stepper steps={STEPS} current={0} />}
-            <div className={`${isLogin ? "mt-2" : ""} mb-8 text-center`}>
+                signing in aren't mid-funnel, so "1 of 2" is noise. It sits
+                directly above the form as a progress cue rather than floating
+                between the switcher and the title, so identity reads as one
+                header and the funnel reads as the next thing you do. */}
+            <div className={`${isLogin ? "mt-1" : ""} mb-5 text-center`}>
               <h1 className="font-display text-3xl font-normal tracking-tight">{title}</h1>
               <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
             </div>
+            {!isLogin && <Stepper steps={STEPS} current={0} />}
 
             <Card>
               <CardContent className="pt-6">

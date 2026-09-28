@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
 import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
@@ -102,7 +103,7 @@ function UpgradeContent() {
                   {portalLoading ? "Opening billing..." : "Manage subscription"}
                 </Button>
                 <p className="text-center text-xs text-muted-foreground/70">Cancel anytime — two clicks, no emails.</p>
-                {portalError && <p className="text-xs text-destructive">{portalError}</p>}
+                {portalError && <Alert>{portalError}</Alert>}
               </CardContent>
             </Card>
           ) : (
@@ -144,7 +145,7 @@ function UpgradeContent() {
             </Card>
           </div>
           )}
-          {error && <p role="alert" className="mt-4 text-center text-sm text-destructive">{error}</p>}
+          {error && <div className="mt-4"><Alert>{error}</Alert></div>}
           <div className="mt-6 flex justify-center gap-2">
             <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>
             <Button variant="ghost" onClick={() => router.push("/account")}>Account</Button>
