@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
+import { Calendar, Clock, MapPin } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
@@ -177,11 +178,17 @@ function BaselineContent() {
               >
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <Eyebrow scale="sm" className="mb-1">Date of birth</Eyebrow>
+                    <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
+                      <Calendar className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+                      <Eyebrow as="span" scale="sm">Date of birth</Eyebrow>
+                    </div>
                     <p className="mt-1 text-sm text-foreground">{formatDateOfBirth(row?.dob)}</p>
                   </div>
                   <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <Eyebrow scale="sm" className="mb-1">Time of birth</Eyebrow>
+                    <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
+                      <Clock className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+                      <Eyebrow as="span" scale="sm">Time of birth</Eyebrow>
+                    </div>
                     <p className="mt-1 text-sm text-foreground">
                       {row?.tob || "—"}
                       {meta?.timePrecision === "approximate" && (
@@ -190,7 +197,10 @@ function BaselineContent() {
                     </p>
                   </div>
                   <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <Eyebrow scale="sm" className="mb-1">Place of birth</Eyebrow>
+                    <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
+                      <MapPin className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+                      <Eyebrow as="span" scale="sm">Place of birth</Eyebrow>
+                    </div>
                     <p className="mt-1 text-sm text-foreground">{row?.pob || "—"}</p>
                   </div>
                 </div>

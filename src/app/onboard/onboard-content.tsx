@@ -11,7 +11,8 @@ import { TurnstileWidget } from "@/components/turnstile";
 import { Stepper } from "@/components/stepper";
 import { BaselineForm } from "@/components/baseline-form";
 import { PasskeySignInButton } from "@/components/passkey";
-import { safeInAppPath } from "@/lib/utils";
+import { Alert } from "@/components/ui/alert";
+import { cn, safeInAppPath } from "@/lib/utils";
 
 const STEPS = ["Account", "Baseline"];
 
@@ -199,6 +200,18 @@ export function OnboardContent() {
   };
 
   // ── Password reset (token) screen ─────────────────────────────
+  // Switching between the two access modes keeps any invite or post-login
+  // destination in the URL, so a person arriving from an invitation (or bounced
+  // from a protected page) doesn't lose that intent when they toggle.
+  const switchMode = (m: "login" | "signup") => {
+    setError(null);
+    const p = new URLSearchParams();
+    p.set("mode", m);
+    if (inviteToken) p.set("invite", inviteToken);
+    if (nextParam) p.set("next", nextParam);
+    router.replace(`/onboard?${p.toString()}`);
+  };
+
   if (!mounted) {
     return (
       <>
@@ -236,8 +249,8 @@ export function OnboardContent() {
                       placeholder="••••••••"
                     />
                   </div>
-                  {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-                  {notice && <p className="text-sm text-foreground">{notice}</p>}
+                  {error && <Alert>{error}</Alert>}
+                  {notice && <Alert tone="notice">{notice}</Alert>}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Resetting..." : "Reset password"}
                   </Button>
@@ -302,7 +315,7 @@ export function OnboardContent() {
                       placeholder="you@example.com"
                     />
                   </div>
-                  {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+                  {error && <Alert>{error}</Alert>}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Sending..." : "Send reset link"}
                   </Button>
@@ -331,6 +344,41 @@ export function OnboardContent() {
         <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
           <div className="card-backlight msg-in w-full max-w-md">
+            {/* Segmented access switcher — one premium control replaces the old
+                bottom "New to Sovereign? / Have an account?" text link, so the
+                two modes read as siblings rather than one being an afterthought. */}
+            <div className="mb-6 flex justify-center">
+              <div
+                role="group"
+                aria-label="Choose how to continue"
+                className="inline-flex rounded-full border border-border bg-surface-1/70 p-1 backdrop-blur"
+              >
+                {(
+                  [
+                    ["signup", "Create account"],
+                    ["login", "Sign in"],
+                  ] as const
+                ).map(([m, label]) => {
+                  const on = (m === "login") === isLogin;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => switchMode(m)}
+                      className={cn(
+                        "rounded-full px-4 py-1.5 text-sm transition-colors",
+                        on
+                          ? "bg-white/[0.08] font-medium text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {/* The stepper only applies to new accounts; returning users
                 signing in aren't mid-funnel, so "1 of 2" is noise. */}
             {!isLogin && <Stepper steps={STEPS} current={0} />}
@@ -460,30 +508,12 @@ export function OnboardContent() {
                     </>
                   )}
 
-                  {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+                  {error && <Alert>{error}</Alert>}
 
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Please wait..." : isLogin ? "Sign in" : "Create account"}
                   </Button>
                 </form>
-
-                <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">
-                  {isLogin ? (
-                    <>
-                      New to Sovereign?{" "}
-                      <a href="/onboard?mode=signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-                        Create your account
-                      </a>
-                    </>
-                  ) : (
-                    <>
-                      Have an account?{" "}
-                      <a href="/onboard?mode=login" className="font-medium text-foreground underline-offset-4 hover:underline">
-                        Sign in
-                      </a>
-                    </>
-                  )}
-                </p>
               </CardContent>
             </Card>
           </div>

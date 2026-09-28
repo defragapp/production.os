@@ -851,6 +851,14 @@ export function ChatClient() {
  * The People strip in chat: who you're connected to and who you've invited.
  * Read-only summary — full label/consent control lives in /settings.
  */
+/** Initials for a connection avatar — first+last name, or first two of one word. */
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "•";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 function PeoplePanel({
   tier,
   onClose,
@@ -895,7 +903,7 @@ function PeoplePanel({
   }, []);
 
   return (
-    <div className="border-b border-border bg-background px-4 py-4">
+    <div className="border-b border-border bg-surface-1/60 px-4 py-4 backdrop-blur-xl">
       <div className="mx-auto max-w-3xl">
         <div className="mb-3 flex items-center justify-between">
           <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -922,17 +930,30 @@ function PeoplePanel({
             ) : (
               <ul className="space-y-2">
                 {connections.map((c) => (
-                  <li key={c.relationId} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                    <span className="font-medium text-foreground">{c.personName}</span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                      {c.myLabel}
+                  <li
+                    key={c.relationId}
+                    className="flex items-center gap-3 rounded-panel border border-white/[0.06] bg-surface-1/40 px-3 py-2.5"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-xs font-semibold text-foreground"
+                    >
+                      {initials(c.personName)}
                     </span>
-                    <span className="text-xs text-muted-foreground/70">
-                      {c.peerSharesBaseline
-                        ? "shares their baseline with you"
-                        : "hasn't shared their baseline with you"}
-                      {!c.shareBaseline ? " · you're not sharing yours" : ""}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium text-foreground">{c.personName}</span>
+                        <span className="shrink-0 rounded-full border border-border bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                          {c.myLabel}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground/70">
+                        {c.peerSharesBaseline
+                          ? "Shares their baseline with you"
+                          : "Hasn’t shared their baseline yet"}
+                        {!c.shareBaseline ? " · you’re not sharing yours" : ""}
+                      </p>
+                    </div>
                   </li>
                 ))}
               </ul>

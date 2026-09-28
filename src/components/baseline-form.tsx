@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
 import { validateDateOfBirth } from "@/lib/date-of-birth";
 
 const TOB_BUCKETS = [
@@ -249,7 +250,7 @@ export function BaselineForm({
         </p>
       </div>
 
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && <Alert>{error}</Alert>}
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Computing Baseline..." : submitLabel}

@@ -51,7 +51,7 @@ export default function GlobalError({
             Something went wrong
           </p>
           <h1 style={{ margin: "0 0 1rem", fontSize: "2.25rem", fontWeight: 400, letterSpacing: "-0.01em" }}>
-            A pattern broke.
+            This one&apos;s on us.
           </h1>
           <p style={{ margin: "0 0 2rem", fontSize: "1.125rem", lineHeight: 1.6, color: "#a9a396" }}>
             Something didn&apos;t line up on our end. Reloading usually clears it — and if it keeps
