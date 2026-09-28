@@ -13,7 +13,7 @@ import { BaselineForm } from "@/components/baseline-form";
 import { PasskeySignInButton } from "@/components/passkey";
 import { safeInAppPath } from "@/lib/utils";
 
-const STEPS = ["Account", "Baseline", "Plan"];
+const STEPS = ["Account", "Baseline"];
 
 /**
  * Parse a JSON response defensively. A worker crash or proxy error can return
@@ -332,7 +332,7 @@ export function OnboardContent() {
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
           <div className="card-backlight msg-in w-full max-w-md">
             {/* The stepper only applies to new accounts; returning users
-                signing in aren't mid-funnel, so "1 of 3" is noise. */}
+                signing in aren't mid-funnel, so "1 of 2" is noise. */}
             {!isLogin && <Stepper steps={STEPS} current={0} />}
             <div className={`${isLogin ? "mt-2" : ""} mb-8 text-center`}>
               <h1 className="font-display text-3xl font-normal tracking-tight">{title}</h1>
@@ -510,12 +510,16 @@ export function OnboardContent() {
 
           <Card>
             <CardContent className="pt-6">
+              {/* Value before the ask: a Baseline is only a picture until it's
+                  used. Everyone lands in their first conversation — the upgrade
+                  surface lives in-chat at the free cap, where intent is earned
+                  rather than assumed. */}
               <BaselineForm
-                submitLabel="Save Baseline & continue"
+                submitLabel="Save Baseline & start asking"
                 onSaved={() => router.push(
                   inviteToken
                     ? `/invite?token=${encodeURIComponent(inviteToken)}`
-                    : existingUser ? "/chat" : "/upgrade?from=baseline"
+                    : "/chat"
                 )}
               />
               <p className="mt-5 border-t pt-4 text-center text-sm text-muted-foreground">

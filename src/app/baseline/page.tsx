@@ -13,7 +13,7 @@ import { BaselineDrawer } from "@/components/baseline-drawer";
 import type { Baseline, BaselineData } from "@/lib/types";
 import { formatD1Date, formatDateOfBirth } from "@/lib/utils";
 
-const STEPS = ["Account", "Baseline", "Plan"];
+const STEPS = ["Account", "Baseline"];
 
 function BaselineContent() {
   const router = useRouter();

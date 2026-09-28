@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Nav } from "@/components/nav";
-import { Stepper } from "@/components/stepper";
 import { PageHeader } from "@/components/page-header";
 import { PageTexture } from "@/components/page-texture";
 import { LoadingScreen } from "@/components/ui/loading";
@@ -20,18 +19,13 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
   );
 }
 
-const STEPS = ["Account", "Baseline", "Plan"];
-
 function UpgradeContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const fromBaseline = searchParams.get("from") === "baseline";
 
   const [loading, setLoading] = useState<"monthly" | "annual" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [isPlus, setIsPlus] = useState(false);
-  const [hasBaseline, setHasBaseline] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
@@ -39,12 +33,9 @@ function UpgradeContent() {
     (async () => {
       try {
         const res = await fetch("/api/auth");
-        const data = await res.json() as { user?: { subscription_tier?: string } | null; hasBaseline?: boolean };
+        const data = await res.json() as { user?: { subscription_tier?: string } | null };
         if (!data.user) { router.push("/onboard?mode=login"); return; }
         setIsPlus(data.user.subscription_tier === "sovereign+");
-        // Reflect the real funnel state: a no-baseline visitor who lands here
-        // directly shouldn't see "✓ Baseline" on the stepper.
-        if (typeof data.hasBaseline === "boolean") setHasBaseline(data.hasBaseline);
       } catch { router.push("/onboard?mode=login"); }
       finally { setAuthChecked(true); }
     })();
@@ -92,12 +83,6 @@ function UpgradeContent() {
       <main id="main" className="relative z-10 min-h-[calc(100vh-3.5rem)] overflow-hidden px-6 py-10">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="msg-in mx-auto w-full max-w-3xl">
-          <Stepper steps={STEPS} current={2} completed={hasBaseline ? 2 : 1} />
-          {fromBaseline && (
-            <p className="mb-4 text-center text-sm font-medium text-foreground">
-              Your Baseline is ready. Last step — choose how you&apos;d like to continue.
-            </p>
-          )}
           <PageHeader
             title={isPlus ? "You're on Sovereign+" : "Pick your plan"}
             description={

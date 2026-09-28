@@ -1,5 +1,5 @@
 /**
- * Horizontal funnel stepper (Sign in → Baseline → Plan).
+ * Horizontal funnel stepper (Account → Baseline).
  * Communicates the user's journey so every step feels intentional.
  */
 export function Stepper({
