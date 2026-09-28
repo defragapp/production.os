@@ -2,6 +2,7 @@
   "name": "production-os",
   "version": "0.1.0",
   "private": true,
+  "//release": "CANONICAL RELEASE PATH: `git push origin main` (Cloudflare Workers Builds deploys automatically). Use `npm run deploy` ONLY for an out-of-band hotfix when no push is in flight. NEVER both at once — a push-triggered build colliding with a local deploy stalls static-asset binding propagation (the 503/hang seen on /, /privacy, /terms). Always gate first with `npm run verify:release`.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -18,7 +19,8 @@
     "db:migrate:0003:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0003_journeys.sql",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:release": "node scripts/verify-release.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.2",
@@ -45,6 +47,7 @@
     "esbuild": "^0.28.2",
     "eslint": "^9.0.0",
     "eslint-config-next": "15.5.25",
+    "playwright": "^1.63.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.0",

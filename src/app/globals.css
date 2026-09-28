@@ -518,6 +518,31 @@ a,[role="button"] {
   touch-action: manipulation;
 }
 
+/* ── Touch ergonomics (Fitts's-law floor) ────────────────────────
+   On coarse pointers (phones/tablets) every primary control presents at
+   least a 44x44 hit area. We enlarge the tap target only under
+   `pointer: coarse`, so the desktop footprint is untouched while a
+   fingertip reliably catches the journey actions, the header memory pill,
+   and the settings switches/radios. */
+@media (pointer: coarse) {
+  .journey-bar button,
+  .memory-pill,
+  [role="switch"],
+  [role="radio"] {
+    min-height: 2.75rem; /* 44px */
+  }
+  .journey-bar button {
+    padding-inline: 0.5rem;
+  }
+  /* The inline "Not there yet?" step override is a whisper on desktop;
+     center it in a 44px-tall target on touch without changing its type. */
+  .journey-bar li button {
+    display: inline-flex;
+    align-items: center;
+    padding-inline: 0.5rem;
+  }
+}
+
 /* ── Modern UI / Polish Enhancements ───────────────────────────── */
 
 /* Refined custom scrollbar matching dark graphite */

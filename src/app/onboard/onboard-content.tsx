@@ -216,7 +216,7 @@ export function OnboardContent() {
     return (
       <>
         <Nav />
-        <main id="main" className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+        <main id="main" className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center p-6">
           <p className="text-muted-foreground">Loading...</p>
         </main>
       </>
@@ -227,7 +227,7 @@ export function OnboardContent() {
     return (
       <>
         <Nav />
-        <main id="main" className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+        <main id="main" className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center p-6">
           <div className="w-full max-w-md">
             {/* Password reset is an account-recovery side trip, not an
                 onboarding step — no stepper. */}
@@ -273,7 +273,7 @@ export function OnboardContent() {
       return (
         <>
           <Nav />
-          <main id="main" className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+          <main id="main" className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center p-6">
             <div className="w-full max-w-md text-center">
               <h1 className="mb-4 font-display text-3xl font-normal tracking-tight">Check your email</h1>
               <p className="text-sm text-muted-foreground">
@@ -292,7 +292,7 @@ export function OnboardContent() {
     return (
       <>
         <Nav />
-        <main id="main" className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+        <main id="main" className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center p-6">
           <div className="w-full max-w-md">
             {/* Forgot-password is recovery, not onboarding — no stepper. */}
             <div className="mb-8 mt-2 text-center">
@@ -341,7 +341,7 @@ export function OnboardContent() {
     return (
       <>
         <Nav />
-        <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+        <main id="main" className="relative flex min-h-[calc(100dvh-3.5rem)] items-center justify-center overflow-hidden p-6">
           <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
           <div className="card-backlight msg-in w-full max-w-md">
             {/* Segmented access switcher — one premium control replaces the old
@@ -529,7 +529,7 @@ export function OnboardContent() {
   return (
     <>
       <Nav />
-      <main id="main" className="relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden p-6">
+      <main id="main" className="relative flex min-h-[calc(100dvh-3.5rem)] items-center justify-center overflow-hidden p-6">
         <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
         <div className="w-full max-w-md">
           <Stepper steps={STEPS} current={1} />

@@ -753,7 +753,7 @@ export function ChatClient() {
                   aria-haspopup="menu"
                   aria-expanded={memoryMenuOpen}
                   title={memoryMode === "local" ? "Device-Only memory" : "Server memory"}
-                  className={memoryMode === "local" ? "gap-1.5" : "gap-1.5 lg:px-2.5"}
+                  className={`memory-pill ${memoryMode === "local" ? "gap-1.5" : "gap-1.5 lg:px-2.5"}`}
                 >
                   {memorySwitching ? <span className="h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" aria-hidden="true" /> : memoryMode === "local" ? <Lock className="h-4 w-4" aria-hidden="true" /> : <Globe className="h-4 w-4" aria-hidden="true" />}
                   <span className="hidden lg:inline">{memorySwitching ? "Switching…" : memoryMode === "local" ? "On device" : "All devices"}</span>

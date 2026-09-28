@@ -80,10 +80,9 @@ function viewFromLocal(rec: LocalJourneyRecord<HoldableJourney>): JourneyClientV
 }
 
 function localRecordFromView(view: JourneyClientView, userScope: string, status: LocalJourneyStatus): LocalJourneyRecord<HoldableJourney> {
-  const state: HoldableJourney = {
-    ...viewToState(view),
-    inquiry_level: view.inquiryLevel,
-  };
+  // viewToState already carries inquiry_level, so there is nothing to overlay —
+  // re-adding the key here was a duplicate object literal (esbuild flagged it).
+  const state: HoldableJourney = viewToState(view);
   return { version: 1, userScope, updatedAt: new Date().toISOString(), status, state };
 }
 

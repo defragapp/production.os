@@ -53,7 +53,7 @@ export function PageShell({
         className={cn(
           "relative z-10 overflow-hidden",
           center
-            ? "flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6"
+            ? "flex min-h-[calc(100dvh-3.5rem)] items-center justify-center p-6"
             : cn("mx-auto px-6 pt-14 pb-24", {
                 "max-w-2xl": wide === "prose",
                 "max-w-lg": wide === "panel",

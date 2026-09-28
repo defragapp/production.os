@@ -24,13 +24,29 @@ export interface SovereignModel {
 
 type AiRun = (model: string, input: unknown, settings?: unknown) => Promise<unknown>;
 
+/**
+ * Extract a stable, greppable cause from a binding failure. Cloudflare surfaces
+ * Workers AI / AI Gateway errors as `error code: 1050` inside the message text,
+ * so we pull the numeric code out and log it alongside a trimmed message. This
+ * keeps a self-heal event attributable (1050 spend/rate block vs. a malformed
+ * gateway id vs. a network drop) without dumping a whole stack per turn.
+ */
+export function describeModelError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  const code = /\b(\d{3,4})\b/.exec(message)?.[1];
+  const trimmed = message.replace(/\s+/g, " ").trim().slice(0, 200);
+  return code ? `code ${code}: ${trimmed}` : trimmed;
+}
+
 /** Keep the model contract platform-agnostic while still typed at call sites. */
 export function createCloudflareModel(
   env: { AI: unknown; AI_GATEWAY_ID: string },
   options: { model?: string; gatewayId?: string } = {},
 ): SovereignModel {
   const model = options.model ?? SOVEREIGN_MODEL;
-  const gatewayId = options.gatewayId ?? (env.AI_GATEWAY_ID || DEFAULT_GATEWAY_ID);
+  // An explicitly-empty gatewayId (options.gatewayId === "") disables the
+  // gateway tier; otherwise fall back to the configured id, then the default.
+  const gatewayId = (options.gatewayId ?? (env.AI_GATEWAY_ID || DEFAULT_GATEWAY_ID)).trim();
   const ai = env.AI as unknown as { run: AiRun };
 
   return {
@@ -38,18 +54,32 @@ export function createCloudflareModel(
       const messages = modelMessages(input);
       if (messages.length === 0) throw new ModelError("No messages to send to the model.");
       const params = { messages, max_tokens: input.maxTokens ?? DEFAULT_MAX_TOKENS };
-      try {
-        const result = await ai.run(model, params, { gateway: { id: gatewayId } });
-        return { text: extractText(result), usedGateway: true };
-      } catch (gatewayErr) {
-        console.error("[sovereign-model] gateway run failed:", gatewayErr);
+
+      // Tier 1 — AI Gateway (caching, rate limits, analytics). Skipped cleanly
+      // when no gateway id is configured, so a blank id never becomes an
+      // invalid `{ gateway: { id: "" } }` call the binding would reject.
+      if (gatewayId) {
         try {
-          const result = await ai.run(model, params);
-          return { text: extractText(result), usedGateway: false };
-        } catch (directErr) {
-          console.error("[sovereign-model] direct run failed:", directErr);
-          throw new ModelError("Sovereign couldn't reach the AI just now — try again in a moment.");
+          const result = await ai.run(model, params, { gateway: { id: gatewayId } });
+          return { text: extractText(result), usedGateway: true };
+        } catch (gatewayErr) {
+          // Self-heal: a stale/misconfigured gateway (the common cause of a
+          // 1050 on the gateway call while the underlying binding is healthy)
+          // falls through to a direct binding call instead of failing the turn.
+          console.error(`[sovereign-model] gateway run failed (${describeModelError(gatewayErr)}) — retrying via direct binding`);
         }
+      }
+
+      // Tier 2 — direct binding, no gateway indirection. This is the last
+      // automatic tier; if it also fails we surface the code and degrade
+      // gracefully so the caller refunds usage and shows a friendly retry
+      // message rather than crashing the session.
+      try {
+        const result = await ai.run(model, params);
+        return { text: extractText(result), usedGateway: false };
+      } catch (directErr) {
+        console.error(`[sovereign-model] direct run failed (${describeModelError(directErr)})`);
+        throw new ModelError("Sovereign couldn't reach the AI just now — try again in a moment.");
       }
     },
   };
