@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Check, Plus } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
@@ -165,6 +165,29 @@ const ANSWER_ANATOMY = [
   },
 ];
 
+// The relationship moat, made interactive: the same moment seen from each
+// side, resolving into shared ground. Copy follows the human-first rule set —
+// no jargon, no "the pattern", the output is an "answer", never a "read".
+const PERSPECTIVE = {
+  eyebrow: "Between two people",
+  heading: "The same moment, from both sides.",
+  deck: "When one person presses for an answer, the other often steps back to find one. Neither is wrong — and Sovereign holds both at once.",
+  sides: {
+    you: {
+      tab: "What you might be feeling",
+      text: "Urgency to resolve this now, so it stops feeling unsafe between us.",
+    },
+    them: {
+      tab: "What they might be experiencing",
+      text: "Feeling flooded, and needing a little space before they can think clearly.",
+    },
+  },
+  commonLabel: "The common ground",
+  commonText:
+    "You both value the connection. You just regulate pressure at different speeds — and that difference is negotiable, not a verdict on either of you.",
+  note: "An illustrative example — the shape of a real conversation, not a transcript.",
+} as const;
+
 /**
  * The product, drawn in CSS: the same surfaces and chrome the real chat
  * renders today — pill thread chips, an avatar-free glass bubble set in the
@@ -256,6 +279,63 @@ function PlanFeature({ children }: { children: React.ReactNode }) {
       <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" strokeWidth={2.2} aria-hidden="true" />
       {children}
     </li>
+  );
+}
+
+/**
+ * The relationship moat, made tangible: toggle to the other side of the same
+ * moment, then land on common ground. Two states, one always-visible resolution
+ * so the shared truth is never hidden behind a tab. Illustrative, labelled so.
+ */
+function PerspectiveSwitch() {
+  const [side, setSide] = useState<"you" | "them">("you");
+  const active = PERSPECTIVE.sides[side];
+  const chip =
+    "rounded-full border px-4 py-2 text-sm transition-colors";
+  const on =
+    "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]";
+  const off = "border-border/50 bg-surface-1/50 text-muted-foreground hover:text-foreground";
+
+  return (
+    <div className="glass-panel rounded-panel p-6 md:p-9">
+      <div
+        className="flex flex-wrap justify-center gap-2"
+        role="group"
+        aria-label="Two sides of the same moment"
+      >
+        {(["you", "them"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSide(key)}
+            aria-pressed={side === key}
+            className={`${chip} ${side === key ? on : off}`}
+          >
+            {PERSPECTIVE.sides[key].tab}
+          </button>
+        ))}
+      </div>
+
+      <div aria-live="polite" className="mt-6 text-center">
+        <p
+          key={side}
+          className="msg-in mx-auto max-w-xl font-display text-[15px] leading-[1.7] text-foreground/90 md:text-[16px]"
+        >
+          {active.text}
+        </p>
+      </div>
+
+      <div className="mt-6 border-t border-border/70 pt-5 text-center">
+        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
+          {PERSPECTIVE.commonLabel}
+        </p>
+        <p className="mx-auto max-w-xl font-display text-[15px] leading-[1.7] text-foreground/90 md:text-[16px]">
+          {PERSPECTIVE.commonText}
+        </p>
+      </div>
+
+      <p className="mt-5 text-center text-xs text-muted-foreground/70">{PERSPECTIVE.note}</p>
+    </div>
   );
 }
 
@@ -413,6 +493,23 @@ export function LandingClient() {
                   An illustrative example — the shape of a real answer, not a transcript of one.
                 </p>
               </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ── Between two people ───────────────────────────── */}
+        <div className="section-rule" aria-hidden="true" />
+        <section className="relative overflow-hidden px-6 py-20 md:py-28">
+          <div className="mx-auto max-w-3xl">
+            <Reveal className="mb-10 text-center md:mb-12">
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground/80">{PERSPECTIVE.eyebrow}</p>
+              <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
+                {PERSPECTIVE.heading}
+              </h2>
+              <p className="mt-3 text-sm text-muted-foreground md:text-base">{PERSPECTIVE.deck}</p>
+            </Reveal>
+            <Reveal delay={100}>
+              <PerspectiveSwitch />
             </Reveal>
           </div>
         </section>
