@@ -110,7 +110,26 @@ interface JourneyStore {
   /** `undefined` means the write failed — the caller keeps the current view.
    *  Dismissal is deliberately not here: it is session-local in both modes
    *  (the bar folds away, the journey survives, a new unlock re-reveals it). */
-  applyControl(patch: { id: string; rename?: string; pause?: boolean; overrideStep?: string }): Promise<JourneyClientView | undefined>;
+  applyControl(patch: { id: string; rename?: string; pause?: boolean; complete?: boolean; overrideStep?: string }): Promise<JourneyClientView | undefined>;
+  /** Begin the next arc: a journey with no goal yet and nothing reached, which
+   *  the engine fills in as the person talks. `null` when it could not be made
+   *  — which is survivable, because the first real turn creates one anyway. */
+  createFresh(): Promise<JourneyClientView | null>;
+}
+
+/** Step 0 in the canonical shape the stores agree on: first step current, the
+ *  rest locked, no milestones, no goal. Shared so a fresh server row and a
+ *  fresh device vault record cannot start life differently. */
+function freshJourneyState(): JourneyState {
+  return {
+    current_step: DEFAULT_JOURNEY_STEPS[0].id,
+    unlocked_milestones: [],
+    visual_progress: 0,
+    newly_unlocked: [],
+    inquiry_level: 1,
+    steps: DEFAULT_JOURNEY_STEPS.map((s, i) => ({ ...s, status: i === 0 ? "current" as const : "locked" as const })),
+    suggested_goal: null,
+  };
 }
 
 /** Re-mark a server row for the canvas: the `current` marker and the badge
@@ -131,6 +150,23 @@ async function getJSON<T>(url: string, init?: RequestInit): Promise<T | null> {
   try {
     const res = await fetch(url, init);
     if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Like getJSON, but reads a 409's body: `POST /api/journeys` answers 409 with
+ *  the journey that is already active, which is the caller's answer as often
+ *  as not — so a conflict must not read as a network failure. */
+async function postJSON<T>(url: string, body: unknown): Promise<T | null> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok && res.status !== 409) return null;
     return (await res.json()) as T;
   } catch {
     return null;
@@ -160,8 +196,9 @@ const serverStore: JourneyStore = {
   async applyStateFrame(state, journeyId) {
     return { ...stateToView(journeyId, state), inquiryLevel: state.inquiry_level, newlyUnlocked: state.newly_unlocked };
   },
-  async applyControl({ id, rename, pause, overrideStep }) {
+  async applyControl({ id, rename, pause, complete, overrideStep }) {
     const body = rename !== undefined ? { goal: rename }
+      : complete ? { status: "complete" }
       : pause !== undefined ? { status: pause ? "paused" : "active" }
       : overrideStep ? { current_step: overrideStep }
       : null;
@@ -173,6 +210,10 @@ const serverStore: JourneyStore = {
     });
     if (!data?.journey) return undefined;
     return markedView(data.journey);
+  },
+  async createFresh() {
+    const data = await postJSON<{ journey?: JourneyView }>("/api/journeys", { goal: null });
+    return data?.journey ? markedView(data.journey) : null;
   },
 };
 
@@ -200,10 +241,12 @@ function localStore(userScope: string): JourneyStore {
       await writeRecord("journey", localRecordFromView(view, userScope, status));
       return view;
     },
-    async applyControl({ rename, pause, overrideStep }) {
+    async applyControl({ rename, pause, complete, overrideStep }) {
       const rec = await readRecord<HoldableJourney>("journey", userScope);
       if (!rec) return undefined;
-      const status: LocalJourneyStatus | undefined = pause !== undefined ? (pause ? "paused" : "active") : undefined;
+      const status: LocalJourneyStatus | undefined = complete
+        ? "complete"
+        : pause !== undefined ? (pause ? "paused" : "active") : undefined;
       const patched = patchLocalJourney<HoldableJourney>(rec, { goal: rename, status, overrideStep }, DEFAULT_JOURNEY_STEPS, STEP_TO_MILESTONE, MILESTONE_WEIGHTS);
       // An override rewinds the unlocked set, so step statuses and progress
       // must be recomputed from it — exactly what the server PATCH does.
@@ -217,6 +260,20 @@ function localStore(userScope: string): JourneyStore {
       await writeRecord("journey", patched);
       return viewFromLocal(patched);
     },
+    async createFresh() {
+      // A device holds exactly one journey, so "fresh" means the current record
+      // is replaced — never accumulated. The archive lives in whatever the
+      // person did with it before (completing it is the caller's step).
+      const rec: LocalJourneyRecord<HoldableJourney> = {
+        version: 1,
+        userScope,
+        updatedAt: new Date().toISOString(),
+        status: "active",
+        state: freshJourneyState(),
+      };
+      const ok = await writeRecord("journey", rec);
+      return ok ? viewFromLocal(rec) : null;
+    },
   };
 }
 
@@ -226,7 +283,8 @@ export function getJourneyStore(mode: MemoryMode, userScope: string): JourneySto
 
 /**
  * The chat page's journey hook: loads the stored journey once, folds in every
- * confirmed `{ state }` frame, and exposes the four controls. `onReveal` lets
+ * confirmed `{ state }` frame, and exposes the controls — rename, pause, step
+ * back, complete, and start the next one. `onReveal` lets
  * the page un-hide a dismissed bar when a fresh milestone unlocks — the bar
  * earns its place back by progress, not by nagging.
  *
@@ -271,7 +329,7 @@ export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () =>
     return next;
   }, [store, onReveal]);
 
-  const applyControl = useCallback(async (patch: { id: string; rename?: string; pause?: boolean; overrideStep?: string }) => {
+  const applyControl = useCallback(async (patch: { id: string; rename?: string; pause?: boolean; complete?: boolean; overrideStep?: string }) => {
     const next = await store.applyControl(patch);
     if (next) {
       genRef.current += 1;
@@ -280,5 +338,26 @@ export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () =>
     return next ?? null;
   }, [store]);
 
-  return { view, selectLinked, applyStateFrame, applyControl };
+  /** Close the arc that is finished. The row survives (status `complete`);
+   *  `GET /api/journeys` filters it out, so the next real turn starts a new one
+   *  rather than quietly resuming an ended conversation's business. */
+  const completeJourney = useCallback(async (id: string) => {
+    return await applyControl({ id, complete: true });
+  }, [applyControl]);
+
+  /** The one tap behind "Start a fresh journey": archive whatever is open, then
+   *  begin the next arc. In that order, because the server holds exactly one
+   *  active journey — completing is what makes room. When the fresh row cannot
+   *  be made (offline, a conflict), the canvas goes empty on purpose instead of
+   *  leaving a finished journey looking current; the first real turn mints the
+   *  next one. */
+  const startFreshJourney = useCallback(async (id: string | null) => {
+    if (id) await store.applyControl({ id, complete: true });
+    const next = await store.createFresh();
+    genRef.current += 1;
+    setView(next);
+    return next;
+  }, [store]);
+
+  return { view, selectLinked, applyStateFrame, applyControl, completeJourney, startFreshJourney };
 }

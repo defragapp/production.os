@@ -2,7 +2,7 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, nineteen gates, all must be green before a commit or deploy:
+ * One command, twenty-two gates, all must be green before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
  *   3. vitest run                          — unit + pure-reducer tests
@@ -38,12 +38,27 @@
  *  18. voice dictation                    — a stubbed Web Speech engine: the mic mounts, is ≥44px,
  *                                            toggles aria-pressed, feeds the draft, lets go on send;
  *                                            with the API removed, no control renders at all.
- *  19. Device-Only parity                 — same walk with memory_mode='local' and a journey that
+ *  19. live voice preview                 — the stubbed engine emits an interim guess and then its
+ *                                            final pass on top of words the person typed: the guess
+ *                                            paints immediately, the sentence lands exact with zero
+ *                                            duplication, an iOS `onend` mid-utterance is followed by
+ *                                            a restart, and a hand edit survives dictation.
+ *  20. Device-Only parity                 — same walk with memory_mode='local' and a journey that
  *                                            exists only in the encrypted IndexedDB vault: thread
  *                                            switching keeps the DEVICE journey, never the server row
  *                                            the thread is linked to, and stays movement-free.
+ *  21. completion & fresh start           — an arc that reaches step 5 offers Mark complete, that tap
+ *                                            archives it (the compact band reads Complete with a
+ *                                            one-tap New), and starting fresh mints an empty journey
+ *                                            — in BOTH memory modes, movement-free, controls ≥44px —
+ *                                            and a brand-new conversation is asked whether it wants
+ *                                            the running arc or an untouched one of its own.
+ *  22. software-keyboard viewport         — /chat and /onboard through 390×844 → 390×480 → 390×844
+ *                                            with the composer focused: composer + Send + Mic fully
+ *                                            on screen, no horizontal overflow, the panel cap holds
+ *                                            its own box, CLS ≤ 0.01, console-clean.
  *
- * Gates 1-8 and 10-19 fail closed. The preview-backed passes (9-19) boot the
+ * Gates 1-8 and 10-22 fail closed. The preview-backed passes (9-22) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -95,6 +110,23 @@ function run(cmd, args, opts = {}) {
  *  seeded account, and `--local` is the only mode they are allowed to use. */
 const d1Local = (command) =>
   run("npx", ["wrangler", "d1", "execute", "production-os-db", "--local", "--command", command]);
+
+/** A read query against LOCAL D1, parsed best-effort into rows. `null` means
+ *  this environment could not answer at all, which a caller reports as a
+ *  finding instead of reading an empty result set as a real "no rows". */
+async function d1Query(command) {
+  const res = await run("npx", ["wrangler", "d1", "execute", "production-os-db", "--local", "--json", "--command", command]);
+  if (res.code !== 0) return null;
+  const start = res.stdout.indexOf("[");
+  if (start < 0) return null;
+  try {
+    const parsed = JSON.parse(res.stdout.slice(start));
+    const first = Array.isArray(parsed) ? parsed[0] : parsed;
+    return first?.results ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function gateStaticAnalysis() {
   heading("Gate 1-3 · types, lint, tests");
@@ -176,7 +208,7 @@ async function gateStaticAnalysis() {
     chatRoute.includes("UPDATE threads SET journey_id = ?");
   record("thread switching clears transient state and follows threads.journey_id", isolation,
     isolation ? "" : "a thread switch would again carry a retry banner / open panel into the next conversation");
-  // Device-Only parity (Gate 19 measures it): the vault must stay reachable by
+  // Device-Only parity (Gate 20 measures it): the vault must stay reachable by
   // the same key/id names this script writes, and the store must keep resolving
   // a thread link through the device's single journey instead of asking D1.
   const parity =
@@ -191,14 +223,48 @@ async function gateStaticAnalysis() {
   const voice =
     dict.includes("webkitSpeechRecognition") &&
     dict.includes("not-allowed") &&
-    /interimResults = false/.test(dict) &&
+    // Live preview is the whole point: a final-only engine feels like a broken
+    // microphone for the six seconds the person is actually speaking.
+    /interimResults = true/.test(dict) &&
+    /MAX_RESTARTS/.test(dict) &&
+    /InvalidStateError/.test(dict) &&
     chat.includes("useDictation") &&
     chat.includes("aria-pressed={dictating}") &&
     chat.includes("motion-reduce:animate-none") &&
-    /stopDictation\(\);\n\s*setFailedTurn\(null\)/.test(chat) &&
+    // Send lets go of the microphone BEFORE it reads the composer, so a phrase
+    // that is on screen but not yet finalized is sent rather than dropped.
+    /stopDictation\(\);\n\s*const content = \(inputRef\.current\?\.value/.test(chat) &&
     /clearThreadContext[\s\S]{0,400}stopDictation\(\)/.test(chat);
-  record("voice dictation is progressive, motion-safe, and stops on send / thread switch", voice,
-    voice ? "" : "dictation lost its feature detection, its press state, or a stop path (a mic that outlives the turn)");
+  record("voice dictation is live-preview, iOS-resilient, and stops on send / thread switch", voice,
+    voice ? "" : "dictation lost its feature detection, its interim paint, its restart guard, or a stop path");
+  // A finished arc has to be finishable: the completion controls live in the
+  // bar, the archiving + minting lives in the store, and the shell wires them.
+  const completion =
+    canvas.includes("onComplete") &&
+    canvas.includes("onStartFresh") &&
+    canvas.includes('Mark complete') &&
+    canvas.includes("Start a fresh journey") &&
+    store.includes("createFresh()") &&
+    store.includes('status: "complete"') &&
+    store.includes("freshJourneyState") &&
+    store.includes("startFreshJourney") &&
+    chat.includes("onStartFresh={") &&
+    chat.includes("setFreshOffer");
+  record("a journey can be completed, archived, and started fresh in both memory modes", completion,
+    completion ? "" : "the completion / fresh-start surface was removed from the bar, the store, or the shell");
+  // The keyboard contract (Gate 22 measures the behaviour; this proves the page
+  // still asks the visual viewport, because `100dvh` never learns about the keys).
+  const viewportPath = path.join(srcDir, "lib/viewport.ts");
+  const viewport = fs.existsSync(viewportPath) ? fs.readFileSync(viewportPath, "utf8") : "";
+  const keyboard =
+    viewport.includes("KEYBOARD_MIN_INSET") &&
+    viewport.includes("MIN_PINNABLE_HEIGHT") &&
+    chat.includes("keyboardPinHeight") &&
+    chat.includes("window.visualViewport") &&
+    /shellHeight \? `\$\{shellHeight\}px` : undefined/.test(chat) &&
+    css.includes("pb-safe");
+  record("the chat shell pins itself to the visual viewport while the keyboard is up", keyboard,
+    keyboard ? "" : "the shell lost its visualViewport watch, or went back to an imperative style write");
 }
 
 async function gateBuild() {
@@ -805,15 +871,75 @@ const SPEECH_STUB = `(() => {
     start() { window.__speech.started += 1; window.__speech.instance = this; }
     stop() { window.__speech.stopped += 1; }
     abort() { window.__speech.stopped += 1; }
-    __say(text) {
-      const results = [{ 0: { transcript: text }, isFinal: true }];
+    // One segment of the engine's voice, final or still a guess — the exact
+    // results[i][0].transcript + isFinal shape the app reads.
+    __emit(text, isFinal) {
+      const results = [{ 0: { transcript: text }, isFinal }];
       if (this.onresult) this.onresult({ resultIndex: 0, results });
     }
+    __say(text) { this.__emit(text, true); }
+    __guess(text) { this.__emit(text, false); }
+    // iOS's habit: a brief pause ends the continuous session on its own.
+    __iosEnd() { if (this.onend) this.onend(); }
+    __config() { return { continuous: this.continuous, interimResults: this.interimResults, maxAlternatives: this.maxAlternatives }; }
   }
   for (const key of ['SpeechRecognition', 'webkitSpeechRecognition']) {
     Object.defineProperty(window, key, { value: FakeRecognition, configurable: true, writable: true });
   }
 })()`;
+
+/** Seal a journey into the Device-Only vault with the committed envelope
+ *  format (AES-GCM, a non-extractable key under "journey-aesgcm", one record
+ *  per kind), so a local-mode gate walks the real encrypted store rather than a
+ *  stand-in. Both the parity pass and the completion pass need it, and the two
+ *  only differ in the state they hand in.
+ *
+ *  A real function, not a string of one: Playwright only hands a second argument
+ *  to a function it can call, so a string expression here would evaluate to an
+ *  uncalled function and silently write nothing (the vault gates then read
+ *  `undefined` back). Never invoked in Node — it is serialized and runs in the
+ *  page, which is why it touches `indexedDB` and `crypto.subtle` directly. */
+async function VAULT_SEED(payload) {
+  const openDb = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open("sovereign-memory", 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");
+      if (!db.objectStoreNames.contains("records")) db.createObjectStore("records", { keyPath: "id" });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const idb = (db, store, mode, fn) => new Promise((resolve, reject) => {
+    const req = fn(db.transaction(store, mode).objectStore(store));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const url = (buf) => {
+    const bytes = new Uint8Array(buf);
+    let s = '';
+    for (const b of bytes) s += String.fromCharCode(b);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  };
+  const db = await openDb();
+  let key = await idb(db, "keys", "readonly", (o) => o.get("journey-aesgcm"));
+  if (!key) {
+    key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    await idb(db, "keys", "readwrite", (o) => o.put(key, "journey-aesgcm"));
+  }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const rec = {
+    version: 1,
+    userScope: "verify-release@local.test",
+    updatedAt: new Date().toISOString(),
+    status: payload.status,
+    state: payload.state,
+  };
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(rec)));
+  await idb(db, "records", "readwrite", (o) => o.put({ id: "journey", env: { v: "v1", iv: url(iv.buffer), data: url(ct) } }));
+  db.close();
+  return true;
+}
 
 /** The other half of progressive enhancement: pretend the API does not exist.
  *  Own properties shadow the prototype accessors Chrome really does expose. */
@@ -823,8 +949,45 @@ const SPEECH_REMOVED = `(() => {
   }
 })()`;
 
+/** Is the composer actually reachable, in the viewport the person has right
+ *  now? "In view" means inside it — a control clipped below the bottom edge is
+ *  the keyboard's signature failure, and looks perfect in a screenshot of the
+ *  layout viewport. */
+const KEYBOARD_PROBE = `(() => {
+  const ta = document.querySelector('textarea[aria-label="Message Sovereign"]');
+  if (!ta) return null;
+  const inView = (el) => {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.top >= -0.5 && r.bottom <= window.innerHeight + 0.5 && r.left >= -0.5 && r.right <= window.innerWidth + 0.5;
+  };
+  const buttons = [...document.querySelectorAll('.composer-pill button')].filter((b) => b.getClientRects().length > 0);
+  return {
+    inner: window.innerHeight,
+    shell: Math.round(document.getElementById('main')?.getBoundingClientRect().height ?? 0),
+    composer: inView(ta),
+    buttons: buttons.length,
+    buttonsInView: buttons.filter(inView).length,
+    overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    cls: window.__cls ? Number(window.__cls.total.toFixed(4)) : -1,
+  };
+})()`;
+
+/** The same question, on a document-scroller: whatever the person is typing
+ *  into must be the thing the screen is showing them. */
+const FIELD_PROBE = `(() => {
+  const el = document.activeElement;
+  const r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+  return {
+    tag: el ? el.tagName : 'none',
+    inView: !!r && r.width > 0 && r.height > 0 && r.top >= -0.5 && r.bottom <= window.innerHeight + 0.5,
+    overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    cls: window.__cls ? Number(window.__cls.total.toFixed(4)) : -1,
+  };
+})()`;
+
 async function gateErgonomics(port, booted) {
-  heading("Gate 12-19 · transcript clearance, live veil interactions, mid-stream drop, dismissal, thread isolation (server + device), voice");
+  heading("Gate 12-22 · transcript clearance, veil interactions, mid-stream drop, thread isolation, voice, completion, keyboard");
   const skip = (why) => {
     record("first message never behind the collapsed veil (3 viewports)", true, `SKIPPED — ${why}`);
     record("live veil expand → step override → collapse is shift-free", true, `SKIPPED — ${why}`);
@@ -834,7 +997,17 @@ async function gateErgonomics(port, booted) {
     record("capped panel shows its scroll affordance only while steps are out of reach", true, `SKIPPED — ${why}`);
     record("switching threads clears the retry banner and follows the thread's journey", true, `SKIPPED — ${why}`);
     record("voice dictation is progressive, ≥44px, feeds the draft and releases on send", true, `SKIPPED — ${why}`);
+    record("dictation paints the words as they are spoken and locks the exact sentence on final", true, `SKIPPED — ${why}`);
+    record("dictation survives iOS ending the session, and a hand edit made while speaking", true, `SKIPPED — ${why}`);
+    record("dictation goes quiet for good when the engine gives up, and refuses to repaint it", true, `SKIPPED — ${why}`);
     record("Device-Only keeps its own journey across thread switches", true, `SKIPPED — ${why}`);
+    record("server journey: Mark complete archives the row and New mints an untouched arc", true, `SKIPPED — ${why}`);
+    record("a new conversation is asked whether to carry the running arc or open its own", true, `SKIPPED — ${why}`);
+    record("device journey: the same two taps work from the encrypted vault alone", true, `SKIPPED — ${why}`);
+    record("keyboard cycle: composer and its controls stay fully on screen (844→480→844)", true, `SKIPPED — ${why}`);
+    record("keyboard cycle: the expanded panel keeps its own box and off the composer", true, `SKIPPED — ${why}`);
+    record("keyboard: the shell obeys a visualViewport-only report and gives the height back", true, `SKIPPED — ${why}`);
+    record("keyboard: /onboard keeps its focused field reachable through the same cycle", true, `SKIPPED — ${why}`);
   };
   if (!booted) return skip("preview server did not come up in this environment");
   const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
@@ -1218,7 +1391,117 @@ async function gateErgonomics(port, booted) {
   record("voice dictation is progressive, ≥44px, feeds the draft and releases on send", voice.length === 0,
     voice.slice(0, 3).join(" | ") || "stubbed engine mounted, pressed, dictated, sent, released; unsupported rendered nothing");
 
-  // ── Gate 19 · the same isolation, in Device-Only mode ────────────────
+  // ── Gate 19 · the microphone has to look alive while it is listening ────
+  // The failure this guards is not a crash, it is six seconds of an empty text
+  // box, which a person reads as a broken mic and taps again. So the stub emits
+  // a guess, the composer is read, the guess is finalized, the composer is read
+  // again — and anything that is not the exact sentence, at either read, is the
+  // dead mic or the duplicated words coming back.
+  const live = [];
+  const giveUp = [];
+  let livePreviewSeen = false;
+  let landedExact = "";
+  let restartMeasured = false;
+  let handEditKept = "";
+  let quietLandsClean = false;
+  {
+    const typed = "Right now, ";
+    const guess = "I feel stuck";
+    const final = "I feel stuck with my brother";
+    const composer = 'textarea[aria-label="Message Sovereign"]';
+    const { ctx, page, errs } = await openChat(390, 844, { init: SPEECH_STUB });
+    const draft = () => page.inputValue(composer);
+    const micState = (sel) => page.evaluate((s) => ({
+      started: window.__speech.started,
+      stopped: window.__speech.stopped,
+      pressed: document.querySelector(s)?.getAttribute("aria-pressed") ?? "gone",
+    }), sel);
+    try {
+      if ((await page.locator(micSel).count()) !== 1) {
+        live.push("no microphone control to drive the live-preview walk");
+      } else {
+        // The person types first, then speaks: what the engine adds must attach
+        // to their words, never replace them.
+        await page.fill(composer, typed);
+        await sleep(250);
+        await page.locator(micSel).click();
+        await sleep(350);
+        const cfg = await page.evaluate(() => window.__speech.instance.__config());
+        if (!cfg?.interimResults) live.push("the engine was started with interimResults off — while speaking, nothing appears on screen");
+        if (!cfg?.continuous) live.push("the engine was started non-continuous, so the first breath ends dictation");
+        await page.evaluate((text) => window.__speech.instance.__guess(text), guess);
+        await sleep(200);
+        const interimDraft = await draft();
+        livePreviewSeen = interimDraft === `${typed}${guess}`;
+        if (!livePreviewSeen) live.push(`the guess never reached the composer while speaking (draft=${JSON.stringify(interimDraft)})`);
+        await page.evaluate((text) => window.__speech.instance.__say(text), final);
+        await sleep(250);
+        landedExact = await draft();
+        if (landedExact !== `${typed}${final}`) live.push(`the finalized pass did not land the exact sentence (draft=${JSON.stringify(landedExact)})`);
+        const saidTwice = landedExact.split(final).length - 1;
+        if (saidTwice !== 1) live.push(`the sentence appears ${saidTwice} times — the interim ghost was not replaced (draft=${JSON.stringify(landedExact)})`);
+        if (landedExact.includes(`${guess}${final}`)) live.push("the interim guess survived into the committed text (word salad on send)");
+
+        // iOS ends a continuous session after a pause. The person did not ask
+        // for that, so the mic must pick itself back up.
+        const before = await micState(micSel);
+        await page.evaluate(() => window.__speech.instance.__iosEnd());
+        await sleep(500);
+        const after = await micState(micSel);
+        restartMeasured = after.started === before.started + 1;
+        if (!restartMeasured) live.push(`iOS ending the session left the mic down (starts ${before.started}→${after.started}, aria-pressed=${after.pressed})`);
+        if (after.pressed !== "true") live.push(`after the engine quit by itself the mic reads aria-pressed=${after.pressed}`);
+
+        // And the person may well edit the words while still speaking them.
+        const hand = "Right now, I feel stuck with my sister";
+        await page.fill(composer, hand);
+        await sleep(250);
+        await page.evaluate(() => window.__speech.instance.__guess("and I want it to stop"));
+        await sleep(250);
+        handEditKept = await draft();
+        if (!handEditKept.includes("with my sister")) live.push(`a hand edit during dictation was overwritten by the engine (draft=${JSON.stringify(handEditKept)})`);
+        if (!handEditKept.endsWith("and I want it to stop")) live.push(`the live guess stopped flowing after a hand edit (draft=${JSON.stringify(handEditKept)})`);
+        if (handEditKept.split("and I want it to stop").length - 1 !== 1) live.push("the provisional phrase was painted twice after a hand edit");
+
+        // Tapping the mic down must keep everything on screen: a phrase the
+        // engine never got to finalize is still a thing the person said.
+        await page.locator(micSel).click();
+        await sleep(350);
+        const stopped = await draft();
+        if (stopped !== handEditKept) live.push(`stopping dictation changed the composer (${JSON.stringify(stopped)} vs ${JSON.stringify(handEditKept)})`);
+        if ((await micState(micSel)).stopped < 1) live.push("tapping the mic down did not stop the session");
+
+        // The engine can also give up on its own. Tapping back in and hearing
+        // nothing has to bring the microphone down — and a result that arrives
+        // after the session is over must not repaint a composer the person has
+        // already stopped dictating into.
+        await page.locator(micSel).click();
+        await sleep(350);
+        await page.evaluate(() => window.__speech.instance.__iosEnd());
+        await sleep(450);
+        const quiet = await micState(micSel);
+        if (quiet.pressed !== "false") giveUp.push("the mic stayed lit after the engine ended a session it had never heard");
+        const held = await draft();
+        await page.evaluate(() => window.__speech.instance.__guess(" ghost text"));
+        await sleep(250);
+        const lateRead = await draft();
+        quietLandsClean = lateRead === held && quiet.pressed === "false";
+        if (lateRead !== held) giveUp.push(`a late result after the engine gave up repainted the composer (${JSON.stringify(lateRead)})`);
+      }
+    } catch (e) {
+      live.push(`live-preview walk failed: ${String(e).slice(0, 90)}`);
+    }
+    if (errs.length) live.push(`console/page errors ${errs.slice(0, 2).join(" | ")}`);
+    await ctx.close();
+  }
+  record("dictation paints the words as they are spoken and locks the exact sentence on final", live.length === 0 && livePreviewSeen && landedExact === "Right now, I feel stuck with my brother",
+    landedExact && landedExact !== "Right now, I feel stuck with my brother" ? `landed ${JSON.stringify(landedExact)}` : live.slice(0, 2).join(" | "));
+  record("dictation survives iOS ending the session, and a hand edit made while speaking", live.length === 0 && restartMeasured && handEditKept.includes("with my sister"),
+    live.slice(0, 2).join(" | ") || (restartMeasured ? `restart on onend ok, hand edit kept: ${JSON.stringify(handEditKept.slice(0, 52))}` : "the mic went down when the engine quit by itself"));
+  record("dictation goes quiet for good when the engine gives up, and refuses to repaint it", giveUp.length === 0 && quietLandsClean,
+    giveUp.slice(0, 2).join(" | ") || "an unheard session ended with the mic down, and its late words never reached the composer");
+
+  // ── Gate 20 · the same isolation, in Device-Only mode ────────────────
   // Every gate above runs against journeys that live in D1. This one flips the
   // fixture account to memory_mode='local' and plants a THIRD journey that
   // exists nowhere on the server — only inside the encrypted IndexedDB vault —
@@ -1239,61 +1522,24 @@ async function gateErgonomics(port, booted) {
 
       // Write the vault with the committed envelope format: AES-GCM, a
       // non-extractable key under "journey-aesgcm", one sealed record per kind.
-      const seeded = await page.evaluate(async (goal) => {
-        const openDb = () => new Promise((resolve, reject) => {
-          const req = indexedDB.open("sovereign-memory", 1);
-          req.onupgradeneeded = () => {
-            const db = req.result;
-            if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");
-            if (!db.objectStoreNames.contains("records")) db.createObjectStore("records", { keyPath: "id" });
-          };
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-        const idb = (db, store, mode, fn) => new Promise((resolve, reject) => {
-          const req = fn(db.transaction(store, mode).objectStore(store));
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-        const url = (buf) => {
-          const bytes = new Uint8Array(buf);
-          let s = "";
-          for (const b of bytes) s += String.fromCharCode(b);
-          return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-        };
-        const db = await openDb();
-        let key = await idb(db, "keys", "readonly", (o) => o.get("journey-aesgcm"));
-        if (!key) {
-          key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-          await idb(db, "keys", "readwrite", (o) => o.put(key, "journey-aesgcm"));
-        }
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const rec = {
-          version: 1,
-          userScope: "verify-release@local.test",
-          updatedAt: new Date().toISOString(),
-          status: "active",
-          state: {
-            current_step: "widen-the-frame",
-            unlocked_milestones: ["signal-surfaced", "meaning-clarified", "parts-separated"],
-            visual_progress: 0.55,
-            newly_unlocked: [],
-            inquiry_level: 3,
-            suggested_goal: goal,
-            steps: [
-              { id: "surface-signal", label: "Say what's landing", status: "done" },
-              { id: "name-what-landed", label: "Name what crossed the line", status: "done" },
-              { id: "separate-the-parts", label: "Separate what's yours from what's theirs", status: "done" },
-              { id: "widen-the-frame", label: "See the fuller picture", status: "current" },
-              { id: "grounded-next-step", label: "Choose one grounded next step", status: "locked" },
-            ],
-          },
-        };
-        const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(rec)));
-        await idb(db, "records", "readwrite", (o) => o.put({ id: "journey", env: { v: "v1", iv: url(iv.buffer), data: url(ct) } }));
-        db.close();
-        return true;
-      }, LOCAL_GOAL).catch((e) => `vault write threw ${String(e)}`);
+      const seeded = await page.evaluate(VAULT_SEED, {
+        status: "active",
+        state: {
+          current_step: "widen-the-frame",
+          unlocked_milestones: ["signal-surfaced", "meaning-clarified", "parts-separated"],
+          visual_progress: 0.55,
+          newly_unlocked: [],
+          inquiry_level: 3,
+          suggested_goal: LOCAL_GOAL,
+          steps: [
+            { id: "surface-signal", label: "Say what's landing", status: "done" },
+            { id: "name-what-landed", label: "Name what crossed the line", status: "done" },
+            { id: "separate-the-parts", label: "Separate what's yours from what's theirs", status: "done" },
+            { id: "widen-the-frame", label: "See the fuller picture", status: "current" },
+            { id: "grounded-next-step", label: "Choose one grounded next step", status: "locked" },
+          ],
+        },
+      }).catch((e) => `vault write threw ${String(e)}`);
       if (seeded !== true) {
         parityFindings.push(String(seeded).slice(0, 90));
       } else {
@@ -1355,6 +1601,374 @@ async function gateErgonomics(port, booted) {
   }
   record("Device-Only keeps its own journey across thread switches", parityFindings.length === 0,
     parityFindings.slice(0, 3).join(" | ") || "vault journey survived a thread switch aimed at a server journey; banner cleared, CLS 0.0000");
+
+  // ── Gate 21 · an arc that ends has to be able to END ────────────────
+  // Reaching step 5 was a dead end: the canvas read 100%, offered nothing, and
+  // the next conversation — on another subject entirely — was still fused to
+  // the same five steps. So: walk the finish once against a D1 row and once
+  // against a vault record, through the identical surface, and check the taps
+  // actually moved the store behind them.
+  const STEP_IDS = ["surface-signal", "name-what-landed", "separate-the-parts", "widen-the-frame", "grounded-next-step"];
+  const MILESTONE_IDS = ["signal-surfaced", "meaning-clarified", "parts-separated", "frame-widened", "footing-found"];
+  const allDoneSteps = STEP_IDS.map((id) => ({ id, label: id.replace(/-/g, " "), status: "done" }));
+  /** Every journey the fixture user holds, then the seed re-applied. A fresh
+   *  journey minted by a completion walk must not survive into the next pass as
+   *  "the active journey": the seed only upserts its own two ids. */
+  const cleanJourneys = async () => {
+    await d1Local(`DELETE FROM journey_events WHERE user_id = '${FIXTURE_USER_ID}';`);
+    await d1Local(`DELETE FROM journeys WHERE user_id = '${FIXTURE_USER_ID}';`);
+    return seedLocalD1();
+  };
+  const setJourneyAtEnd = async (id) => (await d1Local(
+    `UPDATE journeys SET milestones_json = '${JSON.stringify(MILESTONE_IDS)}', steps_json = '${JSON.stringify(allDoneSteps)}', visual_progress = 1, current_step = 'grounded-next-step', status = 'active' WHERE id = '${id}';`,
+  )).code === 0;
+
+  /** One finished arc, walked the same way whichever memory holds it: reach the
+   *  last step → be offered Mark complete → tap it → the band reads Complete
+   *  with a one-tap New → tap New → an untouched journey is on screen. Every
+   *  move is measured, because a completion state that shoves the transcript
+   *  around is worse than no completion state at all. */
+  const walkCompletion = async (page, label) => {
+    const found = [];
+    let worstCls = 0;
+    const band = async () => (await page.evaluate(VEIL_PROBE))?.band ?? "";
+    const readCls = async () => {
+      const c = await page.evaluate(() => (window.__cls ? window.__cls.total : -1));
+      worstCls = Math.max(worstCls, c);
+      if (c < 0) found.push(`${label}: no shift observer was installed`);
+      else if (c > 0.01) found.push(`${label}: the completion swap moved the layout (CLS=${c.toFixed(4)})`);
+    };
+    const floor = async (name) => {
+      const box = await page.getByRole("button", { name, exact: true }).boundingBox();
+      if (!box || box.height < 44 || box.width < 44) {
+        found.push(`${label}: ${name} is ${box ? `${Math.round(box.width)}x${Math.round(box.height)}` : "missing"} — under the 44×44 tap floor`);
+        return false;
+      }
+      return true;
+    };
+    const toggle = page.getByRole("button", { name: "Show journey steps" });
+    if ((await toggle.count()) === 0) return { found, worstCls: -1 };
+    await toggle.click();
+    await sleep(700);
+    const reached = page.getByRole("button", { name: "Mark complete", exact: true });
+    if ((await reached.count()) === 0) {
+      found.push(`${label}: an arc that has reached its last step offered no way to say so`);
+      return { found, worstCls };
+    }
+    if (!(await floor("Mark complete"))) return { found, worstCls };
+    if ((await page.getByText("reached the last step").count()) === 0) found.push(`${label}: the end of the arc arrived with no sentence to explain it`);
+    await page.evaluate(() => { if (window.__cls) window.__cls.total = 0; });
+    await reached.click();
+    await sleep(1000);
+    await readCls();
+    const fresh = page.getByRole("button", { name: "Start a fresh journey", exact: true });
+    if ((await fresh.count()) === 0) {
+      found.push(`${label}: once marked complete there was no one-tap way to begin again`);
+      return { found, worstCls };
+    }
+    if (!(await floor("Start a fresh journey"))) return { found, worstCls };
+    if ((await page.getByRole("button", { name: "Pause", exact: true }).count()) > 0) found.push(`${label}: a finished journey still offered Pause`);
+    if ((await page.getByText("Archived").count()) === 0) found.push(`${label}: the archived state never said so`);
+    // Fold it away: the compact band has to carry the same news in 44px, and
+    // carry it without growing — the transcript's clearance is sized to it.
+    await page.getByRole("button", { name: "Hide steps" }).click();
+    await sleep(700);
+    const doneBand = await band();
+    if (!/^Journey complete/.test(doneBand)) found.push(`${label}: the compact band of a finished journey did not read as complete (band ${JSON.stringify(doneBand.slice(0, 64))})`);
+    const newTap = page.getByRole("button", { name: "New journey", exact: true });
+    if ((await newTap.count()) === 0) {
+      found.push(`${label}: the compact band of a finished journey has no fresh-start tap`);
+      return { found, worstCls };
+    }
+    const newBox = await newTap.boundingBox();
+    if (!newBox || newBox.height < 44 || newBox.width < 44) found.push(`${label}: the band's New control is ${newBox ? `${Math.round(newBox.width)}x${Math.round(newBox.height)}` : "unmeasurable"}`);
+    const bandH = await page.evaluate(() => Math.round(document.querySelector(".journey-veil-compact")?.getBoundingClientRect().height ?? 0));
+    if (bandH > 46) found.push(`${label}: the compact band grew to ${bandH}px to hold its New control (reserved clearance is measured against 44px)`);
+    await page.evaluate(() => { if (window.__cls) window.__cls.total = 0; });
+    await newTap.click();
+    await sleep(1500);
+    await readCls();
+    const nextBand = await band();
+    if (/Journey complete/.test(nextBand)) found.push(`${label}: starting fresh left the finished arc on screen as if it were still current`);
+    if (!/step 1 of 5/.test(nextBand)) found.push(`${label}: starting fresh did not land on an untouched journey (band ${JSON.stringify(nextBand.slice(0, 64))})`);
+    return { found, worstCls };
+  };
+
+  const serverDone = [];
+  let serverDoneCls = -1;
+  // "New chat" must hand the person a choice, not a silent inheritance: the
+  // offer, its tap, and the row the tap minted are measured on the same page
+  // the completion walk just left, so the two halves of one arc's lifecycle are
+  // never asserted against different fixtures.
+  const offerFound = [];
+  let offerCls = -1;
+  let offerBeforeId = "";
+  {
+    const seededClean = await cleanJourneys();
+    if (!seededClean.ok) {
+      serverDone.push(`local seed could not be re-applied (${seededClean.why})`);
+    } else if (!(await setJourneyAtEnd(FIXTURE_JOURNEY_ID))) {
+      serverDone.push("local D1 would not advance the fixture journey to its last step");
+    } else {
+      try {
+        const { ctx, page, errs } = await openChat(390, 844);
+        const walk = await walkCompletion(page, "server");
+        serverDone.push(...walk.found);
+        serverDoneCls = walk.worstCls;
+        // The taps have to reach the row, not just the render: the archived arc
+        // is complete in D1, and exactly one untouched journey is active.
+        const rows = await d1Query(`SELECT id, status, visual_progress, goal FROM journeys WHERE user_id = '${FIXTURE_USER_ID}'`);
+        if (!rows) serverDone.push("local D1 could not answer the journey-row check");
+        else {
+          const archived = rows.find((r) => r.id === FIXTURE_JOURNEY_ID);
+          if (!archived) serverDone.push("the completed journey row disappeared from D1 entirely");
+          else if (archived.status !== "complete") serverDone.push(`Mark complete never reached D1 (row status=${archived.status})`);
+          const active = rows.filter((r) => r.status === "active");
+          if (active.length === 1) offerBeforeId = String(active[0].id ?? "");
+          if (active.length !== 1) serverDone.push(`${active.length} journeys are active after starting fresh (the server holds exactly one)`);
+          else if (Number(active[0].visual_progress) !== 0 || active[0].goal) serverDone.push(`the "fresh" journey is not untouched (progress=${active[0].visual_progress}, goal=${JSON.stringify(active[0].goal)})`);
+        }
+        const noise = errs.filter((m) => !/status of 503/.test(m));
+        if (noise.length) serverDone.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+        // ── the new-conversation offer, on the very same page ──────────
+        if (serverDone.length === 0) {
+          if (!offerBeforeId) offerFound.push("no fresh active journey row to compare the offer's tap against");
+          else {
+            await page.getByRole("button", { name: "New thread" }).click();
+            await sleep(1600);
+            if ((await page.getByText("This conversation picks up your current journey").count()) === 0) {
+              offerFound.push("a new conversation inherited the running journey with no say in the matter");
+            } else {
+              const offerBtn = page.getByRole("button", { name: "Start a fresh journey", exact: true });
+              const obox = await offerBtn.boundingBox();
+              if (!obox || obox.height < 44 || obox.width < 44) offerFound.push(`the fresh-journey offer is ${obox ? `${Math.round(obox.width)}x${Math.round(obox.height)}` : "unmeasurable"}, under the 44×44 tap floor`);
+              else {
+                await page.evaluate(() => { if (window.__cls) window.__cls.total = 0; });
+                await offerBtn.click();
+                await sleep(1600);
+                const m = await page.evaluate(VEIL_PROBE);
+                offerCls = m ? m.cls : -1;
+                if (!m) offerFound.push("the new conversation rendered no veil to measure");
+                else if (!/step 1 of 5/.test(m.band) || /^Journey complete/.test(m.band)) offerFound.push(`the offer's tap did not open an untouched arc (band ${JSON.stringify(m.band.slice(0, 64))})`);
+                if (offerCls < 0) offerFound.push("no shift observer was installed");
+                else if (offerCls > 0.01) offerFound.push(`accepting the offer moved the layout (CLS=${offerCls.toFixed(4)})`);
+                // The proof it is a *separate* journey, not the same row rewound:
+                // a different id holds the one active slot.
+                const after = await d1Query(`SELECT id, status, goal FROM journeys WHERE user_id = '${FIXTURE_USER_ID}'`);
+                if (!after) offerFound.push("local D1 could not answer the fresh-thread row check");
+                else {
+                  const nowActive = after.filter((r) => r.status === "active");
+                  if (nowActive.length !== 1) offerFound.push(`${nowActive.length} active journeys after accepting the offer (the server holds exactly one)`);
+                  else if (String(nowActive[0].id) === offerBeforeId) offerFound.push("the new conversation is bound to the journey it was offered to leave behind");
+                }
+                if ((await page.getByText("This conversation picks up your current journey").count()) > 0) offerFound.push("the offer stayed on screen after it was accepted");
+              }
+            }
+          }
+        }
+        await ctx.close();
+      } catch (e) {
+        serverDone.push(`server completion walk failed: ${String(e).slice(0, 90)}`);
+      }
+    }
+    // Restore either way: a stray "Untitled journey" left active would be the
+    // journey every later pass sees on mount.
+    await cleanJourneys();
+  }
+  record("server journey: Mark complete archives the row and New mints an untouched arc", serverDone.length === 0 && serverDoneCls >= 0 && serverDoneCls <= 0.01,
+    serverDone.slice(0, 3).join(" | ") || `archived in D1, one blank journey active, whole cycle CLS=${serverDoneCls.toFixed(4)}`);
+  record("a new conversation is asked whether to carry the running arc or open its own", offerFound.length === 0 && offerCls >= 0 && offerCls <= 0.01,
+    offerFound.slice(0, 3).join(" | ") || (offerCls < 0 ? "not reached — the completion walk above failed first" : `offer accepted, a different row holds the one active slot, CLS=${offerCls.toFixed(4)}`));
+
+  const deviceDone = [];
+  let deviceDoneCls = -1;
+  if (!(await flip("local"))) {
+    deviceDone.push("local D1 would not accept the memory_mode flip for the device completion walk");
+  } else {
+    try {
+      const { ctx, page, errs } = await openChat(390, 844);
+      // A journey that exists only on the device, already at its last step.
+      const seeded = await page.evaluate(VAULT_SEED, {
+        status: "active",
+        state: {
+          current_step: "grounded-next-step",
+          unlocked_milestones: MILESTONE_IDS,
+          visual_progress: 1,
+          newly_unlocked: [],
+          inquiry_level: 4,
+          suggested_goal: LOCAL_GOAL,
+          steps: allDoneSteps,
+        },
+      }).catch((e) => `vault write threw ${String(e)}`);
+      if (seeded !== true) {
+        deviceDone.push(String(seeded).slice(0, 90));
+      } else {
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 25000 });
+        await page.waitForSelector('textarea[aria-label="Message Sovereign"]', { timeout: 15000 });
+        await sleep(2000);
+        const walk = await walkCompletion(page, "device");
+        deviceDone.push(...walk.found);
+        deviceDoneCls = walk.worstCls;
+        // And it has to survive the device being turned off and on again: the
+        // fresh arc lives in the vault, not in a React state tree.
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 25000 });
+        await page.waitForSelector('textarea[aria-label="Message Sovereign"]', { timeout: 15000 });
+        await sleep(2000);
+        const after = await page.evaluate(VEIL_PROBE);
+        if (!after) deviceDone.push("device: /chat rendered no transcript + veil after the reload");
+        else if (!/step 1 of 5/.test(after.band) || /Journey complete/.test(after.band)) deviceDone.push(`the device forgot its fresh journey on reload (band ${JSON.stringify(after.band.slice(0, 64))})`);
+        const noise = errs.filter((m) => !/status of 503/.test(m));
+        if (noise.length) deviceDone.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+      }
+      await ctx.close();
+    } catch (e) {
+      deviceDone.push(`device completion walk failed: ${String(e).slice(0, 90)}`);
+    } finally {
+      if (!(await flip("server"))) deviceDone.push("memory_mode could not be restored to 'server'");
+      await cleanJourneys();
+    }
+  }
+  record("device journey: the same two taps work from the encrypted vault alone", deviceDone.length === 0 && deviceDoneCls >= 0 && deviceDoneCls <= 0.01,
+    deviceDone.slice(0, 3).join(" | ") || `vault archive + fresh start, whole cycle CLS=${deviceDoneCls.toFixed(4)}`);
+
+  // ── Gate 22 · the keyboard is a viewport, and it comes and goes ───────
+  // Nothing may be occluded, spilled, or jolted while the visible height
+  // contracts and expands again: on a phone this happens twice a message, and
+  // the composer is the one control that has to be where the thumb already is.
+  const keyboard = [];
+  const panelKeyboard = [];
+  const pinKeyboard = [];
+  let keyboardCls = -1;
+  {
+    const composer = 'textarea[aria-label="Message Sovereign"]';
+    const { ctx, page, errs } = await openChat(390, 844);
+    const cycle = async (height, tag) => {
+      await page.evaluate(() => { if (window.__cls) window.__cls.total = 0; });
+      await page.setViewportSize({ width: 390, height });
+      await sleep(650);
+      const m = await page.evaluate(KEYBOARD_PROBE);
+      if (!m) {
+        keyboard.push(`${tag}: /chat rendered no composer to measure`);
+        return;
+      }
+      if (!m.composer) keyboard.push(`${tag}: the composer is not fully inside the viewport (shell ${m.shell}px, viewport ${m.inner}px)`);
+      if (m.buttonsInView !== m.buttons) keyboard.push(`${tag}: ${m.buttons - m.buttonsInView} of ${m.buttons} composer control(s) fell out of view`);
+      if (m.overflowX > 1) keyboard.push(`${tag}: ${m.overflowX}px of horizontal overflow`);
+      if (m.cls < 0) keyboard.push(`${tag}: no shift observer was installed`);
+      else if (m.cls > 0.01) keyboard.push(`${tag}: the viewport change moved the layout (CLS=${m.cls.toFixed(4)})`);
+      keyboardCls = Math.max(keyboardCls, m.cls);
+    };
+    await page.fill(composer, "Waiting on the keyboard");
+    await page.focus(composer);
+    await sleep(400);
+    await cycle(480, "390×480 (keys up)");
+
+    // The panel, at keyboard height: capped to its own box, and never between
+    // the person and the pill they are typing in.
+    await page.getByRole("button", { name: "Show journey steps" }).click();
+    await sleep(700);
+    const open = await page.evaluate(VEIL_PROBE);
+    if (!open) {
+      panelKeyboard.push("390×480: nothing to judge (no veil + transcript)");
+    } else {
+      if (open.spillPx > 0 && !open.veilScrolls) panelKeyboard.push(`390×480: the expanded panel reaches ${open.spillPx}px past the transcript box and does not scroll internally`);
+      if (open.composerHit === "veil") panelKeyboard.push("390×480: the panel intercepts composer taps");
+      if (open.veil.bottom > open.wrapperBottom + 1) panelKeyboard.push(`390×480: the panel spills onto the header/chrome row (veil bottom ${open.veil.bottom} > box bottom ${open.wrapperBottom})`);
+      const pill = await page.evaluate(KEYBOARD_PROBE);
+      if (pill && !pill.composer) panelKeyboard.push("390×480: with the panel open, the composer is off screen");
+      if (pill && pill.buttonsInView !== pill.buttons) panelKeyboard.push(`390×480: ${pill.buttons - pill.buttonsInView} composer control(s) hidden behind the open panel`);
+    }
+    await page.getByRole("button", { name: "Hide steps" }).click();
+    await sleep(500);
+    await cycle(844, "390×844 (keys away)");
+    const noise = errs.filter((m) => !/status of 503/.test(m));
+    if (noise.length) keyboard.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+
+    // The report iOS actually gives: the layout viewport keeps its full height
+    // and only `visualViewport` learns about the keys. Resizing above shrinks
+    // both, so `dvh` alone passes that and fails this — which is exactly the
+    // standalone-PWA bug the shell's pin exists to close.
+    const pin = await page.evaluate(async () => {
+      Object.defineProperty(window.visualViewport, "height", { configurable: true, value: 480 });
+      window.visualViewport.dispatchEvent(new Event("resize"));
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const shell = document.getElementById("main");
+      const ta = document.querySelector('textarea[aria-label="Message Sovereign"]');
+      const out = {
+        inner: window.innerHeight,
+        shell: Math.round(shell?.getBoundingClientRect().height ?? 0),
+        composerBottom: Math.round(ta?.getBoundingClientRect().bottom ?? 0),
+      };
+      // Let go of the fake and hand the real getter back.
+      delete window.visualViewport.height;
+      window.visualViewport.dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 350));
+      out.released = Math.round(document.getElementById("main")?.getBoundingClientRect().height ?? 0);
+      return out;
+    }).catch((e) => ({ error: String(e).slice(0, 80) }));
+    if (pin.error) pinKeyboard.push(`the visualViewport report could not be simulated: ${pin.error}`);
+    else {
+      if (pin.inner !== 844) pinKeyboard.push(`the layout viewport moved during the fake keyboard (${pin.inner}px) — the simulation proved nothing`);
+      if (pin.shell !== 480) pinKeyboard.push(`the shell stayed at ${pin.shell}px when only visualViewport knew about the keys (visible area 480px)`);
+      if (pin.composerBottom > 484) pinKeyboard.push(`the composer sat at y=${pin.composerBottom}, below the visible area (480px)`);
+      if (pin.released !== 844) pinKeyboard.push(`the shell stayed shrunk after the keyboard went away (${pin.released}px)`);
+    }
+    await ctx.close();
+  }
+  record("keyboard cycle: composer and its controls stay fully on screen (844→480→844)", keyboard.length === 0 && keyboardCls >= 0 && keyboardCls <= 0.01,
+    keyboard.slice(0, 3).join(" | ") || `whole cycle CLS=${keyboardCls.toFixed(4)}`);
+  record("keyboard cycle: the expanded panel keeps its own box and off the composer", panelKeyboard.length === 0,
+    panelKeyboard.slice(0, 3).join(" | ") || "capped, scrollable, and nowhere near the pill at 390×480");
+  record("keyboard: the shell obeys a visualViewport-only report and gives the height back", pinKeyboard.length === 0,
+    pinKeyboard.slice(0, 3).join(" | ") || "844px layout viewport, 480px shell while the keys are up, 844px again when they go");
+
+  // /onboard is a document-scroller rather than a pinned shell — it grows
+  // instead of clipping — so the honest question at keyboard height is whether
+  // the field being typed into is still on screen and nothing runs sideways.
+  const onboardKeyboard = [];
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+    await ctx.addInitScript(CLS_OBSERVER_SCRIPT);
+    const page = await ctx.newPage();
+    const errs = [];
+    // Turnstile's script prints its own anti-debug bait — `console.error("%c%d",
+    // "font-size:0;color:transparent", <number>)` — which lands here verbatim and
+    // is untouchable from page code. Only an error whose source is that widget is
+    // excused, and every other finding carries its URL, so a future
+    // misdiagnosis is readable in the gate report instead of filtered away.
+    const isWidgetNoise = (url) => /^https:\/\/challenges\.cloudflare\.com\//.test(url);
+    page.on("console", (m) => {
+      if (m.type() !== "error") return;
+      const text = m.text();
+      const url = m.location()?.url ?? "";
+      if (isWidgetNoise(url)) return;
+      errs.push(url ? `${url} :: ${text}` : text);
+    });
+    page.on("pageerror", (e) => errs.push(String(e)));
+    try {
+      await page.goto(`http://localhost:${port}/onboard`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForSelector("input", { timeout: 12000 });
+      await page.focus("input");
+      await sleep(500);
+      for (const [h, tag] of [[480, "390×480 (keys up)"], [844, "390×844 (keys away)"]]) {
+        await page.evaluate(() => { if (window.__cls) window.__cls.total = 0; });
+        await page.setViewportSize({ width: 390, height: h });
+        await sleep(650);
+        const m = await page.evaluate(FIELD_PROBE);
+        if (m.tag !== "INPUT") onboardKeyboard.push(`${tag}: focus left the field it was typing into (${m.tag})`);
+        if (!m.inView) onboardKeyboard.push(`${tag}: the focused field is not on screen`);
+        if (m.overflowX > 1) onboardKeyboard.push(`${tag}: ${m.overflowX}px of horizontal overflow`);
+        if (m.cls < 0) onboardKeyboard.push(`${tag}: no shift observer was installed`);
+        else if (m.cls > 0.01) onboardKeyboard.push(`${tag}: the viewport change moved the layout (CLS=${m.cls.toFixed(4)})`);
+      }
+      if (errs.length) onboardKeyboard.push(`console/page errors ${errs.slice(0, 2).join(" | ")}`);
+    } catch (e) {
+      onboardKeyboard.push(`onboard keyboard walk failed: ${String(e).slice(0, 90)}`);
+    }
+    await ctx.close();
+  }
+  record("keyboard: /onboard keeps its focused field reachable through the same cycle", onboardKeyboard.length === 0,
+    onboardKeyboard.slice(0, 3).join(" | ") || "field stayed in view, no sideways scroll, no shift");
 
   await browser.close();
 }

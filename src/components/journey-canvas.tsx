@@ -25,6 +25,11 @@ interface JourneyBarProps {
   onPauseResume: () => void;
   onDismiss: () => void;
   onStepBack: (stepId: string) => void;
+  /** Archive the finished arc. Offered the moment the last step is reached, so
+   *  "done" is a thing a person can say out loud to the product. */
+  onComplete: () => void;
+  /** Close what is open and begin the next one, in a single tap. */
+  onStartFresh: () => void;
 }
 
 const VIEW_W = 600;
@@ -71,7 +76,7 @@ export function JourneyCanvas({ steps, progress, newlyUnlocked }: {
   );
 }
 
-export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPauseResume, onDismiss, onStepBack }: JourneyBarProps) {
+export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPauseResume, onDismiss, onStepBack, onComplete, onStartFresh }: JourneyBarProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(journey.goal ?? "");
   const renameTriggerRef = useRef<HTMLButtonElement>(null);
@@ -97,11 +102,23 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
   const doneCount = journey.steps.filter((s) => s.status === "done").length;
   const total = journey.steps.length;
   const currentIdx = journey.steps.findIndex((s) => s.status === "current");
-  const groupLabel = `Your progress${journey.goal ? ` on ${journey.goal}` : ""}: step ${doneCount + 1} of ${total}, ${doneCount} milestones reached. Currently: ${INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}.`;
+  // Two ways to be at the end: the engine lit every milestone, or the person
+  // said so. `progress >= 1` is the engine's own word for "nothing left".
+  const atEnd = total > 0 && (doneCount === total || journey.progress >= 1);
+  const isComplete = journey.status === "complete";
+  // A finished arc has no "current step", so the ordinary label would read
+  // "step 6 of 5" — say what is true instead.
+  const groupLabel = isComplete
+    ? `Journey complete${journey.goal ? `: ${journey.goal}` : ""}. ${doneCount} of ${total} steps reached.`
+    : `Your progress${journey.goal ? ` on ${journey.goal}` : ""}: step ${Math.min(doneCount + 1, total)} of ${total}, ${doneCount} milestones reached. Currently: ${INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}.`;
   if (!expanded) {
     // Compact band: one row, never a second line, so the overlay's footprint is
     // the reserved clearance and nothing else. Renaming, pausing, and dismissing
-    // live one tap away in the full view.
+    // live one tap away in the full view — and so does the one control worth
+    // putting here, because it is the thing a person looks for after finishing:
+    // the tap sits *beside* the row's own toggle, never inside it (a button in a
+    // button is invalid), and the row's flex-1 text absorbs its width, so
+    // nothing on the band moves when it appears.
     return (
       <figure role="group" aria-label={groupLabel} className="journey-bar journey-veil-compact gap-2 rounded-panel border border-border/60 bg-white/[0.03] px-3">
         <button
@@ -112,21 +129,32 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
           className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <span aria-hidden="true" className="shrink-0 rounded-full border border-border/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            {INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}
+            {isComplete ? "Complete" : INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}
           </span>
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{journey.goal ?? "Untitled journey"}</span>
           <span aria-hidden="true" className="shrink-0 font-mono text-[10px] text-muted-foreground">{doneCount}/{total}</span>
           <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground" aria-hidden="true" />
           <span className="sr-only">Show journey steps</span>
         </button>
+        {isComplete && (
+          <button
+            type="button"
+            onClick={onStartFresh}
+            title="Start a fresh journey"
+            className="inline-flex min-h-[2.75rem] min-w-[2.75rem] shrink-0 items-center justify-center rounded-sm border border-border/60 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-[240ms] hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            New
+            <span className="sr-only"> journey</span>
+          </button>
+        )}
       </figure>
     );
   }
   return (
     <figure role="group" aria-label={groupLabel} className="journey-bar rounded-panel border border-border/60 bg-white/[0.03] px-4 pb-3 pt-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-border/60 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground" aria-label={`Inquiry level: ${INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}`}>
-          {INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}
+        <span className="rounded-full border border-border/60 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground" aria-label={isComplete ? "Journey complete" : `Inquiry level: ${INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}`}>
+          {isComplete ? "Complete" : INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}
         </span>
         {editing ? (
           <form className="flex min-w-0 flex-1 items-center gap-2" onSubmit={(e) => { e.preventDefault(); onRename(draft.trim()); setEditing(false); }}>
@@ -141,10 +169,41 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
         )}
         <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
           <button ref={hideRef} type="button" onClick={toggleSteps} aria-expanded aria-controls="journey-steps" className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Hide steps</button>
-          <button type="button" onClick={onPauseResume} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">{journey.status === "paused" ? "Resume" : "Pause"}</button>
+          {!isComplete && (
+            <button type="button" onClick={onPauseResume} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">{journey.status === "paused" ? "Resume" : "Pause"}</button>
+          )}
           <button type="button" onClick={onDismiss} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Dismiss</button>
         </div>
       </div>
+      {/* The end of an arc deserves a sentence, not a confetti cannon. Both
+          buttons clear the 44px floor because they are the point of the whole
+          panel: one says "this is finished", the other opens the next thing. */}
+      {(atEnd || isComplete) && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 pb-1">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {isComplete
+              ? "Archived. Your next conversation starts its own journey whenever you're ready."
+              : "You've reached the last step. Mark it complete and a new conversation starts fresh."}
+          </p>
+          {isComplete ? (
+            <button
+              type="button"
+              onClick={onStartFresh}
+              className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              Start a fresh journey
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onComplete}
+              className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              Mark complete
+            </button>
+          )}
+        </div>
+      )}
       <div id="journey-steps">
         <div className="journey-emblem-wash relative">
           <JourneyCanvas steps={journey.steps} progress={journey.progress} newlyUnlocked={journey.newlyUnlocked} />

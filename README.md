@@ -30,16 +30,27 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 > action matrix, upgrade ladder, and copy-paste "agent Lee" prompts), and
 > [`docs/stripe-plan.md`](docs/stripe-plan.md) (free → Sovereign+ monetization).
 
-## CI/CD
+## Release flow
 
-Deploys are managed by Cloudflare CI (external webhooks — no `.github/workflows`):
+Production does not deploy itself. Cloudflare Workers Builds has not
+auto-triggered on any of the last four pushes to `main`, so a push alone leaves
+production on the previous version. The canonical path is manual and ordered —
+the same three steps `package.json` documents as `//release`:
 
-1. Push to `main` triggers the build.
-2. Build runs `npx opennextjs-cloudflare build` (the OpenNext compiler; it internally calls `npm run build`, i.e. `next build`).
-3. Deploy runs `npx wrangler deploy` and rolls out to 100% of traffic.
-4. Live at `sovereign.defrag.app` / `app.defrag.app`.
+```bash
+npm run verify:release                          # every gate green, or do not ship
+git push origin main                            # the repo stays the source of truth
+rm -rf .open-next .next && npm run deploy       # the release itself
+npx wrangler deployments list                   # confirm the new version went out
+```
 
-A preview-branches trigger exists for non-`main` branches using the same build command.
+`npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`)
+and then `wrangler deploy`, which rolls out to 100% of traffic; live at
+`sovereign.defrag.app` / `app.defrag.app`. Never start a deploy while another
+build is in flight — the collision stalls static-asset binding propagation (the
+503/hang previously seen on `/`, `/privacy`, `/terms`). The dashboard still
+lists a preview-branches trigger for non-`main` branches; treat it as
+unverified until a build from it shows up in `wrangler deployments list`.
 
 ## Setup
 
@@ -116,8 +127,10 @@ npm run preview    # OpenNext build + preview in Workers runtime (workerd)
 npm run deploy     # OpenNext build + deploy to Cloudflare edge
 ```
 
-Run `npm run typecheck && npm run lint && npm test && npx opennextjs-cloudflare build`
-locally before pushing to verify the exact CI pipeline output.
+Run `npm run verify:release` before pushing — it is the whole ratchet (types,
+lint, tests, contract wiring, a clean OpenNext build, the browser vault, the
+zero-CLS veil, and a live authenticated walk over `/chat` in both memory modes,
+against a local preview server).
 
 > Note: `next build` alone does NOT produce `.open-next/`. To build the
 > Workers bundle locally, always use `npx opennextjs-cloudflare build`
@@ -184,7 +197,7 @@ src/
 │   ├── turnstile.ts                   # verifyTurnstileToken (env-gated)
 │   ├── types.ts                       # Shared TypeScript types
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 19 files / 181 tests)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 23 files / 223 tests)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
 

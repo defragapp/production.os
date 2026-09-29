@@ -13,7 +13,14 @@ personal "Baseline" computed from birth data.
   `/baseline`, `/chat`, `/upgrade`, `/account`, `/settings`), D1/KV bindings, Stripe
   billing flows, and auth logic.
 - Make surgical, additive refinements to copy, styling, and micro-components only.
-- Validate before every deploy: `npm run typecheck && npm run lint && npm test`.
+- Validate before every deploy with `npm run verify:release` — the full ratchet in
+  `scripts/verify-release.mjs` (typecheck, lint, and tests are its first three
+  gates; the rest measure the built app in a browser).
+- Releasing is ordered and manual (the canonical path is `//release` in
+  `package.json`): every gate green → `git push origin main` →
+  `rm -rf .open-next .next && npm run deploy`. Workers Builds has not
+  auto-triggered on the last four pushes, so a push alone ships nothing — confirm
+  with `npx wrangler deployments list`.
 
 ## 2. STRICT VOCABULARY GUARDRAILS (public UI, marketing, and AI responses)
 

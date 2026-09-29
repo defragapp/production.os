@@ -14,6 +14,7 @@ import { ShareCardButton } from "@/components/share-card";
 import { JourneyBar, MILESTONE_STEP_LABELS } from "@/components/journey-canvas";
 import { useJourney } from "@/lib/journey-store";
 import { useDictation } from "@/lib/dictation";
+import { keyboardPinHeight } from "@/lib/viewport";
 import type { JourneyState } from "@/lib/sovereign-journey";
 import type { ChatMessage, BaselineData, MemoryMode, RelationshipView } from "@/lib/types";
 
@@ -253,6 +254,10 @@ export function ChatClient() {
   // closed state, which is what keeps its arrival at CLS 0.0000.
   const [journeyVisible, setJourneyVisible] = useState(false);
   const [journeyExpanded, setJourneyExpanded] = useState(false);
+  // Offered once, in the empty state of a brand-new conversation: "this thread
+  // will carry on with the journey already running — or you can start a fresh
+  // one". Two topics fused to one five-step arc is the dead end this undoes.
+  const [freshOffer, setFreshOffer] = useState(false);
   // The exact text of a turn that couldn't be delivered, plus why: `unreachable`
   // never got an answer at all (dropped connection, 429, 503), `incomplete` means
   // the stream opened and then died before an answer arrived. Holding it lets us
@@ -271,7 +276,7 @@ export function ChatClient() {
   // The journey bar earns its place back with progress, not nagging: dismissal
   // is session-local, and the next confirmed unlock quietly re-reveals it.
   const revealJourney = useCallback(() => setJourneyDismissed(false), []);
-  const { view: journey, selectLinked, applyStateFrame, applyControl } = useJourney(memoryMode, userScope, revealJourney);
+  const { view: journey, selectLinked, applyStateFrame, applyControl, completeJourney, startFreshJourney } = useJourney(memoryMode, userScope, revealJourney);
 
   // The veil's own box, so the page can ask it how much is out of reach, and
   // the transcript's scroller, so switching conversations can send the caret
@@ -283,22 +288,26 @@ export function ChatClient() {
   const [veilHasMore, setVeilHasMore] = useState(false);
 
   // ── Voice dictation, on the browser's own speech engine ─────────
-  // Dictated words land in the draft exactly where typed words live: same
-  // localStorage mirror, same auto-grow, and nothing leaves the device until
+  // The engine owns the whole composer string while it runs, because the words
+  // it is still guessing must be replaceable: `base + finalized + provisional`
+  // is painted as one value, so a guess becomes its finalized form without ever
+  // appearing twice. Words land in the same draft typed words live in — same
+  // localStorage mirror, same auto-grow — and nothing leaves the device until
   // Send. Browsers without the API never see the control at all.
-  const appendDictation = useCallback((text: string) => {
-    setInput((prev) => {
-      const base = prev.trimEnd();
-      return base ? `${base} ${text}` : text;
-    });
-  }, []);
+  const draftValueRef = useRef("");
+  useEffect(() => {
+    draftValueRef.current = input;
+  }, [input]);
+  const readDraft = useCallback(() => draftValueRef.current, []);
+  const writeDraft = useCallback((text: string) => setInput(text), []);
   const {
     supported: dictationSupported,
     listening: dictating,
+    previewing: dictationPreview,
     notice: dictationNotice,
     toggle: toggleDictation,
     stop: stopDictation,
-  } = useDictation({ onText: appendDictation });
+  } = useDictation({ getDraft: readDraft, setDraft: writeDraft });
 
   // Seed the composer with a starting point and put the caret at the end, so
   // the person finishes the sentence in their own words instead of sending ours.
@@ -351,6 +360,7 @@ export function ChatClient() {
     setFailedTurn(null);
     setJourneyExpanded(false);
     setVeilHasMore(false);
+    setFreshOffer(false);
     stopDictation();
     scrollerRef.current?.scrollTo({ top: 0 });
   }, [stopDictation]);
@@ -400,9 +410,26 @@ export function ChatClient() {
     setThreadId(null);
     // A fresh conversation has no journey of its own: return to the active one
     // and let the next `{ state }` frame correct it the moment the engine
-    // infers something new.
+    // infers something new. But a brand-new topic deserves its own arc, so the
+    // choice is offered once, here, where the person is about to start typing.
+    setFreshOffer(Boolean(journey) && journey?.status !== "complete");
     void linkJourneyToThread(null);
-  }, [clearThreadContext, linkJourneyToThread]);
+  }, [clearThreadContext, linkJourneyToThread, journey]);
+
+  // Archive what is finished, and the next conversation starts its own arc.
+  // Both memory modes reach this one call: the server PATCHes the row to
+  // `complete` then mints a blank successor; the device replaces its single
+  // vault record, which is the same two moves at that scale.
+  const completeCurrentJourney = useCallback(() => {
+    const id = journey?.id;
+    if (id) void completeJourney(id);
+  }, [journey?.id, completeJourney]);
+
+  const beginFreshJourney = useCallback(async () => {
+    setFreshOffer(false);
+    setJourneyDismissed(false);
+    await startFreshJourney(journey?.id ?? null);
+  }, [journey?.id, startFreshJourney]);
 
   useEffect(() => {
     (async () => {
@@ -480,9 +507,13 @@ export function ChatClient() {
     measure();
     el.addEventListener("scroll", measure, { passive: true });
     window.addEventListener("resize", measure);
+    // iOS does not fire `resize` when the keys come up, and the panel's own
+    // height cap just changed: `visualViewport` is the only event that says so.
+    window.visualViewport?.addEventListener("resize", measure);
     return () => {
       el.removeEventListener("scroll", measure);
       window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
     };
   }, [journeyExpanded, journey]);
 
@@ -575,6 +606,32 @@ export function ChatClient() {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 176)}px`;
   }, [input]);
+
+  // The software keyboard, which `100dvh` does not know about. On iOS (in the
+  // browser and in standalone PWA mode) the layout viewport keeps its full
+  // height while the keys cover the bottom of the screen, so a composer pinned
+  // to the bottom of `100dvh` sits under the keyboard: the person types into a
+  // field they can see the caret in but cannot tap. `visualViewport.height` is
+  // the honest measure, so while the keys are up the shell is pinned to it and
+  // the flex column hands the difference back to the transcript — which already
+  // owns its own scrolling, so the caret stays in view. Rendered through state
+  // rather than an imperative style write, because the shell's `style`
+  // attribute also carries `--journey-progress`: React rewrites the whole
+  // attribute when the journey moves, and would silently drop a height it does
+  // not know about (the composer straight back under the keyboard).
+  const [shellHeight, setShellHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const apply = () => setShellHeight(keyboardPinHeight(window.innerHeight, vv.height));
+    apply();
+    vv.addEventListener("resize", apply);
+    window.addEventListener("resize", apply);
+    return () => {
+      vv.removeEventListener("resize", apply);
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
 
   // A calm, non-intrusive offline signal, so a person never taps send into a
   // dead connection. `navigator.onLine` seeds it; the events keep it honest.
@@ -857,13 +914,17 @@ export function ChatClient() {
   }, [threadId, refreshThreads, refreshUsage, router, applyStateFrame]);
 
   const sendMessage = useCallback(async () => {
-    const content = input.trim();
-    if (!content || isStreaming) return;
+    if (isStreaming) return;
     // Nobody wants a microphone still open while their words are flying: stop
-    // first, so a late phrase can't land in the draft of the next turn.
+    // first, then read the composer — a provisional phrase already painted on
+    // screen is the person's own wording, and `inputRef` holds it a render
+    // before `input` state does.
     stopDictation();
+    const content = (inputRef.current?.value ?? input).trim();
+    if (!content) return;
     setFailedTurn(null);
     setInput("");
+    setFreshOffer(false);
     await performTurn([...messages, { role: "user", content }]);
   }, [input, isStreaming, messages, performTurn, stopDictation]);
 
@@ -894,8 +955,9 @@ export function ChatClient() {
     // composer stays pinned to the bottom on every viewport. `min-h-screen`
     // let the page grow, so on phones the tall empty state pushed the input
     // below the fold — `h-[100dvh]` keeps the shell to the screen and lets
-    // the inner `overflow-y-auto` own scrolling. dvh tracks mobile browser chrome.
-    <main id="main" className="flex h-[100dvh] flex-col" style={{ "--journey-progress": String(journey?.visual_progress ?? 0) } as React.CSSProperties}>
+    // the inner `overflow-y-auto` own scrolling. dvh tracks mobile browser chrome;
+    // while the keyboard is up it is overridden with the visible height, above.
+    <main id="main" className="flex h-[100dvh] flex-col" style={{ "--journey-progress": String(journey?.visual_progress ?? 0), height: shellHeight ? `${shellHeight}px` : undefined } as React.CSSProperties}>
       <Nav />
       {/* App screen: the conversation itself is the content, so the page
           title exists for assistive tech only (every page carries one h1). */}
@@ -1131,6 +1193,8 @@ export function ChatClient() {
                       onPauseResume={() => { void applyControl({ id: journey.id, pause: journey.status !== "paused" }); }}
                       onDismiss={() => setJourneyDismissed(true)}
                       onStepBack={(stepId) => { void applyControl({ id: journey.id, overrideStep: stepId }); }}
+                      onComplete={completeCurrentJourney}
+                      onStartFresh={() => { void beginFreshJourney(); }}
                     />
                   )}
                 </div>
@@ -1160,6 +1224,25 @@ export function ChatClient() {
                         About yourself, what you&apos;re sitting with, the people in your life — or the whole system they make.
                       </p>
                       <StartingPoints onPick={seedComposer} disabled={isStreaming} />
+                      {/* The new-thread half of "one arc per topic". It sits in the
+                          empty state rather than in a dialog because this is the
+                          only moment the choice means anything: before the first
+                          message, while either path is still free. */}
+                      {freshOffer && journey && (
+                        <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-2 border-t border-border/50 pt-5 text-center sm:flex-row sm:justify-center sm:gap-3 sm:text-left">
+                          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+                            {"This conversation picks up your current journey"}
+                            {journey.goal ? `: ${journey.goal}` : ""}{"."}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => { void beginFreshJourney(); }}
+                            className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                          >
+                            Start a fresh journey
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1330,7 +1413,11 @@ export function ChatClient() {
                       onClick={toggleDictation}
                       aria-pressed={dictating}
                       aria-label={dictating ? "Stop dictation" : "Dictate your message"}
-                      title={dictating ? "Stop dictation" : "Dictate"}
+                      // `previewing` is deliberately only in the tooltip: any
+                      // in-flow "listening…" caption would reflow the pill on
+                      // every guess the engine revises, and a revised guess is
+                      // exactly the moment a person should not lose their place.
+                      title={dictating ? (dictationPreview ? "Listening — tap to stop" : "Stop dictation") : "Dictate"}
                       className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                         dictating
                           ? "border-foreground/35 bg-white/[0.10] text-foreground"

@@ -2,7 +2,7 @@
   "name": "production-os",
   "version": "0.1.0",
   "private": true,
-  "//release": "CANONICAL RELEASE PATH: `git push origin main` (Cloudflare Workers Builds deploys automatically). Use `npm run deploy` ONLY for an out-of-band hotfix when no push is in flight. NEVER both at once — a push-triggered build colliding with a local deploy stalls static-asset binding propagation (the 503/hang seen on /, /privacy, /terms). Always gate first with `npm run verify:release`.",
+  "//release": "CANONICAL RELEASE PATH, in this order: (1) `npm run verify:release` — every gate in scripts/verify-release.mjs green (the count grows with each ratchet; the script's own header is the source of truth), (2) commit and `git push origin main`, (3) `rm -rf .open-next .next && npm run deploy`. Step 3 is NOT optional: Workers Builds has not auto-triggered on the last four pushes, so a push alone leaves production on the previous version — confirm with `npx wrangler deployments list` before assuming a push shipped. Do not run two deploys at once: a push-triggered build colliding with a local deploy stalls static-asset binding propagation (the 503/hang seen on /, /privacy, /terms).",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

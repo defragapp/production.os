@@ -74,6 +74,8 @@ w.__mountJourney = (el, doneCount) => {
       onPauseResume={() => {}}
       onDismiss={() => {}}
       onStepBack={() => {}}
+      onComplete={() => {}}
+      onStartFresh={() => {}}
     />,
   );
 };
@@ -130,6 +132,8 @@ function renderRevealBar() {
       onPauseResume={() => {}}
       onDismiss={() => {}}
       onStepBack={() => {}}
+      onComplete={() => {}}
+      onStartFresh={() => {}}
     />,
   );
 };
@@ -163,6 +167,8 @@ w.__mountNaive = (el, doneCount) => {
         onPauseResume={() => {}}
         onDismiss={() => {}}
         onStepBack={() => {}}
+        onComplete={() => {}}
+        onStartFresh={() => {}}
       />
     </div>,
   );
