@@ -27,7 +27,9 @@ export function Logo({
     <Link
       href={href}
       aria-label="Sovereign OS home"
-      className={`group inline-flex items-center gap-2.5 ${className ?? ""}`}
+      // `nav-brand` is a hook: flat on desktop, raised to the 44px tap floor on
+      // coarse pointers by globals.css (the bare emblem is only 22px wide).
+      className={`nav-brand group inline-flex items-center gap-2.5 ${className ?? ""}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

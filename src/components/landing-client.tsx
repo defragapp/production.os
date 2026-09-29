@@ -332,7 +332,7 @@ function PerspectiveSwitch() {
   const [side, setSide] = useState<"you" | "them">("you");
   const active = PERSPECTIVE.sides[side];
   const chip =
-    "rounded-full border px-4 py-2 text-sm transition-colors";
+    "tap-line rounded-full border px-4 py-2 text-sm transition-colors";
   const on =
     "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]";
   const off = "border-border/50 bg-surface-1/50 text-muted-foreground hover:text-foreground";
@@ -406,7 +406,7 @@ export function LandingClient() {
                   <Link href="/onboard?mode=signup" className="btn-focal px-7 py-3 text-sm font-semibold">
                     Start free
                   </Link>
-                  <Link href="#how" className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground">
+                  <Link href="#how" className="tap-line text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground">
                     See how it works →
                   </Link>
                 </div>
@@ -653,19 +653,19 @@ export function LandingClient() {
             <p className="mt-2.5">Private by design. Grounded in data. Yours to decide.</p>
           </div>
           <div className="flex flex-wrap items-center gap-6">
-            <Link href="/about" className="transition-colors duration-[240ms] hover:text-foreground">
+            <Link href="/about" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               Philosophy
             </Link>
-            <Link href="/faq" className="transition-colors duration-[240ms] hover:text-foreground">
+            <Link href="/faq" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               FAQ
             </Link>
-            <Link href="/terms" className="transition-colors duration-[240ms] hover:text-foreground">
+            <Link href="/terms" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               Terms
             </Link>
-            <Link href="/privacy" className="transition-colors duration-[240ms] hover:text-foreground">
+            <Link href="/privacy" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               Privacy
             </Link>
-            <Link href="/support" className="transition-colors duration-[240ms] hover:text-foreground">
+            <Link href="/support" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               Support
             </Link>
           </div>

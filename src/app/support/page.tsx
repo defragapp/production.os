@@ -80,7 +80,7 @@ export default async function SupportPage() {
             </div>
             <Link
               href="/faq"
-              className="block text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+              className="tap-line block text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
             >
               Looking for a quick answer? Check the FAQ →
             </Link>

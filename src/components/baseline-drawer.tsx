@@ -140,7 +140,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
+        className="tap-line flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
       >
         <span className="flex items-baseline gap-2">
           <span className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">

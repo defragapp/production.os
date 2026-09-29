@@ -11,11 +11,14 @@ async function getSessionPayload(request: NextRequest) {
   return { env, payload: session.payload, error: undefined as NextResponse | undefined };
 }
 import { DEFAULT_JOURNEY_STEPS } from "@/lib/sovereign-journey";
-import { rowToView, type JourneyRow } from "@/lib/journeys";
+import { LIFECYCLE_EVENTS, logJourneyEvent, pastArcFromView, rowToView, type JourneyRow } from "@/lib/journeys";
 
 export const dynamic = "force-dynamic";
 
 const LIST_LIMIT = 20;
+/** The archive is a look-back surface, not an index: ten closed arcs is more
+ *  than anyone reads calmly, and it keeps the response a fixed small size. */
+const COMPLETED_LIMIT = 10;
 
 export async function GET(request: NextRequest) {
   const { env, payload, error } = await getSessionPayload(request);
@@ -23,7 +26,19 @@ export async function GET(request: NextRequest) {
   const rows = await env.DB.prepare(
     "SELECT * FROM journeys WHERE user_id = ? AND status != 'complete' ORDER BY updated_at DESC LIMIT ?"
   ).bind(payload.sub, LIST_LIMIT).all<JourneyRow>();
-  return NextResponse.json({ journeys: (rows.results ?? []).map(rowToView) });
+  // Finished arcs come back as a separate field rather than being appended to
+  // `journeys`: the active-list contract ("the first row is the live journey")
+  // is what the canvas and every fallback already depend on, and an archive
+  // that pushed the live row past the limit would silently blank the panel.
+  // They are reduced to PastArc here so both memory modes hand the UI exactly
+  // the same shape.
+  const done = await env.DB.prepare(
+    "SELECT * FROM journeys WHERE user_id = ? AND status = 'complete' ORDER BY updated_at DESC LIMIT ?"
+  ).bind(payload.sub, COMPLETED_LIMIT).all<JourneyRow>();
+  return NextResponse.json({
+    journeys: (rows.results ?? []).map(rowToView),
+    completed: (done.results ?? []).map((r) => pastArcFromView(rowToView(r))),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -42,5 +57,9 @@ export async function POST(request: NextRequest) {
     "INSERT INTO journeys (id, user_id, goal, current_step, steps_json, milestones_json, visual_progress) VALUES (?, ?, ?, ?, ?, '[]', 0)"
   ).bind(id, payload.sub, goal, DEFAULT_JOURNEY_STEPS[0].id, JSON.stringify(steps)).run();
   const row = await env.DB.prepare("SELECT * FROM journeys WHERE id = ?").bind(id).first<JourneyRow>();
+  // This POST is only ever reached by a person tapping "start a fresh journey"
+  // — the engine mints arcs through persistJourneyState instead — so the row is
+  // the user's own word that an arc began.
+  await logJourneyEvent(env, id, payload.sub, LIFECYCLE_EVENTS.started, "user-confirmed");
   return NextResponse.json({ journey: row ? rowToView(row) : null }, { status: 201 });
 }

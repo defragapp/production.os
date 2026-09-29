@@ -84,10 +84,14 @@ const boldRaw = await sharp(core).resize(workW, WORK_H).ensureAlpha().raw().toBu
 const bold = await sharp(dilate(boldRaw, workW, WORK_H, 2), { raw: { width: workW, height: WORK_H, channels: 4 } }).png().toBuffer();
 const bm = await sharp(bold).metadata();
 
-// Center a glyph on a square graphite plate (favicon / iOS icon). The glyph is
-// scaled to fit the plate; its own whitespace provides the breathing room.
-async function plate(glyph, size) {
-  const g = await sharp(glyph).resize(size, size, { fit: "inside" }).png().toBuffer();
+// Center a glyph on a square graphite plate (favicon / iOS icon / PWA install
+// icon). The glyph is scaled to fit the plate; its own whitespace provides the
+// breathing room. `fill` shrinks the glyph relative to the plate, which is what
+// a maskable icon needs: Android crops the outer ring, so the mark has to live
+// inside the safe zone instead of touching the edges.
+async function plate(glyph, size, fill = 1) {
+  const box = Math.max(1, Math.round(size * fill));
+  const g = await sharp(glyph).resize(box, box, { fit: "inside" }).png().toBuffer();
   const gm = await sharp(g).metadata();
   return sharp({ create: { width: size, height: size, channels: 4, background: PLATE } })
     .composite([{ input: g, top: Math.round((size - gm.height) / 2), left: Math.round((size - gm.width) / 2) }])
@@ -100,6 +104,14 @@ await sharp(bold).toFile(`${OUT}/emblem-core-bold.png`);
 // Favicon (64px) wants the bold render; the iOS icon (180px) has room for detail.
 await sharp(await plate(bold, 64)).toFile(`${OUT}/icon.png`);
 await sharp(await plate(core, 180)).toFile(`${OUT}/apple-icon.png`);
+// Install surfaces ask for specific sizes and will downscale anything else, so
+// the canonical 192/512 pair ships at those exact dimensions — plus a maskable
+// variant of each (solid full-bleed plate, mark inside the safe zone) so an
+// Android home screen never crops the emblem into a half-circle.
+await sharp(await plate(core, 192)).toFile(`${OUT}/pwa-192x192.png`);
+await sharp(await plate(core, 512)).toFile(`${OUT}/pwa-512x512.png`);
+await sharp(await plate(core, 192, 0.62)).toFile(`${OUT}/maskable-192x192.png`);
+await sharp(await plate(core, 512, 0.62)).toFile(`${OUT}/maskable-512x512.png`);
 
 // The social card is rendered by satori at request time, which cannot fetch a
 // runtime asset URL under the Workers/OpenNext runtime (it silently drops the
@@ -118,4 +130,4 @@ writeFileSync(
 );
 
 console.log("built:", { full: fm, core: cm, bold: bm });
-console.log("wrote public/brand/{emblem-full,emblem-core,emblem-core-bold,icon,apple-icon}.png + src/lib/brand-emblem-data.ts");
+console.log("wrote public/brand/{emblem-full,emblem-core,emblem-core-bold,icon,apple-icon,pwa-192x192,pwa-512x512,maskable-192x192,maskable-512x512}.png + src/lib/brand-emblem-data.ts");

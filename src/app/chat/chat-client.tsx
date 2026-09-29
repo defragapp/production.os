@@ -11,7 +11,7 @@ import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { RichText } from "@/components/rich-text";
 import { ShareCardButton } from "@/components/share-card";
-import { JourneyBar, MILESTONE_STEP_LABELS } from "@/components/journey-canvas";
+import { JourneyBar, PastJourneysSheet, MILESTONE_STEP_LABELS } from "@/components/journey-canvas";
 import { useJourney } from "@/lib/journey-store";
 import { useDictation } from "@/lib/dictation";
 import { keyboardPinHeight } from "@/lib/viewport";
@@ -258,6 +258,9 @@ export function ChatClient() {
   // will carry on with the journey already running — or you can start a fresh
   // one". Two topics fused to one five-step arc is the dead end this undoes.
   const [freshOffer, setFreshOffer] = useState(false);
+  // The archive is opened, not navigated to: a person finishing an arc should be
+  // able to see the one they just closed without leaving the conversation.
+  const [pastOpen, setPastOpen] = useState(false);
   // The exact text of a turn that couldn't be delivered, plus why: `unreachable`
   // never got an answer at all (dropped connection, 429, 503), `incomplete` means
   // the stream opened and then died before an answer arrived. Holding it lets us
@@ -276,7 +279,7 @@ export function ChatClient() {
   // The journey bar earns its place back with progress, not nagging: dismissal
   // is session-local, and the next confirmed unlock quietly re-reveals it.
   const revealJourney = useCallback(() => setJourneyDismissed(false), []);
-  const { view: journey, selectLinked, applyStateFrame, applyControl, completeJourney, startFreshJourney } = useJourney(memoryMode, userScope, revealJourney);
+  const { view: journey, past, selectLinked, applyStateFrame, applyControl, completeJourney, startFreshJourney } = useJourney(memoryMode, userScope, revealJourney);
 
   // The veil's own box, so the page can ask it how much is out of reach, and
   // the transcript's scroller, so switching conversations can send the caret
@@ -361,6 +364,7 @@ export function ChatClient() {
     setJourneyExpanded(false);
     setVeilHasMore(false);
     setFreshOffer(false);
+    setPastOpen(false);
     stopDictation();
     scrollerRef.current?.scrollTo({ top: 0 });
   }, [stopDictation]);
@@ -1153,6 +1157,22 @@ export function ChatClient() {
 
           {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
 
+          {/* Rendered as a sibling of the veil, never a descendant: the veil
+              carries `backdrop-filter`, which makes it the containing block for
+              any fixed element inside it — a sheet mounted in there would be
+              trapped in the panel's box instead of covering the page. Closing
+              hands focus back to the control the person tapped, which only
+              exists while the panel is expanded, so the lookup is optional. */}
+          {pastOpen && past.length > 0 && (
+            <PastJourneysSheet
+              arcs={past}
+              onClose={() => {
+                setPastOpen(false);
+                requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".journey-past-trigger")?.focus());
+              }}
+            />
+          )}
+
           {/* One polite, one-shot line per fresh unlock — the bar itself never
               lives in an aria-live region, so frames don't spam assistive tech. */}
           <p className="sr-only" role="status" aria-live="polite">{milestoneAnnouncement}</p>
@@ -1195,6 +1215,8 @@ export function ChatClient() {
                       onStepBack={(stepId) => { void applyControl({ id: journey.id, overrideStep: stepId }); }}
                       onComplete={completeCurrentJourney}
                       onStartFresh={() => { void beginFreshJourney(); }}
+                      pastCount={past.length}
+                      onShowPast={() => setPastOpen(true)}
                     />
                   )}
                 </div>

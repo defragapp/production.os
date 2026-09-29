@@ -50,7 +50,7 @@ export default function FaqPage() {
 
         <Link
           href="/upgrade"
-          className="mx-auto mb-10 block text-center text-sm text-muted-foreground underline-offset-4 transition-colors duration-[240ms] hover:text-foreground hover:underline"
+          className="tap-line-center mx-auto mb-10 block text-center text-sm text-muted-foreground underline-offset-4 transition-colors duration-[240ms] hover:text-foreground hover:underline"
         >
           Compare Free and Sovereign+ →
         </Link>

@@ -541,6 +541,72 @@ a,[role="button"] {
     align-items: center;
     padding-inline: 0.5rem;
   }
+  /* The Button primitive is the app's primary control and its three ordinary
+     sizes are 36–40px (`h-9`, `h-10`, `h-10 w-10`): fine under a cursor, a
+     near-miss for a thumb. `min-height` beats a smaller `height`, so this
+     raises every variant — including the ones `asChild` renders as a link —
+     from one place, and no page has to remember to opt in. The `link` variant
+     is excluded because it is a word inside a sentence, and WCAG 2.5.8 says so
+     outright: its size is constrained by the line-height of the prose around
+     it, and forcing it to 44px would break the paragraph instead of the tap. */
+  .btn:not(.btn-link) {
+    min-height: 2.75rem;
+  }
+  .btn-size-icon {
+    min-width: 2.75rem;
+  }
+  /* A control the person is asked to tap on its own line — a footer
+     destination, a "read more" line, a demo tab. `tap-line` is applied at the
+     call site (never globally on `a[href]`), because the same anchor is often
+     running text, and WCAG 2.5.8 exempts a target that sits inside a sentence
+     precisely because the line-height of that prose constrains it. */
+  .tap-line {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    /* Height alone doesn't make a tappable target: a two-letter footer
+       destination like "FAQ" clears 44px tall but is still ~26px wide, and a
+       44×26 pill is a miss waiting to happen. The floor is a square, so the
+       short edge gets the same 2.75rem the long edge already had. */
+    min-width: 2.75rem;
+  }
+  /* Where the line used to be centred by `text-center`, a flex container has
+     to be told — otherwise the label drifts to the left edge of a box that is
+     no longer shrink-to-fit. */
+  .tap-line-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+  /* The header's own two forms, plus the brand link — which at 390px is the
+     emblem alone, and an emblem is not a 22px-wide target. */
+  .nav-link,
+  .nav-brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+  .nav-brand {
+    min-width: 2.75rem;
+  }
+  /* A control wearing a button treatment is a call to action, not prose — and
+     it wears that treatment on both tags: an <a> for the FAQ's "Write to the
+     team" and every nav "Start free", a native <button> for the support form's
+     send. The class is the promise, so the floor follows the class. */
+  .btn-glass,
+  .btn-aurora,
+  .btn-focal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+  /* An FAQ row's whole label band is the control, so the band has to be as
+     tall as the finger being aimed at it. */
+  details > summary {
+    min-height: 2.75rem;
+  }
 }
 
 /* ── Modern UI / Polish Enhancements ───────────────────────────── */
@@ -875,6 +941,45 @@ a,[role="button"] {
   margin-bottom: -28px;
   pointer-events: none;
   background: linear-gradient(to bottom, transparent, hsl(var(--background) / 0.92));
+}
+
+/* Past journeys: the archive a closed arc leaves behind. It opens as a fixed
+   sheet, so it owns no static space and nothing on the page moves when it
+   arrives — the same physics the veil above depends on, reveal by transform and
+   opacity only. Scroll lock is deliberately NOT applied: removing the page's
+   scrollbar would move every transcript row sideways by its own width, trading
+   a zero-shift reveal for a measured layout shift. Plain CSS (no @apply) all
+   the way down, because verify:release injects this region verbatim into the
+   CLS harness. */
+.past-arc-scrim {
+  animation: past-arc-fade 0.2s ease both;
+}
+.past-arc-sheet {
+  animation: past-arc-rise 0.24s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+@keyframes past-arc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes past-arc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .past-arc-scrim,
+  .past-arc-sheet {
+    animation: none;
+  }
 }
 
 

@@ -16,11 +16,15 @@ personal "Baseline" computed from birth data.
 - Validate before every deploy with `npm run verify:release` — the full ratchet in
   `scripts/verify-release.mjs` (typecheck, lint, and tests are its first three
   gates; the rest measure the built app in a browser).
-- Releasing is ordered and manual (the canonical path is `//release` in
-  `package.json`): every gate green → `git push origin main` →
-  `rm -rf .open-next .next && npm run deploy`. Workers Builds has not
-  auto-triggered on the last four pushes, so a push alone ships nothing — confirm
-  with `npx wrangler deployments list`.
+- Releasing is ordered (the canonical path is `//release` in `package.json`):
+  every gate green → `git push origin main` → confirm with
+  `npx wrangler deployments list`. Workers Builds on the git integration DOES
+  fire on a push to `main` (the deployment list shows a build-system-authored
+  version within a couple of minutes of each recent push), so pushing ships.
+  Running `rm -rf .open-next .next && npm run deploy` straight after a push is a
+  second build of the same commit in flight — that collision is what stalls
+  static-asset binding propagation. Deploy from the CLI only when no new version
+  shows up ~3 minutes after the push, or when the tree to ship is not on `main`.
 
 ## 2. STRICT VOCABULARY GUARDRAILS (public UI, marketing, and AI responses)
 
@@ -75,3 +79,11 @@ MUST NOT be renamed by copy passes.
 - Reuse existing classes (`glass-panel`, `card-lift`, `section-rule`, `btn-focal`,
   `btn-aurora`, `btn-glass`, `font-display`) — extend, don't reinvent.
 - Clean TypeScript + Tailwind. No unnecessary dependencies.
+- The touch floor is raised from ONE place: the `@media (pointer: coarse)` block
+  in `globals.css`, keyed on hook classes that carry no desktop declaration
+  (`btn`, `btn-size-icon`, `btn-link`, `tap-line`, `tap-line-center`, `nav-link`,
+  `nav-brand`). Put the hook on the element instead of hand-writing a
+  `min-h-[44px]` at the call site, and leave a target that sits inside running
+  prose alone — WCAG 2.5.8 exempts it, because the line height owns its size.
+  Gate 24 measures the boxes in a real browser; Gate 3b proves the hooks are
+  still applied.

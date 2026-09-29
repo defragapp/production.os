@@ -10,7 +10,7 @@ async function getSessionPayload(request: NextRequest) {
   return { env, payload: session.payload, error: undefined as NextResponse | undefined };
 }
 import { DEFAULT_JOURNEY_STEPS } from "@/lib/sovereign-journey";
-import { rowToView, STEP_TO_MILESTONE, MILESTONE_WEIGHTS, type JourneyRow } from "@/lib/journeys";
+import { rowToView, STEP_TO_MILESTONE, MILESTONE_WEIGHTS, LIFECYCLE_EVENTS, logJourneyEvent, type JourneyRow } from "@/lib/journeys";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +51,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const progress = Math.round(kept.reduce((t, m) => t + (MILESTONE_WEIGHTS[m] ?? 0), 0) * 100) / 100;
     const steps = DEFAULT_JOURNEY_STEPS.map((s, i) => ({ ...s, status: i < targetIdx ? "done" as const : i === targetIdx ? "current" as const : "locked" as const }));
     await env.DB.prepare("UPDATE journeys SET current_step = ?, steps_json = ?, milestones_json = ?, visual_progress = ?, updated_at = datetime('now') WHERE id = ?").bind(target.id, JSON.stringify(steps), JSON.stringify(kept), progress, id).run();
+    // The rewind is its own event: the derived rows already say which
+    // milestones lit, and only this row says that a person took one back.
+    await logJourneyEvent(env, id, payload.sub, LIFECYCLE_EVENTS.rewound, "user-confirmed");
     const updated = await env.DB.prepare("SELECT * FROM journeys WHERE id = ?").bind(id).first<JourneyRow>();
     return NextResponse.json({ journey: updated ? rowToView(updated) : null });
   }
@@ -64,6 +67,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (updates.length === 0) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   updates.push("updated_at = datetime('now')");
   await env.DB.prepare(`UPDATE journeys SET ${updates.join(", ")} WHERE id = ? AND user_id = ?`).bind(...binds, id, payload.sub).run();
+  // Closing an arc is logged once, and only on the transition — re-sending
+  // `complete` for a journey that is already archived would otherwise pile a
+  // fresh event into the timeline on every retry.
+  if (body.status === "complete" && row.status !== "complete") {
+    await logJourneyEvent(env, id, payload.sub, LIFECYCLE_EVENTS.completed, "user-confirmed");
+  }
   const updated = await env.DB.prepare("SELECT * FROM journeys WHERE id = ?").bind(id).first<JourneyRow>();
   return NextResponse.json({ journey: updated ? rowToView(updated) : null });
 }

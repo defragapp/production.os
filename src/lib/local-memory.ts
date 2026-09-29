@@ -31,7 +31,51 @@ const JOURNEY_KEY_ID = "journey-aesgcm";
 // so consumers of the vault can import the whole local-memory surface from here.
 export type { MemoryMode };
 export type LocalJourneyStatus = "active" | "paused" | "complete" | "hidden";
-export type LocalRecordKind = "journey";
+/** `journey` is the live arc. `journey-history` is what an arc leaves behind
+ *  when it closes, plus the device's own copy of the lifecycle timeline — the
+ *  local answer to `journeys.status = 'complete'` and `journey_events`. */
+export type LocalRecordKind = "journey" | "journey-history";
+
+/** One closed arc, reduced to what a person actually wants from a look-back:
+ *  the subject, when it ended, how far it got. */
+export interface LocalArcSummary {
+  goal: string | null;
+  completedAt: string;
+  stepsReached: number;
+  totalSteps: number;
+}
+/** A lifecycle line, mirroring a `journey_events` row: derived milestones and
+ *  the moments the person decided (started, completed, rewound). */
+export interface LocalJourneyEventLog {
+  milestone: string;
+  source: "derived" | "user-confirmed";
+  at: string;
+}
+export interface LocalJourneyHistory {
+  arcs: LocalArcSummary[];
+  events: LocalJourneyEventLog[];
+}
+
+/** Bounds on the local archive. Ten closed arcs and fifty timeline lines are
+ *  more than anyone reads, and they keep one sealed envelope small enough to
+ *  decrypt on every page load — a device-only memory should not grow into a
+ *  database nobody can open. */
+export const MAX_LOCAL_ARCS = 10;
+export const MAX_LOCAL_EVENTS = 50;
+
+/** Pure, newest-first, bounded: the only way history is ever written locally,
+ *  so completing an arc can never overwrite the ones before it. */
+export function appendLocalHistory(
+  history: LocalJourneyHistory | null,
+  input: { arc?: LocalArcSummary; events?: LocalJourneyEventLog[] },
+): LocalJourneyHistory {
+  const previousArcs = history?.arcs ?? [];
+  const previousEvents = history?.events ?? [];
+  return {
+    arcs: input.arc ? [input.arc, ...previousArcs].slice(0, MAX_LOCAL_ARCS) : previousArcs,
+    events: input.events?.length ? [...input.events, ...previousEvents].slice(0, MAX_LOCAL_EVENTS) : previousEvents,
+  };
+}
 
 /** A journey as the client derives it, stored beside the user scope so a
  *  shared device can't blend two accounts' records. */

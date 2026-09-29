@@ -32,25 +32,33 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 
 ## Release flow
 
-Production does not deploy itself. Cloudflare Workers Builds has not
-auto-triggered on any of the last four pushes to `main`, so a push alone leaves
-production on the previous version. The canonical path is manual and ordered —
-the same three steps `package.json` documents as `//release`:
+A push to `main` **does** deploy itself. Cloudflare Workers Builds (the git
+integration) fired on every recent push: `npx wrangler deployments list` shows a
+second version — authored by the build system rather than the API token — landing
+within a couple of minutes of each push. So the canonical path is two steps, not
+three, and the third step is the one that has been biting people:
 
 ```bash
 npm run verify:release                          # every gate green, or do not ship
-git push origin main                            # the repo stays the source of truth
-rm -rf .open-next .next && npm run deploy       # the release itself
+git push origin main                            # Workers Builds ships it
 npx wrangler deployments list                   # confirm the new version went out
+```
+
+Run the CLI deploy only when that listing shows no new version ~3 minutes after
+the push, or when what has to ship is not yet on `main`:
+
+```bash
+rm -rf .open-next .next && npm run deploy
 ```
 
 `npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`)
 and then `wrangler deploy`, which rolls out to 100% of traffic; live at
-`sovereign.defrag.app` / `app.defrag.app`. Never start a deploy while another
-build is in flight — the collision stalls static-asset binding propagation (the
-503/hang previously seen on `/`, `/privacy`, `/terms`). The dashboard still
-lists a preview-branches trigger for non-`main` branches; treat it as
-unverified until a build from it shows up in `wrangler deployments list`.
+`sovereign.defrag.app` / `app.defrag.app`. Do not run it straight after a push:
+that is a second build of the same commit in flight at once, and that collision
+stalls static-asset binding propagation (the 503/hang previously seen on `/`,
+`/privacy`, `/terms`). The dashboard still lists a preview-branches trigger for
+non-`main` branches; treat it as unverified until a build from it shows up in
+`wrangler deployments list`.
 
 ## Setup
 
@@ -197,7 +205,7 @@ src/
 │   ├── turnstile.ts                   # verifyTurnstileToken (env-gated)
 │   ├── types.ts                       # Shared TypeScript types
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 23 files / 223 tests)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 23 files / 229 tests)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
 

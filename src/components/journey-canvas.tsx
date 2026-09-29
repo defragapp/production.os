@@ -1,7 +1,8 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { INQUIRY_LEVEL_LABELS, DEFAULT_JOURNEY_STEPS, type JourneyStep } from "@/lib/sovereign-journey";
+import type { PastArc } from "@/lib/journeys";
 
 export interface JourneyBarData {
   id: string | null;
@@ -30,6 +31,10 @@ interface JourneyBarProps {
   onComplete: () => void;
   /** Close what is open and begin the next one, in a single tap. */
   onStartFresh: () => void;
+  /** How many arcs this person has already closed. Zero means the door stays
+   *  shut — an empty archive is not worth a control. */
+  pastCount: number;
+  onShowPast: () => void;
 }
 
 const VIEW_W = 600;
@@ -76,7 +81,7 @@ export function JourneyCanvas({ steps, progress, newlyUnlocked }: {
   );
 }
 
-export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPauseResume, onDismiss, onStepBack, onComplete, onStartFresh }: JourneyBarProps) {
+export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPauseResume, onDismiss, onStepBack, onComplete, onStartFresh, pastCount, onShowPast }: JourneyBarProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(journey.goal ?? "");
   const renameTriggerRef = useRef<HTMLButtonElement>(null);
@@ -221,6 +226,110 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
           ))}
         </ol>
       </div>
+      {/* The archive, and the way back to it. It is the LAST child of the panel
+          on purpose: content appended under the final row moves nothing that is
+          already painted, so the count going 0 → 1 in the same breath as a
+          completion costs exactly zero layout shift (the band above has the same
+          property, which is why it survives on transform alone). Class name is
+          a hook twice over — the tap floor audit reads it, and the page hands
+          focus back to it when the sheet closes. */}
+      {pastCount > 0 && (
+        <button
+          type="button"
+          onClick={onShowPast}
+          className="journey-past-trigger mt-2 flex min-h-[2.75rem] w-full items-center justify-between gap-3 rounded-sm border-t border-border/50 pt-2 text-left transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <span className="text-xs text-muted-foreground">Past journeys</span>
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{pastCount} archived</span>
+        </button>
+      )}
     </figure>
+  );
+}
+
+/** A completion date, in the register the rest of the product uses — no
+ *  timestamps, no ISO. An unreadable row is the same as a missing one. */
+function formatArcDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(d);
+}
+
+/** The archive, opened. A fixed sheet rather than in-flow content: it owns no
+ *  static space, so looking back never moves the conversation (see the
+ *  `.past-arc-*` keyframes in globals.css — transform and opacity only). It is
+ *  deliberately non-modal: no scroll lock (that would shift every message row
+ *  by the scrollbar's width) and the thread strip stays reachable. */
+export function PastJourneysSheet({ arcs, onClose }: { arcs: PastArc[]; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  // `onClose` arrives as a fresh arrow on every parent render, so it goes in a
+  // ref: the listener is attached once (below) and always calls the latest
+  // handler. Attaching per-render-on-`onClose` churned the document listener on
+  // every parent update, and with the step panel also expanded underneath a
+  // single Escape folded the panel while the sheet survived to the second press
+  // — a sheet you can enter but not leave on the first try is a trap, not a
+  // feature. Capture phase + stopPropagation makes this topmost layer win the
+  // one press it owns, and leaves the panel behind for the next.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      onCloseRef.current();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, []);
+  return (
+    <div
+      className="past-arc-scrim fixed inset-0 z-[900] flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="false"
+        aria-label="Past journeys"
+        onClick={(event) => event.stopPropagation()}
+        className="past-arc-sheet max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-t-panel border border-border/60 bg-background px-5 pb-6 pt-5 shadow-[0_-24px_60px_-30px_rgba(0,0,0,0.9)] sm:rounded-panel sm:px-6"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Archive</p>
+            <h2 className="mt-1 font-display text-xl font-normal tracking-tight text-foreground">Past journeys</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {/* Honest about the bound rather than promising a permanent record:
+                  both memory modes keep the most recent ten (see MAX_LOCAL_ARCS
+                  and COMPLETED_LIMIT), which is the whole point of a look-back. */}
+              {arcs.length === 1 ? "One arc you have closed." : `${arcs.length} arcs you have closed.`} The ten most recent stay here.
+            </p>
+          </div>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            className="inline-flex min-h-[2.75rem] min-w-[2.75rem] shrink-0 items-center justify-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Close
+          </button>
+        </div>
+        <ol className="mt-4 space-y-3">
+          {arcs.map((arc, i) => (
+            <li key={`${arc.completedAt}-${i}`} className="rounded-md border border-border/50 bg-white/[0.03] px-4 py-3">
+              <p className="text-sm font-medium text-foreground">{arc.goal ?? "Untitled journey"}</p>
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                {formatArcDate(arc.completedAt) || "Date unavailable"}
+                {" · "}
+                {arc.stepsReached} of {arc.totalSteps} steps reached
+              </p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
   );
 }

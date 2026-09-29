@@ -6,8 +6,11 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
+// `nav-link` is a hook, not a style: it carries no declaration on desktop, and
+// the coarse-pointer block in globals.css raises it to the 44px tap floor on
+// touch. Same for `tap-line` on the drawer's rows.
 const navLink =
-  "rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.04]";
+  "nav-link rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.04]";
 const navLinkActive = "text-foreground font-medium bg-white/[0.06] shadow-sm";
 
 const PLUS_BADGE =
@@ -130,7 +133,7 @@ export function Nav() {
                 href="/chat"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/chat")}
-                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
                   pathname === "/chat" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
@@ -140,7 +143,7 @@ export function Nav() {
                 href="/baseline"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/baseline")}
-                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
                   pathname === "/baseline" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
@@ -156,7 +159,7 @@ export function Nav() {
                   href="/upgrade"
                   onClick={() => setOpen(false)}
                   aria-current={ariaCurrent("/upgrade")}
-                  className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
                     pathname === "/upgrade" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                   }`}
                 >
@@ -167,7 +170,7 @@ export function Nav() {
                 href="/account"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/account")}
-                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
                   pathname === "/account" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
@@ -177,7 +180,7 @@ export function Nav() {
                 href="/settings"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/settings")}
-                className={`rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
                   pathname === "/settings" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                 }`}
               >
@@ -186,7 +189,7 @@ export function Nav() {
               <div className="pt-2 mt-2 border-t border-border/50">
                 <button
                   onClick={handleSignOut}
-                  className="w-full rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  className="tap-line w-full rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 >
                   Sign out
                 </button>
@@ -197,28 +200,28 @@ export function Nav() {
               <Link
                 href="/about"
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 Philosophy
               </Link>
               <Link
                 href="/faq"
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 FAQ
               </Link>
               <Link
                 href="/support"
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 Support
               </Link>
               <Link
                 href="/onboard?mode=login"
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 Sign in
               </Link>

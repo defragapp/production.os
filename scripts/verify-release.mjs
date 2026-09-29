@@ -2,7 +2,7 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, twenty-two gates, all must be green before a commit or deploy:
+ * One command, twenty-five gates, all must be green before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
  *   3. vitest run                          — unit + pure-reducer tests
@@ -57,8 +57,26 @@
  *                                            with the composer focused: composer + Send + Mic fully
  *                                            on screen, no horizontal overflow, the panel cap holds
  *                                            its own box, CLS ≤ 0.01, console-clean.
+ *  23. archive & lifecycle                — an arc marked complete stays reachable through the
+ *                                            "Past journeys" disclosure in BOTH memory modes (server
+ *                                            rows and the bounded vault envelope), and closing /
+ *                                            rewinding / starting an arc each leave exactly one line
+ *                                            in journey_events, sourced to the person who decided.
+ *  24. whole-surface ergonomics           — the page that stops a person at /baseline?from=chat
+ *                                            answers why above the form (and stays quiet without the
+ *                                            param), 11 routes spill sideways at zero widths across
+ *                                            390 / 768 / 1440, and every visible control on the
+ *                                            funnel and the reading surfaces presents a ≥44px tap box
+ *                                            on coarse pointers — prose-inline targets exempted the
+ *                                            way WCAG 2.5.8 exempts them, checkboxes measured
+ *                                            through the label that forwards their click.
+ *  25. install manifest                   — /manifest.webmanifest declares 192x192 and 512x512 for
+ *                                            both `any` and `maskable`, and each entry is fetched and
+ *                                            read back as a real PNG whose IHDR matches the declared
+ *                                            size, because a home-screen icon is the first thing a
+ *                                            phone shows of this product.
  *
- * Gates 1-8 and 10-22 fail closed. The preview-backed passes (9-22) boot the
+ * Gates 1-8 and 10-25 fail closed. The preview-backed passes (9-24) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -265,6 +283,33 @@ async function gateStaticAnalysis() {
     css.includes("pb-safe");
   record("the chat shell pins itself to the visual viewport while the keyboard is up", keyboard,
     keyboard ? "" : "the shell lost its visualViewport watch, or went back to an imperative style write");
+  // The whole-surface tap floor (Gate 24 measures it in a real browser): the
+  // rules have to stay inside the ONE `pointer: coarse` block, and the hook
+  // classes they key on have to stay applied at the call sites. Gate 7a reads
+  // the first rule of that block only, so this takes the block itself — up to
+  // the closing brace at column 0 — and checks the rest inside it.
+  const coarseFull = /@media \(pointer: coarse\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+  const uiButton = fs.readFileSync(path.join(srcDir, "components/ui/button.tsx"), "utf8");
+  const logo = fs.readFileSync(path.join(srcDir, "components/ui/logo.tsx"), "utf8");
+  const floorHooks =
+    coarseFull.includes('.btn:not(.btn-link) {') &&
+    coarseFull.includes(".btn-size-icon {") &&
+    coarseFull.includes(".tap-line {") &&
+    coarseFull.includes(".tap-line-center {") &&
+    coarseFull.includes(".nav-brand {") &&
+    /\.nav-link,[\s\S]{0,80}min-height: 2\.75rem/.test(coarseFull) &&
+    /details > summary \{[\s\S]{0,60}min-height: 2\.75rem/.test(coarseFull) &&
+    /\.btn-glass,[\s\S]{0,200}min-height: 2\.75rem/.test(coarseFull) &&
+    // The primitive carries the hooks its CSS keys on, and excludes its own
+    // in-prose variant from the floor.
+    uiButton.includes('"btn inline-flex') &&
+    uiButton.includes("btn-size-icon") &&
+    uiButton.includes("btn-link") &&
+    nav.includes("nav-link") &&
+    nav.includes("tap-line") &&
+    logo.includes("nav-brand");
+  record("the coarse-pointer tap floor is still one block, hooked at every call site", floorHooks,
+    floorHooks ? "" : "a `btn` / `tap-line` / `nav-link` / `nav-brand` hook was dropped from the CSS or from the component that carries it");
 }
 
 async function gateBuild() {
@@ -941,6 +986,39 @@ async function VAULT_SEED(payload) {
   return true;
 }
 
+/** Open one sealed vault record from inside the page and hand back its
+ *  plaintext, so a Device-Only gate can assert what the encrypted store
+ *  actually holds instead of trusting the render. Same envelope format as
+ *  VAULT_SEED (and the same reason for being a real function): it runs in the
+ *  browser, where `indexedDB` and `crypto.subtle` live. `null` means the record
+ *  was never written — a finding, not an empty archive. */
+async function VAULT_READ(id) {
+  const openDb = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open("sovereign-memory", 1);
+    req.onupgradeneeded = () => resolve(req.result);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const idb = (db, store, mode, fn) => new Promise((resolve, reject) => {
+    const req = fn(db.transaction(store, mode).objectStore(store));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const bytes = (s) => {
+    const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+    return out;
+  };
+  const db = await openDb();
+  const stored = await idb(db, "records", "readonly", (o) => o.get(id));
+  const key = await idb(db, "keys", "readonly", (o) => o.get("journey-aesgcm"));
+  db.close();
+  if (!stored || !key) return null;
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes(stored.env.iv) }, key, bytes(stored.env.data));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
 /** The other half of progressive enhancement: pretend the API does not exist.
  *  Own properties shadow the prototype accessors Chrome really does expose. */
 const SPEECH_REMOVED = `(() => {
@@ -986,8 +1064,90 @@ const FIELD_PROBE = `(() => {
   };
 })()`;
 
+/** A whole-surface read of one page: horizontal overflow plus every visible
+ *  control's EFFECTIVE tap box. Three measurement rules, all of them the honest
+ *  one rather than the convenient one:
+ *  - a checkbox/radio is tapped through its label, so the box measured is the
+ *    union of the input and the `label[for=…]` (or wrapping label) that
+ *    forwards the click — the person's target, not the 16px glyph;
+ *  - a control sitting inside running prose is exempt (WCAG 2.5.8's inline
+ *    exception): its height is set by the line it lives in, and forcing it to
+ *    44px would break the paragraph instead of the tap;
+ *  - anything `display: inline` has no box to measure.
+ *  Returns `coarse` so a caller can fail loudly if the emulation it asked for
+ *  (hasTouch) is not what the browser actually reported. */
+const SURFACE_PROBE = `(() => {
+  const vis = (el) => {
+    if (!el || !el.getClientRects().length) return false;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return false;
+    if (el.closest('[aria-hidden="true"]')) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const name = (el) => (el.getAttribute('aria-label') || el.getAttribute('title') || (el.textContent || '').trim() || el.getAttribute('placeholder') || el.getAttribute('href') || el.tagName).replace(/\\s+/g, ' ').slice(0, 42);
+  const box = (el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  };
+  const union = (a, b) => ({
+    left: Math.min(a.left, b.left),
+    top: Math.min(a.top, b.top),
+    right: Math.max(a.right, b.right),
+    bottom: Math.max(a.bottom, b.bottom),
+  });
+  const labelFor = (el) => {
+    if (el.tagName === 'INPUT') {
+      const type = (el.getAttribute('type') || '').toLowerCase();
+      if (type === 'checkbox' || type === 'radio' || type === 'file') {
+        if (el.id) {
+          const bound = document.querySelector('label[for="' + el.id + '"]');
+          if (bound && vis(bound)) return bound;
+        }
+        const wrap = el.closest('label');
+        if (wrap && vis(wrap)) return wrap;
+      }
+    }
+    return null;
+  };
+  // A word inside a sentence: the element is the only control in a text
+  // container that also holds bare words.
+  const inlineInProse = (el) => {
+    if (el.classList.contains('btn-link')) return true;
+    const p = el.parentElement;
+    if (!p || !/^(P|LI|DD|DT|SPAN|LABEL|SMALL|EM|STRONG)$/.test(p.tagName)) return false;
+    const words = [...p.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim()).length;
+    const kids = [...p.children].filter(vis);
+    return words > 0 && kids.length === 1 && kids[0] === el;
+  };
+  const sel = 'button, input:not([type=hidden]), select, textarea, a[href], [role="button"], [role="link"], [role="switch"], [role="tab"], [role="radio"], summary';
+  const nodes = [...document.querySelectorAll(sel)].filter(vis);
+  const under = [];
+  let counted = 0;
+  for (const el of nodes) {
+    const cs = getComputedStyle(el);
+    if (cs.display === 'inline') continue;
+    if (inlineInProse(el)) continue;
+    counted += 1;
+    let b = box(el);
+    const label = labelFor(el);
+    if (label) b = union(b, box(label));
+    const w = Math.round((b.right - b.left) * 10) / 10;
+    const h = Math.round((b.bottom - b.top) * 10) / 10;
+    if (h < 44 || w < 44) {
+      under.push({ tag: el.tagName.toLowerCase(), name: name(el), w, h, cls: String(el.className || '').slice(0, 70) });
+    }
+  }
+  return {
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    coarse: matchMedia('(pointer: coarse)').matches,
+    count: counted,
+    under: under.sort((a, b) => a.h - b.h),
+  };
+})()`;
+
 async function gateErgonomics(port, booted) {
-  heading("Gate 12-22 · transcript clearance, veil interactions, mid-stream drop, thread isolation, voice, completion, keyboard");
+  heading("Gate 12-23 · transcript clearance, veil interactions, mid-stream drop, thread isolation, voice, completion, keyboard, archive");
   const skip = (why) => {
     record("first message never behind the collapsed veil (3 viewports)", true, `SKIPPED — ${why}`);
     record("live veil expand → step override → collapse is shift-free", true, `SKIPPED — ${why}`);
@@ -1008,6 +1168,8 @@ async function gateErgonomics(port, booted) {
     record("keyboard cycle: the expanded panel keeps its own box and off the composer", true, `SKIPPED — ${why}`);
     record("keyboard: the shell obeys a visualViewport-only report and gives the height back", true, `SKIPPED — ${why}`);
     record("keyboard: /onboard keeps its focused field reachable through the same cycle", true, `SKIPPED — ${why}`);
+    record("a completed arc stays reachable through Past journeys, in both memories", true, `SKIPPED — ${why}`);
+    record("the arc's three decisions are recorded: rewound, completed, started", true, `SKIPPED — ${why}`);
   };
   if (!booted) return skip("preview server did not come up in this environment");
   const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
@@ -1831,6 +1993,228 @@ async function gateErgonomics(port, booted) {
   record("device journey: the same two taps work from the encrypted vault alone", deviceDone.length === 0 && deviceDoneCls >= 0 && deviceDoneCls <= 0.01,
     deviceDone.slice(0, 3).join(" | ") || `vault archive + fresh start, whole cycle CLS=${deviceDoneCls.toFixed(4)}`);
 
+  // ── Gate 23 · an arc that ends must still be readable, and its timeline
+  //    has to know that it ended ──────────────────────────────────────
+  // Gate 21 proved the two taps work. It said nothing about what happens after:
+  // a journey marked `complete` left the panel, the row stayed in D1 with no way
+  // back to it, and `journey_events` — the table whose whole purpose is "why did
+  // it unlock that?" — recorded none of the three decisions the person actually
+  // made. So this walks the same surface twice more and asserts the two things
+  // only an audit trail can assert: what is on screen, and what is in the store.
+  const archive = [];
+  const lifecycle = [];
+  let archiveCls = -1;
+  /** Finish an arc that is sitting at its last step, then find it again.
+   *  Every step is measured, because an archive nobody can reach is the same
+   *  product defect as an archive that was never written. */
+  const walkPastJourneys = async (page, label, goalText) => {
+    const found = [];
+    const cls = async () => {
+      const c = await page.evaluate(() => (window.__cls ? window.__cls.total : -1));
+      if (c < 0) found.push(`${label}: no shift observer was installed`);
+      return c;
+    };
+    await page.getByRole("button", { name: "Show journey steps" }).click();
+    await sleep(700);
+    const complete = page.getByRole("button", { name: "Mark complete", exact: true });
+    if ((await complete.count()) === 0) {
+      found.push(`${label}: the arc never reached a Mark complete control, so the archive walk could not start`);
+      return { found, cls: -1 };
+    }
+    await page.evaluate(() => { if (window.__cls) window.__cls.total = 0; });
+    await complete.click();
+    await sleep(1400);
+    // The disclosure is the panel's LAST child on purpose: the count going 0 → 1
+    // has to be the one insertion in the app that moves nothing already painted.
+    const trigger = page.locator(".journey-past-trigger");
+    if ((await trigger.count()) === 0) {
+      found.push(`${label}: a completed arc left no way back to it`);
+      return { found, cls: await cls() };
+    }
+    const tbox = await trigger.boundingBox();
+    if (!tbox || tbox.height < 44 || tbox.width < 44) {
+      found.push(`${label}: the Past journeys disclosure is ${tbox ? `${Math.round(tbox.width)}x${Math.round(tbox.height)}` : "unmeasurable"}, under the 44×44 tap floor`);
+      return { found, cls: await cls() };
+    }
+    const readout = (await trigger.innerText()).replace(/\s+/g, " ").trim();
+    // Both the count and the row meta wear `uppercase` in the sheet, and
+    // Chrome's innerText applies that text-transform — so these read back as
+    // "1 ARCHIVED" / "5 OF 5 STEPS REACHED". Match the words a person sees,
+    // blind to the casing the stylesheet forced on them.
+    if (!/1 archived/i.test(readout)) found.push(`${label}: the disclosure read ${JSON.stringify(readout.slice(0, 48))} instead of counting one closed arc`);
+    await trigger.click();
+    await sleep(700);
+    const sheet = page.locator('[role="dialog"][aria-label="Past journeys"]');
+    if ((await sheet.count()) === 0) {
+      found.push(`${label}: the disclosure opened no archive sheet`);
+      return { found, cls: await cls() };
+    }
+    const rows = (await sheet.innerText()).replace(/\s+/g, " ");
+    if (!rows.includes(goalText)) found.push(`${label}: the sheet did not name the arc it closed (looked for ${JSON.stringify(goalText.slice(0, 32))})`);
+    if (!/5 of 5 steps reached/i.test(rows)) found.push(`${label}: the steps reached were missing from the row (${JSON.stringify(rows.slice(0, 90))})`);
+    if (/Date unavailable/i.test(rows)) found.push(`${label}: the completion date never rendered`);
+    const cbox = await sheet.getByRole("button", { name: "Close", exact: true }).boundingBox();
+    if (!cbox || cbox.height < 44 || cbox.width < 44) found.push(`${label}: the sheet's Close control is ${cbox ? `${Math.round(cbox.width)}x${Math.round(cbox.height)}` : "unmeasurable"}`);
+    await page.keyboard.press("Escape");
+    await sleep(650);
+    if ((await page.locator('[role="dialog"][aria-label="Past journeys"]').count()) > 0) found.push(`${label}: Escape left the archive on screen`);
+    const focusBack = await page.evaluate(() => String(document.activeElement?.className ?? document.activeElement?.tagName ?? "none"));
+    if (!/journey-past-trigger/.test(focusBack)) found.push(`${label}: closing the archive dropped focus to ${JSON.stringify(focusBack.slice(0, 40))} instead of the disclosure`);
+    return { found, cls: await cls() };
+  };
+
+  // ── server: D1 holds the archive, and journey_events holds the timeline ──
+  {
+    const seededClean = await cleanJourneys();
+    if (!seededClean.ok) {
+      archive.push(`local seed could not be re-applied (${seededClean.why})`);
+    } else {
+      try {
+        const { ctx, page, errs } = await openChat(390, 844);
+        // Rewind FIRST, while the seed still leaves a CURRENT step. "Not there
+        // yet?" renders only on a step at or before the current one, and the
+        // completion walk flattens every step to done — which would leave the
+        // override with nothing to sit on and could never log the step-rewound
+        // row. The visual half of the override is Gate 13's job; this is the
+        // write's job.
+        await page.getByRole("button", { name: "Show journey steps" }).click();
+        await sleep(700);
+        const rewind = page.locator('#journey-steps button:has-text("Not there yet?")').first();
+        if ((await rewind.count()) === 0) {
+          lifecycle.push("server: no step-override control to tap, so a rewound arc was never logged");
+        } else {
+          await rewind.click();
+          await sleep(1200);
+        }
+        // Now advance the arc to its last step: the completion walk needs a Mark
+        // complete to press, and the archived row has to read "5 of 5 reached".
+        if (!(await setJourneyAtEnd(FIXTURE_JOURNEY_ID))) {
+          archive.push("local D1 would not return the fixture journey to its last step after the override");
+        } else {
+          await page.reload({ waitUntil: "domcontentloaded", timeout: 25000 });
+          await page.waitForSelector('textarea[aria-label="Message Sovereign"]', { timeout: 15000 });
+          await sleep(2000);
+          const walk = await walkPastJourneys(page, "server", "Work through the tension with my partner");
+          archive.push(...walk.found);
+          archiveCls = walk.cls;
+          // And the next arc, so the row the fresh journey mints leaves its own
+          // line on the same page it was created on.
+          const fresh = page.getByRole("button", { name: "Start a fresh journey", exact: true });
+          if ((await fresh.count()) === 0) {
+            lifecycle.push("server: no fresh-start control after archiving, so a new arc could not be logged");
+          } else {
+            await fresh.click();
+            await sleep(1600);
+          }
+        }
+        const noise = errs.filter((m) => !/status of 503/.test(m));
+        if (noise.length) archive.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+        await ctx.close();
+        const lines = await d1Query(`SELECT journey_id, milestone, source FROM journey_events WHERE user_id = '${FIXTURE_USER_ID}'`);
+        if (!lines) {
+          lifecycle.push("local D1 could not answer the journey_events read-back");
+        } else {
+          const has = (milestone, journeyId) => lines.filter((l) => l.milestone === milestone && l.journey_id === journeyId);
+          const startedElsewhere = lines.filter((l) => l.milestone === "journey-started" && l.journey_id !== FIXTURE_JOURNEY_ID);
+          if (has("step-rewound", FIXTURE_JOURNEY_ID).length !== 1) lifecycle.push(`server: step-rewound rows for the arc = ${has("step-rewound", FIXTURE_JOURNEY_ID).length} (expected one)`);
+          if (has("journey-completed", FIXTURE_JOURNEY_ID).length !== 1) lifecycle.push(`server: journey-completed rows for the arc = ${has("journey-completed", FIXTURE_JOURNEY_ID).length} (expected exactly one — a repeat tap must not re-log the same transition)`);
+          if (startedElsewhere.length !== 1) lifecycle.push(`server: journey-started rows on a new arc = ${startedElsewhere.length} (expected one)`);
+          const decided = lines.filter((l) => l.source !== "user-confirmed");
+          if (decided.length > 0) lifecycle.push(`server: lifecycle lines wrote source=${JSON.stringify(decided[0].source)} — a decision the person made is not 'derived'`);
+        }
+        // The archived row is still in D1 with its status, not deleted: history
+        // is preserved by completing, which is the table's own documented rule.
+        const kept = await d1Query(`SELECT id, status FROM journeys WHERE user_id = '${FIXTURE_USER_ID}' AND status = 'complete'`);
+        if (!kept) lifecycle.push("local D1 could not answer the archived-row check");
+        else if (!kept.some((r) => r.id === FIXTURE_JOURNEY_ID)) lifecycle.push("server: the completed row was deleted instead of kept as history");
+      } catch (e) {
+        archive.push(`server archive walk failed: ${String(e).slice(0, 90)}`);
+      }
+    }
+    await cleanJourneys();
+  }
+
+  // ── device: the same look-back, out of the encrypted vault alone ──────
+  // The load-bearing local question: completing an arc replaces the one `journey`
+  // record the device holds, so if the archive were the same record it would be
+  // overwritten on the next tap and the person would have "completed" their
+  // history away. It is a separate envelope, appended through a bounded writer.
+  let deviceArchiveCls = -1;
+  if (!(await flip("local"))) {
+    archive.push("local D1 would not accept the memory_mode flip for the device archive walk");
+  } else {
+    try {
+      const { ctx, page, errs } = await openChat(390, 844);
+      const seeded = await page.evaluate(VAULT_SEED, {
+        status: "active",
+        state: {
+          current_step: "grounded-next-step",
+          unlocked_milestones: MILESTONE_IDS,
+          visual_progress: 1,
+          newly_unlocked: [],
+          inquiry_level: 4,
+          suggested_goal: LOCAL_GOAL,
+          steps: allDoneSteps,
+        },
+      }).catch((e) => `vault write threw ${String(e)}`);
+      if (seeded !== true) {
+        archive.push(String(seeded).slice(0, 90));
+      } else {
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 25000 });
+        await page.waitForSelector('textarea[aria-label="Message Sovereign"]', { timeout: 15000 });
+        await sleep(2000);
+        const walk = await walkPastJourneys(page, "device", LOCAL_GOAL);
+        archive.push(...walk.found);
+        deviceArchiveCls = walk.cls;
+        const fresh = page.getByRole("button", { name: "Start a fresh journey", exact: true });
+        if ((await fresh.count()) === 0) {
+          lifecycle.push("device: no fresh-start control after archiving, so a new arc could not be logged");
+        } else {
+          await fresh.click();
+          await sleep(1700);
+        }
+        const history = await page.evaluate(VAULT_READ, "journey-history").catch((e) => ({ error: String(e).slice(0, 70) }));
+        if (history?.error) {
+          lifecycle.push(`device: the archive envelope could not be opened (${history.error})`);
+        } else if (!history?.state) {
+          lifecycle.push("device: completing an arc in Device-Only wrote no journey-history record at all");
+        } else {
+          const arcs = history.state.arcs ?? [];
+          const lines = history.state.events ?? [];
+          if (arcs.length !== 1) lifecycle.push(`device: the vault archive holds ${arcs.length} arcs (expected one)`);
+          else if (arcs[0].goal !== LOCAL_GOAL || arcs[0].stepsReached !== 5) lifecycle.push(`device: the archived row is wrong (${JSON.stringify(arcs[0]).slice(0, 80)})`);
+          const milestones = lines.map((l) => l.milestone);
+          if (!milestones.includes("journey-completed")) lifecycle.push("device: the vault timeline never recorded the closing");
+          if (!milestones.includes("journey-started")) lifecycle.push("device: the vault timeline never recorded the new arc");
+          if (lines.filter((l) => l.milestone === "journey-completed").length !== 1) lifecycle.push("device: the closing was logged more than once");
+        }
+        // And the live record the next walk reads is untouched by the archive:
+        // one fresh journey, nothing carried over.
+        const live = await page.evaluate(VAULT_READ, "journey").catch(() => null);
+        if (!live?.state) {
+          lifecycle.push("device: no live vault record after the fresh start");
+        } else if (live.status === "complete") {
+          lifecycle.push("device: starting fresh left the finished arc as the live journey");
+        } else if (live.state.unlocked_milestones?.length !== 0) {
+          lifecycle.push(`device: the fresh journey inherited ${live.state.unlocked_milestones?.length} milestones from the closed one`);
+        }
+        const noise = errs.filter((m) => !/status of 503/.test(m));
+        if (noise.length) archive.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+        await ctx.close();
+      }
+    } catch (e) {
+      archive.push(`device archive walk failed: ${String(e).slice(0, 90)}`);
+    } finally {
+      if (!(await flip("server"))) archive.push("memory_mode could not be restored to 'server'");
+      await cleanJourneys();
+    }
+  }
+  const archiveWorst = Math.max(archiveCls, deviceArchiveCls);
+  record("a completed arc stays reachable through Past journeys, in both memories", archive.length === 0 && archiveWorst >= 0 && archiveWorst <= 0.01,
+    archive.slice(0, 3).join(" | ") || `disclosure + sheet read the closed arc in server and Device-Only, whole walk CLS=${archiveWorst.toFixed(4)}`);
+  record("the arc's three decisions are recorded: rewound, completed, started", lifecycle.length === 0,
+    lifecycle.slice(0, 3).join(" | ") || "journey_events in D1 and the vault timeline both hold one line per decision");
+
   // ── Gate 22 · the keyboard is a viewport, and it comes and goes ───────
   // Nothing may be occluded, spilled, or jolted while the visible height
   // contracts and expands again: on a phone this happens twice a message, and
@@ -1934,9 +2318,9 @@ async function gateErgonomics(port, booted) {
     // Turnstile's script prints its own anti-debug bait — `console.error("%c%d",
     // "font-size:0;color:transparent", <number>)` — which lands here verbatim and
     // is untouchable from page code. Only an error whose source is that widget is
-    // excused, and every other finding carries its URL, so a future
-    // misdiagnosis is readable in the gate report instead of filtered away.
-    const isWidgetNoise = (url) => /^https:\/\/challenges\.cloudflare\.com\//.test(url);
+    // excused (see the module-level `isWidgetNoise`), and every other finding
+    // carries its URL, so a future misdiagnosis is readable in the gate report
+    // instead of filtered away.
     page.on("console", (m) => {
       if (m.type() !== "error") return;
       const text = m.text();
@@ -1973,10 +2357,205 @@ async function gateErgonomics(port, booted) {
   await browser.close();
 }
 
+/**
+ * Gate 24 · the rest of the funnel was never measured. The ergonomics lessons
+ * above were learned on /chat and /settings — two routes out of eleven. This
+ * walks the whole thing at the three sizes a real visitor owns and asks each
+ * page the same three questions: does the page that STOPS someone explain
+ * itself, does anything spill sideways, and is every control a thumb can
+ * actually hit? Measured in the browser, because a stylesheet that says
+ * `min-height` is not the same claim as a box that is.
+ */
+async function gateSurfaces(port, booted) {
+  heading("Gate 24 · whole-surface ergonomics — 11 routes at 3 sizes");
+  const skip = (why) => {
+    record("the page that stops a person tells them why, above the form it stops them at", true, `SKIPPED — ${why}`);
+    record("no surface spills sideways at 390 / 768 / 1440 (11 routes)", true, `SKIPPED — ${why}`);
+    record("the funnel's own controls are thumb-sized on touch", true, `SKIPPED — ${why}`);
+    record("the reading surfaces hold the same tap floor", true, `SKIPPED — ${why}`);
+  };
+  if (!booted) return skip("preview server did not come up in this environment");
+  const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
+  if (!jwtSecret) return skip("no JWT_SECRET in .dev.vars");
+  const seeded = await seedLocalD1();
+  if (!seeded.ok) return skip(seeded.why);
+  const token = mintSessionToken(jwtSecret);
+
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ channel: "chrome", headless: true });
+  const stopped = [];
+  const spill = [];
+  const funnelFloor = [];
+  const readingFloor = [];
+  let surfacesJudged = 0;
+  let controlsMeasured = 0;
+  {
+    const authRoutes = [
+      { route: "/baseline?from=chat", sink: funnelFloor, banner: true },
+      { route: "/baseline", sink: funnelFloor, noBanner: true },
+      { route: "/account", sink: funnelFloor },
+      { route: "/upgrade", sink: funnelFloor },
+      { route: "/settings", sink: funnelFloor },
+    ];
+    const publicRoutes = [
+      // Signup step one is the funnel's front door: consent checkbox, Turnstile,
+      // submit — and it is only reachable signed OUT, so it rides with the rest
+      // of the public set and reports into the funnel's own tally.
+      { route: "/onboard?mode=signup", sink: funnelFloor },
+      { route: "/", sink: readingFloor },
+      { route: "/about", sink: readingFloor },
+      { route: "/faq", sink: readingFloor },
+      { route: "/support", sink: readingFloor },
+      { route: "/invite", sink: readingFloor },
+    ];
+    // The first-time branch is the one that carries the explanation, and it only
+    // renders while no Baseline row exists. The fixture seeds one, so this takes
+    // it away for the pass and puts it back with the upserting seed file.
+    await d1Local(`DELETE FROM baselines WHERE user_id = '${FIXTURE_USER_ID}';`);
+    for (const vp of [{ w: 390, h: 844 }, { w: 768, h: 1024 }, { w: 1440, h: 900, fine: true }]) {
+      for (const [authed, list] of [[true, authRoutes], [false, publicRoutes]]) {
+        const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h }, hasTouch: !vp.fine });
+        if (authed) await ctx.addCookies([{ name: "sovereign_session", value: token, domain: "localhost", path: "/", httpOnly: false, secure: false, sameSite: "Lax" }]);
+        await ctx.addInitScript(CLS_OBSERVER_SCRIPT);
+        const page = await ctx.newPage();
+        for (const entry of list) {
+          try {
+            await page.goto(`http://localhost:${port}${entry.route}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+            await sleep(1300);
+            const land = await page.evaluate(() => location.pathname);
+            if (land.startsWith("/onboard") && !entry.route.startsWith("/onboard")) {
+              stopped.push(`${vp.w} ${entry.route} sent the session to ${land} — nothing was measured there`);
+              continue;
+            }
+            const m = await page.evaluate(SURFACE_PROBE);
+            surfacesJudged += 1;
+            controlsMeasured += m.count;
+            if (m.count < 3) spill.push(`${entry.route}@${vp.w}: only ${m.count} control(s) measurable — the page rendered near-empty`);
+            if (m.overflow > 1) spill.push(`${entry.route}@${vp.w}: ${m.overflow}px of horizontal overflow`);
+            if (!vp.fine) {
+              if (!m.coarse) stopped.push(`${vp.w}×${vp.h}: (pointer: coarse) never matched, so the tap floor was not in play`);
+              for (const u of m.under) entry.sink.push(`${entry.route}@${vp.w}: ${u.tag} "${u.name}" ${u.w}×${u.h}`);
+            }
+            if (entry.banner) {
+              // Chrome's innerText applies text-transform, and the callout's
+              // heading is an uppercase Eyebrow — so the fetched string reads
+              // "WHY WE ASK FIRST". Match it the way a person would: blind to
+              // the casing the stylesheet forced on it.
+              const main = await page.locator("main").innerText().catch(() => "");
+              if (!/why we ask first/i.test(main)) {
+                stopped.push(`${vp.w}: arriving from a conversation, /baseline still gave no reason for the ask`);
+              } else {
+                if (!/Chat opens the moment your Baseline exists/.test(main)) stopped.push(`${vp.w}: the callout never says what the Baseline unlocks`);
+                if (!/one thing only/.test(main)) stopped.push(`${vp.w}: the callout never says what happens to the birth data`);
+                if (!/NASA\/JPL/.test(main)) stopped.push(`${vp.w}: the callout never says where the numbers come from`);
+                const mark = await page.getByText(/why we ask first/i).boundingBox().catch(() => null);
+                const form = await page.locator("form").first().boundingBox().catch(() => null);
+                if (!mark || !form) stopped.push(`${vp.w}: the callout or the form was not on screen to place`);
+                else if (mark.bottom > form.top) stopped.push(`${vp.w}: the explanation sits below the form it explains (${Math.round(mark.bottom)} > ${Math.round(form.top)})`);
+              }
+              const cls = await page.evaluate(() => (window.__cls ? window.__cls.total : -1));
+              if (cls < 0) stopped.push(`${vp.w}: no shift observer on the stopped page`);
+              else if (cls > 0.01) stopped.push(`${vp.w}: arriving at the stopped page moved the layout (CLS=${cls.toFixed(4)})`);
+            }
+            if (entry.noBanner && (await page.getByText(/why we ask first/i).count()) > 0) {
+              stopped.push(`${vp.w}: /baseline explains the chat redirect to someone who never came from chat`);
+            }
+          } catch (e) {
+            spill.push(`${entry.route}@${vp.w}: nav failed ${String(e).slice(0, 60)}`);
+          }
+        }
+        await ctx.close();
+      }
+    }
+    await seedLocalD1();
+  }
+  record("the page that stops a person tells them why, above the form it stops them at", stopped.length === 0,
+    stopped.slice(0, 3).join(" | ") || "one box, three answers, above the form — and quiet without ?from=chat");
+  record("no surface spills sideways at 390 / 768 / 1440 (11 routes)", spill.length === 0 && surfacesJudged === 33,
+    spill.slice(0, 3).join(" | ") || `${surfacesJudged} route×viewport pairs, 0 overflow`);
+  record("the funnel's own controls are thumb-sized on touch", funnelFloor.length === 0,
+    funnelFloor.slice(0, 3).join(" | ") || "baseline, account, upgrade, settings and signup clear 44px");
+  record("the reading surfaces hold the same tap floor", readingFloor.length === 0,
+    readingFloor.slice(0, 3).join(" | ") || `landing, philosophy, FAQ, support and invite — ${controlsMeasured} controls measured in all`);
+
+  await browser.close();
+}
+
 function fetchWithTimeout(url, ms) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t));
+}
+
+/** Cloudflare's Turnstile widget debugs itself in the visitor's console (an
+ *  anti-devtools trick), and /onboard is the only page that mounts it. Excuse
+ *  those lines by ORIGIN only — never by message text — so a page bug wearing
+ *  the same clothes stays red, and every other finding keeps its URL. */
+const isWidgetNoise = (url) => /^https:\/\/challenges\.cloudflare\.com\//.test(url);
+
+/** Read the size a PNG actually encodes (IHDR), so an icon entry is checked as
+ *  the file it is rather than the string the manifest claims. */
+function pngDimensions(buf) {
+  if (buf.length < 24) return null;
+  if (buf.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") return null;
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
+
+async function gateManifest(port, booted) {
+  heading("Gate 25 · PWA install manifest");
+  if (!booted) {
+    record("the install manifest carries 192 and 512, any + maskable, as real PNGs", true, "SKIPPED — preview server did not come up in this environment");
+    return;
+  }
+  const findings = [];
+  let json = null;
+  try {
+    const res = await fetchWithTimeout(`http://localhost:${port}/manifest.webmanifest`, 15000);
+    if (res.status !== 200) findings.push(`GET /manifest.webmanifest → ${res.status}`);
+    const type = res.headers.get("content-type") || "";
+    if (!/manifest\+json|application\/json/.test(type)) findings.push(`served as ${JSON.stringify(type)}`);
+    json = JSON.parse(await res.text());
+  } catch (e) {
+    findings.push(`the manifest is not readable: ${String(e).slice(0, 70)}`);
+  }
+  let checked = 0;
+  if (json) {
+    const icons = Array.isArray(json.icons) ? json.icons : [];
+    if (icons.length === 0) findings.push("no icons array");
+    for (const want of [192, 512]) {
+      const sizes = `${want}x${want}`;
+      const holds = (i) => String(i.sizes || "").split(/\s+/).includes(sizes);
+      const purpose = (i, p) => String(i.purpose || "any").split(/\s+/).includes(p);
+      const any = icons.filter((i) => holds(i) && purpose(i, "any"));
+      const mask = icons.filter((i) => holds(i) && purpose(i, "maskable"));
+      if (any.length === 0) findings.push(`${sizes} declared for no any-purpose icon`);
+      if (mask.length === 0) findings.push(`${sizes} declared for no maskable icon`);
+      // The declaration is a claim; the file is the fact. An entry that points
+      // at a 64px bitmap (or an HTML 404 page wearing a PNG name) installs a
+      // blurry or missing icon, and the manifest would still read as complete.
+      for (const icon of [...any, ...mask]) {
+        checked += 1;
+        try {
+          const res = await fetchWithTimeout(`http://localhost:${port}${icon.src}`, 15000);
+          const buf = Buffer.from(await res.arrayBuffer());
+          const ctype = res.headers.get("content-type") || "";
+          const dim = pngDimensions(buf);
+          if (res.status !== 200) findings.push(`${icon.src} → ${res.status}`);
+          else if (!ctype.startsWith("image/png")) findings.push(`${icon.src} served as ${JSON.stringify(ctype)}`);
+          else if (!dim) findings.push(`${icon.src} is not a decodable PNG`);
+          else if (dim.width !== want || dim.height !== want) findings.push(`${icon.src} declares ${icon.sizes} and encodes ${dim.width}x${dim.height}`);
+          else if (buf.length < 500) findings.push(`${icon.src} is ${buf.length} bytes at ${sizes} — too thin to be a real render`);
+        } catch (e) {
+          findings.push(`${icon.src} could not be fetched: ${String(e).slice(0, 50)}`);
+        }
+      }
+    }
+    if (!json.name) findings.push("no name");
+    if (!json.theme_color) findings.push("no theme_color");
+    if (json.display !== "standalone") findings.push(`display=${JSON.stringify(json.display)} — a home-screen install should open as its own app`);
+  }
+  record("the install manifest carries 192 and 512, any + maskable, as real PNGs", findings.length === 0 && checked >= 4,
+    findings.slice(0, 3).join(" | ") || `${checked} icon entries fetched and byte-checked against their declared size`);
 }
 
 async function main() {
@@ -1998,8 +2577,10 @@ async function main() {
   const { child, booted } = await launchPreview(8788);
   try {
     await gateRoutes(8788, booted);
+    await gateManifest(8788, booted);
     await gateAuthenticated(8788, booted);
     await gateErgonomics(8788, booted);
+    await gateSurfaces(8788, booted);
   } finally {
     if (child) child.kill("SIGKILL");
   }
@@ -2026,4 +2607,4 @@ if (!process.env.SOVEREIGN_VERIFY_IMPORT_ONLY) {
 }
 
 // Exported for isolated gate development in .audit-tmp scratch runners.
-export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, FIXTURE_THREAD2_ID, FIXTURE_JOURNEY2_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, gateErgonomics };
+export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, FIXTURE_THREAD2_ID, FIXTURE_JOURNEY2_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, isWidgetNoise, gateErgonomics, gateSurfaces, gateManifest, SURFACE_PROBE };

@@ -19,12 +19,18 @@ import {
   stepsFromUnlocked,
   STEP_TO_MILESTONE,
   MILESTONE_WEIGHTS,
+  LIFECYCLE_EVENTS,
+  pastArcFromView,
   type JourneyView,
+  type PastArc,
 } from "./journeys";
 import {
+  appendLocalHistory,
   patchLocalJourney,
   readRecord,
   writeRecord,
+  type LocalJourneyEventLog,
+  type LocalJourneyHistory,
   type LocalJourneyRecord,
   type LocalJourneyStatus,
   type MemoryMode,
@@ -102,6 +108,10 @@ function viewToState(view: JourneyClientView): JourneyState {
 
 interface JourneyStore {
   fetchActive(): Promise<JourneyClientView | null>;
+  /** Arcs that have been closed, newest first — the look-back the archive is
+   *  for. Empty rather than null: "no finished arcs yet" is a real answer and
+   *  the UI should not have to distinguish it from a failed read. */
+  fetchCompleted(): Promise<PastArc[]>;
   /** The journey a specific thread was produced in. `null` when the row is
    *  gone (deleted, or never linked) and the caller should fall back. */
   fetchById(id: string): Promise<JourneyClientView | null>;
@@ -156,6 +166,25 @@ async function getJSON<T>(url: string, init?: RequestInit): Promise<T | null> {
   }
 }
 
+/** Add to the device's own archive and timeline. Best effort by design: the
+ *  live journey record is the load-bearing write, and a history line that fails
+ *  to seal must never cost someone their progress or block the tap they made. */
+async function localAppend(userScope: string, input: { arc?: PastArc; events?: LocalJourneyEventLog[] }): Promise<void> {
+  try {
+    const prev = await readRecord<LocalJourneyHistory>("journey-history", userScope);
+    const at = new Date().toISOString();
+    await writeRecord<LocalJourneyHistory>("journey-history", {
+      version: 1,
+      userScope,
+      updatedAt: at,
+      status: "active",
+      state: appendLocalHistory(prev?.state ?? null, input),
+    });
+  } catch {
+    // Nothing to do from here but keep going; the next read shows what survived.
+  }
+}
+
 /** Like getJSON, but reads a 409's body: `POST /api/journeys` answers 409 with
  *  the journey that is already active, which is the caller's answer as often
  *  as not — so a conflict must not read as a network failure. */
@@ -192,6 +221,10 @@ const serverStore: JourneyStore = {
   async fetchById(id) {
     const data = await getJSON<{ journey?: JourneyView }>(`/api/journeys/${encodeURIComponent(id)}`);
     return data?.journey ? markedView(data.journey) : null;
+  },
+  async fetchCompleted() {
+    const data = await getJSON<{ completed?: PastArc[] }>("/api/journeys");
+    return data?.completed ?? [];
   },
   async applyStateFrame(state, journeyId) {
     return { ...stateToView(journeyId, state), inquiryLevel: state.inquiry_level, newlyUnlocked: state.newly_unlocked };
@@ -232,6 +265,10 @@ function localStore(userScope: string): JourneyStore {
       const rec = await readRecord<HoldableJourney>("journey", userScope);
       return rec ? viewFromLocal(rec) : null;
     },
+    async fetchCompleted() {
+      const rec = await readRecord<LocalJourneyHistory>("journey-history", userScope);
+      return rec?.state.arcs ?? [];
+    },
     async applyStateFrame(state) {
       const view: JourneyClientView = { ...stateToView(LOCAL_JOURNEY_ID, state), inquiryLevel: state.inquiry_level, newlyUnlocked: state.newly_unlocked };
       const prev = await readRecord<HoldableJourney>("journey", userScope);
@@ -239,6 +276,12 @@ function localStore(userScope: string): JourneyStore {
       // renamed record keeps its human-set status through a derived turn.
       const status: LocalJourneyStatus = prev && prev.status !== "complete" ? prev.status : "active";
       await writeRecord("journey", localRecordFromView(view, userScope, status));
+      // The device's own `journey_events`: a milestone the engine derived, kept
+      // in the same envelope format as everything else here.
+      if (view.newlyUnlocked.length > 0) {
+        const at = new Date().toISOString();
+        await localAppend(userScope, { events: view.newlyUnlocked.map((milestone) => ({ milestone, source: "derived" as const, at })) });
+      }
       return view;
     },
     async applyControl({ rename, pause, complete, overrideStep }) {
@@ -258,12 +301,28 @@ function localStore(userScope: string): JourneyStore {
         };
       }
       await writeRecord("journey", patched);
-      return viewFromLocal(patched);
+      const view = viewFromLocal(patched);
+      // Closing an arc is the moment the device must not forget: the live
+      // record is about to be replaced by the next one, so the finished arc is
+      // copied into the archive first. Same transition-only rule as the server
+      // (`journey_events` gets one line per closing, not one per retry).
+      if (complete && rec.status !== "complete") {
+        await localAppend(userScope, {
+          arc: pastArcFromView(view),
+          events: [{ milestone: LIFECYCLE_EVENTS.completed, source: "user-confirmed", at: view.updated_at }],
+        });
+      } else if (overrideStep) {
+        await localAppend(userScope, {
+          events: [{ milestone: LIFECYCLE_EVENTS.rewound, source: "user-confirmed", at: view.updated_at }],
+        });
+      }
+      return view;
     },
     async createFresh() {
       // A device holds exactly one journey, so "fresh" means the current record
-      // is replaced — never accumulated. The archive lives in whatever the
-      // person did with it before (completing it is the caller's step).
+      // is replaced — never accumulated. What the finished arc leaves behind is
+      // already in `journey-history` (completing it is the caller's step, and
+      // that is the write that archives it), so overwriting here loses nothing.
       const rec: LocalJourneyRecord<HoldableJourney> = {
         version: 1,
         userScope,
@@ -272,7 +331,9 @@ function localStore(userScope: string): JourneyStore {
         state: freshJourneyState(),
       };
       const ok = await writeRecord("journey", rec);
-      return ok ? viewFromLocal(rec) : null;
+      if (!ok) return null;
+      await localAppend(userScope, { events: [{ milestone: LIFECYCLE_EVENTS.started, source: "user-confirmed", at: rec.updatedAt }] });
+      return viewFromLocal(rec);
     },
   };
 }
@@ -296,6 +357,9 @@ export function getJourneyStore(mode: MemoryMode, userScope: string): JourneySto
  */
 export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () => void) {
   const [view, setView] = useState<JourneyClientView | null>(null);
+  // Closed arcs are a second, slower read: the live journey is what the canvas
+  // is for, and the archive arriving a beat later costs nothing.
+  const [past, setPast] = useState<PastArc[]>([]);
   // Stable store identity per (mode, scope): the fetch effect must not
   // re-fire on every render.
   const store = useMemo(() => getJourneyStore(mode, userScope), [mode, userScope]);
@@ -303,11 +367,23 @@ export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () =>
   // thread-linked read). The latest request wins, always.
   const genRef = useRef(0);
 
+  const refreshPast = useCallback(async () => {
+    const gen = genRef.current;
+    const arcs = await store.fetchCompleted();
+    if (gen === genRef.current) setPast(arcs);
+    return arcs;
+  }, [store]);
+
   useEffect(() => {
     const gen = ++genRef.current;
     void (async () => {
+      // Kick the archive off first so the two reads overlap, then let the
+      // journey land — neither waits for the other to be shown.
+      const arcsPromise = store.fetchCompleted();
       const loaded = await store.fetchActive();
       if (gen === genRef.current) setView(loaded);
+      const arcs = await arcsPromise;
+      if (gen === genRef.current) setPast(arcs);
     })();
   }, [store]);
 
@@ -339,11 +415,15 @@ export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () =>
   }, [store]);
 
   /** Close the arc that is finished. The row survives (status `complete`);
-   *  `GET /api/journeys` filters it out, so the next real turn starts a new one
-   *  rather than quietly resuming an ended conversation's business. */
+   *  `GET /api/journeys` filters it out of the active list, so the next real
+   *  turn starts a new one rather than quietly resuming an ended
+   *  conversation's business — and the archive is re-read so it shows up in
+   *  "Past journeys" instead of vanishing. */
   const completeJourney = useCallback(async (id: string) => {
-    return await applyControl({ id, complete: true });
-  }, [applyControl]);
+    const next = await applyControl({ id, complete: true });
+    void refreshPast();
+    return next;
+  }, [applyControl, refreshPast]);
 
   /** The one tap behind "Start a fresh journey": archive whatever is open, then
    *  begin the next arc. In that order, because the server holds exactly one
@@ -356,8 +436,9 @@ export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () =>
     const next = await store.createFresh();
     genRef.current += 1;
     setView(next);
+    void refreshPast();
     return next;
-  }, [store]);
+  }, [store, refreshPast]);
 
-  return { view, selectLinked, applyStateFrame, applyControl, completeJourney, startFreshJourney };
+  return { view, past, refreshPast, selectLinked, applyStateFrame, applyControl, completeJourney, startFreshJourney };
 }

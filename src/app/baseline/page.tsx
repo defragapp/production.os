@@ -96,11 +96,6 @@ function BaselineContent() {
     return (
       <PageShell className="max-w-md">
         <Stepper steps={STEPS} current={1} />
-        {fromChat && (
-          <p className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
-            You need your Baseline before you can chat with the AI — it takes about a minute.
-          </p>
-        )}
         <PageHeader
           title="Build your Baseline"
           description="Enter your birth information to generate a personal starting point, computed from NASA planetary data. It is used for one purpose only: computing your Baseline."
@@ -111,6 +106,28 @@ function BaselineContent() {
           description="Set it once, then review or update it here any time."
           rule={false}
         >
+          {/* The point of friction deserves the reason. Someone sent here from
+              /chat has just been stopped, so this answers the three questions
+              that actually stop people typing: why am I here, what does this
+              unlock, what happens to my birth data. One box, directly above the
+              form — not a page they have to scroll past — and only when they came
+              from a conversation, because nobody else needs the explanation. */}
+          {fromChat && (
+            <div className="mb-6 rounded-panel border border-border/60 bg-white/[0.03] px-4 py-4">
+              <Eyebrow as="p" scale="sm">Why we ask first</Eyebrow>
+              <p className="mt-2 text-sm leading-relaxed text-foreground">
+                Chat opens the moment your Baseline exists. It is the plain-language picture your
+                conversations are read against — where you tend to start, what keeps coming back,
+                which threads are yours to carry. Without it, every answer starts from nothing and
+                has to guess.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Your birth time and place are used for one thing only: computing that starting point from
+                NASA/JPL planetary positions. Nothing is shared without a yes, and you can update these
+                details here any time. It takes about a minute.
+              </p>
+            </div>
+          )}
           <BaselineForm
             submitLabel="Build my Baseline"
             onSaved={() => {

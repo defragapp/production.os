@@ -69,7 +69,7 @@ export default function AboutPage() {
               </Link>
               <Link
                 href="/faq"
-                className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground"
+                className="tap-line text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground"
               >
                 Read the FAQ →
               </Link>

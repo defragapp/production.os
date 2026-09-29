@@ -44,6 +44,56 @@ export function stateToView(journeyId: string | null, state: JourneyState): Jour
   };
 }
 
+/** The three moments a person decides something about an arc, as opposed to the
+ *  engine deriving a milestone. They share `journey_events.milestone` (free
+ *  TEXT, no schema change) so the audit/replay table reads as one timeline:
+ *  what lit up, and what the person said out loud.
+ */
+export const LIFECYCLE_EVENTS = {
+  started: "journey-started",
+  completed: "journey-completed",
+  rewound: "step-rewound",
+} as const;
+
+export type JourneyEventSource = "derived" | "user-confirmed";
+
+/** Write one lifecycle row. Deliberately unthrowable: an audit line is the
+ *  least important thing happening in a request that is renaming, completing,
+ *  or rewinding a journey, and a failed INSERT must never turn a successful
+ *  tap into an error the person has to retry. */
+export async function logJourneyEvent(
+  env: JourneyDb,
+  journeyId: string,
+  userId: string,
+  milestone: string,
+  source: JourneyEventSource,
+): Promise<void> {
+  try {
+    await env.DB.prepare(
+      "INSERT INTO journey_events (id, journey_id, user_id, milestone, source) VALUES (?, ?, ?, ?, ?)"
+    ).bind(generateUUID(), journeyId, userId, milestone, source).run();
+  } catch (e) {
+    console.error("[journeys] lifecycle event failed:", e);
+  }
+}
+
+/** An arc that is finished, reduced to the three things worth remembering:
+ *  what it was about, when it closed, and how far it got. */
+export interface PastArc {
+  goal: string | null;
+  completedAt: string;
+  stepsReached: number;
+  totalSteps: number;
+}
+export function pastArcFromView(view: JourneyView): PastArc {
+  return {
+    goal: view.goal,
+    completedAt: view.updated_at,
+    stepsReached: view.steps.filter((s) => s.status === "done").length,
+    totalSteps: view.steps.length,
+  };
+}
+
 /** Minimal D1 surface journeys.ts needs — structural so it works with both
  *  AppEnv and the generated CloudflareEnv regardless of which ambient types
  *  win in a given build. */

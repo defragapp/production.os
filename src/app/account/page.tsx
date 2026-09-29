@@ -358,7 +358,7 @@ export default function AccountPage() {
             </div>
 
             <div className="flex justify-center pt-1">
-              <Link href="/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              <Link href="/" className="tap-line text-sm text-muted-foreground transition-colors hover:text-foreground">
                 Return to homepage
               </Link>
             </div>

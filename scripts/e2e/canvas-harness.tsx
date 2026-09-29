@@ -31,6 +31,11 @@ let revealRoot: Root | null = null;
 // panel is a state change worth measuring exactly like the reveal is.
 let revealExpanded = true;
 let revealDone = 3;
+// How many closed arcs the fixture's archive knows about. Driving it from 0 to
+// a count is the moment the "Past journeys" row appears — the one insertion in
+// the panel that happens while a person is looking at it (they just marked an
+// arc complete), so it is worth measuring like the reveal is.
+let revealPast = 0;
 
 // Live layout-shift accounting for the CLS fixture. Registered at module
 // load, so it observes every shift the harness page produces from here on.
@@ -49,6 +54,7 @@ const w = globalThis as unknown as {
   __naiveClear?: () => void;
   __revealOpen?: (open: boolean) => void;
   __revealExpand?: (expanded?: boolean) => void;
+  __revealPast?: (count: number) => void;
   __clsReset?: () => void;
   __clsRead?: () => { total: number; count: number };
   __appendRows?: (n: number) => void;
@@ -76,6 +82,8 @@ w.__mountJourney = (el, doneCount) => {
       onStepBack={() => {}}
       onComplete={() => {}}
       onStartFresh={() => {}}
+      pastCount={0}
+      onShowPast={() => {}}
     />,
   );
 };
@@ -134,6 +142,8 @@ function renderRevealBar() {
       onStepBack={() => {}}
       onComplete={() => {}}
       onStartFresh={() => {}}
+      pastCount={revealPast}
+      onShowPast={() => {}}
     />,
   );
 };
@@ -169,6 +179,8 @@ w.__mountNaive = (el, doneCount) => {
         onStepBack={() => {}}
         onComplete={() => {}}
         onStartFresh={() => {}}
+        pastCount={0}
+        onShowPast={() => {}}
       />
     </div>,
   );
@@ -188,6 +200,13 @@ w.__revealOpen = (open) => {
  *  edge may move; the transcript is out of its way by construction. */
 w.__revealExpand = (expanded) => {
   revealExpanded = typeof expanded === "boolean" ? expanded : !revealExpanded;
+  renderRevealBar();
+};
+
+/** The archive count changing while the panel is open — the trigger row is
+ *  appended below the last one, so nothing already painted may move. */
+w.__revealPast = (count) => {
+  revealPast = count;
   renderRevealBar();
 };
 
