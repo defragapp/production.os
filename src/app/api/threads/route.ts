@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const threadId = url.searchParams.get("id");
   if (threadId) {
-    const thread = await env.DB.prepare("SELECT id, user_id, message_history, created_at, updated_at FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).first<Thread>();
+    const thread = await env.DB.prepare("SELECT id, user_id, message_history, journey_id, created_at, updated_at FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).first<Thread>();
     if (!thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     let messages: ChatMessage[] = [];
     try { messages = JSON.parse(thread.message_history) as ChatMessage[]; } catch {}

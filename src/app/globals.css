@@ -856,5 +856,26 @@ a,[role="button"] {
   padding-top: calc(1.5rem + 4.375rem);
 }
 
+/* Fourth measured truth: a capped panel that still has content below it needs
+   to say so. `max-height: 100%` (see above) turns the expanded veil into an
+   inner scroller on short viewports, and without a cue the clipped step row
+   reads as a bug rather than as more to read. The fade is a sticky ::after
+   pulled out of the flow with a negative margin, so it costs no scrollHeight
+   and no layout: appended below the last row, it never moves anything above
+   it, which is why the veil-fade toggle measures at CLS 0.0000. The class is
+   only present while the panel overflows AND the reader is off the bottom.
+   Tapping the transcript or pressing Escape collapses the panel, so the fade
+   is a hint, never a trap. */
+.journey-veil-fade::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  display: block;
+  height: 28px;
+  margin-bottom: -28px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, hsl(var(--background) / 0.92));
+}
+
 
 

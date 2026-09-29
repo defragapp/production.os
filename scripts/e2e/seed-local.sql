@@ -52,3 +52,42 @@ VALUES (
 ON CONFLICT(id) DO UPDATE SET
   message_history = excluded.message_history,
   journey_id = excluded.journey_id;
+
+-- A second, paused journey and a second thread that links it. Together they
+-- make thread switching falsifiable: opening thread two must show THIS goal in
+-- the compact band (not the active journey's), and starting a new chat must
+-- fall back to the active one. Thread two carries an old updated_at on purpose
+-- — the fixture thread above must stay the one /chat opens first, because
+-- several gates assert against its transcript.
+INSERT INTO journeys (id, user_id, goal, current_step, steps_json, milestones_json, visual_progress, status)
+VALUES (
+  '__JOURNEY2_ID__',
+  '__USER_ID__',
+  'Stop replaying the argument at three in the morning',
+  'surface-signal',
+  '[{"id":"surface-signal","label":"Say what''s landing","status":"current"},{"id":"name-what-landed","label":"Name what crossed the line","status":"locked"},{"id":"separate-the-parts","label":"Separate what''s yours from what''s theirs","status":"locked"},{"id":"widen-the-frame","label":"See the fuller picture","status":"locked"},{"id":"grounded-next-step","label":"Choose one grounded next step","status":"locked"}]',
+  '[]',
+  0,
+  'paused'
+)
+ON CONFLICT(id) DO UPDATE SET
+  goal = excluded.goal,
+  current_step = excluded.current_step,
+  steps_json = excluded.steps_json,
+  milestones_json = '[]',
+  visual_progress = 0,
+  status = 'paused';
+
+INSERT INTO threads (id, user_id, message_history, journey_id, created_at, updated_at)
+VALUES (
+  '__THREAD2_ID__',
+  '__USER_ID__',
+  '[{"role":"user","content":"Second thread: why do I defend people who never accused me?"},{"role":"assistant","content":"That question arrived already answered — notice how fast the defence went up."}]',
+  '__JOURNEY2_ID__',
+  '2026-01-01 00:00:00',
+  '2026-01-01 00:00:00'
+)
+ON CONFLICT(id) DO UPDATE SET
+  message_history = excluded.message_history,
+  journey_id = excluded.journey_id,
+  updated_at = '2026-01-01 00:00:00';

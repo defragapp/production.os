@@ -75,6 +75,18 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(journey.goal ?? "");
   const renameTriggerRef = useRef<HTMLButtonElement>(null);
+  // The two forms of the bar each own one toggle, and only one of them exists at
+  // a time — so focus is moved by hand whenever the disclosure flips.
+  const showRef = useRef<HTMLButtonElement>(null);
+  const hideRef = useRef<HTMLButtonElement>(null);
+  const toggleSteps = () => {
+    const willExpand = !expanded;
+    onToggleExpanded();
+    // Focus follows the disclosure: the control that was just tapped unmounts
+    // with the rest of its form, and a keyboard user would otherwise land on
+    // <body> mid-thought. Hand them the control that survives the swap.
+    requestAnimationFrame(() => (willExpand ? hideRef : showRef).current?.focus());
+  };
   const cancelRename = () => {
     // Escape abandons the edit cleanly and hands focus back to the control it
     // came from, so the keyboard never lands on an element that just unmounted.
@@ -93,8 +105,9 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
     return (
       <figure role="group" aria-label={groupLabel} className="journey-bar journey-veil-compact gap-2 rounded-panel border border-border/60 bg-white/[0.03] px-3">
         <button
+          ref={showRef}
           type="button"
-          onClick={onToggleExpanded}
+          onClick={toggleSteps}
           aria-expanded={false}
           className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
@@ -127,7 +140,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
           </button>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
-          <button type="button" onClick={onToggleExpanded} aria-expanded aria-controls="journey-steps" className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Hide steps</button>
+          <button ref={hideRef} type="button" onClick={toggleSteps} aria-expanded aria-controls="journey-steps" className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Hide steps</button>
           <button type="button" onClick={onPauseResume} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">{journey.status === "paused" ? "Resume" : "Pause"}</button>
           <button type="button" onClick={onDismiss} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Dismiss</button>
         </div>

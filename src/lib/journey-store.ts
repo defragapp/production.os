@@ -11,7 +11,7 @@
  * same truth. Local controls land immediately on this device — which is the
  * trade the person chose when they switched to Device-Only.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_JOURNEY_STEPS, type JourneyState } from "./sovereign-journey";
 import {
   progressFromUnlocked,
@@ -102,12 +102,29 @@ function viewToState(view: JourneyClientView): JourneyState {
 
 interface JourneyStore {
   fetchActive(): Promise<JourneyClientView | null>;
+  /** The journey a specific thread was produced in. `null` when the row is
+   *  gone (deleted, or never linked) and the caller should fall back. */
+  fetchById(id: string): Promise<JourneyClientView | null>;
   /** Fold in the confirmed `{ state }` frame — the journey the UI shows next. */
   applyStateFrame(state: JourneyState, journeyId: string | null): Promise<JourneyClientView>;
   /** `undefined` means the write failed — the caller keeps the current view.
    *  Dismissal is deliberately not here: it is session-local in both modes
    *  (the bar folds away, the journey survives, a new unlock re-reveals it). */
   applyControl(patch: { id: string; rename?: string; pause?: boolean; overrideStep?: string }): Promise<JourneyClientView | undefined>;
+}
+
+/** Re-mark a server row for the canvas: the `current` marker and the badge
+ *  level are derived here so a GET, a PATCH and a thread-linked read cannot
+ *  drift apart. */
+function markedView(row: JourneyView): JourneyClientView {
+  const marked = withCurrentMarker(row.steps);
+  return {
+    ...row,
+    current_step: marked.steps[marked.currentIdx]?.id ?? row.current_step,
+    steps: marked.steps,
+    inquiryLevel: levelFromDone(marked.currentIdx),
+    newlyUnlocked: [],
+  };
 }
 
 async function getJSON<T>(url: string, init?: RequestInit): Promise<T | null> {
@@ -131,17 +148,14 @@ const serverStore: JourneyStore = {
       const rows = data.journeys ?? [];
       const row = rows.find((j) => j.status === "active") ?? rows.find((j) => j.status === "paused");
       if (!row) return null;
-      const marked = withCurrentMarker(row.steps);
-      return {
-        ...row,
-        current_step: marked.steps[marked.currentIdx]?.id ?? row.current_step,
-        steps: marked.steps,
-        inquiryLevel: levelFromDone(marked.currentIdx),
-        newlyUnlocked: [],
-      };
+      return markedView(row);
     } catch {
       return null;
     }
+  },
+  async fetchById(id) {
+    const data = await getJSON<{ journey?: JourneyView }>(`/api/journeys/${encodeURIComponent(id)}`);
+    return data?.journey ? markedView(data.journey) : null;
   },
   async applyStateFrame(state, journeyId) {
     return { ...stateToView(journeyId, state), inquiryLevel: state.inquiry_level, newlyUnlocked: state.newly_unlocked };
@@ -158,14 +172,7 @@ const serverStore: JourneyStore = {
       body: JSON.stringify(body),
     });
     if (!data?.journey) return undefined;
-    const marked = withCurrentMarker(data.journey.steps);
-    return {
-      ...data.journey,
-      current_step: marked.steps[marked.currentIdx]?.id ?? data.journey.current_step,
-      steps: marked.steps,
-      inquiryLevel: levelFromDone(marked.currentIdx),
-      newlyUnlocked: [],
-    };
+    return markedView(data.journey);
   },
 };
 
@@ -177,6 +184,12 @@ function localStore(userScope: string): JourneyStore {
       // record (and its progress) survives for the next unlock.
       if (!rec || rec.status === "hidden" || rec.status === "complete") return null;
       return viewFromLocal(rec);
+    },
+    async fetchById() {
+      // A device holds exactly one journey, so any link resolves to it. The id
+      // exists so the code path is shared, not because local rows are addressable.
+      const rec = await readRecord<HoldableJourney>("journey", userScope);
+      return rec ? viewFromLocal(rec) : null;
     },
     async applyStateFrame(state) {
       const view: JourneyClientView = { ...stateToView(LOCAL_JOURNEY_ID, state), inquiryLevel: state.inquiry_level, newlyUnlocked: state.newly_unlocked };
@@ -216,26 +229,43 @@ export function getJourneyStore(mode: MemoryMode, userScope: string): JourneySto
  * confirmed `{ state }` frame, and exposes the four controls. `onReveal` lets
  * the page un-hide a dismissed bar when a fresh milestone unlocks — the bar
  * earns its place back by progress, not by nagging.
+ *
+ * `selectLinked` is the thread-switch half of the same face: a thread that
+ * carries a `journey_id` shows THAT journey, and an unlinked thread (or one
+ * whose row was deleted) falls back to the active journey — so switching
+ * conversations can never leave the previous thread's steps on screen, and can
+ * never leave a person staring at an empty canvas either.
  */
 export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () => void) {
   const [view, setView] = useState<JourneyClientView | null>(null);
   // Stable store identity per (mode, scope): the fetch effect must not
   // re-fire on every render.
   const store = useMemo(() => getJourneyStore(mode, userScope), [mode, userScope]);
+  // Reads resolve out of order (a slow active-list fetch answering after a
+  // thread-linked read). The latest request wins, always.
+  const genRef = useRef(0);
 
   useEffect(() => {
-    let cancelled = false;
+    const gen = ++genRef.current;
     void (async () => {
       const loaded = await store.fetchActive();
-      if (!cancelled) setView(loaded);
+      if (gen === genRef.current) setView(loaded);
     })();
-    return () => {
-      cancelled = true;
-    };
+  }, [store]);
+
+  const selectLinked = useCallback(async (journeyId: string | null) => {
+    const gen = ++genRef.current;
+    const linked = journeyId ? await store.fetchById(journeyId) : null;
+    // A link that no longer resolves is not a reason to hide the canvas: fall
+    // back to the active journey rather than reporting nothing.
+    const next = linked ?? await store.fetchActive();
+    if (gen === genRef.current) setView(next);
+    return next;
   }, [store]);
 
   const applyStateFrame = useCallback(async (state: JourneyState, journeyId: string | null) => {
     const next = await store.applyStateFrame(state, journeyId);
+    genRef.current += 1;
     setView(next);
     if (next.newlyUnlocked.length > 0) onReveal?.();
     return next;
@@ -243,9 +273,12 @@ export function useJourney(mode: MemoryMode, userScope: string, onReveal?: () =>
 
   const applyControl = useCallback(async (patch: { id: string; rename?: string; pause?: boolean; overrideStep?: string }) => {
     const next = await store.applyControl(patch);
-    if (next) setView(next);
+    if (next) {
+      genRef.current += 1;
+      setView(next);
+    }
     return next ?? null;
   }, [store]);
 
-  return { view, applyStateFrame, applyControl };
+  return { view, selectLinked, applyStateFrame, applyControl };
 }

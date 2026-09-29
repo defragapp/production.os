@@ -2,7 +2,7 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, fourteen gates, all must be green before a commit or deploy:
+ * One command, nineteen gates, all must be green before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
  *   3. vitest run                          — unit + pure-reducer tests
@@ -29,8 +29,21 @@
  *                                            panel never spills onto the composer.
  *  14. mid-stream SSE drop                — a stream that closes before `content` + `[DONE]` arms
  *                                            the same one-tap retry and recovers on re-run.
+ *  15. veil dismissal                     — Escape AND a tap on the transcript fold the expanded
+ *                                            panel back to the compact band, CLS ≤ 0.01, focus kept.
+ *  16. scroll affordance                  — the capped panel shows its bottom fade only while steps
+ *                                            are out of reach (390×500), and loses it at the bottom.
+ *  17. thread-switch isolation            — switching threads / New chat clears the retry banner,
+ *                                            swaps the transcript, and follows threads.journey_id.
+ *  18. voice dictation                    — a stubbed Web Speech engine: the mic mounts, is ≥44px,
+ *                                            toggles aria-pressed, feeds the draft, lets go on send;
+ *                                            with the API removed, no control renders at all.
+ *  19. Device-Only parity                 — same walk with memory_mode='local' and a journey that
+ *                                            exists only in the encrypted IndexedDB vault: thread
+ *                                            switching keeps the DEVICE journey, never the server row
+ *                                            the thread is linked to, and stays movement-free.
  *
- * Gates 1-8 and 10-14 fail closed. The preview-backed passes (9-14) boot the
+ * Gates 1-8 and 10-19 fail closed. The preview-backed passes (9-19) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -76,6 +89,12 @@ function run(cmd, args, opts = {}) {
     child.on("error", (err) => resolve({ code: -1, stdout, stderr: stderr + String(err) }));
   });
 }
+
+/** One statement against the LOCAL dev D1 only (.wrangler/state). Nothing in
+ *  this script ever touches production D1: the authenticated passes need a
+ *  seeded account, and `--local` is the only mode they are allowed to use. */
+const d1Local = (command) =>
+  run("npx", ["wrangler", "d1", "execute", "production-os-db", "--local", "--command", command]);
 
 async function gateStaticAnalysis() {
   heading("Gate 1-3 · types, lint, tests");
@@ -132,6 +151,54 @@ async function gateStaticAnalysis() {
   record("journey bar ships compact + expanded forms behind one toggle", compactToggle, compactToggle ? "" : "JourneyBar's compact band or its step container was removed");
   const truncation = /sawDone/.test(chat) && /sawContent/.test(chat) && /!sawDone \|\| !sawContent/.test(chat) && chat.includes('kind: "incomplete"');
   record("a truncated SSE is treated as an incomplete turn, not a success", truncation, truncation ? "" : "the stream no longer checks for content + [DONE] before declaring the turn fine");
+  // Dismissal + scroll affordance: Gate 15/16 measure the behaviour; this proves
+  // the page still offers both ways to fold the panel and still marks overflow.
+  const dismissal =
+    css.includes(".journey-veil-fade::after {") &&
+    /\.journey-veil-fade::after \{[^}]*position: sticky/.test(css) &&
+    /\.journey-veil-fade::after \{[^}]*margin-bottom: -28px/.test(css) &&
+    chat.includes("journey-veil-fade") &&
+    chat.includes('event.key !== "Escape"') &&
+    chat.includes("scrollerRef") &&
+    /el\.addEventListener\("click", onClick\)/.test(chat);
+  record("the expanded panel folds on Escape and on a transcript tap, with a scroll cue", dismissal,
+    dismissal ? "" : "the veil lost its fade rule, its Escape handler, or its transcript-tap collapse");
+  const store = fs.readFileSync(path.join(srcDir, "lib/journey-store.ts"), "utf8");
+  const threadsRoute = fs.readFileSync(path.join(srcDir, "app/api/threads/route.ts"), "utf8");
+  const chatRoute = fs.readFileSync(path.join(srcDir, "app/api/chat/route.ts"), "utf8");
+  const isolation =
+    chat.includes("clearThreadContext") &&
+    /const clearThreadContext = useCallback\(\(\) => \{[\s\S]{0,400}setFailedTurn\(null\)/.test(chat) &&
+    chat.includes("linkJourneyToThread") &&
+    store.includes("fetchById") &&
+    store.includes("selectLinked") &&
+    threadsRoute.includes("SELECT id, user_id, message_history, journey_id") &&
+    chatRoute.includes("UPDATE threads SET journey_id = ?");
+  record("thread switching clears transient state and follows threads.journey_id", isolation,
+    isolation ? "" : "a thread switch would again carry a retry banner / open panel into the next conversation");
+  // Device-Only parity (Gate 19 measures it): the vault must stay reachable by
+  // the same key/id names this script writes, and the store must keep resolving
+  // a thread link through the device's single journey instead of asking D1.
+  const parity =
+    store.includes('async fetchById()') &&
+    store.includes("viewFromLocal(rec)") &&
+    chat.includes('Device-Only memory') &&
+    fs.readFileSync(path.join(srcDir, "lib/local-memory.ts"), "utf8").includes('"journey-aesgcm"');
+  record("Device-Only mode still resolves a thread's journey from the vault, not D1", parity,
+    parity ? "" : "the local store lost fetchById / viewFromLocal, or the vault's key id moved without the gate's writer");
+  const dictPath = path.join(srcDir, "lib/dictation.ts");
+  const dict = fs.existsSync(dictPath) ? fs.readFileSync(dictPath, "utf8") : "";
+  const voice =
+    dict.includes("webkitSpeechRecognition") &&
+    dict.includes("not-allowed") &&
+    /interimResults = false/.test(dict) &&
+    chat.includes("useDictation") &&
+    chat.includes("aria-pressed={dictating}") &&
+    chat.includes("motion-reduce:animate-none") &&
+    /stopDictation\(\);\n\s*setFailedTurn\(null\)/.test(chat) &&
+    /clearThreadContext[\s\S]{0,400}stopDictation\(\)/.test(chat);
+  record("voice dictation is progressive, motion-safe, and stops on send / thread switch", voice,
+    voice ? "" : "dictation lost its feature detection, its press state, or a stop path (a mic that outlives the turn)");
 }
 
 async function gateBuild() {
@@ -414,6 +481,11 @@ async function gateRoutes(port, booted) {
 const FIXTURE_USER_ID = "7v7f1r00-0000-4000-8000-000000000001";
 const FIXTURE_JOURNEY_ID = "7v7f1r00-0000-4000-8000-000000000002";
 const FIXTURE_THREAD_ID = "7v7f1r00-0000-4000-8000-000000000003";
+// The second journey/thread pair is what makes thread-switching falsifiable:
+// each thread links a different journey, so a bar that fails to follow the
+// conversation shows the other goal and the gate sees it.
+const FIXTURE_JOURNEY2_ID = "7v7f1r00-0000-4000-8000-000000000004";
+const FIXTURE_THREAD2_ID = "7v7f1r00-0000-4000-8000-000000000005";
 const FIXTURE_EMAIL = "verify-release@local.test";
 
 /** Read a bare KEY=value from .dev.vars (local dev secrets, never printed). */
@@ -432,7 +504,9 @@ async function seedLocalD1() {
   const sql = tpl
     .replaceAll("__USER_ID__", FIXTURE_USER_ID)
     .replaceAll("__JOURNEY_ID__", FIXTURE_JOURNEY_ID)
-    .replaceAll("__THREAD_ID__", FIXTURE_THREAD_ID);
+    .replaceAll("__THREAD_ID__", FIXTURE_THREAD_ID)
+    .replaceAll("__JOURNEY2_ID__", FIXTURE_JOURNEY2_ID)
+    .replaceAll("__THREAD2_ID__", FIXTURE_THREAD2_ID);
   const tmp = path.join(cacheDir, "seed-local.rendered.sql");
   fs.mkdirSync(cacheDir, { recursive: true });
   fs.writeFileSync(tmp, sql);
@@ -701,24 +775,66 @@ const VEIL_PROBE = `(() => {
     wrapperBottom: Math.round(w.bottom),
     spillPx: Math.round(v.bottom - w.bottom),
     veilScrolls: veil.scrollHeight > veil.clientHeight + 1,
+    fade: veil.classList.contains("journey-veil-fade"),
+    scrollY: { top: Math.round(veil.scrollTop), max: Math.round(veil.scrollHeight - veil.clientHeight) },
+    focus: (() => { const a = document.activeElement; return a ? a.tagName : "none"; })(),
+    focusInCompact: (() => { const a = document.activeElement; return !!(a && a.closest && a.closest(".journey-veil-compact")); })(),
     firstTop: Math.round(f.top),
     gapPx: Math.round(f.top - v.bottom),
     firstHit: hit(Math.round(f.left + f.width / 2), Math.round((f.top + f.bottom) / 2)),
     composerHit: ta ? hit(Math.round(ta.getBoundingClientRect().left + 40), Math.round(ta.getBoundingClientRect().top + ta.getBoundingClientRect().height / 2)) : "none",
     steps: rows.length,
     currentRow: rows.findIndex((li) => (li.textContent || "").indexOf("(current step)") !== -1),
-    band: (document.querySelector(".journey-veil figure") || { getAttribute: () => "" }).getAttribute("aria-label").replace(/\\s+/g, " ").slice(0, 48),
+    band: (document.querySelector(".journey-veil figure") || { getAttribute: () => "" }).getAttribute("aria-label").replace(/\\s+/g, " ").slice(0, 96),
     cls: window.__cls ? Number(window.__cls.total.toFixed(4)) : -1,
   };
 })()`;
 
+/** A stand-in speech engine. The real one needs a microphone and a network
+ *  service, neither of which belongs in a release gate; this records starts and
+ *  stops and hands back exactly the `results[i][0].transcript` shape the app
+ *  reads, so what is under test is the composer's integration. */
+const SPEECH_STUB = `(() => {
+  class FakeRecognition {
+    constructor() {
+      this.lang = ''; this.continuous = false; this.interimResults = false; this.maxAlternatives = 1;
+      this.onresult = null; this.onerror = null; this.onend = null;
+      window.__speech = window.__speech || { started: 0, stopped: 0, instance: null };
+      window.__speech.instance = this;
+    }
+    start() { window.__speech.started += 1; window.__speech.instance = this; }
+    stop() { window.__speech.stopped += 1; }
+    abort() { window.__speech.stopped += 1; }
+    __say(text) {
+      const results = [{ 0: { transcript: text }, isFinal: true }];
+      if (this.onresult) this.onresult({ resultIndex: 0, results });
+    }
+  }
+  for (const key of ['SpeechRecognition', 'webkitSpeechRecognition']) {
+    Object.defineProperty(window, key, { value: FakeRecognition, configurable: true, writable: true });
+  }
+})()`;
+
+/** The other half of progressive enhancement: pretend the API does not exist.
+ *  Own properties shadow the prototype accessors Chrome really does expose. */
+const SPEECH_REMOVED = `(() => {
+  for (const key of ['SpeechRecognition', 'webkitSpeechRecognition']) {
+    Object.defineProperty(window, key, { value: undefined, configurable: true, writable: true });
+  }
+})()`;
+
 async function gateErgonomics(port, booted) {
-  heading("Gate 12-14 · transcript clearance under the veil, live veil interactions, mid-stream drop");
+  heading("Gate 12-19 · transcript clearance, live veil interactions, mid-stream drop, dismissal, thread isolation (server + device), voice");
   const skip = (why) => {
     record("first message never behind the collapsed veil (3 viewports)", true, `SKIPPED — ${why}`);
     record("live veil expand → step override → collapse is shift-free", true, `SKIPPED — ${why}`);
     record("mid-stream drop: truncated SSE arms one-tap retry", true, `SKIPPED — ${why}`);
     record("mid-stream drop: retry answers and leaves no duplicate turn", true, `SKIPPED — ${why}`);
+    record("expanded veil dismisses on Escape and on a transcript tap", true, `SKIPPED — ${why}`);
+    record("capped panel shows its scroll affordance only while steps are out of reach", true, `SKIPPED — ${why}`);
+    record("switching threads clears the retry banner and follows the thread's journey", true, `SKIPPED — ${why}`);
+    record("voice dictation is progressive, ≥44px, feeds the draft and releases on send", true, `SKIPPED — ${why}`);
+    record("Device-Only keeps its own journey across thread switches", true, `SKIPPED — ${why}`);
   };
   if (!booted) return skip("preview server did not come up in this environment");
   const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
@@ -731,10 +847,13 @@ async function gateErgonomics(port, booted) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   // hasTouch without isMobile: this pass measures live CLS, and Chrome's mobile
   // view mode suppresses layout-shift entries entirely.
-  const openChat = async (width, height, { touch = true } = {}) => {
+  const openChat = async (width, height, { touch = true, init = null } = {}) => {
     const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: touch });
     await ctx.addCookies([{ name: "sovereign_session", value: token, domain: "localhost", path: "/", httpOnly: false, secure: false, sameSite: "Lax" }]);
     await ctx.addInitScript(CLS_OBSERVER_SCRIPT);
+    // Before any page script: feature detection happens on mount, so a stub or
+    // a removal has to be in place the first time the composer renders.
+    if (init) await ctx.addInitScript(init);
     const page = await ctx.newPage();
     const errs = [];
     page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
@@ -881,6 +1000,362 @@ async function gateErgonomics(port, booted) {
   record("mid-stream drop: truncated SSE arms one-tap retry", armFindings.length === 0, armFindings.slice(0, 2).join(" | "));
   record("mid-stream drop: retry answers and leaves no duplicate turn", recoverFindings.length === 0, recoverFindings.slice(0, 3).join(" | "));
   await ctx.close();
+
+  // ── Gate 15 · two effortless ways to put the expanded panel away ──────
+  const dismissal = [];
+  let dismissalCls = -1;
+  for (const vp of [{ w: 390, h: 844 }, { w: 1440, h: 900, touch: false }]) {
+    const tag = `${vp.w}x${vp.h}`;
+    const opts = { touch: vp.touch !== false };
+    // Escape, from the panel's own toggle: the band folds AND focus lands on the
+    // compact summary's show-steps button instead of dropping to <body>.
+    const esc = await openChat(vp.w, vp.h, opts);
+    await esc.page.getByRole("button", { name: "Show journey steps" }).click();
+    await sleep(650);
+    const escOpen = await esc.page.evaluate(VEIL_PROBE);
+    if (!escOpen || escOpen.steps === 0) {
+      dismissal.push(`${tag}: could not expand the panel to test Escape`);
+    } else {
+      await esc.page.keyboard.press("Escape");
+      await sleep(650);
+      const after = await esc.page.evaluate(VEIL_PROBE);
+      if (after.steps > 0) dismissal.push(`${tag}: Escape left the panel expanded`);
+      if (!(after.focus === "BUTTON" && after.focusInCompact)) dismissal.push(`${tag}: Escape left focus on ${after.focus}${after.focusInCompact ? " (compact band)" : " outside the compact band"}`);
+      if (after.veil.bottom > after.firstTop) dismissal.push(`${tag}: after Escape the compact band covers message #1`);
+      dismissalCls = Math.max(dismissalCls, after.cls);
+    }
+    if (esc.errs.length) dismissal.push(`${tag}: console/page errors during Escape ${esc.errs.slice(0, 2).join(" | ")}`);
+    await esc.ctx.close();
+
+    // A tap on the conversation underneath the panel.
+    const tap = await openChat(vp.w, vp.h, opts);
+    await tap.page.getByRole("button", { name: "Show journey steps" }).click();
+    await sleep(650);
+    const tapOpen = await tap.page.evaluate(VEIL_PROBE);
+    if (!tapOpen || tapOpen.steps === 0) {
+      dismissal.push(`${tag}: could not expand the panel to test the transcript tap`);
+    } else {
+      // Tap the conversation BELOW the panel, never through it: a tap that lands
+      // on the veil belongs to the panel's own controls and must not fold it.
+      const spot = await tap.page.evaluate(() => {
+        const v = document.querySelector(".journey-veil")?.getBoundingClientRect();
+        const sc = document.querySelector('[role="log"]')?.getBoundingClientRect();
+        if (!v || !sc) return null;
+        const y = Math.min(Math.round(Math.max(v.bottom + 30, sc.top + sc.height * 0.6)), Math.round(sc.bottom - 20));
+        return { x: Math.round(sc.left + sc.width / 2), y };
+      });
+      if (!spot) {
+        dismissal.push(`${tag}: no transcript area to judge`);
+      } else {
+        const covered = await tap.page.evaluate(({ x, y }) => {
+          const el = document.elementFromPoint(x, y);
+          return !!(el && el.closest && el.closest(".journey-veil"));
+        }, spot);
+        if (covered) {
+          dismissal.push(`${tag}: the whole transcript is under the panel at ${tag}, nothing left to tap`);
+        } else {
+          await tap.page.mouse.click(spot.x, spot.y);
+          await sleep(650);
+          const after = await tap.page.evaluate(VEIL_PROBE);
+          if (after.steps > 0) dismissal.push(`${tag}: tapping the transcript left the panel expanded`);
+          dismissalCls = Math.max(dismissalCls, after.cls);
+        }
+      }
+    }
+    if (tap.errs.length) dismissal.push(`${tag}: console/page errors during the transcript tap ${tap.errs.slice(0, 2).join(" | ")}`);
+    await tap.ctx.close();
+  }
+  record("expanded veil dismisses on Escape and on a transcript tap", dismissal.length === 0 && dismissalCls >= 0 && dismissalCls <= 0.01,
+    dismissal.slice(0, 3).join(" | ") || `both gestures fold the band, worst CLS=${dismissalCls.toFixed(4)}`);
+
+  // ── Gate 16 · the capped panel admits when it is hiding steps ─────────
+  const affordance = [];
+  {
+    // 390x500 is the phone with the keyboard up: the step list cannot fit, so
+    // the panel scrolls internally and must say so — then stop saying it at the
+    // bottom, or the cue becomes a lie.
+    const { ctx, page, errs } = await openChat(390, 500);
+    await page.getByRole("button", { name: "Show journey steps" }).click();
+    await sleep(700);
+    const top = await page.evaluate(VEIL_PROBE);
+    if (!top) {
+      affordance.push("390x500: no panel to judge");
+    } else {
+      if (!top.veilScrolls) affordance.push(`390x500: the capped panel did not scroll internally (${top.veil.h}px tall, ${top.scrollY.max}px of overflow)`);
+      if (top.scrollY.max <= 0) affordance.push("390x500: expected hidden steps below the fold, the panel fits entirely");
+      else if (!top.fade) affordance.push("390x500: steps are out of reach and no scroll affordance is marked");
+      if (top.spillPx > 0) affordance.push(`390x500: the panel spills ${top.spillPx}px past its box`);
+      if (top.composerHit === "veil") affordance.push("390x500: the panel intercepts composer taps");
+      await page.evaluate(() => { const v = document.querySelector(".journey-veil"); if (v) v.scrollTop = v.scrollHeight; });
+      await sleep(500);
+      const bottom = await page.evaluate(VEIL_PROBE);
+      if (bottom.scrollY.top <= 0) affordance.push("390x500: the panel never actually scrolled");
+      if (bottom.fade) affordance.push("390x500: the affordance stayed after reaching the last step");
+      if (errs.length) affordance.push(`console/page errors ${errs.slice(0, 2).join(" | ")}`);
+    }
+    await ctx.close();
+  }
+  {
+    // A panel that fits must not wear the cue.
+    const { ctx, page } = await openChat(390, 844);
+    await page.getByRole("button", { name: "Show journey steps" }).click();
+    await sleep(700);
+    const m = await page.evaluate(VEIL_PROBE);
+    if (m) {
+      if (!m.veilScrolls && m.fade) affordance.push("390x844: the affordance renders on a panel with nothing hidden");
+      if (m.veilScrolls && m.scrollY.max > 2 && !m.fade) affordance.push("390x844: steps are out of reach with no affordance");
+    }
+    await ctx.close();
+  }
+  record("capped panel shows its scroll affordance only while steps are out of reach", affordance.length === 0,
+    affordance.slice(0, 3).join(" | ") || "fade marks 390x500 overflow, clears at the bottom, absent when the panel fits");
+
+  // ── Gate 17 · one conversation's transient state never follows you ────
+  const bleed = [];
+  {
+    const { ctx, page, errs } = await openChat(390, 844);
+    const bandA = (await page.evaluate(VEIL_PROBE))?.band ?? "";
+    if (!/Work through the tension/.test(bandA)) bleed.push(`thread A did not open on its linked journey (band ${JSON.stringify(bandA.slice(0, 60))})`);
+    // Arm a retry banner in thread A. The stub answers in the browser, so
+    // /api/chat never runs: no inference, no usage claim, no thread write.
+    await page.route("**/api/chat", (r) => r.request().method() === "POST"
+      ? r.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Model unavailable (gate stub)" }) })
+      : r.continue());
+    const probe = `Bleed probe ${Math.random().toString(36).slice(2, 8)}`;
+    await page.fill('textarea[aria-label="Message Sovereign"]', probe);
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    const armed = await page.waitForSelector('button:has-text("Try again")', { timeout: 8000 }).catch(() => null);
+    if (!armed) bleed.push("thread A never armed the retry banner, so switching had nothing to clear");
+    await page.unroute("**/api/chat");
+    const chip = page.locator('button[title^="Second thread"]');
+    if ((await chip.count()) === 0) {
+      bleed.push("the second seeded thread's chip is not reachable at 390px");
+    } else {
+      await page.evaluate(() => { window.__cls.total = 0; });
+      await chip.first().click();
+      await sleep(1800);
+      const b = await page.evaluate(VEIL_PROBE);
+      if ((await page.locator('button:has-text("Try again")').count()) > 0) bleed.push("the retry banner followed into thread B — its Try again would re-send thread A's words here");
+      const userTexts = await page.evaluate(() => [...document.querySelectorAll("p.whitespace-pre-wrap")]
+        .filter((p) => p.closest("div.justify-end"))
+        .map((p) => (p.textContent || "").trim()));
+      if (userTexts.some((t) => t.includes(probe))) bleed.push("thread A's transcript stayed painted after switching");
+      if (!userTexts.some((t) => t.includes("Second thread"))) bleed.push(`thread B's own messages never rendered (${JSON.stringify(userTexts[0] ?? "").slice(0, 40)})`);
+      if (!b) {
+        bleed.push("thread B rendered no transcript + veil to judge");
+      } else {
+        if (!/Stop replaying/.test(b.band)) bleed.push(`the canvas did not follow the thread: band shows ${JSON.stringify(b.band.slice(0, 60))}, expected thread B's linked journey`);
+        if (b.cls > 0.01) bleed.push(`switching threads moved the layout (CLS=${b.cls.toFixed(4)})`);
+      }
+      // And back out: a new conversation returns to the active journey, folded.
+      await page.getByRole("button", { name: "New thread" }).click();
+      await sleep(1600);
+      const fresh = await page.evaluate(VEIL_PROBE);
+      if (fresh) {
+        if (fresh.steps > 0) bleed.push(`"New thread" left thread B's panel expanded (${fresh.steps} rows)`);
+        if (!/Work through the tension/.test(fresh.band)) bleed.push(`"New thread" did not return to the active journey (band ${JSON.stringify(fresh.band.slice(0, 60))})`);
+        if (bandA && fresh.band !== bandA) bleed.push(`the active journey's band changed (${JSON.stringify(fresh.band.slice(0, 40))} vs ${JSON.stringify(bandA.slice(0, 40))})`);
+      }
+    }
+    if (errs.filter((m) => !/status of 503/.test(m)).length) bleed.push(`console/page errors ${errs.filter((m) => !/status of 503/.test(m)).slice(0, 2).join(" | ")}`);
+    // The one console entry we expect is Chrome logging our own deliberate 503
+    // stub; a page error, a 500, or anything else is still a finding.
+    await ctx.close();
+  }
+  record("switching threads clears the retry banner and follows the thread's journey", bleed.length === 0,
+    bleed.slice(0, 3).join(" | ") || "banner cleared, transcript swapped, canvas followed thread B then returned to the active journey");
+
+  // ── Gate 18 · voice dictation, on a stand-in engine ──────────────────
+  // The only stable handle on the control: its accessible name deliberately
+  // changes with its state ("Dictate your message" / "Stop dictation"), which is
+  // correct for screen readers and wrong for a locator.
+  const micSel = '.composer-pill button[aria-pressed]';
+  const voice = [];
+  {
+    const { ctx, page, errs } = await openChat(390, 844, { init: SPEECH_STUB });
+    if ((await page.locator(micSel).count()) !== 1) {
+      voice.push("a browser that exposes SpeechRecognition rendered no microphone control");
+    } else {
+      const box = await page.locator(micSel).boundingBox();
+      if (!box || box.width < 44 || box.height < 44) voice.push(`the mic control is ${box ? `${Math.round(box.width)}x${Math.round(box.height)}` : "unmeasurable"}, under the 44px tap floor`);
+      if ((await page.locator(micSel).getAttribute("aria-pressed")) !== "false") voice.push("the mic did not start at aria-pressed=false");
+      await page.locator(micSel).click();
+      await sleep(400);
+      if ((await page.locator(micSel).getAttribute("aria-pressed")) !== "true") voice.push("tapping the mic did not set aria-pressed=true");
+      if ((await page.locator(micSel).getAttribute("aria-label")) !== "Stop dictation") voice.push("the listening control did not rename itself for assistive tech");
+      const started = await page.evaluate(() => (window.__speech ? window.__speech.started : -1));
+      if (started !== 1) voice.push(`tapping the mic started ${started} recognition session(s), expected 1`);
+      await page.evaluate(() => window.__speech.instance.__say("I want to feel calmer about this"));
+      await sleep(400);
+      const draft = await page.inputValue('textarea[aria-label="Message Sovereign"]');
+      if (!draft.includes("I want to feel calmer about this")) voice.push(`dictated words never reached the composer (draft=${JSON.stringify(draft.slice(0, 40))})`);
+      // Send has to let go of the microphone, or a listener outlives the turn.
+      await page.route("**/api/chat", (r) => r.request().method() !== "POST" ? r.continue() : r.fulfill({
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+        body: [`data: {"threadId":"${FIXTURE_THREAD_ID}"}\n\n`, 'data: {"content":"Dictated and delivered."}\n\n', "data: [DONE]\n\n"].join(""),
+      }));
+      await page.getByRole("button", { name: "Send", exact: true }).click();
+      await sleep(1800);
+      const stopped = await page.evaluate(() => (window.__speech ? window.__speech.stopped : -1));
+      if (stopped < 1) voice.push("sending left the recognition session running");
+      const pressed = await page.locator(micSel).getAttribute("aria-pressed").catch(() => "gone");
+      if (pressed !== "false") voice.push(`after Send the mic reads aria-pressed=${pressed}`);
+      if ((await page.inputValue('textarea[aria-label="Message Sovereign"]')).trim() !== "") voice.push("the sent turn left words in the composer");
+      if ((await page.locator("text=Dictated and delivered").count()) === 0) voice.push("the dictated turn never produced an answer");
+    }
+    if (errs.length) voice.push(`console/page errors ${errs.slice(0, 2).join(" | ")}`);
+    await ctx.close();
+  }
+  {
+    // The other half of progressive enhancement: with the API gone, the
+    // composer renders exactly as it did before — no dead control, no error.
+    const { ctx, page, errs } = await openChat(390, 844, { init: SPEECH_REMOVED });
+    if ((await page.locator(micSel).count()) > 0) voice.push("the mic control rendered in a browser without SpeechRecognition");
+    if (errs.length) voice.push(`an unsupported browser produced console errors ${errs.slice(0, 2).join(" | ")}`);
+    await ctx.close();
+  }
+  record("voice dictation is progressive, ≥44px, feeds the draft and releases on send", voice.length === 0,
+    voice.slice(0, 3).join(" | ") || "stubbed engine mounted, pressed, dictated, sent, released; unsupported rendered nothing");
+
+  // ── Gate 19 · the same isolation, in Device-Only mode ────────────────
+  // Every gate above runs against journeys that live in D1. This one flips the
+  // fixture account to memory_mode='local' and plants a THIRD journey that
+  // exists nowhere on the server — only inside the encrypted IndexedDB vault —
+  // then asks the question the mode actually makes: when a thread carries a
+  // server `journey_id` that the device has never seen, which journey wins?
+  // (The device's. It has to: a stranger reading the screen over someone's
+  // shoulder must not be shown a journey this account chose to keep on device.)
+  const LOCAL_GOAL = "Keep the evenings I actually want back";
+  const parityFindings = [];
+  const flip = async (mode) => (await d1Local(`UPDATE users SET memory_mode = '${mode}' WHERE id = '${FIXTURE_USER_ID}';`)).code === 0;
+  if (!(await flip("local"))) {
+    parityFindings.push("local D1 would not accept the memory_mode flip");
+  } else {
+    try {
+      const { ctx, page, errs } = await openChat(390, 844);
+      const pill = await page.evaluate(() => document.querySelector(".memory-pill")?.getAttribute("title") ?? "");
+      if (pill !== "Device-Only memory") parityFindings.push(`the account did not boot in Device-Only (pill ${JSON.stringify(pill)})`);
+
+      // Write the vault with the committed envelope format: AES-GCM, a
+      // non-extractable key under "journey-aesgcm", one sealed record per kind.
+      const seeded = await page.evaluate(async (goal) => {
+        const openDb = () => new Promise((resolve, reject) => {
+          const req = indexedDB.open("sovereign-memory", 1);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");
+            if (!db.objectStoreNames.contains("records")) db.createObjectStore("records", { keyPath: "id" });
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const idb = (db, store, mode, fn) => new Promise((resolve, reject) => {
+          const req = fn(db.transaction(store, mode).objectStore(store));
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const url = (buf) => {
+          const bytes = new Uint8Array(buf);
+          let s = "";
+          for (const b of bytes) s += String.fromCharCode(b);
+          return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        };
+        const db = await openDb();
+        let key = await idb(db, "keys", "readonly", (o) => o.get("journey-aesgcm"));
+        if (!key) {
+          key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+          await idb(db, "keys", "readwrite", (o) => o.put(key, "journey-aesgcm"));
+        }
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const rec = {
+          version: 1,
+          userScope: "verify-release@local.test",
+          updatedAt: new Date().toISOString(),
+          status: "active",
+          state: {
+            current_step: "widen-the-frame",
+            unlocked_milestones: ["signal-surfaced", "meaning-clarified", "parts-separated"],
+            visual_progress: 0.55,
+            newly_unlocked: [],
+            inquiry_level: 3,
+            suggested_goal: goal,
+            steps: [
+              { id: "surface-signal", label: "Say what's landing", status: "done" },
+              { id: "name-what-landed", label: "Name what crossed the line", status: "done" },
+              { id: "separate-the-parts", label: "Separate what's yours from what's theirs", status: "done" },
+              { id: "widen-the-frame", label: "See the fuller picture", status: "current" },
+              { id: "grounded-next-step", label: "Choose one grounded next step", status: "locked" },
+            ],
+          },
+        };
+        const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(rec)));
+        await idb(db, "records", "readwrite", (o) => o.put({ id: "journey", env: { v: "v1", iv: url(iv.buffer), data: url(ct) } }));
+        db.close();
+        return true;
+      }, LOCAL_GOAL).catch((e) => `vault write threw ${String(e)}`);
+      if (seeded !== true) {
+        parityFindings.push(String(seeded).slice(0, 90));
+      } else {
+        // Reload so the store is built from scratch in local mode: whatever band
+        // appears afterwards came from the vault, not from an earlier fetch.
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 25000 });
+        await page.waitForSelector('textarea[aria-label="Message Sovereign"]', { timeout: 15000 });
+        await sleep(2000);
+        const home = await page.evaluate(VEIL_PROBE);
+        if (!home) {
+          parityFindings.push("Device-Only /chat rendered no transcript + veil to judge");
+        } else {
+          if (!/Keep the evenings/.test(home.band)) parityFindings.push(`the canvas did not read the device journey (band ${JSON.stringify(home.band.slice(0, 60))})`);
+          if (home.cls > 0.01) parityFindings.push(`a Device-Only arrival moved the layout (CLS=${home.cls.toFixed(4)})`);
+
+          // Arm a retry banner here, so a failure to clear it is unmistakable.
+          await page.route("**/api/chat", (r) => r.request().method() === "POST"
+            ? r.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Model unavailable (gate stub)" }) })
+            : r.continue());
+          const probe = `Device-only probe ${Math.random().toString(36).slice(2, 8)}`;
+          await page.fill('textarea[aria-label="Message Sovereign"]', probe);
+          await page.getByRole("button", { name: "Send", exact: true }).click();
+          const armed = await page.waitForSelector('button:has-text("Try again")', { timeout: 8000 }).catch(() => null);
+          await page.unroute("**/api/chat");
+          if (!armed) parityFindings.push("the retry banner never armed in Device-Only, so switching had nothing to clear");
+
+          const chip = page.locator('button[title^="Second thread"]');
+          if ((await chip.count()) === 0) {
+            parityFindings.push("thread B's chip is not reachable at 390px in Device-Only");
+          } else {
+            await chip.first().click();
+            await sleep(2000);
+            const b = await page.evaluate(VEIL_PROBE);
+            if ((await page.locator('button:has-text("Try again")').count()) > 0) parityFindings.push("the retry banner followed into thread B in Device-Only too");
+            const userTexts = await page.evaluate(() => [...document.querySelectorAll("p.whitespace-pre-wrap")]
+              .filter((p) => p.closest("div.justify-end")).map((p) => (p.textContent || "").trim()));
+            if (userTexts.some((t) => t.includes(probe))) parityFindings.push("thread A's transcript stayed painted after switching");
+            if (!userTexts.some((t) => t.includes("Second thread"))) parityFindings.push("thread B's server messages never rendered in Device-Only");
+            if (!b) {
+              parityFindings.push("thread B rendered no transcript + veil to judge");
+            } else {
+              // The load-bearing assertion: thread B's row points at a server
+              // journey the device has never held. Showing it would be a leak.
+              if (!/Keep the evenings/.test(b.band)) parityFindings.push(`thread B's server journey overwrote the device one (band ${JSON.stringify(b.band.slice(0, 60))})`);
+              if (b.cls > 0.01) parityFindings.push(`switching in Device-Only moved the layout (CLS=${b.cls.toFixed(4)})`);
+            }
+            if ((await page.inputValue('textarea[aria-label="Message Sovereign"]')).includes(probe)) parityFindings.push("thread A's words were still in the composer after switching");
+          }
+        }
+        const noise = errs.filter((m) => !/status of 503/.test(m));
+        if (noise.length) parityFindings.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+        await ctx.close();
+      }
+    } finally {
+      // Whatever the walk concluded, the account goes back to the mode every
+      // other gate (and the next re-seed) expects.
+      if (!(await flip("server"))) parityFindings.push("memory_mode could not be restored to 'server'");
+    }
+  }
+  record("Device-Only keeps its own journey across thread switches", parityFindings.length === 0,
+    parityFindings.slice(0, 3).join(" | ") || "vault journey survived a thread switch aimed at a server journey; banner cleared, CLS 0.0000");
+
   await browser.close();
 }
 
@@ -937,4 +1412,4 @@ if (!process.env.SOVEREIGN_VERIFY_IMPORT_ONLY) {
 }
 
 // Exported for isolated gate development in .audit-tmp scratch runners.
-export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, gateErgonomics };
+export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, FIXTURE_THREAD2_ID, FIXTURE_JOURNEY2_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, gateErgonomics };

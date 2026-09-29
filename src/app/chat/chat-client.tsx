@@ -3,7 +3,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUp, Globe, Lock, Plus, RefreshCw, Shield, Square, Users, X } from "lucide-react";
+import { ArrowUp, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Shield, Square, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
@@ -13,6 +13,7 @@ import { RichText } from "@/components/rich-text";
 import { ShareCardButton } from "@/components/share-card";
 import { JourneyBar, MILESTONE_STEP_LABELS } from "@/components/journey-canvas";
 import { useJourney } from "@/lib/journey-store";
+import { useDictation } from "@/lib/dictation";
 import type { JourneyState } from "@/lib/sovereign-journey";
 import type { ChatMessage, BaselineData, MemoryMode, RelationshipView } from "@/lib/types";
 
@@ -270,7 +271,34 @@ export function ChatClient() {
   // The journey bar earns its place back with progress, not nagging: dismissal
   // is session-local, and the next confirmed unlock quietly re-reveals it.
   const revealJourney = useCallback(() => setJourneyDismissed(false), []);
-  const { view: journey, applyStateFrame, applyControl } = useJourney(memoryMode, userScope, revealJourney);
+  const { view: journey, selectLinked, applyStateFrame, applyControl } = useJourney(memoryMode, userScope, revealJourney);
+
+  // The veil's own box, so the page can ask it how much is out of reach, and
+  // the transcript's scroller, so switching conversations can send the caret
+  // reader back to the top instead of leaving them mid-thread.
+  const veilRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  // True while the expanded panel is capped AND there are still steps below the
+  // fold — the only signal that a clipped row is more to read, not a bug.
+  const [veilHasMore, setVeilHasMore] = useState(false);
+
+  // ── Voice dictation, on the browser's own speech engine ─────────
+  // Dictated words land in the draft exactly where typed words live: same
+  // localStorage mirror, same auto-grow, and nothing leaves the device until
+  // Send. Browsers without the API never see the control at all.
+  const appendDictation = useCallback((text: string) => {
+    setInput((prev) => {
+      const base = prev.trimEnd();
+      return base ? `${base} ${text}` : text;
+    });
+  }, []);
+  const {
+    supported: dictationSupported,
+    listening: dictating,
+    notice: dictationNotice,
+    toggle: toggleDictation,
+    stop: stopDictation,
+  } = useDictation({ onText: appendDictation });
 
   // Seed the composer with a starting point and put the caret at the end, so
   // the person finishes the sentence in their own words instead of sending ours.
@@ -313,23 +341,68 @@ export function ChatClient() {
     }
   }, []);
 
+  // Thread switching is a navigation, and a navigation must not carry the
+  // previous page's transient state with it: an armed retry banner whose
+  // "Try again" would otherwise re-send thread A's words into thread B, an
+  // expanded step panel belonging to a different conversation, a scroll
+  // position left mid-thread, and a microphone still open. The draft
+  // deliberately survives — it belongs to the person, not to a thread.
+  const clearThreadContext = useCallback(() => {
+    setFailedTurn(null);
+    setJourneyExpanded(false);
+    setVeilHasMore(false);
+    stopDictation();
+    scrollerRef.current?.scrollTo({ top: 0 });
+  }, [stopDictation]);
+
+  // The canvas follows the conversation: a thread that carries a `journey_id`
+  // shows that journey, and an unlinked thread (or one whose journey row was
+  // deleted) falls back to the active journey rather than keeping the previous
+  // thread's steps on screen.
+  const journeyIdRef = useRef<string | null>(null);
+  // The hook's reader changes identity as the account and memory mode resolve;
+  // hold it in a ref so the callbacks below stay stable — otherwise the mount
+  // effect would re-run and open a thread twice.
+  const selectLinkedRef = useRef(selectLinked);
+  useEffect(() => {
+    selectLinkedRef.current = selectLinked;
+  }, [selectLinked]);
+
+  const linkJourneyToThread = useCallback(async (journeyId: string | null) => {
+    const next = await selectLinkedRef.current(journeyId);
+    const previous = journeyIdRef.current;
+    if (next && previous && next.id !== previous) {
+      // A journey the person has never seen earns its place back: dismissal is
+      // per journey, not a permanent mute for the whole account.
+      setJourneyDismissed(false);
+    }
+    journeyIdRef.current = next?.id ?? null;
+  }, []);
+
   const openThread = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/threads?id=${id}`);
       if (!res.ok) return;
-      const data = await res.json() as { thread?: { messages?: ChatMessage[] } };
+      const data = await res.json() as { thread?: { messages?: ChatMessage[]; journey_id?: string | null } };
       const msgs = data.thread?.messages || [];
+      clearThreadContext();
       setMessages(msgs.map((m) => ({ ...m })));
       setThreadId(id);
       const label = threadLabel(msgs);
       setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, label } : t)));
+      await linkJourneyToThread(data.thread?.journey_id ?? null);
     } catch {}
-  }, []);
+  }, [clearThreadContext, linkJourneyToThread]);
 
   const startNewThread = useCallback(() => {
+    clearThreadContext();
     setMessages([]);
     setThreadId(null);
-  }, []);
+    // A fresh conversation has no journey of its own: return to the active one
+    // and let the next `{ state }` frame correct it the moment the engine
+    // infers something new.
+    void linkJourneyToThread(null);
+  }, [clearThreadContext, linkJourneyToThread]);
 
   useEffect(() => {
     (async () => {
@@ -391,6 +464,74 @@ export function ChatClient() {
     }
     setJourneyVisible(false);
   }, [journey, journeyDismissed]);
+
+  useEffect(() => {
+    // The expanded panel is capped to its own box (`max-height: 100%`), so on a
+    // short viewport it scrolls internally. Mark that only while there really
+    // is more below, and clear it at the bottom so the cue never lies.
+    const el = veilRef.current;
+    if (!el || !journeyExpanded) {
+      setVeilHasMore(false);
+      return;
+    }
+    const measure = () => {
+      setVeilHasMore(el.scrollHeight - el.scrollTop - el.clientHeight > 2);
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [journeyExpanded, journey]);
+
+  // Two effortless ways to put the panel away, because reaching for "Hide steps"
+  // inside the panel it just covered is the long way round: `Escape` anywhere,
+  // and a tap on the conversation underneath it. Both collapse inside the
+  // out-of-flow veil, so the gesture costs nothing above the fold (measured
+  // CLS 0.0000).
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const active = document.activeElement;
+      // The inline rename field handles its own Escape (it cancels the edit);
+      // stealing it mid-name would be a worse edit than leaving the panel open.
+      if (active instanceof HTMLInputElement) return;
+      const wasListening = dictating;
+      stopDictation();
+      // Escape's first job is always the microphone; the panel waits for the
+      // next press rather than folding away under someone still speaking.
+      if (wasListening || !journeyExpanded) return;
+      const focusWasInside = veilRef.current?.contains(active) ?? false;
+      setJourneyExpanded(false);
+      if (focusWasInside) {
+        // The expanded controls unmount on the next commit: hand focus to the
+        // compact band's own toggle instead of dropping it to <body>.
+        requestAnimationFrame(() => {
+          document.querySelector<HTMLButtonElement>(".journey-veil-compact button")?.focus();
+        });
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [journeyExpanded, dictating, stopDictation]);
+
+  useEffect(() => {
+    // Tapping the transcript means "I'm reading, not looking at steps". Bound
+    // through the ref rather than a JSX prop so the scroller keeps its plain
+    // `role="log"` semantics for assistive tech.
+    const el = scrollerRef.current;
+    if (!el || !journeyExpanded) return;
+    const onClick = () => {
+      // A drag that selects a sentence ends in a click too: quoting your own
+      // words is not a request to fold the canvas away.
+      if ((window.getSelection()?.toString() ?? "") !== "") return;
+      setJourneyExpanded(false);
+    };
+    el.addEventListener("click", onClick);
+    return () => el.removeEventListener("click", onClick);
+  }, [journeyExpanded]);
 
   useEffect(() => {
     const fresh = (journey?.newlyUnlocked ?? []).filter((m) => !announcedMilestones.current.has(m));
@@ -718,10 +859,13 @@ export function ChatClient() {
   const sendMessage = useCallback(async () => {
     const content = input.trim();
     if (!content || isStreaming) return;
+    // Nobody wants a microphone still open while their words are flying: stop
+    // first, so a late phrase can't land in the draft of the next turn.
+    stopDictation();
     setFailedTurn(null);
     setInput("");
     await performTurn([...messages, { role: "user", content }]);
-  }, [input, isStreaming, messages, performTurn]);
+  }, [input, isStreaming, messages, performTurn, stopDictation]);
 
   // One-tap recovery: replay the transcript up to (and including) the failed
   // user message — dropping the trailing error bubble — so the retry never
@@ -967,7 +1111,7 @@ export function ChatClient() {
                 arrives via transform/opacity, so nothing in flow ever moves and
                 CLS stays exactly zero (measured: any in-flow height change, even
                 animated 0fr→1fr, is a shift in Chrome). */}
-            <div className={`journey-veil bg-background/80 backdrop-blur-sm ${journeyVisible && journey && !journeyDismissed ? "journey-veil-open" : ""}`}>
+            <div ref={veilRef} className={`journey-veil bg-background/80 backdrop-blur-sm ${journeyVisible && journey && !journeyDismissed ? "journey-veil-open" : ""} ${journeyExpanded && veilHasMore ? "journey-veil-fade" : ""}`}>
               <div className="px-4 py-3">
                 <div className="mx-auto max-w-3xl">
                   {journey && !journeyDismissed && (
@@ -998,7 +1142,7 @@ export function ChatClient() {
                 is static from the first frame (see globals.css): it is what lets the
                 panel cover nothing but the space it owns, without the reveal costing
                 a point of layout shift. */}
-            <div className="journey-clearance flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
+            <div ref={scrollerRef} className="journey-clearance flex-1 overflow-y-auto px-4 py-6" role="log" aria-live="polite" aria-label="Conversation">
               <div className="mx-auto max-w-3xl space-y-4">
                 {messages.length === 0 && (
                   <div className="flex min-h-full flex-col px-2 py-10">
@@ -1134,6 +1278,19 @@ export function ChatClient() {
                     </Button>
                   </div>
                 )}
+                {/* Dictation trouble (a blocked microphone, an engine that
+                    refused to start) reads as one calm line above the pill —
+                    never a modal, and it clears itself. */}
+                {dictationNotice && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="mb-2 flex items-center gap-2 rounded-lg border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" />
+                    {dictationNotice}
+                  </div>
+                )}
                 <div className="composer-pill flex items-end gap-2 pl-5 pr-1.5 py-1.5">
                   <textarea
                     ref={inputRef}
@@ -1162,6 +1319,33 @@ export function ChatClient() {
                     }}
                     className="max-h-44 min-h-11 flex-1 resize-none border-0 bg-transparent px-0 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
+                  {/* Voice dictation, for browsers that have it and nobody else.
+                      Same 44px circle as Send, an `aria-pressed` state instead of
+                      a colour-only cue, and the recording dot is absolutely
+                      positioned so listening can never reflow the pill (a width
+                      change in this row would itself be a layout shift). */}
+                  {dictationSupported && !isStreaming && (
+                    <button
+                      type="button"
+                      onClick={toggleDictation}
+                      aria-pressed={dictating}
+                      aria-label={dictating ? "Stop dictation" : "Dictate your message"}
+                      title={dictating ? "Stop dictation" : "Dictate"}
+                      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                        dictating
+                          ? "border-foreground/35 bg-white/[0.10] text-foreground"
+                          : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {dictating ? <MicOff className="h-4 w-4" aria-hidden="true" /> : <Mic className="h-4 w-4" aria-hidden="true" />}
+                      {dictating && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-red-400 motion-reduce:animate-none"
+                        />
+                      )}
+                    </button>
+                  )}
                   {isStreaming ? (
                     <Button onClick={stopStreaming} variant="outline" size="icon" className="h-11 w-11 shrink-0 rounded-full">
                       <Square className="h-3.5 w-3.5" />

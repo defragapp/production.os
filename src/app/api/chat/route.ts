@@ -208,6 +208,14 @@ async function handleChat(request: NextRequest) {
   try {
     if (threadId) {
       await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?").bind(JSON.stringify(messagesToStore), currentThreadId, userId).run();
+      // Keep the thread's journey link current so opening this conversation
+      // later re-shows the canvas that belongs to it. Only when this turn
+      // actually produced a journey id — a turn that derived no state must not
+      // sever an existing link. Set NULL by the database when the journey row
+      // is deleted, and the client then falls back to the active journey.
+      if (activeJourneyId) {
+        await env.DB.prepare("UPDATE threads SET journey_id = ? WHERE id = ? AND user_id = ?").bind(activeJourneyId, currentThreadId, userId).run();
+      }
     } else if (memoryMode === "local") {
       // Zero retention means no new server row: a Device-Only thread lives in
       // the client's history (and the transcript above is never written).
@@ -215,7 +223,7 @@ async function handleChat(request: NextRequest) {
       // own stored history as a side effect of a preference flip would be the
       // opposite of privacy. They can clear it deliberately in the UI.
     } else {
-      await env.DB.prepare("INSERT INTO threads (id, user_id, message_history) VALUES (?, ?, ?)").bind(currentThreadId, userId, JSON.stringify(messagesToStore)).run();
+      await env.DB.prepare("INSERT INTO threads (id, user_id, message_history, journey_id) VALUES (?, ?, ?, ?)").bind(currentThreadId, userId, JSON.stringify(messagesToStore), activeJourneyId).run();
     }
   } catch (persistErr) {
     console.error("[chat] Failed to persist thread:", persistErr);

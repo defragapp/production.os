@@ -75,6 +75,9 @@ export interface Thread {
   id: string;
   user_id: string;
   message_history: string;  // JSON string of ChatMessage[]
+  /** The journey this conversation produced, when one exists. Nullable and
+   *  nulled by the database when the journey row is deleted. */
+  journey_id?: string | null;
   created_at: string;
   updated_at: string;
 }
