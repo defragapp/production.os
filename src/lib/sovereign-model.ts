@@ -1,12 +1,16 @@
 /**
  * Sovereign Model Adapter — non-streaming complete generation with a
- * Cloudflare AI Gateway-first call and a direct fallback, plus response
- * normalization to a single text field.
+ * Cloudflare AI Gateway-first call, a direct fallback, a secondary-model
+ * capacity hedge, plus response normalization to a single text field.
  */
 
 import type { ModelInput, ModelOutput } from "./sovereign-types";
 
 export const SOVEREIGN_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
+/** Non-quantized sibling of the primary. The -fp8 pool can return a regional
+ *  503/1050 capacity error while the standard pool is healthy; trying it costs
+ *  one extra call but keeps chat uptime global. */
+export const SOVEREIGN_SECONDARY_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 export const DEFAULT_GATEWAY_ID = "sovereign-ai-gateway";
 
 /**
@@ -70,15 +74,25 @@ export function createCloudflareModel(
         }
       }
 
-      // Tier 2 — direct binding, no gateway indirection. This is the last
-      // automatic tier; if it also fails we surface the code and degrade
-      // gracefully so the caller refunds usage and shows a friendly retry
-      // message rather than crashing the session.
+      // Tier 2 — direct binding, no gateway indirection. If it also fails,
+      // one last automatic tier runs before we degrade: the secondary model
+      // (a regional -fp8 capacity outage shouldn't take the whole product
+      // down). The caller refunds usage and shows a friendly retry message
+      // only once every tier has been exhausted.
       try {
         const result = await ai.run(model, params);
         return { text: extractText(result), usedGateway: false };
       } catch (directErr) {
         console.error(`[sovereign-model] direct run failed (${describeModelError(directErr)})`);
+        if (model !== SOVEREIGN_SECONDARY_MODEL) {
+          try {
+            const result = await ai.run(SOVEREIGN_SECONDARY_MODEL, params);
+            console.error(`[sovereign-model] recovered on secondary model ${SOVEREIGN_SECONDARY_MODEL}`);
+            return { text: extractText(result), usedGateway: false };
+          } catch (secondaryErr) {
+            console.error(`[sovereign-model] secondary run failed (${describeModelError(secondaryErr)})`);
+          }
+        }
         throw new ModelError("Sovereign couldn't reach the AI just now — try again in a moment.");
       }
     },

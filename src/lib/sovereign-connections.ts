@@ -81,6 +81,9 @@ export async function buildConsentedPeers(
         geneKeysLabels: derived.geneKeysLabels.slice(0, 4),
       },
       betweenDesign: between,
+      // Carry HD data for the deterministic signal engine (internal only).
+      _hd: peerHd,
+      _between: gateCount(myHd) && gateCount(peerHd) ? compareDesigns(myHd, peerHd) : undefined,
     });
   }
   return peers;

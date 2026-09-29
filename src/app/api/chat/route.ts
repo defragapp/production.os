@@ -5,7 +5,8 @@ import { getEnv } from "@/lib/env";
 import { deriveBaseline } from "@/lib/sovereign-prompt";
 import type { DerivedBaseline } from "@/lib/sovereign-prompt";
 import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereign-reasoning";
-import { buildConsentedPeers } from "@/lib/sovereign-connections";
+import { buildConsentedPeers, positionsFromBaseline } from "@/lib/sovereign-connections";
+import { computeHumanDesign } from "@/lib/sovereign-humandesign";
 import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
 import { FREE_TIER_DAILY_LIMIT, SOVEREIGN_PLUS_DAILY_LIMIT } from "@/lib/limits";
 import { claimAnswer, releaseAnswer } from "@/lib/usage";
@@ -200,7 +201,7 @@ async function handleChat(request: NextRequest) {
   // materializes it.
   let context;
   try {
-    context = buildReasoningContext({ history: conversation, baseline: derived, consented });
+    context = buildReasoningContext({ history: conversation, baseline: derived, consented, myHd: computeHumanDesign(positionsFromBaseline(rawBaselineData)) });
   } catch (err) {
     console.error("[chat] reasoning prelude failed:", err instanceof Error ? `${err.name}: ${err.message}` : err);
     if (usageClaimed) await releaseAnswer(env, payload.sub);

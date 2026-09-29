@@ -17,8 +17,10 @@ import {
   detectSafetyMode,
   validateSovereignText,
 } from "./sovereign-safety";
+import { buildRelationalSignals, buildSystemSignals } from "./sovereign-signals";
 import type { SovereignModel } from "./sovereign-model";
 import type { ChatMessage } from "./types";
+import type { HumanDesignComputation } from "./sovereign-humandesign";
 import type {
   AuthorizationContext,
   BaselineSignal,
@@ -549,8 +551,10 @@ export function buildReasoningContext(opts: {
   history: ChatMessage[];
   baseline: DerivedBaseline;
   consented?: ConsentedPeer[];
+  /** Self's HD computation — enables deterministic relational/system signals. */
+  myHd?: HumanDesignComputation;
 }): ReasoningContext {
-  const { history, baseline, consented = [] } = opts;
+  const { history, baseline, consented = [], myHd } = opts;
   const latestUser = [...history].reverse().find((m) => m.role === "user");
   const latestText = latestUser?.content ?? "";
   const classification = classifyQuestion(latestText);
@@ -612,6 +616,30 @@ export function buildReasoningContext(opts: {
   // (unless consent-gated context is present — that survives regardless).
   if (conversations === 0 && context.authorization.systemContext !== "consented") {
     context.authorization.systemContext = "none";
+  }
+
+  // Deterministic relational & system signal extraction (Level 3/4).
+  // Only fires when the inquiry level warrants it AND HD data is available.
+  if (classification.level >= 3 && myHd && consented.length > 0) {
+    const withHd = consented.filter((p) => p._hd && p._between);
+    if (withHd.length > 0) {
+      // Level 3: build pair-level signals for each consented peer.
+      const relSignals = [];
+      for (const peer of withHd) {
+        relSignals.push(...buildRelationalSignals(
+          "the user", myHd, peer.name, peer._hd!, peer._between!,
+        ));
+      }
+      context.relationalSignals = relSignals.slice(0, 8);
+
+      // Level 4: build group-level signals when 2+ peers are present.
+      if (classification.level === 4 && withHd.length >= 2) {
+        context.systemSignals = buildSystemSignals(
+          "the user", myHd,
+          withHd.map((p) => ({ name: p.name, hd: p._hd! })),
+        );
+      }
+    }
   }
 
   return context;
@@ -687,6 +715,20 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
       }
     }
     lines.push("  Use consented context to explore what happens BETWEEN people — never to claim certainty about the other person's inner world, and never as a verdict on them.");
+  }
+  if (ctx.relationalSignals && ctx.relationalSignals.length > 0) {
+    lines.push("DETERMINISTIC RELATIONAL SIGNALS (structured comparison evidence — context, not verdict):");
+    for (const s of ctx.relationalSignals) {
+      lines.push(`- [${s.category}] ${s.description}`);
+    }
+    lines.push("  These signals are computationally derived from both people's Baselines. Use them to ground relational observations in concrete tendencies — never to diagnose the other person or declare a relationship outcome.");
+  }
+  if (ctx.systemSignals && ctx.systemSignals.length > 0) {
+    lines.push("DETERMINISTIC SYSTEM/GROUP SIGNALS (multi-person structural dynamics):");
+    for (const s of ctx.systemSignals) {
+      lines.push(`- [${s.category}] ${s.description}`);
+    }
+    lines.push("  These describe group-level energy patterns derived from combining multiple designs. Frame them as one possible structural reading of how this group naturally organizes — not as a fixed hierarchy or inevitable dynamic.");
   }
   const consentedNames = ctx.consented?.map((p) => p.name).join(", ");
   lines.push(

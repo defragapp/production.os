@@ -3,6 +3,7 @@ import { Instrument_Serif, JetBrains_Mono, Manrope } from "next/font/google";
 import { WebAnalytics } from "@/components/web-analytics";
 import { TabBar } from "@/components/tab-bar";
 import { InstallPrompt } from "@/components/install-prompt";
+import { ServiceWorkerRegistration } from "@/components/sw-registration";
 import "./globals.css";
 
 const sans = Manrope({
@@ -126,6 +127,7 @@ export default function RootLayout({
         {children}
         <TabBar />
         <InstallPrompt />
+        <ServiceWorkerRegistration />
         <WebAnalytics />
       </body>
     </html>

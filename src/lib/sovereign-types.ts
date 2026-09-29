@@ -111,6 +111,10 @@ export interface ReasoningContext {
   hypotheses: Hypothesis[];
   /** Consent-gated context about connected people. Never contains birth data. */
   consented?: ConsentedPeer[];
+  /** Deterministic pair-level signals (Level 3). Empty when level < 3 or no peers. */
+  relationalSignals?: RelationalSignal[];
+  /** Deterministic group-level signals (Level 4). Empty when level < 4 or < 2 peers. */
+  systemSignals?: SystemSignal[];
 }
 
 /**
@@ -134,6 +138,14 @@ export interface ConsentedPeer {
   };
   /** Between-design notes derived from comparing both users' computations. */
   betweenDesign: string[];
+  /**
+   * Optional HD computation data for deterministic signal extraction.
+   * Internal only — never rendered verbatim to the prompt. The signal engine
+   * uses this alongside the self's HD to compute structured RelationalSignals.
+   */
+  _hd?: import("./sovereign-humandesign").HumanDesignComputation;
+  /** Pre-computed BetweenDesigns for this pair (from compareDesigns). */
+  _between?: import("./sovereign-humandesign").BetweenDesigns;
 }
 
 export interface ReasoningClassification {
@@ -203,4 +215,37 @@ export interface SovereignGenerationResult {
   usedFallback: boolean;
   repairAttempts: 0 | 1;
   validated: boolean;
+}
+
+// ── Relational & System Signal types (Level 3/4 deterministic layer) ───
+
+export type SignalCategory =
+  | "shared-bridge"
+  | "pace-difference"
+  | "authority-gap"
+  | "channel-activation"
+  | "center-complement"
+  | "center-gap"
+  | "friction-point"
+  | "ease-point";
+
+export interface RelationalSignal {
+  /** Structured category for the model to understand signal type. */
+  category: SignalCategory;
+  /** Which peer(s) this signal involves. */
+  peers: string[];
+  /** Concrete non-jargon description of the relational mechanic. */
+  description: string;
+  /** Epistemic tag: always 'baseline-supported' — deterministic, not speculative. */
+  epistemicStatus: "baseline-supported";
+}
+
+export interface SystemSignal {
+  /** Group-level category. */
+  category: "center-balance" | "role-distribution" | "shared-pressure" | "unheld-center" | "group-bridge";
+  /** All peer names involved. */
+  peers: string[];
+  /** Concrete description of the group mechanic. */
+  description: string;
+  epistemicStatus: "baseline-supported";
 }

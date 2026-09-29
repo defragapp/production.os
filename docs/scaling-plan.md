@@ -116,22 +116,26 @@ in the first 10 minutes is well within our in-app rate limiter but means
 **5,000 Horizons subrequests** in that window — almost certainly met with
 throttling or timeouts from JPL's side.
 
-**Remediation (next engineering pass).**
+**Remediation.**
 
-1. **KV ephemeris cache keyed by `horizons:{targetId}:{utcHourBucket}`**.
-   The Earth-relative geocentric position of each body changes slowly enough
-   that a 1-hour bucket (±6° drift for the Moon, negligible for outer planets)
-   is accurate to ~0.1° of ecliptic longitude — far below the 0.01° precision
-   already used in `extra_prec`. TTL 3,600 s; on cache hit → zero fan-out.
-   At a realistic 100 unique birth-hours in the dataset, a full day of signups
-   hits ≤ 2,400 cached keys instead of 10 × N outbound calls.
+1. ✅ **SHIPPED — KV ephemeris cache keyed by `eph:{targetId}:{YYYY-MM-DDTHH:mm}`**
+   (`src/lib/nasa-jpl.ts`). Cache key is **minute-precise**, matching Horizons'
+   own `START_TIME` granularity, so a hit returns byte-identical rows for an
+   equivalent query. Because historical ephemeris positions for a past UTC
+   instant never change, the TTL is long (90 days). Reads/writes are
+   best-effort — a KV hiccup falls through to the live API and can never fail
+   a Baseline. On an all-cache-hit batch the 150 ms courtesy delay is skipped,
+   so repeat/nearby lookups return in <200 ms with zero outbound calls.
+   Backward compatible: no KV in the env (pure unit tests) → live fetch only.
 2. **Request coalescing via a Durable Object (DO) `HorizonsBatcher`.**
-   When multiple Workers need the same `{targetId, utcHourBucket}` concurrently,
+   When multiple Workers need the same `{targetId, minute}` concurrently,
    the DO collapses them into one Horizons call, returning the cached result to
-   all waiters. Eliminates the thundering-herd on cold buckets.
-3. **Retry with exponential backoff + jitter.** Current `fetchHorizonsRows`
-   throws on non-2xx. Wrap with 2 retries at 1 s / 3 s backoff before
-   degrading; log the `Retry-After` header if present.
+   all waiters. Eliminates the thundering-herd on cold buckets. *(not yet
+   needed — the KV cache absorbs repeat traffic; DO remains the next lever.)*
+3. ✅ **SHIPPED — Retry with exponential backoff.** `fetchWithBackoff` wraps
+   every Horizons call: up to 3 attempts on transient 5xx/429/network faults,
+   backing off 250 ms → 1 s → 4 s (`RETRY_BASE_MS × 4^attempt`); deterministic
+   4xx responses are never retried.
 4. **Pre-computed ephemeris table (long-term).** For the top 10,000 birth
    dates/hour combinations (covering >95% of actual registrations), store the
    10-position JSON in D1 or R2 at build/deploy time; `/api/baseline` becomes
@@ -201,11 +205,13 @@ misconfiguration cannot take chat offline.
    could reach 15–30% for template-like questions.
 2. **AI Gateway per-IP rate limit**: cap e.g. 60 completions / hour / IP at the
    gateway layer. This protects neurons even if a user cycles multiple accounts.
-3. **Model fallback routing**: `@cf/meta/llama-3.1-8b-instruct-fp8` is the
-   primary. If regional capacity returns 503 (Workers AI isolates are
-   region-bound), route to `@cf/meta/llama-3.1-8b-instruct` (non-fp8, ~1.2×
-   slower but wider availability). Implement as a `SECONDARY_MODEL` constant
-   in `sovereign-model.ts` tried after the direct-binding tier.
+3. ✅ **SHIPPED — Model fallback routing**: `@cf/meta/llama-3.1-8b-instruct-fp8`
+   is the primary. If both the gateway tier and the direct-binding tier fail
+   (regional capacity 503 / code 1050 included), `sovereign-model.ts` now tries
+   the `SOVEREIGN_SECONDARY_MODEL` constant (`@cf/meta/llama-3.1-8b-instruct`,
+   non-fp8, wider availability) as a third tier before surfacing a `ModelError`.
+   The secondary is skipped when the primary *is* the secondary (no pool
+   double-retry), and recovery/final failure are both logged for ops.
 4. **Reduce max_tokens for short turns**: the reasoning engine can classify a
    turn as a brief acknowledgment (level-1, no meaning trigger) and pass
    `maxTokens: 512` instead of 1,024, cutting worst-case per-turn neurons ~12%.

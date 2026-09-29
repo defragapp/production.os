@@ -120,12 +120,73 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ── Ephemeris cache & retry resilience ────────────────────────────────
+// Historical ephemeris rows for a given UTC instant never change, so a
+// confirmed response is cached in SESSION_KV for 90 days. Repeat or nearby
+// submissions (same birth minute, re-run after a transient NASA failure)
+// resolve locally instead of fanning out to ssd.jpl.nasa.gov again.
+const EPHEMERIS_CACHE_TTL_S = 90 * 24 * 60 * 60;
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_MS = 250; // 250ms → 1000ms exponential backoff between attempts
+
+/** KV key at minute precision — the exact granularity of the Horizons
+ *  START_TIME parameter, so a hit is always an equivalent query. */
+export function ephemerisCacheKey(targetId: string, instant: Date): string {
+  return `eph:${targetId}:${instant.toISOString().slice(0, 16)}`;
+}
+
+/** Minimal KV shape so pure unit tests can pass a Map-backed fake, and a
+ *  KV-less env (legacy callers, tests) simply disables the cache. */
+type EphemerisKv = {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, opts?: { expirationTtl?: number }): Promise<unknown>;
+} | null | undefined;
+
+function isTransientStatus(status: number): boolean {
+  return status >= 500 || status === 429;
+}
+
+/** Fetch with bounded exponential backoff on transient 5xx/429/network
+ *  errors. Deterministic 4xx responses return immediately — retrying a bad
+ *  query would just repeat the same rejection. */
+async function fetchWithBackoff(
+  url: string,
+  init: RequestInit,
+  fetchImpl: typeof fetch,
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetchImpl(url, init);
+      if (!isTransientStatus(response.status)) return response;
+      lastError = new Error(`Horizons unavailable (${response.status})`);
+    } catch (err) {
+      lastError = err; // network failure / timeout — worth another attempt
+    }
+    if (attempt < MAX_ATTEMPTS - 1) await delay(RETRY_BASE_MS * 4 ** attempt);
+  }
+  throw lastError instanceof Error ? lastError : new Error("Horizons request failed after retries");
+}
+
 async function fetchHorizonsRows(
   env: AppEnv,
   targetId: string,
   instant: Date,
   fetchImpl: typeof fetch = fetch,
+  trace?: { fetched: boolean },
 ): Promise<HorizonsRow[]> {
+  const kv: EphemerisKv = env?.SESSION_KV ?? null;
+  const cacheKey = ephemerisCacheKey(targetId, instant);
+
+  // Cache reads are best-effort: a KV hiccup must never fail the Baseline —
+  // we just fall through to the live API like before the cache existed.
+  if (kv) {
+    try {
+      const hit = await kv.get(cacheKey);
+      if (hit) return JSON.parse(hit) as HorizonsRow[];
+    } catch {}
+  }
+
   const stop = new Date(instant.getTime() + 12 * 60 * 60 * 1000);
   const url = new URL(env.BASELINE_HORIZONS_URL || DEFAULT_HORIZONS_URL);
   const params: Record<string, string> = {
@@ -149,12 +210,20 @@ async function fetchHorizonsRows(
     url.searchParams.set(key, value);
   }
 
-  const response = await fetchImpl(url.toString(), {
+  if (trace) trace.fetched = true;
+  const response = await fetchWithBackoff(url.toString(), {
     headers: { "User-Agent": "Sovereign.OS Baseline Engine/2.0" },
-  });
+  }, fetchImpl);
 
   if (!response.ok) throw new Error(`Horizons unavailable (${response.status})`);
-  return parseHorizonsJson(await response.json());
+  const rows = parseHorizonsJson(await response.json());
+
+  if (kv && rows.length > 0) {
+    try {
+      await kv.put(cacheKey, JSON.stringify(rows), { expirationTtl: EPHEMERIS_CACHE_TTL_S });
+    } catch {}
+  }
+  return rows;
 }
 
 /** Compute natal planetary positions for a given instant. */
@@ -169,9 +238,12 @@ export async function computeNatalPositions(
 
   for (let offset = 0; offset < entries.length; offset += batchSize) {
     const batch = entries.slice(offset, offset + batchSize);
+    // The inter-batch pause exists to be courteous to NASA. A batch answered
+    // entirely from cache never touched the network, so it doesn't wait.
+    const trace = { fetched: false };
     const resolved = await Promise.all(
       batch.map(async ([body, targetId]) => {
-        const rows = await fetchHorizonsRows(env, targetId, instant, fetchImpl);
+        const rows = await fetchHorizonsRows(env, targetId, instant, fetchImpl, trace);
         if (!rows.length) return null;
         const first = rows[0];
         const second = rows[1];
@@ -193,7 +265,7 @@ export async function computeNatalPositions(
       if (result) positions[result[0]] = result[1];
     }
 
-    if (offset + batchSize < entries.length) await delay(150);
+    if (trace.fetched && offset + batchSize < entries.length) await delay(150);
   }
 
   return positions;

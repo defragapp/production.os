@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseHorizonsJson, longitudeToSign } from "./nasa-jpl";
+import { parseHorizonsJson, longitudeToSign, computeNatalPositions, ephemerisCacheKey } from "./nasa-jpl";
+import type { AppEnv } from "./env";
 
 // Faithful excerpt of a real Horizons QUANTITIES=31 CSV response
 // (Sun, geocentric, June 1990) — date tag + blank cols + ObsEcLon/ObsEcLat.
@@ -66,5 +67,101 @@ describe("longitudeToSign", () => {
   });
   it("wraps 359.5° to Pisces", () => {
     expect(longitudeToSign(359.5).sign).toBe("Pisces");
+  });
+});
+
+// ── Ephemeris KV cache & retry backoff ────────────────────────────────
+
+function fakeResponse(status: number, payload: unknown): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => payload,
+  } as Response;
+}
+
+function fakeKv() {
+  const store = new Map<string, { value: string; ttl?: number }>();
+  return {
+    store,
+    get: async (key: string) => store.get(key)?.value ?? null,
+    put: async (key: string, value: string, opts?: { expirationTtl?: number }) => {
+      store.set(key, { value, ttl: opts?.expirationTtl });
+    },
+  };
+}
+
+const INSTANT = new Date("1990-06-15T19:30:00Z");
+
+function envWithKv(kv: ReturnType<typeof fakeKv> | null): AppEnv {
+  return { SESSION_KV: kv, BASELINE_HORIZONS_URL: "" } as unknown as AppEnv;
+}
+
+describe("computeNatalPositions ephemeris cache", () => {
+  it("without KV stays backward-compatible and hits the network for every body", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => { calls++; return fakeResponse(200, REAL_PAYLOAD); }) as typeof fetch;
+    const positions = await computeNatalPositions(envWithKv(null), INSTANT, fetchImpl);
+    expect(calls).toBe(10);
+    expect(Object.keys(positions)).toHaveLength(10);
+  });
+
+  it("stores parsed rows on first fetch and skips outbound fetch on re-run", async () => {
+    const kv = fakeKv();
+    let calls = 0;
+    const fetchImpl = (async () => { calls++; return fakeResponse(200, REAL_PAYLOAD); }) as typeof fetch;
+
+    const first = await computeNatalPositions(envWithKv(kv), INSTANT, fetchImpl);
+    expect(calls).toBe(10);
+    expect(kv.store.size).toBe(10);
+    // Historical ephemeris never changes — a 90-day TTL is safe.
+    for (const entry of kv.store.values()) expect(entry.ttl).toBe(90 * 24 * 60 * 60);
+
+    const second = await computeNatalPositions(envWithKv(kv), INSTANT, fetchImpl);
+    expect(calls).toBe(10); // no additional outbound calls
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first)); // byte-identical
+  });
+
+  it("cache-hit results are byte-identical to the no-cache results", async () => {
+    const fetchImpl = (async () => fakeResponse(200, REAL_PAYLOAD)) as typeof fetch;
+    const uncached = await computeNatalPositions(envWithKv(null), INSTANT, fetchImpl);
+
+    const kv = fakeKv();
+    await computeNatalPositions(envWithKv(kv), INSTANT, fetchImpl); // warm
+    const cached = await computeNatalPositions(envWithKv(kv), INSTANT, fetchImpl);
+    expect(JSON.stringify(cached)).toBe(JSON.stringify(uncached));
+  });
+
+  it("ephemerisCacheKey is minute-precise and target-scoped", () => {
+    const key = ephemerisCacheKey("10", INSTANT);
+    expect(key).toBe("eph:10:1990-06-15T19:30");
+    // Same minute → same key (cache hit); different minute or body → different key.
+    expect(ephemerisCacheKey("10", new Date("1990-06-15T19:30:59Z"))).toBe(key);
+    expect(ephemerisCacheKey("301", INSTANT)).not.toBe(key);
+  });
+
+  it("retries transient 503 with backoff and succeeds", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => {
+      calls++;
+      // First Sun request fails transiently; everything after succeeds.
+      if (calls === 1) return fakeResponse(503, { error: "busy" });
+      return fakeResponse(200, REAL_PAYLOAD);
+    }) as unknown as typeof fetch;
+
+    const kv = fakeKv();
+    const positions = await computeNatalPositions(envWithKv(kv), INSTANT, fetchImpl);
+    expect(positions.sun.sign).toBe("Gemini");
+    expect(calls).toBe(11); // 10 bodies + 1 retry
+  });
+
+  it("does not retry deterministic 4xx rejections", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => { calls++; return fakeResponse(400, { error: "bad query" }); }) as typeof fetch;
+    await expect(
+      computeNatalPositions(envWithKv(null), INSTANT, fetchImpl),
+    ).rejects.toThrow(/Horizons unavailable \(400\)/);
+    // First batch of 2 bodies, each tried exactly once — no retry storm.
+    expect(calls).toBe(2);
   });
 });

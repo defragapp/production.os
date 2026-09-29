@@ -68,6 +68,48 @@ export async function GET(request: NextRequest) {
 
   const grants = await listGrants(env, userId, 50);
 
+  // ── Billing health ────────────────────────────────────────────────────
+  // The Stripe webhook stamps `dunning:<stripe_customer_id>` (last-nudge ms,
+  // 14-day TTL) when a charge fails. A live key therefore means "this paid
+  // account missed a payment within the last 14 days" — exactly the window
+  // Smart Retries and the portal email are working through. KV list gives
+  // the ids; D1 resolves them back to accounts so the owner can act.
+  let dunning: Array<{ customerId: string; email: string | null; lastNudgeAt: number | null }> = [];
+  try {
+    const listed = await env.SESSION_KV.list({ prefix: "dunning:" });
+    const keys = listed.keys.slice(0, 25);
+    const ids = keys.map((k) => k.name.slice("dunning:".length)).filter(Boolean);
+    const emails = new Map<string, string>();
+    if (ids.length > 0) {
+      try {
+        const rows = await env.DB.prepare(
+          `SELECT stripe_customer_id, email FROM users WHERE stripe_customer_id IN (${ids.map(() => "?").join(",")})`,
+        ).bind(...(ids as never[])).all<{ stripe_customer_id: string; email: string }>();
+        for (const r of rows.results ?? []) emails.set(r.stripe_customer_id, r.email);
+      } catch {}
+    }
+    dunning = keys.map((k) => {
+      const customerId = k.name.slice("dunning:".length);
+      // The put() carried a 14-day TTL; if the platform echoes expiration we
+      // can back-compute the failed-charge moment the nudge was stamped at.
+      const lastNudgeAt = typeof k.expiration === "number"
+        ? (k.expiration - 60 * 60 * 24 * 14) * 1000
+        : null;
+      return { customerId, email: emails.get(customerId) ?? null, lastNudgeAt };
+    });
+  } catch {}
+
+  // ── Gift-pass funnel ──────────────────────────────────────────────────
+  // Aggregate view over the grants listed below, so minted-vs-claimed is one
+  // glance rather than a scroll. The count helper degrades to 0 on a
+  // pre-migration database, keeping the console open.
+  const [passesMinted, passesClaimed, passRedemptions, passesRevoked] = await Promise.all([
+    count(env, "SELECT COUNT(*) AS n FROM promo_grants"),
+    count(env, "SELECT COUNT(*) AS n FROM promo_grants WHERE redeemed_count > 0"),
+    count(env, "SELECT COALESCE(SUM(redeemed_count), 0) AS n FROM promo_grants"),
+    count(env, "SELECT COUNT(*) AS n FROM promo_grants WHERE revoked_at IS NOT NULL"),
+  ]);
+
   // Optional single-account inspection: the owner pastes an email to see that
   // person's live entitlement and diagnose a support ticket without DB access.
   const lookupParam = new URL(request.url).searchParams.get("email")?.trim().toLowerCase();
@@ -115,6 +157,17 @@ export async function GET(request: NextRequest) {
       turnsToday,
       modelErrorsToday,
       dayKey: today,
+    },
+    billing: {
+      dunningCount: dunning.length,
+      dunning,
+    },
+    promos: {
+      minted: passesMinted,
+      claimed: passesClaimed,
+      redemptions: passRedemptions,
+      revoked: passesRevoked,
+      open: grants.filter((g) => isGrantOpen(g)).length,
     },
     grants: grants.map((g) => ({
       codeHashTail: g.code_hash.slice(-8),

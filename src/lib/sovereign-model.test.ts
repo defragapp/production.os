@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createCloudflareModel, describeModelError, ModelError, DEFAULT_MAX_TOKENS } from "./sovereign-model";
+import { createCloudflareModel, describeModelError, ModelError, DEFAULT_MAX_TOKENS, SOVEREIGN_MODEL, SOVEREIGN_SECONDARY_MODEL } from "./sovereign-model";
 import type { ModelInput } from "./sovereign-types";
 
 function fakeEnv(run: (model: string, input: unknown, settings?: unknown) => Promise<unknown>) {
@@ -121,6 +121,60 @@ describe("createCloudflareModel", () => {
     expect(logged).toContain("gateway run failed");
     expect(logged).toContain("direct run failed");
     expect(logged).toContain("code 1050");
+    spy.mockRestore();
+  });
+
+  it("walks primary gateway → primary direct → secondary direct on a capacity outage", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const chain: Array<`${string}|${"gateway" | "direct"}`> = [];
+    const model = createCloudflareModel(
+      fakeEnv(async (m, _input, settings) => {
+        chain.push(`${m}|${settings ? "gateway" : "direct"}`);
+        // The -fp8 pool is down regionally (503/1050) on both tiers; the
+        // standard pool answers.
+        if (m === SOVEREIGN_MODEL) throw new Error("error code: 1050 — No available capacity for this model");
+        return { response: "served by the secondary pool" };
+      }),
+    );
+    const out = await model.generate(INPUT);
+    expect(chain).toEqual([
+      `${SOVEREIGN_MODEL}|gateway`,
+      `${SOVEREIGN_MODEL}|direct`,
+      `${SOVEREIGN_SECONDARY_MODEL}|direct`,
+    ]);
+    expect(out.text).toBe("served by the secondary pool");
+    expect(out.usedGateway).toBe(false);
+    expect(spy.mock.calls.flat().join(" ")).toContain("recovered on secondary model");
+    spy.mockRestore();
+  });
+
+  it("only throws ModelError after the secondary tier also fails", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    let calls = 0;
+    const model = createCloudflareModel(
+      fakeEnv(async () => {
+        calls += 1;
+        throw new Error("error code: 1050");
+      }),
+    );
+    await expect(model.generate(INPUT)).rejects.toThrow(ModelError);
+    expect(calls).toBe(3); // gateway + direct + secondary direct
+    expect(spy.mock.calls.flat().join(" ")).toContain("secondary run failed");
+    spy.mockRestore();
+  });
+
+  it("skips the secondary tier when the primary IS the secondary model", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const seen: string[] = [];
+    const model = createCloudflareModel(
+      fakeEnv(async (m) => {
+        seen.push(m);
+        throw new Error("error code: 1050");
+      }),
+      { model: SOVEREIGN_SECONDARY_MODEL, gatewayId: "" },
+    );
+    await expect(model.generate(INPUT)).rejects.toThrow(ModelError);
+    expect(seen).toEqual([SOVEREIGN_SECONDARY_MODEL]); // one call, no duplicate retry
     spy.mockRestore();
   });
 });

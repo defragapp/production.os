@@ -55,7 +55,11 @@ That is the correct, un-bypassable shape — keep it.
    `invoice.payment_action_required` (SCA nudge), and
    `checkout.session.async_payment_failed` (demote to `free`). Users are resolved
    by `customer` → `users.stripe_customer_id` with a `metadata.account_id` /
-   `client_reference_id` fallback. **🔧 Also turn on Stripe's Automated dunning +
+   `client_reference_id` fallback. ✅ **Owner visibility shipped:** `GET /api/owner/overview`
+   now lists live `dunning:*` KV stamps (each means a payment failure within 14 days)
+   joined to account emails, plus the gift-pass funnel (minted / claimed / redeemed /
+   revoked), and `/account`'s Owner Console renders a "Payment issues (14d)" metric
+   and the affected accounts. **🔧 Also turn on Stripe's Automated dunning +
    Smart Retries in the dashboard** — that is the hands-off involuntary-churn
    recovery that complements these events.
 3. 🔧 **Receipt emails.** Stripe only emails its own receipts/invoices if

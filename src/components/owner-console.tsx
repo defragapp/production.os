@@ -27,6 +27,12 @@ interface Grant {
   revokeKey: string;
 }
 
+interface DunningAccount {
+  customerId: string;
+  email: string | null;
+  lastNudgeAt: number | null;
+}
+
 interface Overview {
   metrics: {
     totalUsers: number;
@@ -38,6 +44,10 @@ interface Overview {
     turnsToday: number;
     modelErrorsToday: number;
   };
+  /** Live `dunning:*` KV stamps — paid accounts that missed a payment recently. */
+  billing?: { dunningCount: number; dunning: DunningAccount[] };
+  /** Gift-pass funnel: minted vs claimed vs still open. */
+  promos?: { minted: number; claimed: number; redemptions: number; revoked: number; open: number };
   grants: Grant[];
   lookup: unknown;
 }
@@ -173,10 +183,42 @@ export function OwnerConsole() {
             <div className="grid grid-cols-2 gap-2">
               <Metric label="AI turns today" value={m.turnsToday} />
               <Metric label="Model errors today" value={m.modelErrorsToday} />
+              <Metric label="Payment issues (14d)" value={data?.billing?.dunningCount ?? 0} />
+              <Metric label="Passes open / minted" value={`${data?.promos?.open ?? 0} / ${data?.promos?.minted ?? 0}`} />
             </div>
           </>
         ) : (
           <LoadingScreen className="py-6" label="Loading metrics" />
+        )}
+
+        {/* ── Payment issues (dunning) ────────────────────────── */}
+        {(data?.billing?.dunning.length ?? 0) > 0 && (
+          <div className="glass-panel space-y-2 p-4">
+            <p className="text-sm font-medium text-foreground">Accounts with a failed payment (last 14 days)</p>
+            <ul className="space-y-1">
+              {(data?.billing?.dunning ?? []).slice(0, 10).map((d) => (
+                <li key={d.customerId} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate text-foreground">{d.email ?? d.customerId}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {d.lastNudgeAt ? `nudge ${formatD1Date(new Date(d.lastNudgeAt).toISOString())}` : "awaiting retry"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Stripe Smart Retries keeps charging; the tier holds during the window. A raised count means invoices,
+              not your code — check Stripe&rsquo;s dunning reports before anything here.
+            </p>
+          </div>
+        )}
+
+        {/* ── Gift-pass funnel ────────────────────────────────── */}
+        {data?.promos && data.promos.minted > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Gift passes: {data.promos.minted} minted · {data.promos.claimed} claimed
+            ({data.promos.redemptions} redemptions) · {data.promos.open} still open
+            {data.promos.revoked > 0 ? ` · ${data.promos.revoked} revoked` : ""}.
+          </p>
         )}
 
         {/* ── Mint a 30-day pass ─────────────────────────────────────── */}

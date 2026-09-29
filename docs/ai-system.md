@@ -171,29 +171,32 @@ out-of-flow `.journey-veil`, which reveals at `CLS = 0.0000` (pinned by the
 zero-CLS release gate). Journey lifecycle (rewound / completed / started) is
 logged one row per decision, sourced to the person who decided.
 
-## 10. Future: relational patterning assessment
+## 10. Relational patterning assessment (shipped)
 
-The product roadmap describes systems-level reading ("the systems you live within"). The
-foundations exist:
+The product roadmap describes systems-level reading ("the systems you live within").
+The foundations and the deterministic engine are now live:
 
-- Consent-gated relationship rows are already materialized (`relationships` table,
-  `sovereign-connections.ts` builds `consentedPeers`).
-- `buildBaselineSignals` is per-person; a **pair-comparison renderer** can diff two signal
-  sets on the client-visible evidence triangle (values, pressure responses, and capacities),
-  and a **group/systems renderer** can surface role structures across consented participants.
+- Consent-gated relationship rows are materialized (`relationships` table,
+  `sovereign-connections.ts` builds `consentedPeers`, each carrying an internal-only
+  `_hd` / `_between` HD computation — never rendered verbatim to the model).
+- `src/lib/sovereign-signals.ts` implements the pure, deterministic extractors:
+  1. `buildRelationalSignals(userHd, peer)` — up to six pair signals for Level 3
+     inquiries (shared-bridge themes, pace difference, authority gap, activated
+     joint channels, center complement, friction point), each labeled
+     `baseline-supported` (never verdicts).
+  2. `buildSystemSignals(userHd, peers)` — up to eight group signals for Level 4
+     (center balance across the group, unheld centers, role distribution by Type,
+     shared motor pressure, peer-to-peer bridges) when ≥2 peers are consented.
+- Both are injected into `ReasoningContext` by `buildReasoningContext` (the chat
+  route passes the signed-in user's own `myHd`) and rendered by
+  `renderReasoningContext` as clearly-labeled *context, not verdict* evidence, so
+  the model is anchored by deterministic relational mechanics instead of
+  improvising from raw gate numbers. Below Level 3, or without computed HD, the
+  pipeline behaves exactly as before.
+- Raw birth data never crosses into prompts; signals are derived, jargon-free
+  observations. Pair-level correction memory remains a future step.
 
-Planned additions (design-only, no behavior change committed yet):
-
-1. `buildRelationalSignals(a, b)` — overlap/conflict annotations between two Baselines,
-   each labeled `baseline-supported` (never verdicts).
-2. `buildSystemSignals(people[])` — role/loyalty hypothesis generation for ≥3 consented
-   people, gated exactly like relationships, with the same interpretive safety rules.
-3. Relational correction memory — the pipeline already stores corrected interpretations;
-   extend it to pair-level corrections so a reframe in one relationship context does not
-   contaminate another.
-
-Implement these inside the existing `sovereign-reasoning` pipeline and re-route the consent
-check through `sovereign-connections` exactly as Level 3 does today.
+Pinned by `sovereign-signals.test.ts` (18 tests) and release gate #31.
 
 ## 11. Operations notes
 

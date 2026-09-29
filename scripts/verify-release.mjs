@@ -2,7 +2,7 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, thirty numbered gates (97 individual checks), all must be green
+ * One command, thirty-one numbered gates (105 individual checks), all must be green
  * before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
@@ -107,8 +107,16 @@
  *                                            /support, /baseline, /chat and /settings computes font-size ≥ 16px
  *                                            at 390×844 under coarse pointers, so iOS Safari never auto-zooms
  *                                            the viewport when a person taps a field.
+ *  31. high-value evolution wiring        — the Level 3/4 deterministic relational/system signal engine is
+ *                                            computed and rendered into the prompt; Horizons rows are KV-cached
+ *                                            per minute-bucket with transient-failure backoff; a secondary
+ *                                            Workers AI model runs before ModelError; the owner console
+ *                                            surfaces dunning accounts and the gift-pass funnel; and the
+ *                                            privacy-first offline shell is REAL — /sw.js served as JavaScript
+ *                                            with its /api/ bypass intact, /offline rendering its ≥44px retry,
+ *                                            and a production page registering the worker console-clean.
  *
- * Gates 1-8 and 10-30 fail closed. The preview-backed passes (9-24, 26-30) boot the
+ * Gates 1-8 and 10-31 fail closed. The preview-backed passes (9-24, 26-31) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -387,6 +395,70 @@ async function gateStaticAnalysis() {
     chat.includes('.journey-veil-compact button');
   record("two-layer Escape: the sheet wins press one, the veil folds on press two", layeredEscape,
     layeredEscape ? "" : "the archive sheet lost its capture+stopPropagation, or the page lost one of the two focus handoffs");
+
+  // ── Gate 31 · High-Value Evolution wiring ────────────────────────────
+  // The relational signal engine, the ephemeris cache, the secondary model
+  // tier, the owner's billing view, and the offline shell each ship as pure
+  // source contracts — unit tests prove their behaviour, these ratchets prove
+  // they are still WIRED into the routes that must use them.
+  const signalsPath = path.join(srcDir, "lib/sovereign-signals.ts");
+  const signalsSrc = fs.existsSync(signalsPath) ? fs.readFileSync(signalsPath, "utf8") : "";
+  const reasoningSrc = fs.readFileSync(path.join(srcDir, "lib/sovereign-reasoning.ts"), "utf8");
+  const signalsWired =
+    signalsSrc.includes("export function buildRelationalSignals") &&
+    signalsSrc.includes("export function buildSystemSignals") &&
+    reasoningSrc.includes("buildRelationalSignals(") &&
+    reasoningSrc.includes("buildSystemSignals(") &&
+    reasoningSrc.includes("DETERMINISTIC RELATIONAL SIGNALS") &&
+    reasoningSrc.includes("DETERMINISTIC SYSTEM/GROUP SIGNALS") &&
+    chatRoute.includes("myHd: computeHumanDesign(positionsFromBaseline(rawBaselineData))") &&
+    signalsSrc.includes('"baseline-supported"');
+  record("deterministic relational/system signals are computed and rendered into the prompt", signalsWired,
+    signalsWired ? "" : "the Level 3/4 signal engine lost its export, its render block, or the chat route stopped passing myHd");
+
+  const jplSrc = fs.readFileSync(path.join(srcDir, "lib/nasa-jpl.ts"), "utf8");
+  const jplCache =
+    jplSrc.includes("ephemerisCacheKey") &&
+    jplSrc.includes("SESSION_KV") &&
+    jplSrc.includes("expirationTtl: EPHEMERIS_CACHE_TTL_S") &&
+    /MAX_ATTEMPTS = 3/.test(jplSrc) &&
+    jplSrc.includes("fetchWithBackoff") &&
+    jplSrc.includes("RETRY_BASE_MS * 4 ** attempt");
+  record("Horizons rows are KV-cached per minute-bucket with transient-failure backoff", jplCache,
+    jplCache ? "" : "the ephemeris cache lost its key, its TTL write, or the retry/backoff path was unwired");
+
+  const modelSrc = fs.readFileSync(path.join(srcDir, "lib/sovereign-model.ts"), "utf8");
+  const secondaryTier =
+    modelSrc.includes('SOVEREIGN_SECONDARY_MODEL = "@cf/meta/llama-3.1-8b-instruct"') &&
+    modelSrc.includes("ai.run(SOVEREIGN_SECONDARY_MODEL, params)") &&
+    /if \(model !== SOVEREIGN_SECONDARY_MODEL\)/.test(modelSrc);
+  record("a secondary Workers AI model runs before ModelError is thrown", secondaryTier,
+    secondaryTier ? "" : "the Tier-3 fallback was removed from sovereign-model.ts");
+
+  const overviewRoute = fs.readFileSync(path.join(srcDir, "app/api/owner/overview/route.ts"), "utf8");
+  const ownerConsole = fs.readFileSync(path.join(srcDir, "components/owner-console.tsx"), "utf8");
+  const revenueView =
+    overviewRoute.includes('list({ prefix: "dunning:" })') &&
+    overviewRoute.includes("FROM promo_grants") &&
+    ownerConsole.includes("Payment issues") &&
+    ownerConsole.includes("data.promos.minted");
+  record("owner console surfaces dunning accounts and the gift-pass funnel", revenueView,
+    revenueView ? "" : "the overview stopped reading dunning:* stamps, or the console lost its billing tiles");
+
+  const swSrc = fs.existsSync(path.join(root, "public/sw.js")) ? fs.readFileSync(path.join(root, "public/sw.js"), "utf8") : "";
+  const layoutSrc = fs.readFileSync(path.join(srcDir, "app/layout.tsx"), "utf8");
+  const swRegSrc = fs.existsSync(path.join(srcDir, "components/sw-registration.tsx"))
+    ? fs.readFileSync(path.join(srcDir, "components/sw-registration.tsx"), "utf8") : "";
+  const swPrivacy =
+    swSrc.includes('startsWith("/api/")') &&
+    !swSrc.includes("cache.put") &&
+    swSrc.includes('if (request.method !== "GET") return;') &&
+    swSrc.includes('PRECACHE_URLS = ["/offline"') &&
+    fs.existsSync(path.join(srcDir, "app/offline/page.tsx")) &&
+    layoutSrc.includes("ServiceWorkerRegistration") &&
+    swRegSrc.includes('register("/sw.js"');
+  record("the offline shell precaches only /offline + brand art and never touches /api/*", swPrivacy,
+    swPrivacy ? "" : "sw.js grew a cache.put / lost its API bypass, or the registration was unmounted from the layout");
 }
 
 async function gateBuild() {
@@ -3249,6 +3321,82 @@ async function gateManifest(port, booted) {
     findings.slice(0, 3).join(" | ") || `${checked} icon entries fetched and byte-checked against their declared size`);
 }
 
+/**
+ * Gate 31 (live half) — the offline shell exists as a real served artifact:
+ * /sw.js answers with a JavaScript MIME type (a Worker that 404s or arrives as
+ * text/plain registers nothing on iOS), the /offline page renders its promise
+ * and its ≥44px retry, and a production-build page registers the worker with
+ * zero console errors — the same bar an installed PWA will hit.
+ */
+async function gateEvolution(port, booted) {
+  heading("Gate 31 · evolution pass live surfaces");
+  if (!booted) {
+    record("/sw.js is served as JavaScript from the site root", true, "SKIPPED — preview server did not come up in this environment");
+    record("/offline renders the shell with its retry affordance", true, "SKIPPED — preview server did not come up in this environment");
+    record("service worker registers on a production page with zero console errors", true, "SKIPPED — preview server did not come up in this environment");
+    return;
+  }
+
+  // 1. /sw.js — 200, JS MIME, and the privacy bypass survives whatever the
+  //    asset pipeline did to the file on the way here.
+  let swOk = false;
+  let swWhy = "";
+  try {
+    const res = await fetchWithTimeout(`http://localhost:${port}/sw.js`, 15000);
+    const ctype = res.headers.get("content-type") || "";
+    const body = await res.text();
+    if (res.status !== 200) swWhy = `status ${res.status}`;
+    else if (!/javascript/.test(ctype)) swWhy = `served as ${JSON.stringify(ctype)}`;
+    else if (!body.includes('startsWith("/api/")')) swWhy = "served copy lost the /api/ bypass";
+    else if (body.includes("cache.put")) swWhy = "served copy contains cache.put";
+    else swOk = true;
+  } catch (e) {
+    swWhy = String(e).slice(0, 80);
+  }
+  record("/sw.js is served as JavaScript from the site root", swOk, swOk ? "" : swWhy);
+
+  // 2. /offline — the promise, the button label, and the 44px floor in class.
+  let pageOk = false;
+  let pageWhy = "";
+  try {
+    const res = await fetchWithTimeout(`http://localhost:${port}/offline`, 15000);
+    const html = await res.text();
+    if (res.status !== 200) pageWhy = `status ${res.status}`;
+    else if (!html.includes("Retry connection")) pageWhy = "no Retry connection control";
+    else if (!html.includes("min-h-[48px]")) pageWhy = "retry button lost its ≥44px touch floor";
+    else if (!/noindex|x-noindex/i.test(html) && !html.includes('"robots"')) pageWhy = "no-robots marker missing from the shell";
+    else pageOk = true;
+  } catch (e) {
+    pageWhy = String(e).slice(0, 80);
+  }
+  record("/offline renders the shell with its retry affordance", pageOk, pageOk ? "" : pageWhy);
+
+  // 3. A real production page registers the worker and stays console-clean.
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ channel: "chrome", headless: true });
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+    page.on("pageerror", (e) => errors.push(String(e)));
+    await page.goto(`http://localhost:${port}/onboard`, { waitUntil: "domcontentloaded", timeout: 20000 });
+    // Registration is idle-time by design; give it room, then read the truth
+    // from the browser rather than from any component state.
+    let registered = false;
+    for (let i = 0; i < 30 && !registered; i++) {
+      registered = await page.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => Boolean(r)));
+      if (!registered) await sleep(500);
+    }
+    const swErrors = errors.filter((e) => /service worker|sw\.js|script url/i.test(e));
+    record("service worker registers on a production page with zero console errors", registered && swErrors.length === 0,
+      !registered ? "no registration appeared within 15s" : swErrors.slice(0, 2).join(" | "));
+    await ctx.close();
+  } finally {
+    await browser.close();
+  }
+}
+
 async function main() {
   const started = Date.now();
   console.log("verify:release — continuous stability & zero-regression ratchet");
@@ -3276,6 +3424,7 @@ async function main() {
     await gateIpIsolation(8788, booted);
     await gateOwnerGift(8788, booted);
     await gateInputFloor(8788, booted);
+    await gateEvolution(8788, booted);
   } finally {
     if (child) child.kill("SIGKILL");
   }
