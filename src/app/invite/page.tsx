@@ -46,6 +46,9 @@ function AcceptCard({
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsBaseline, setNeedsBaseline] = useState(false);
+  // Explicit, recorded choice (not a silent server default): share the derived
+  // Baseline signals with this connection. Raw birth data is never shared.
+  const [shareBaseline, setShareBaseline] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +74,7 @@ function AcceptCard({
       const res = await fetch("/api/invites/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token, shareBaseline }),
       });
       if (res.ok) {
         onAccepted(inviterName);
@@ -161,9 +164,22 @@ function AcceptCard({
           <>
             <div className="glass-panel px-4 py-3 text-sm leading-relaxed text-muted-foreground">
               You&apos;re signed in. When you accept,{" "}
-              <span className="font-medium text-foreground">{inviterName}</span> becomes a connection
-              and you can choose how much of your Baseline to share with them.
+              <span className="font-medium text-foreground">{inviterName}</span> becomes a connection.
             </div>
+
+            {/* The sharing decision belongs to the person accepting, at the
+                moment they accept — not to a server default. */}
+            <label htmlFor="share-baseline" className="flex items-start gap-2 text-sm font-normal leading-relaxed text-muted-foreground">
+              <input
+                id="share-baseline"
+                type="checkbox"
+                checked={shareBaseline}
+                onChange={(e) => setShareBaseline(e.target.checked)}
+                aria-label="Share my derived Baseline signals in this connection"
+                className="consent-checkbox mt-1 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border border-input bg-transparent transition-colors checked:border-foreground checked:bg-foreground"
+              />
+              <span>Share my derived Baseline signals in this connection (raw birth data is never shared).</span>
+            </label>
 
             {error && (
               <p role="alert" className="text-sm leading-relaxed text-destructive">{error}</p>

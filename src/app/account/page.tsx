@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
 import { AddPasskeyButton } from "@/components/passkey";
+import { OwnerConsole } from "@/components/owner-console";
 import { formatD1Date } from "@/lib/utils";
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
@@ -51,19 +52,25 @@ export default function AccountPage() {
   const [portalError, setPortalError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNote, setExportNote] = useState<string | null>(null);
+  // The owner surface is decided from the server's tier probe BEFORE mount:
+  // a non-owner never even fires /api/owner/overview, so a browser console
+  // can't show a 404 for a surface that isn't theirs. (The API still 404s —
+  // invisibility in, denial out.)
+  const [ownerView, setOwnerView] = useState(false);
 
   useEffect(() => {
     setVerifyStatus(new URLSearchParams(window.location.search).get("verify"));
     fetch("/api/auth")
       .then((r) => r.json())
       .then((d) => {
-        const data = d as { user?: UserData; usage?: UsageData };
+        const data = d as { user?: UserData; usage?: UsageData; tier?: { isOwner?: boolean } };
         if (!data.user) {
           router.push("/onboard?mode=login");
           return;
         }
         setUser(data.user);
         setUsage(data.usage ?? null);
+        setOwnerView(data.tier?.isOwner === true);
       })
       .catch(() => router.push("/onboard?mode=login"))
       .finally(() => setLoading(false));
@@ -326,6 +333,12 @@ export default function AccountPage() {
                 )}
               </div>
             </Section>
+
+            {/* Rendered only when the server's tier probe says this is the
+                verified owner — and self-gating on top: /api/owner/overview
+                still answers anyone else with a plain 404. */}
+            {ownerView && <OwnerConsole />}
+
             <div className="space-y-2">
               <Button className="w-full" onClick={() => router.push("/chat")}>
                 Back to chat

@@ -59,7 +59,9 @@ export default async function SupportPage() {
                 <li>The reply goes to the email you gave us, and nowhere else.</li>
                 <li>
                   Not a crisis line. If you&apos;re in danger or need urgent care, contact your
-                  local emergency services.
+                  local emergency services — or, in the US or Canada, call or text
+                  {" "}<strong className="text-foreground">988</strong> (Suicide &amp; Crisis Lifeline)
+                  or text HOME to <strong className="text-foreground">741741</strong> (Crisis Text Line).
                 </li>
               </ul>
             </div>

@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <PageShell center={false} wide="prose" rule>
-        <PageHeader title="Terms of Service" description="Last updated: September 28, 2026" center={false} />
+        <PageHeader title="Terms of Service" description="Last updated: September 29, 2026" center={false} />
         <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
           <section>
             <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">1. Acceptance of Terms</h2>
-            <p>By creating an account or using Sovereign OS (&quot;the Service&quot;), you agree to these Terms of Service. If you do not agree, please do not use the Service.</p>
+            <p>By creating an account or using Sovereign OS (&quot;the Service&quot;), you agree to these Terms of Service. At signup you affirmatively accept the current version of these Terms, and we keep a dated record of that acceptance with your account. If you do not agree, please do not use the Service.</p>
           </section>
 
           <section>
@@ -24,8 +24,9 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">3. Accounts</h2>
-            <p>You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You must provide accurate information when creating an account.</p>
+            <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">3. Eligibility &amp; Accounts</h2>
+            <p>You must be at least 18 years old — and otherwise capable of forming a binding contract with us — to create an account or submit a date, time, and place of birth. We verify this with an age affirmation at signup and an 18-or-older check on every Baseline. If you are under 18, please don&apos;t create an account.</p>
+            <p className="mt-2">You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You must provide accurate information when creating an account.</p>
           </section>
 
           <section>
@@ -63,8 +64,10 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">9. AI Outputs &amp; No Reliance</h2>
-            <p>AI-generated content is for informational and reflective purposes only and is not professional, medical, legal, financial, or psychological advice. It may contain inaccuracies, and it is not a substitute for qualified professional care, including in any crisis or safety situation. Where your Baseline is computed from an approximate birth time, output that depends on precise timing is approximate as well.</p>
+            <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">9. AI Outputs, Symbolic Synthesis &amp; Non-Therapy Release</h2>
+            <p>Sovereign OS is a self-reflection tool. It is <strong className="text-foreground">not</strong> medical care, mental health treatment, psychotherapy, clinical psychology, psychiatric diagnosis, crisis counseling, or legal or financial advice, and no AI reflection, Baseline synthesis, or relational insight is offered as any of those things. AI-generated content is for informational and reflective purposes only and may contain inaccuracies. Where your Baseline is computed from an approximate birth time, output that depends on precise timing is approximate as well.</p>
+            <p className="mt-2"><strong className="text-foreground">Express Release of Liability &amp; Assumption of Risk.</strong> Your use of the Service — including how you interpret or act on any AI reflection, Baseline synthesis, or relational insight — is voluntary and at your own risk. You assume full responsibility for any personal, relational, career, financial, or other life decisions or actions you take in connection with the Service, and you expressly release Sovereign OS and its owner and operators from any liability arising from those interpretations, decisions, or actions. Nothing on the Service creates a therapist-client, clinician-patient, or fiduciary relationship between you and us.</p>
+            <p className="mt-2"><strong className="text-foreground">If you are in crisis.</strong> The Service is not equipped for emergencies, and a real human is. In the US or Canada, call or text <strong className="text-foreground">988</strong> (Suicide &amp; Crisis Lifeline); text HOME to <strong className="text-foreground">741741</strong> (Crisis Text Line); the National Domestic Violence Hotline is <strong className="text-foreground">1-800-799-7233</strong>. In immediate danger, call your local emergency number.</p>
           </section>
 
           <section>
@@ -74,7 +77,8 @@ export default function TermsPage() {
 
           <section>
             <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">11. Limitation of Liability</h2>
-            <p>To the maximum extent permitted by law, Sovereign OS shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Service. Where liability cannot be excluded, it is limited to the amount paid by you in the three months preceding the claim or $100, whichever is greater.</p>
+            <p>To the maximum extent permitted by law, Sovereign OS shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Service. Where liability cannot be excluded, our total aggregate liability for all claims arising out of or relating to the Service is limited to the amount actually paid by you to Sovereign OS in the three (3) months preceding the event giving rise to the claim — or, for accounts on the free tier, $0 CAD (or, where a nominal monetary floor is required by applicable law, $10 CAD). This limitation applies whether the claim is based on contract, tort, statute, or any other theory.</p>
+            <p className="mt-2">The disclaimers in Sections 9 and 10, this Section 11, and Sections 13 and 15 survive termination of your account or of these Terms. We may suspend or terminate an account, and revoke access, for conduct that breaches Section 5 (Prohibited Conduct) or endangers the Service or other people.</p>
           </section>
 
           <section>
@@ -93,8 +97,9 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">15. Governing Law &amp; Disputes</h2>
+            <h2 className="mb-2 font-display text-lg font-normal tracking-tight text-foreground">15. Governing Law, Dispute Resolution &amp; Class-Action Waiver</h2>
             <p>These Terms are governed by the laws of Canada and the Province of Ontario, without regard to conflict-of-law principles. You consent to the exclusive jurisdiction of the courts of Ontario for any dispute arising under these Terms. Nothing in this section limits our right to seek injunctive relief in any jurisdiction to protect our intellectual property or enforce Section 5.</p>
+            <p className="mt-2"><strong className="text-foreground">Individual disputes only.</strong> To the fullest extent permitted by applicable law, you and Sovereign OS each agree that any dispute, claim, or proceeding arising out of or relating to the Service or these Terms will be brought and resolved only in your or our individual capacity, and not as a plaintiff or class member in any purported class, collective, consolidated, or representative proceeding. Class-action waivers, class arbitrations, and private-attorney-general actions are prohibited to the extent permitted by law. Nothing in this section waives any non-waivable consumer right you hold under applicable law.</p>
           </section>
 
           <section>

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateResetToken, hashResetToken, generateUUID } from "@/lib/auth";
 import { sendTemplate } from "@/lib/email";
 import {
-  getAuthPayload, loadUser, isPlusTier, normalizedLabel, maskEmail, personName,
+  getAuthPayload, loadUser, normalizedLabel, maskEmail, personName,
   MAX_PENDING_INVITES, INVITE_TTL_MS, isLapsedInvite,
 } from "@/lib/connections";
+import { hasPlusEntitlement } from "@/lib/tier";
 import type { Invite } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
@@ -59,8 +60,9 @@ export async function POST(request: NextRequest) {
 
   const user = await loadUser(env, payload.sub);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // Invitations are the people (Sovereign+) feature — enforced server-side.
-  if (!isPlusTier(user)) {
+  // Invitations are the people (Sovereign+) feature — enforced server-side,
+  // through the live resolver so a gifted pass opens the same doors as Stripe.
+  if (!(await hasPlusEntitlement(env, user))) {
     return NextResponse.json(
       { error: "Invitations are part of Sovereign+. Upgrade to invite people into your relationships.", code: "plus_required" },
       { status: 403 },

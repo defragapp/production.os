@@ -20,6 +20,12 @@ export interface User {
   /** Optional: pre-migration D1 snapshots lack the column, and the defensive
    *  user lookups fall back to selects without it. */
   memory_mode?: MemoryMode;
+  /** Clickwrap receipt (migration 0004): the Terms version affirmed and when.
+   *  Optional for the same pre-migration reason as memory_mode. */
+  terms_version?: string | null;
+  terms_accepted_at?: string | null;
+  /** Owner-minted gift pass expiry (SQLite UTC); null = never held a pass. */
+  gift_expires_at?: string | null;
   created_at: string;
   updated_at: string;
 }

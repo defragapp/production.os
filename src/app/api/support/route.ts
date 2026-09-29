@@ -93,8 +93,12 @@ export async function POST(request: NextRequest) {
     await env.SESSION_KV.put(key, JSON.stringify([...stamps, now]), { expirationTtl: Math.ceil(window / 1000) });
   }
 
-  const operatorInbox = env.SUPPORT_INBOX || env.FROM_EMAIL || "sovereign@defrag.app";
-  await sendTemplate(env, "support-notification", operatorInbox, { name, email, topic, message }).catch((err) => {
+  // Route the message to the operator inbox; the owner's address is both the
+  // configured SUPPORT_INBOX and the fallback, so a missing var never silently
+  // re-points support mail at the platform's own FROM address. Reply-To is the
+  // submitting person, so the owner can answer straight from their inbox.
+  const operatorInbox = env.SUPPORT_INBOX || "chadowen93@gmail.com";
+  await sendTemplate(env, "support-notification", operatorInbox, { name, email, topic, message }, email).catch((err) => {
     console.error("[support] notification send failed:", err);
   });
   await sendTemplate(env, "support-received", email, {}).catch((err) => {

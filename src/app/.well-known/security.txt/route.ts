@@ -6,7 +6,7 @@ export function GET() {
       "Expires: 2027-09-22T00:00:00.000Z\n" +
       "Canonical: https://sovereign.defrag.app/.well-known/security.txt\n" +
       "Preferred-Languages: en\n" +
-      "Policy: https://sovereign.defrag.app/terms\n",
+      "Policy: https://sovereign.defrag.app/privacy#security\n",
     {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     },

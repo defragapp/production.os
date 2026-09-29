@@ -11,6 +11,8 @@ import { verifyTurnstileToken } from "@/lib/turnstile";
 import { syncStripeTier } from "@/lib/stripe";
 import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
 import { readUsage } from "@/lib/usage";
+import { CURRENT_TERMS_VERSION } from "@/lib/terms";
+import { resolveTier } from "@/lib/tier";
 import type { User } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
   // email_verified column. Fall back rather than 500ing the session check.
   let user: User | null;
   try {
-    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, memory_mode, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
+    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, memory_mode, gift_expires_at, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
   } catch {
     try {
       user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
@@ -39,6 +41,12 @@ export async function GET(request: NextRequest) {
     }
   }
   if (!user) return NextResponse.json({ user: null, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null }, { status: 200 });
+
+  // The single tier truth: owner elevation, live gift passes, and lapsed-pass
+  // reversion all resolve here (and self-heal the stored column), so every
+  // surface that reads this probe sees the effective tier — not the cache.
+  const tierInfo = await resolveTier(env, user);
+  user.subscription_tier = tierInfo.tier;
 
   // Webhook-loss reconciliation: if Stripe is configured and we have a customer
   // id, occasionally (≤ 1×/6h) verify the stored tier against Stripe's live
@@ -61,7 +69,21 @@ export async function GET(request: NextRequest) {
   // never disagree with the gate.
   const isFree = user.subscription_tier === "free";
   const usage = { used: isFree ? await readUsage(env, payload.sub) : 0, limit: isFree ? FREE_TIER_DAILY_LIMIT : null };
-  return NextResponse.json({ user, turnstileSiteKey: env.TURNSTILE_SITE_KEY || null, usage, hasBaseline });
+  return NextResponse.json({
+    user,
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY || null,
+    usage,
+    hasBaseline,
+    // Effective-entitlement detail for the account/upgrade surfaces: a gifted
+    // pass reads as Sovereign+ (with its expiry) but is not a paid subscription.
+    tier: {
+      tier: tierInfo.tier,
+      paid: tierInfo.paid,
+      isOwner: tierInfo.isOwner,
+      giftActive: tierInfo.giftActive,
+      giftExpiresAt: tierInfo.giftExpiresAt,
+    },
+  });
 }
 
 const LOGIN_RATE_LIMIT_TTL = 300;
@@ -81,7 +103,7 @@ export async function POST(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
-  let body: { email?: string; password?: string; turnstileToken?: string; intent?: string };
+  let body: { email?: string; password?: string; turnstileToken?: string; intent?: string; termsAccepted?: boolean; termsVersion?: string };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
 
   // Turnstile guards account *creation* (signup) — that's where bot spam is a
@@ -90,6 +112,14 @@ export async function POST(request: NextRequest) {
   // to load (ad-blocker, iOS-Safari ITP, strict network) or an expired token
   // must never dead-end a returning user. Skip the check entirely for login.
   const intent = body.intent === "login" ? "login" : "signup";
+  // Provable clickwrap (Terms §1/§3): account creation is refused unless the
+  // payload explicitly affirms acceptance — the UI checkbox alone is not the
+  // gate; a curl client without `termsAccepted: true` cannot open an account.
+  // Checked first, before the Turnstile round-trip: consent is the front door,
+  // and a request that withholds it should never spend a siteverify call.
+  if (intent !== "login" && body.termsAccepted !== true) {
+    return NextResponse.json({ error: "You must confirm you are at least 18 and agree to the Terms of Service and Privacy Policy to create an account." }, { status: 400 });
+  }
   if (intent !== "login") {
     const turnstileValid = await verifyTurnstileToken(env, body.turnstileToken);
     if (!turnstileValid) {
@@ -122,6 +152,7 @@ export async function POST(request: NextRequest) {
   if (email && !isValidEmail(email)) return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
   if (!email || !password) return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+  // (Clickwrap affirmation was already required above, before Turnstile.)
   const existing = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<User & { password_hash: string; password_salt: string; token_version?: number | null }>();
   // Explicit sign-in must never provision an account. Without this, a "Sign In"
   // submit for an unknown (or just-deleted) email silently created one and
@@ -143,6 +174,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
     userId = existing.id;
+    // Legacy accounts predating clickwrap carry no receipt. Signing in under
+    // the Terms' continued-use clause stamps the current version, so every
+    // active account's consent becomes provable in D1 over time. One guarded
+    // write per account, on the cold login path only.
+    if (existing.terms_version === undefined || existing.terms_version === null) {
+      try {
+        await env.DB.prepare("UPDATE users SET terms_version = ?, terms_accepted_at = datetime('now') WHERE id = ? AND terms_version IS NULL").bind(CURRENT_TERMS_VERSION, existing.id).run();
+      } catch (e) {
+        // Pre-migration databases have no column; the login must never fail for it.
+        console.error("[auth] terms receipt backfill failed:", e);
+      }
+    }
     // Upgrade-on-login: silently move hashes that predate the current policy
     // (legacy raw hex, sub-target iterations, or un-peppered) to the current
     // peppered 100k form, so accounts harden without an outage or password reset.
@@ -159,7 +202,7 @@ export async function POST(request: NextRequest) {
     const salt = generateSalt();
     const passwordHash = await hashPassword(password, salt, PBKDF2_ITERATIONS, pepper);
     userId = generateUUID();
-    await env.DB.prepare("INSERT INTO users (id, email, password_hash, password_salt, subscription_tier) VALUES (?, ?, ?, ?, 'free')").bind(userId, email, passwordHash, salt).run();
+    await env.DB.prepare("INSERT INTO users (id, email, password_hash, password_salt, subscription_tier, terms_version, terms_accepted_at) VALUES (?, ?, ?, ?, 'free', ?, datetime('now'))").bind(userId, email, passwordHash, salt, typeof body.termsVersion === "string" && body.termsVersion ? body.termsVersion : CURRENT_TERMS_VERSION).run();
     const origin = new URL(request.url).origin;
     // Verification email (only when mail delivery is actually configured —
     // otherwise the flow is disabled and nothing is gated).

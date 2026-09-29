@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   if (error) return error;
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { token?: string };
+  let body: { token?: string; shareBaseline?: boolean };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
   const token = body.token?.trim() || "";
   if (!token) return NextResponse.json({ error: "Invitation token is required" }, { status: 400 });
@@ -50,9 +50,16 @@ export async function POST(request: NextRequest) {
   await env.DB.prepare("UPDATE invites SET status = 'accepted', accepted_at = ? WHERE id = ?").bind(new Date().toISOString(), invite.id).run();
 
   const { userA, userB } = orderedPair(invite.owner_user_id, payload.sub);
+  // The accepter's sharing flag is their explicit checkbox choice, recorded at
+  // accept time — not a silent `1`. `orderedPair` is deterministic, so the
+  // accepter can land on either column; pick the one that belongs to them.
+  const share = body.shareBaseline === true ? 1 : 0;
+  const accepterIsB = payload.sub === userB;
+  const aShare = accepterIsB ? 1 : share;
+  const bShare = accepterIsB ? share : 1;
   await env.DB.prepare(
-    "INSERT INTO relationships (id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline) VALUES (?, ?, ?, ?, ?, 1, 1) ON CONFLICT(user_a, user_b) DO NOTHING",
-  ).bind(generateUUID(), userA, userB, invite.role, invite.role).run();
+    "INSERT INTO relationships (id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_a, user_b) DO NOTHING",
+  ).bind(generateUUID(), userA, userB, invite.role, invite.role, aShare, bShare).run();
 
   const owner = await loadUser(env, invite.owner_user_id);
   try {

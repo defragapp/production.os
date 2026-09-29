@@ -7,15 +7,19 @@ import type { DerivedBaseline } from "@/lib/sovereign-prompt";
 import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereign-reasoning";
 import { buildConsentedPeers } from "@/lib/sovereign-connections";
 import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
-import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
-import { claimFreeAnswer, releaseFreeAnswer } from "@/lib/usage";
+import { FREE_TIER_DAILY_LIMIT, SOVEREIGN_PLUS_DAILY_LIMIT } from "@/lib/limits";
+import { claimAnswer, releaseAnswer } from "@/lib/usage";
+import { resolveTier } from "@/lib/tier";
+import { detectExtractionAttempt, buildExtractionDeflection } from "@/lib/sovereign-safety";
 import { mergeChatHistories } from "@/lib/chat-history";
 import { deriveJourneyState, type JourneyState } from "@/lib/sovereign-journey";
 import { loadActiveJourney, persistJourneyState, prevStateFromRow } from "@/lib/journeys";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
 
-/** Max content length per message accepted from the client. */
-const MAX_MESSAGE_LENGTH = 5000;
+/** Max content length per message accepted from the client. 2,000 chars is
+ *  well past anything a real turn of conversation needs, and keeps a scripted
+ *  dump-the-context attempt from paying for itself in tokens. */
+const MAX_MESSAGE_LENGTH = 2000;
 
 /** Burst rate limit: max requests per user per window to protect the LLM endpoint. */
 const CHAT_RATE_LIMIT_MAX = 20;
@@ -55,16 +59,20 @@ async function handleChat(request: NextRequest) {
   await env.SESSION_KV.put(`rl:chat:${payload.sub}`, JSON.stringify([...rlStamps, rlNow]), { expirationTtl: 60 });
 
   // Defensive user lookup: older D1 snapshots may lack the email_verified
-  // column (added after initial schema). Fall back to the pre-verification
-  // shape and treat the user as verified rather than crashing the route.
+  // column (added after initial schema), or gift_expires_at (migration 0004).
+  // Fall back rather than crashing the route; resolveTier probes for a gift
+  // expiry when the selected shape does not carry the column.
   let user: User | null;
   try {
-    user = await env.DB.prepare("SELECT subscription_tier, email_verified, memory_mode FROM users WHERE id = ?").bind(payload.sub).first<User>();
+    user = await env.DB.prepare("SELECT id, email, subscription_tier, email_verified, memory_mode, stripe_customer_id, gift_expires_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
   } catch {
-    console.error("[chat] email_verified column missing, falling back to legacy user lookup");
+    console.error("[chat] user lookup fell back to the legacy shape");
     user = await env.DB.prepare("SELECT subscription_tier FROM users WHERE id = ?").bind(payload.sub).first<User>();
   }
   if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+  // The stored column is a cache; the resolver is the truth — owner elevation
+  // and live gift passes gate exactly here, everywhere at once.
+  const { tier, isOwner } = await resolveTier(env, user);
   // Device-Only memory: inference stays zero-retention. The legacy fallback
   // select has no memory_mode, which normalises to the 'server' default —
   // the safe direction for an un-migrated database.
@@ -80,7 +88,7 @@ async function handleChat(request: NextRequest) {
   if (!userBaseline) return new Response(JSON.stringify({ error: "Please complete your Baseline before using AI chat.", code: "baseline_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   // Gate: must have chosen a subscription tier (free or sovereign+).
-  if (!user.subscription_tier) return new Response(JSON.stringify({ error: "Choose a plan to keep chatting — the free tier is always available.", code: "subscription_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+  if (!tier) return new Response(JSON.stringify({ error: "Choose a plan to keep chatting — the free tier is always available.", code: "subscription_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   let body: { messages: ChatMessage[]; threadId?: string };
   try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { "Content-Type": "application/json" } }); }
@@ -88,6 +96,38 @@ async function handleChat(request: NextRequest) {
 
   const incoming = sanitizeMessages(body.messages);
   if (incoming.length === 0) return new Response(JSON.stringify({ error: "No readable messages provided" }), { status: 400, headers: { "Content-Type": "application/json" } });
+
+  // Pre-model IP guard: a prompt-injection / system-prompt-extraction shape is
+  // deflected here — before any quota claim, before any usage counter, and
+  // above all before env.AI.run(). Zero tokens spent, zero IP leaked; the
+  // thread still records the exchange so the conversation stays coherent.
+  if (detectExtractionAttempt(incoming)) {
+    const deflection = buildExtractionDeflection();
+    const currentThreadId = body.threadId ?? generateUUID();
+    if (body.threadId && memoryMode === "server") {
+      try {
+        const thread = await env.DB.prepare("SELECT message_history FROM threads WHERE id = ? AND user_id = ?").bind(body.threadId, payload.sub).first<Thread>();
+        if (thread) {
+          let stored: ChatMessage[] = [];
+          try { stored = JSON.parse(thread.message_history) as ChatMessage[]; } catch {}
+          const merged = mergeChatHistories(stored, incoming);
+          await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?")
+            .bind(JSON.stringify([...merged, { role: "assistant", content: deflection }]), body.threadId, payload.sub).run();
+        }
+      } catch (persistErr) {
+        console.error("[chat] deflection persist failed:", persistErr);
+      }
+    }
+    const sse = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ threadId: currentThreadId })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: deflection })}\n\n`));
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+    return new Response(sse, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } });
+  }
 
   const baseline = await env.DB.prepare("SELECT tob, pob, dob, nasa_jpl_json_data FROM baselines WHERE user_id = ?").bind(payload.sub).first<Baseline>();
   if (!baseline || !baseline.nasa_jpl_json_data) return new Response(JSON.stringify({ error: "Baseline not found. Please complete onboarding first." }), { status: 403, headers: { "Content-Type": "application/json" } });
@@ -120,21 +160,31 @@ async function handleChat(request: NextRequest) {
     }
   }
 
-  // Free-tier daily cap, claimed atomically in D1 (KV had no compare-and-swap,
-  // so concurrent requests could both pass the old read-modify-write check).
+  // Daily caps, claimed atomically in D1 (KV had no compare-and-swap, so
+  // concurrent requests could both pass the old read-modify-write check).
   // Claimed here — after every validation and lookup — so a malformed request
   // can never burn one of today's answers, and released below if generation
-  // produces nothing.
+  // produces nothing. Free keeps its 5/day; Sovereign+ gets a generous
+  // fair-use ceiling so no honest session feels it, and only a script would;
+  // the owner account is exempt entirely.
   let usageClaimed = false;
-  if (user.subscription_tier === "free") {
-    const claim = await claimFreeAnswer(env, payload.sub, FREE_TIER_DAILY_LIMIT);
+  if (!isOwner) {
+    const cap = tier === "free" ? FREE_TIER_DAILY_LIMIT : SOVEREIGN_PLUS_DAILY_LIMIT;
+    const claim = await claimAnswer(env, payload.sub, cap);
     if (!claim.claimed) {
+      if (tier === "free") {
+        return new Response(JSON.stringify({
+          error: `You've used today's answers — come back tomorrow, or continue without limit with Sovereign+`,
+          upgradeRequired: true,
+          limit: FREE_TIER_DAILY_LIMIT,
+          used: claim.used,
+        }), { status: 402, headers: { "Content-Type": "application/json" } });
+      }
       return new Response(JSON.stringify({
-        error: `You've used today's answers — come back tomorrow, or continue without limit with Sovereign+.`,
-        upgradeRequired: true,
-        limit: FREE_TIER_DAILY_LIMIT,
+        error: "You've reached today's generous fair-use ceiling — tomorrow's reset is never far. If an app or script is driving this, that's exactly the kind of day this stops.",
+        limit: SOVEREIGN_PLUS_DAILY_LIMIT,
         used: claim.used,
-      }), { status: 402, headers: { "Content-Type": "application/json" } });
+      }), { status: 429, headers: { "Content-Type": "application/json" } });
     }
     usageClaimed = !claim.degraded;
   }
@@ -153,7 +203,7 @@ async function handleChat(request: NextRequest) {
     context = buildReasoningContext({ history: conversation, baseline: derived, consented });
   } catch (err) {
     console.error("[chat] reasoning prelude failed:", err instanceof Error ? `${err.name}: ${err.message}` : err);
-    if (usageClaimed) await releaseFreeAnswer(env, payload.sub);
+    if (usageClaimed) await releaseAnswer(env, payload.sub);
     return new Response(JSON.stringify({ error: "Sovereign couldn't finish that answer — try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
   let journeyState: JourneyState | null = null;
@@ -194,8 +244,16 @@ async function handleChat(request: NextRequest) {
     result = await generateSovereignResponse(context, conversation, derived, model);
   } catch (err) {
     console.error("[chat] generation failed:", err instanceof Error ? `${err.name}: ${err.message}` : err);
-    if (usageClaimed) await releaseFreeAnswer(env, payload.sub);
+    if (usageClaimed) await releaseAnswer(env, payload.sub);
     if (err instanceof ModelError) {
+      // Ops telemetry: a ModelError here means BOTH the gateway tier and the
+      // direct binding failed — the exact failure the owner console watches.
+      // Best-effort daily counter; telemetry must never fail the response.
+      try {
+        const dayKey = `ops:model-errors:${new Date().toISOString().slice(0, 10)}`;
+        const raw = await env.SESSION_KV.get(dayKey);
+        await env.SESSION_KV.put(dayKey, String((parseInt(raw || "0", 10) || 0) + 1), { expirationTtl: 7 * 24 * 60 * 60 });
+      } catch {}
       return new Response(JSON.stringify({ error: err.message }), { status: 503, headers: { "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify({ error: "Sovereign couldn't finish that answer — try again." }), { status: 500, headers: { "Content-Type": "application/json" } });

@@ -10,7 +10,9 @@
  * Claim-then-release rather than count-after-success: the gate has to run
  * BEFORE generation (there is no point generating an answer we will refuse to
  * serve), so a claim that turns out to be wasted is returned with
- * `releaseFreeAnswer`.
+ * `releaseAnswer`. The same counter now serves both caps — the free tier's 5
+ * and Sovereign+'s fair-use ceiling — because the enforcement shape is
+ * identical and one table means one thing to trust.
  */
 import type { AppEnv } from "./env";
 
@@ -39,7 +41,7 @@ export interface UsageClaim {
  * the statement matches nothing and returns no row. That single statement is
  * what makes the limit exact under concurrent requests.
  */
-export async function claimFreeAnswer(env: AppEnv, userId: string, limit: number): Promise<UsageClaim> {
+export async function claimAnswer(env: AppEnv, userId: string, limit: number): Promise<UsageClaim> {
   const day = todayUtc();
   try {
     const claimed = await env.DB.prepare(
@@ -67,7 +69,7 @@ export async function claimFreeAnswer(env: AppEnv, userId: string, limit: number
  * Give a claimed slot back when generation failed, so a person is not charged
  * for an answer they never received. Never drops below zero.
  */
-export async function releaseFreeAnswer(env: AppEnv, userId: string): Promise<void> {
+export async function releaseAnswer(env: AppEnv, userId: string): Promise<void> {
   try {
     await env.DB.prepare(
       "UPDATE chat_usage SET used = used - 1 WHERE user_id = ? AND day = ? AND used > 0",

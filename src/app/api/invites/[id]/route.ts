@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
-import { getAuthPayload, loadUser, isPlusTier } from "@/lib/connections";
+import { getAuthPayload, loadUser } from "@/lib/connections";
+import { hasPlusEntitlement } from "@/lib/tier";
 import type { Invite } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const user = await loadUser(env, payload.sub);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isPlusTier(user)) {
+  if (!(await hasPlusEntitlement(env, user))) {
     return NextResponse.json({ error: "Invitations are part of Sovereign+.", code: "plus_required" }, { status: 403 });
   }
 

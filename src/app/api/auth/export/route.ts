@@ -41,6 +41,19 @@ export async function GET(request: NextRequest) {
   const user = await loadUser(env, userId);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Clickwrap receipt (migration 0004): the user's own export carries proof of
+  // the version they affirmed and when. A separate guarded read keeps `loadUser`
+  // — and every pre-migration database behind it — unaffected.
+  let consent: { termsVersion: string | null; termsAcceptedAt: string | null } | null = null;
+  try {
+    const row = await env.DB.prepare("SELECT terms_version, terms_accepted_at FROM users WHERE id = ?")
+      .bind(userId)
+      .first<{ terms_version: string | null; terms_accepted_at: string | null }>();
+    if (row) consent = { termsVersion: row.terms_version ?? null, termsAcceptedAt: row.terms_accepted_at ?? null };
+  } catch (err) {
+    console.error("[export] consent receipt read failed:", err);
+  }
+
   // ── Baseline ────────────────────────────────────────────────────────
   let baseline: Record<string, unknown> | null = null;
   try {
@@ -131,6 +144,8 @@ export async function GET(request: NextRequest) {
       subscriptionTier: user.subscription_tier,
       stripeCustomerId: user.stripe_customer_id ?? null,
       memberSince: user.created_at,
+      // The consent receipt travels with the data it authorises.
+      consent,
     },
     baseline,
     conversations,

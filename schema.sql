@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS users (
   -- continuity, the default). 'local' means zero-retention inference — /api/chat
   -- skips the threads write and the client keeps an encrypted IndexedDB copy.
   memory_mode         TEXT NOT NULL DEFAULT 'server',
+  -- Provable clickwrap: the Terms version the account accepted, and when
+  -- (migration 0004; see lib/terms.ts for CURRENT_TERMS_VERSION).
+  terms_version       TEXT,
+  terms_accepted_at   TEXT,
+  -- Owner-minted gift pass expiry, SQLite UTC shape (see lib/tier.ts);
+  -- resolveTier reverts the account to free on the first read after a lapse.
+  gift_expires_at     TEXT,
   created_at          TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -28,6 +35,9 @@ CREATE TABLE IF NOT EXISTS baselines (
   pob                  TEXT,
   dob                  TEXT,
   nasa_jpl_json_data   TEXT,
+  -- Timestamped 18+ / self-reflection consent recorded at Baseline submit
+  -- (migration 0004); the raw birth data itself is never shared.
+  consent_accepted_at  TEXT,
   created_at           TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -148,5 +158,23 @@ CREATE INDEX IF NOT EXISTS idx_journey_events_journey ON journey_events(journey_
 -- and the client keeps an encrypted IndexedDB copy instead.
 -- Fresh databases include memory_mode/journey_id inline above; pre-migration
 -- D1 files pick them up through migrations/0003_journeys.sql.
+
+-- Owner-minted 30-day Sovereign+ gift passes. D1 stores only the SHA-256 hash
+-- of the code (same posture as invite/reset tokens); the raw code exists only
+-- in the owner's clipboard and the redemption link. Columns mirror
+-- PROMO_GRANT_SELECT in src/lib/promo.ts exactly.
+CREATE TABLE IF NOT EXISTS promo_grants (
+  code_hash           TEXT PRIMARY KEY,
+  created_by          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  duration_days       INTEGER NOT NULL DEFAULT 30,
+  max_redemptions     INTEGER NOT NULL DEFAULT 1,
+  redeemed_count      INTEGER NOT NULL DEFAULT 0,
+  redeemed_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  note                TEXT,
+  expires_at          TEXT,
+  revoked_at          TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_promo_grants_owner ON promo_grants(created_by, created_at);
 
 

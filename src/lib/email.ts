@@ -264,13 +264,17 @@ export async function sendTemplate<T extends TemplateName>(
   env: AppEnv,
   template: T,
   to: string,
-  vars: TemplateVars<T>
+  vars: TemplateVars<T>,
+  /** Optional Reply-To. The support-notification sets this to the submitting
+   *  person's address so the operator can answer straight from their inbox
+   *  while `from` stays the platform's own `sovereign@defrag.app`. */
+  replyTo?: string,
 ): Promise<boolean> {
   const tmpl = EMAIL_TEMPLATES[template];
   if (!tmpl) throw new Error(`Unknown email template: ${template}`);
 
   const html = tmpl.render(vars as Record<string, unknown>);
-  const opts: SendEmailOptions = { to, subject: tmpl.subject, html };
+  const opts: SendEmailOptions = { to, subject: tmpl.subject, html, replyTo };
 
   const fromEmail = env.FROM_EMAIL || "sovereign@defrag.app";
   const apiKey = env.RESEND_API_KEY;

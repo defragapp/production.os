@@ -13,6 +13,7 @@ import { BaselineForm } from "@/components/baseline-form";
 import { PasskeySignInButton } from "@/components/passkey";
 import { Alert } from "@/components/ui/alert";
 import { cn, safeInAppPath } from "@/lib/utils";
+import { CURRENT_TERMS_VERSION } from "@/lib/terms";
 
 const STEPS = ["Account", "Baseline"];
 
@@ -104,7 +105,15 @@ export function OnboardContent() {
       const authRes = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, intent: isLogin ? "login" : "signup", turnstileToken: !isLogin && turnstileSiteKey ? turnstileToken : undefined }),
+        body: JSON.stringify({
+          email, password,
+          intent: isLogin ? "login" : "signup",
+          turnstileToken: !isLogin && turnstileSiteKey ? turnstileToken : undefined,
+          // Provable clickwrap: the server stamps the version affirmed onto the
+          // user row (users.terms_version / terms_accepted_at) at signup.
+          termsAccepted: !isLogin && consent ? true : undefined,
+          termsVersion: !isLogin && consent ? CURRENT_TERMS_VERSION : undefined,
+        }),
       });
 
       if (!authRes.ok) {
@@ -450,7 +459,7 @@ export function OnboardContent() {
                           type="checkbox"
                           checked={consent}
                           onChange={(e) => setConsent(e.target.checked)}
-                          aria-label="I agree to the Terms of Service and Privacy Policy"
+                          aria-label="I am at least 18 years old and agree to the Terms of Service and Privacy Policy"
                           aria-describedby="consent-note"
                           className="consent-checkbox mt-1 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded border border-input bg-transparent transition-colors checked:border-foreground checked:bg-foreground"
                         />
@@ -459,7 +468,7 @@ export function OnboardContent() {
                             label still forwards clicks to toggle the box. */}
                         <Label htmlFor="consent" className="text-sm font-normal leading-relaxed">
                           <span id="consent-note">
-                            I agree to the {""}
+                            I am at least 18 years old and agree to the {""}
                             <a href="/terms" className="underline hover:text-foreground">Terms of Service</a>{" and "}
                             <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
                             My birth data is used only to compute my Baseline, and it&apos;s never

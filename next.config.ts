@@ -31,7 +31,9 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    // microphone=(self): first-party dictation (Web Speech API, /chat) must
+    // not be blocked by policy; camera and geolocation stay denied everywhere.
+    value: "camera=(), microphone=(self), geolocation=()",
   },
   {
     key: "Content-Security-Policy",
@@ -57,6 +59,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Ship no client source maps: build logic and prompt scaffolding stay out
+  // of the browser bundle surface.
+  productionBrowserSourceMaps: false,
   async headers() {
     return [
       {

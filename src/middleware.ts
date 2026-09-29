@@ -50,7 +50,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Public pages + Next.js metadata routes (icons, og images) ────
-  const publicPages = ["/", "/onboard", "/terms", "/privacy"];
+  // /redeem is public so a gifted-pass recipient sees the branded invitation
+  // before they have an account; the claim itself is gated at POST /api/redeem.
+  const publicPages = ["/", "/onboard", "/terms", "/privacy", "/redeem"];
   if (
     publicPages.includes(pathname) ||
     pathname.startsWith("/apple-icon") ||

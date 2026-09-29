@@ -384,6 +384,53 @@ export function detectSafetyMode(messages: ChatMessage[]): SafetyMode {
   return "standard";
 }
 
+/**
+ * Pre-model prompt-injection / system-prompt-extraction detector.
+ *
+ * The Engine's system prompt and derivation rules are the product's core IP
+ * (Terms §5/§7). A request that reads like it is trying to lift them out —
+ * "ignore previous instructions", "print your system prompt", "repeat the
+ * words above starting with You are", "dump buildSystemPrompt" — is answered
+ * with a calm deflection BEFORE any model call: zero tokens spent, zero IP
+ * leaked. Deliberately narrow: it fires on extraction/injection shapes, not
+ * on a person sincerely asking what the tool is or how it works in general
+ * terms (that conversation belongs to /faq and /support, and the model can
+ * handle it inside its prompt without ever revealing the prompt itself).
+ */
+const EXTRACTION_PATTERNS = [
+  // Classic instruction-override injections, with a payload noun in reach.
+  /\b(?:ignore|disregard|forget|override)\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|your)\s+(?:instructions?|rules?|prompts?|directives?|guidelines?|context)\b/i,
+  // Direct asks to reveal the system prompt or internal rules.
+  /\b(?:print|show|reveal|display|output|repeat|dump|leak|paste)\s+(?:me\s+)?(?:your|the|any)\s+(?:hidden\s+|secret\s+|internal\s+)?(?:system\s+prompts?|prompt|instructions?|rules?|guidelines?|directives?)\b/i,
+  // "Repeat everything above" family, including the starting-words variant.
+  /\brepeat\s+(?:everything|all\s+(?:of\s+)?this|the\s+(?:text|words|content|message)s?\s+above|what\s+(?:comes|is)\s+above)\b/i,
+  /\b(?:above|previous|earlier)\s+(?:text|words|content|instructions?|prompt)s?\b.{0,40}\b(?:starting|beginning)\s+with\b/i,
+  /\bstarting\s+with\s+["'`]?\s*you\s+are\b/i,
+  // Naming internal symbols or the prompt machinery itself.
+  /\b(?:buildSystemPrompt|sovereign-prompt|systemPrompt|system_prompt)\b/i,
+  // Role/identity overrides aimed at unhinging the guardrails.
+  /\b(?:you\s+are\s+now|pretend\s+(?:to\s+be|you(?:'re|\s+are)))\s+[^.]{0,60}\b(?:unrestricted|unfiltered|jailbreak|dan|no\s+rules?|developer\s+mode)/i,
+  /\b(?:enter|switch\s+(?:to|into)|enable)\s+(?:developer|debug|god|jailbreak|unrestricted)\s+mode\b/i,
+];
+
+export function detectExtractionAttempt(messages: ChatMessage[]): boolean {
+  // Only the human turns carry intent to extract; assistant text is our own.
+  const text = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
+  return EXTRACTION_PATTERNS.some((p) => p.test(text));
+}
+
+/** The deflection the chat route streams in place of a model call. Grounded,
+ *  in voice, and it confirms nothing about what lies behind the curtain. */
+export function buildExtractionDeflection(): string {
+  return [
+    "I won't reproduce my internal instructions — what shapes how I answer is part of the tool, and the invitation to lift it out isn't one I take.",
+    "",
+    "What I can tell you plainly: this is a self-reflection space, your answers are grounded in your own Baseline and what you've shared, and nothing here is a substitute for professional care. If you're curious how Sovereign works at a high level, the FAQ and the Terms say what I can honestly say.",
+    "",
+    "If there's something real you want to look at — a pattern, a relationship, a decision — I'm right here for that.",
+  ].join("\n");
+}
+
 export function buildSafetyResponse(mode: Exclude<SafetyMode, "standard">): string {
   if (mode === "escalate") {
     return [

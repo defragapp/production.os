@@ -16,6 +16,7 @@
   "vars": {
     "AI_GATEWAY_ID": "sovereign-ai-gateway",
     "FROM_EMAIL": "sovereign@defrag.app",
+    "SUPPORT_INBOX": "chadowen93@gmail.com",
     "BASELINE_HORIZONS_URL": "https://ssd.jpl.nasa.gov/api/horizons.api",
     "STRIPE_PRICE_SOVEREIGN_PLUS_MONTHLY": "price_1Te0g9Bk78yJ8Hww8fFZCqhm",
     "STRIPE_PRICE_SOVEREIGN_PLUS_ANNUAL": "price_1Tq6nPBk78yJ8Hwwm0pxg4hH",

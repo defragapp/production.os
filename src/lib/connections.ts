@@ -36,12 +36,17 @@ export async function getAuthPayload(request: NextRequest) {
 
 export async function loadUser(env: { DB: D1Database }, userId: string): Promise<User | null> {
   try {
-    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name FROM users WHERE id = ?").bind(userId).first<User>();
+    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at FROM users WHERE id = ?").bind(userId).first<User>();
   } catch {
     return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(userId).first<User>();
   }
 }
 
+/**
+ * @deprecated A stored-column read. Gifted passes, owner elevation, and lapsed
+ * entitlement all resolve through `hasPlusEntitlement` in ./tier — gate on that
+ * so a just-gifted person is a Sovereign+ account everywhere at once.
+ */
 export function isPlusTier(user: User | null): boolean {
   return user?.subscription_tier === "sovereign+";
 }

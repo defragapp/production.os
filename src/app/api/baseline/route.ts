@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
 import { computeNatalPositions, buildAstrologyBaseline } from "@/lib/nasa-jpl";
 import { computeHumanDesign } from "@/lib/sovereign-humandesign";
+import { isAdultIso, UNDER_18_ERROR } from "@/lib/date-of-birth";
 import { getEnv } from "@/lib/env";
 import type { AppEnv } from "@/lib/env";
 import type { Baseline } from "@/lib/types";
@@ -66,6 +67,9 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
   const { tob, pob, dob, tobAccuracy } = body;
   if (!pob || !dob) return NextResponse.json({ error: "Date of birth and place of birth are required" }, { status: 400 });
+  // 18+ eligibility floor, enforced server-side exactly as the form does — a
+  // curl client cannot walk a minor's DOB past the UI (Terms §3).
+  if (!isAdultIso(dob)) return NextResponse.json({ error: UNDER_18_ERROR }, { status: 400 });
 
   // Exact time, or an approximation for people who don't know it. These map to
   // representative local times; the derivation is built on tendencies, and the
@@ -129,7 +133,9 @@ async function storeBaseline(
     nasaJplData = { error: "NASA/JPL computation failed — stored raw birth data only", meta: { tob: tobStored, effectiveTob: `${String(instant.getUTCHours()).padStart(2, "0")}:${String(instant.getUTCMinutes()).padStart(2, "0")}`, tobAccuracy, timePrecision, pob, dob, computedAt: new Date().toISOString() } };
   }
   const nasaJplJson = JSON.stringify(nasaJplData);
-  await env.DB.prepare(`INSERT INTO baselines (user_id, tob, pob, dob, nasa_jpl_json_data) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET tob = excluded.tob, pob = excluded.pob, dob = excluded.dob, nasa_jpl_json_data = excluded.nasa_jpl_json_data, updated_at = datetime('now')`).bind(userId, tobStored, pob, dob, nasaJplJson).run();
+  // `consent_accepted_at` is the timestamped receipt that the 18+ / self-
+  // reflection affirmation happened at this submission (migration 0004).
+  await env.DB.prepare(`INSERT INTO baselines (user_id, tob, pob, dob, nasa_jpl_json_data, consent_accepted_at) VALUES (?, ?, ?, ?, ?, datetime('now')) ON CONFLICT(user_id) DO UPDATE SET tob = excluded.tob, pob = excluded.pob, dob = excluded.dob, nasa_jpl_json_data = excluded.nasa_jpl_json_data, consent_accepted_at = datetime('now'), updated_at = datetime('now')`).bind(userId, tobStored, pob, dob, nasaJplJson).run();
   return NextResponse.json({ ok: true, baseline: nasaJplData });
 }
 

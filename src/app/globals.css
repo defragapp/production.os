@@ -607,6 +607,29 @@ a,[role="button"] {
   details > summary {
     min-height: 2.75rem;
   }
+  /* Consent checkboxes are a legal affirmation, and a 16px box is not a tap
+     target — the signup, invite-accept, and gift-redeem affirmations all wear
+     `.consent-checkbox`. The visual box grows to the 44px floor; the tick is
+     already centred, so only the hit area changes. */
+  .consent-checkbox {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+  /* iOS Safari auto-zooms the viewport to the field when a focused control's
+     computed font-size is under 16px — a jarring, layout-breaking zoom on every
+     tap. Our primitives type inputs at 14px (`text-sm`) for density on desktop;
+     on coarse pointers we lift every text-entry control to at least 16px so the
+     page never zooms when a person starts typing on /onboard, /baseline, /chat,
+     /support, /settings, /account, or /redeem. `max()` keeps any control already
+     16px+ exactly as authored. `!important` is load-bearing: Tailwind v3 emits
+     utilities as unlayered classes (specificity 0-1-0), which would otherwise
+     outrank these bare element selectors — Gate 30 measures the winner. */
+  input,
+  textarea,
+  select,
+  [contenteditable]:not([contenteditable="false"]) {
+    font-size: max(16px, 1rem) !important;
+  }
 }
 
 /* ── Modern UI / Polish Enhancements ───────────────────────────── */
