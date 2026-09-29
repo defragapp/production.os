@@ -49,14 +49,25 @@ for a consumer product.
 
 ## 3. Account ↔ Baseline binding
 
-`schema.sql` keys everything off the immutable user id (`users.id`, a UUID v4):
+`schema.sql` keys everything off the immutable user id (`users.id`, a UUID v4).
+The D1 schema is now **10 tables** (`users`, `baselines`, `threads`, `invites`,
+`relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`,
+`promo_grants`); the auth-relevant subset:
 
 ```
-users (id PK, email UNIQUE, password_hash, password_salt, email_verified, …)
-baselines (user_id PK/FK → users.id, nasa_jpl_json_data, …)   -- ON DELETE CASCADE
-threads   (id PK, user_id FK → users.id, message_history, …)  -- ON DELETE CASCADE
-passkeys  (credential_id PK, user_id FK → users.id, public_key, counter, …)
+users (id PK, email UNIQUE, password_hash, password_salt, email_verified,
+       token_version, memory_mode, stripe_customer_id, subscription_tier,
+       terms_version, terms_accepted_at, gift_expires_at, …)
+baselines (user_id PK/FK → users.id, nasa_jpl_json_data, consent_accepted_at, …)   -- ON DELETE CASCADE
+threads   (id PK, user_id FK → users.id, message_history, journey_id, …)           -- ON DELETE CASCADE
+passkeys  (credential_id PK, user_id FK → users.id, public_key, counter, …)        -- ON DELETE CASCADE
 ```
+
+Entitlement/compliance columns ride on `users`: `token_version` (session
+revocation, §5), `memory_mode` (`server`/`local`, see `ai-system.md`),
+`subscription_tier` (+ `stripe_customer_id`), `gift_expires_at` (owner gift
+passes, resolved by `tier.ts`), and the clickwrap receipt `terms_version` /
+`terms_accepted_at` (§7).
 
 A passkey or password is only ever an *unlock mechanism* that resolves to a
 `user_id`; the Baseline and threads hang off that id. Authentication therefore
@@ -110,19 +121,25 @@ dual-pepper migration keyed by a version tag.
 ## 5. Sessions
 
 - Signed **JWT (HS256)** with the `JWT_SECRET` Workers secret. Payload:
-  `{ sub: userId, email, iat, exp }`, **7-day** expiry.
+  `{ sub: userId, email, tv, iat, exp }`, **7-day** expiry. `tv` is the account's
+  `users.token_version`.
 - Delivered as an **httpOnly, Secure, SameSite=Lax** cookie
   (`sovereign_session`). Not readable by JS → XSS cannot mint or steal a
   usable session cookie; SameSite=Lax blunts CSRF on top-level navigations.
 - Verified in `src/middleware.ts` (route gate) and again per-route where the
   user row/entitlement is needed. `GET /api/auth` returns the current session.
+- **Early revocation via `token_version`.** Every authenticated read compares
+  the cookie's `tv` to the live `users.token_version`; a mismatch rejects the
+  session. `sign-out` and password reset bump `token_version`, so an
+  outstanding cookie is invalidated **before** its 7-day expiry — logout and
+  reset genuinely revoke, not just clear the browser cookie.
 - No server-side session table: statelessness suits Workers; `SESSION_KV` holds
   only counters/rate-limits and password-reset tokens, not the session itself.
 
-Trade-off (accepted for now): a logout cannot revoke an already-issued JWT
-before expiry (mitigated by the short window and `DELETE /api/auth` clearing the
-cookie). If instant revocation becomes a requirement, add a small KV denylist
-keyed by `jti`.
+This closes the earlier trade-off (a logout could not revoke an issued JWT): the
+`token_version` counter is the lightweight, D1-backed revocation the doc once
+listed as a possible future KV `jti` denylist — implemented without a per-token
+denylist.
 
 ---
 
@@ -153,8 +170,15 @@ resolves to the "continue without it" path instead of an empty, non-working box.
 
 ---
 
-## 7. Email verification & password reset
+## 7. Email verification, signup consent & password reset
 
+- **Signup clickwrap (provable consent).** `POST /api/auth` in signup mode
+  requires `termsAccepted: true` (and sends `termsVersion` from `lib/terms.ts`
+  `CURRENT_TERMS_VERSION`). This check runs **before** the Turnstile round-trip,
+  so consent is the front door and a request that withholds it is 400ed without
+  spending a siteverify call; a curl client cannot bypass it. On success the
+  account stores `users.terms_version` + `terms_accepted_at = datetime('now')`,
+  and `GET /api/auth/export` returns that receipt with the user's data.
 - On signup a one-time **verification token** is stored as a SHA-256 hash
   (`verification_token`) with a 48h expiry; verification is gated on Resend
   actually being configured (`emailVerificationEnabled`). AI chat is unlocked

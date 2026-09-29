@@ -10,13 +10,14 @@ The user then converses with an AI in their own words. The AI's job is to help t
 
 ## How conversations are grounded
 
-Every AI answer is generated per user from three sources:
+Every AI answer is generated per user from four sources:
 
 1. **Baseline signals** — derived from the user's computed Baseline (sun/moon themes, qualities, pressure responses, underused capacities, Human Design type/strategy/authority, Gene Keys, life path). These are tendencies used to support reflection.
-2. **The conversation itself** — a window of prior exchanges in the same thread.
+2. **The conversation itself** — a window of prior exchanges in the same thread (bounded to the last 20 messages).
 3. **Consent-gated relationship context** — the profiles of people who have explicitly accepted the user's invitation and consented to appear in that user's context. A person can never appear in another's AI context without consent, and each side is read through its own Baseline.
+4. **Static system directives** — model instructions and safety caps that are part of the codebase, not user data.
 
-The pipeline is deterministic in structure: compute baseline → derive signals → classify the user's question into an inquiry level → reason with evidence discipline → generate through a local cloud model (Llama 3.1 8B Instruct) via an AI Gateway with automatic fallback.
+The pipeline is deterministic in structure: compute baseline → derive signals → classify the user's question into an inquiry level → reason with evidence discipline → generate through a local cloud model (Llama 3.1 8B Instruct) via an AI Gateway with automatic fallback → validate the output through three safety layers. A pre-model prompt-extraction guard deflects injection attempts before any model call is made, at zero token cost.
 
 ## Evidence discipline (in full)
 
@@ -44,23 +45,33 @@ When a pattern is identified, the AI walks through: (1) Meaning — what the use
 
 ## Safety and boundaries (in full)
 
+- **18+ eligibility.** The platform enforces a minimum age server-side (DOB check at baseline computation) and requires a provable terms-of-service clickthrough with stored receipt before account creation.
 - **No diagnosis.** The AI does not pathologize, does not install identity labels ("you have low self-worth"), and does not treat the Baseline as a clinical signal.
 - **No relational verdicts.** It does not claim knowledge of another person's hidden emotions or intentions, and does not judge who is right.
 - **No overvalidation or moralizing.** It does not say what the user should do.
 - **No destiny.** It never predicts outcomes.
 - **User correction is integral.** The user can reject any interpretation; the AI accepts it, integrates it, and does not re-assert it.
 - **Crisis handling.** If a user discloses trauma, self-harm, abuse, or danger, the AI acknowledges what was shared, does not attempt to analyze it, and directs the user to appropriate professional resources.
+- **Prompt-extraction guard.** Before reaching the model, a turn that requests the system prompt or instructions is deflected with a grounded reply, ensuring internal directives never leak.
 - **Content safety layer.** A lexicon-based moderation layer (negation-aware) blocks prohibited categories (diagnosis, pathology, self-harm encouragement, harassment/abuse, explicit content, dangerous/illegal action). Higher-risk turns are answered with a grounded, repair-style response rather than silence or fabrication.
 - **Answer integrity.** If the model does not return a complete, valid answer, the API retries the model once and, on repeat failure, returns an honest "couldn't finish" message — never a hallucinated placeholder.
 
 ## Data, privacy, and consent (in full)
 
 - Birth data is used for one purpose only: computing the Baseline. It is never shared, sold, or used to train anyone else's view of the user.
-- The raw baseline JSON and conversation history are scoped to the owning account in that account's D1 row and KV stores.
+- The raw baseline JSON and conversation history are scoped to the owning account in that account's D1 row.
 - AI answers are generated per request; there is no training on user conversations at all.
 - Relationships appear only through explicit invitations; each participant's data is visible only through their own authenticated session. The invited person must accept and consent before their derived profile can be used in another user's AI context.
-- Accounts can be deleted in one click, which removes the account and its data.
-- Free tier: 5 AI messages/day, 20 requests/min burst cap. Sovereign+ (subscription) removes the daily message cap and unlocks relationship invitations.
+- Accounts can be deleted in one click, which cascades and removes the account and all its data.
+- **Dual memory architecture.** By default (`server` mode), transcripts persist in D1 for multi-device continuity. In `local` (Device-Only) mode, the server writes no thread data; the browser encrypts conversation history with an AES-GCM 256 non-extractable key sealed in IndexedDB, and the AI edge retains nothing.
+- Sessions are httpOnly JWTs with server-side early revocation (a token_version counter invalidates outstanding cookies on logout or password reset without a denylist).
+- Free tier: 5 AI messages/day (enforced by an atomic D1 counter), 20 requests/min burst cap. Sovereign+ (subscription or 30-day gift pass): 150 messages/day fair-use ceiling and the full relationship feature set.
+
+## Journey Engine & progressive features
+
+- **Journey** (deterministic, not model-run): a structured self-reflection arc derived from the conversation's reasoning context. Milestones unlock as the user explores new inquiry levels or domains. The arc renders in an out-of-flow overlay with zero Cumulative Layout Shift.
+- **Voice dictation:** Web Speech API integration for hands-free input; progressive enhancement (works where the browser supports it, silent otherwise).
+- **Gift passes:** SHA-256-hashed 30-day Sovereign+ codes the platform owner can distribute; atomic single-use claim prevents reuse.
 
 ## What Sovereign is NOT
 

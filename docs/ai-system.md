@@ -22,6 +22,10 @@ the model verbatim or exposed to another user.
 ## 2. Baseline computation (`/api/baseline`)
 
 1. User submits optional place, date, time, timezone.
+   - **18+ floor:** `src/lib/date-of-birth.ts` rejects a DOB under 18 (UTC), and
+     the same check runs server-side in `/api/baseline` (a minor's DOB is 400ed);
+     a successful submit stamps `baselines.consent_accepted_at` as the consent
+     receipt. Raw birth data is never shared with another user.
 2. **Natal positions**: `src/lib/nasa-jpl.ts` resolves coordinates against the NASA/JPL
    Horizons API (`BASELINE_HORIZONS_URL`) for the ten natal bodies (Sun, Moon, Mercury,
    Venus, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto).
@@ -82,10 +86,19 @@ Gates applied in order:
 
 1. JWT auth (`verifyJWT`) — anonymous messages are rejected.
 2. Account must exist and have a completed Baseline.
-3. Rate limits: burst (20 req / 60 s) and, for the free tier, a daily cap
-   (`FREE_TIER_DAILY_LIMIT = 5`, reset nightly). Sovereign+ lifts the daily cap (enforced
-   server-side, not in the UI).
-4. Message is trimmed and length-capped (`MAX_MESSAGE_LENGTH`).
+3. Rate limits: a KV burst limiter (20 req / 60 s) and a **daily turn ceiling
+   claimed with a single atomic D1 upsert** on `chat_usage` — `FREE_TIER_DAILY_LIMIT
+   = 5`, `SOVEREIGN_PLUS_DAILY_LIMIT = 150` (owner `chadowen93@gmail.com` exempt).
+   The atomic upsert replaced the old KV read-modify-write counter, which had no
+   compare-and-swap and so was bypassable by concurrent requests.
+4. Message is trimmed and length-capped at **2,000 chars**.
+5. **Pre-model prompt-extraction guard** (`sovereign-safety.ts`): a turn that asks
+   the model to reveal or reproduce its instructions ("ignore previous
+   instructions", "print your system prompt", "repeat the words above…", "dump
+   buildSystemPrompt") is deflected immediately with a calm, grounded refusal —
+   **before any `env.AI.run()` call**, at zero token cost and with zero IP
+   leakage. Locally (where a real model call can only 503) this is what lets the
+   IP-isolation release gate prove a deflection never reached the model.
 
 The thread merges server-side (`mergeChatHistories`) and is sanitized (`sanitizeMessages`)
 before the safety layers run. The validated answer is delivered as a single SSE `content`
@@ -99,7 +112,9 @@ Three layers, all in `sovereign-safety.ts`:
 
 - **Layer 1 — Intent escalation (detectSafetyMode)**: flags turns that push the model to
   act as a clinician, fortune-teller, psychic, or to moralize across the user's life. Flagged
-  turns get an escalated, grounded instruction block.
+  turns get an escalated, grounded instruction block. The same pre-model pass also carries the
+  **prompt-extraction guard** (§6 step 5), which short-circuits an injection/extraction attempt
+  to a deflection with no model call at all.
 - **Layer 2 — Lexicon validation**: a negation-aware category filter over the model's output
   (diagnosis/pathology prohibitions, self-harm encouragement, harassment/abuse, explicit
   content, dangerous/illegal action). Negation awareness prevents "not a diagnosis" from being
@@ -134,7 +149,29 @@ scaffolding:
 - Accounts and their data delete atomically (one click from Account).
 - There is no training on user conversations — generation is per-request.
 
-## 9. Future: relational patterning assessment
+## 9. Dual memory & the Journey Engine
+
+**Memory modes** (a per-user `memory_mode` on `users`, surfaced in Settings):
+
+- **`server` (default)** — threads and journeys persist in D1 (`threads`,
+  `journeys`, `journey_events`) for multi-device continuity. `/api/chat` writes
+  the merged transcript back to the thread.
+- **`local` (Device-Only)** — zero-retention inference: `/api/chat` **skips the D1
+  thread write**, and the browser keeps the arc in an IndexedDB vault
+  `sovereign-memory` (stores `keys` + `records`) sealed with an **AES-GCM 256,
+  non-extractable `CryptoKey`** (`lib/local-memory.ts`, `lib/journey-store.ts`).
+  The edge still infers the single turn, but nothing about that turn is stored
+  server-side.
+
+**Journey Engine** (`lib/sovereign-journey.ts`) is deterministic, not model-run: it
+holds the step catalog, milestone unlocks, and progress math so the arc is stable
+and replayable. The chat transcript feeds it; `journey_events` (server) or the
+vault (Device-Only) is the append-only audit trail. The UI renders it as the
+out-of-flow `.journey-veil`, which reveals at `CLS = 0.0000` (pinned by the
+zero-CLS release gate). Journey lifecycle (rewound / completed / started) is
+logged one row per decision, sourced to the person who decided.
+
+## 10. Future: relational patterning assessment
 
 The product roadmap describes systems-level reading ("the systems you live within"). The
 foundations exist:
@@ -158,7 +195,7 @@ Planned additions (design-only, no behavior change committed yet):
 Implement these inside the existing `sovereign-reasoning` pipeline and re-route the consent
 check through `sovereign-connections` exactly as Level 3 does today.
 
-## 10. Operations notes
+## 11. Operations notes
 
 - Bindings: `DB` (D1), `SESSION_KV`, `AI`, `AI_GATEWAY_ID`, `BASELINE_HORIZONS_URL`.
 - Secrets: `JWT_SECRET`, `RESEND_API_KEY`, `STRIPE_*`, `TURNSTILE_SECRET_KEY`,

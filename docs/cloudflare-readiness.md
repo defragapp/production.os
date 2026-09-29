@@ -128,20 +128,37 @@ curl -X POST https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets \
 5. **Static asset caching.** Next/OpenNext emits hashed `_next/static` assets;
    confirm long `Cache-Control` (immutable) so the edge serves the JS/CSS during
    a spike (the beacon + images should be cache hits, not origin hits).
+6. **NASA/JPL Horizons ephemeris cache (KV)** — every `/api/baseline` call
+   fans out 10 HTTP subrequests to `ssd.jpl.nasa.gov`. A KV cache keyed
+   `horizons:{targetId}:{utcHourBucket}` (TTL 3,600 s) collapses repeat
+   lookups to zero outbound calls; a Durable Object batcher coalesces
+   concurrent identical requests. See
+   [`scaling-plan.md` §1B Bottleneck 1](./scaling-plan.md) for the full
+   analysis and implementation steps.
+7. **D1 message_history compaction path.** Threads store the full transcript
+   as a JSON TEXT blob (≤ 100 KB). At 5k+ active users, a scheduled archive
+   Worker should split cold threads to R2 or per-message `journey_events`
+   rows to keep per-UPDATE payloads bounded. See
+   [`scaling-plan.md` §1B Bottleneck 3](./scaling-plan.md).
+8. **Workers AI model fallback routing.** If `@cf/meta/llama-3.1-8b-instruct-fp8`
+   hits regional capacity (503), the model adapter’s self-heal tier should try
+   a secondary model (`@cf/meta/llama-3.1-8b-instruct`) before surfacing a
+   user-facing error. See
+   [`scaling-plan.md` §1B Bottleneck 2](./scaling-plan.md).
 
 ### P2 — trust & visibility
-6. **Turnstile strict mode** — flip `TURNSTILE_REQUIRED=true` only after we
+9. **Turnstile strict mode** — flip `TURNSTILE_REQUIRED=true` only after we
    confirm the widget loads for the real audience (see `docs/auth.md §6`). Once
    passkeys carry most logins, keep Turnstile best-effort on those paths.
-7. **Real User Monitoring (RUM)** in Cloudflare Zero Trust — free, gives Core
-   Web Vitals from real visitors during the spike (when you most want to see it).
-8. **Security Analytics** (free, from BFM/WAF/managed rules) — confirms what the
-   rules are actually blocking. **Firewall Events** log for audit.
-9. **Page Shield** — paid add-on; revisit only if client-side skimming of the
-   Stripe fields becomes a concern. Checkout uses **Stripe-hosted fields**
-   (`js.stripe.com`), so raw card data never touches our origin — Page Shield is
-   a nice-to-have, not a launch blocker.
-10. **Logpush / Observability analytics tables** for the Workers logs if we want
+10. **Real User Monitoring (RUM)** in Cloudflare Zero Trust — free, gives Core
+    Web Vitals from real visitors during the spike (when you most want to see it).
+11. **Security Analytics** (free, from BFM/WAF/managed rules) — confirms what the
+    rules are actually blocking. **Firewall Events** log for audit.
+12. **Page Shield** — paid add-on; revisit only if client-side skimming of the
+    Stripe fields becomes a concern. Checkout uses **Stripe-hosted fields**
+    (`js.stripe.com`), so raw card data never touches our origin — Page Shield is
+    a nice-to-have, not a launch blocker.
+13. **Logpush / Observability analytics tables** for the Workers logs if we want
     long-retention dashboards (free tier is limited; fine to defer).
 
 ### Deliberately NOT used
@@ -156,9 +173,10 @@ curl -X POST https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets \
 
 ## 4. Media-spike playbook (the scenario you flagged)
 
-> The step-by-step operational version (thresholds, monitoring, and the exact
-> Lee prompts) lives in [`scaling-plan.md`](./scaling-plan.md). This section is the
-> strategic summary; that one is what you hand an agent mid-spike.
+> The step-by-step operational version (thresholds, monitoring, the three
+> bottleneck deep-dives, and the exact Lee prompts) lives in
+> [`scaling-plan.md`](./scaling-plan.md). This section is the strategic summary;
+> that one is what you hand an agent mid-spike.
 
 The architecture is already edge-native, so the plan is about **cost + abuse +
 perceived latency**, not server capacity:
@@ -181,8 +199,11 @@ perceived latency**, not server capacity:
 2. **§3.1–3.2** (this week): AI Gateway caching + rate limit + logging, billing
    alerts. — *highest cost-protection ROI before publicity*
 3. **§3.3 Queues** for email/AI fan-out — *I implement in code when greenlit.*
-4. **§3.6 Turnstile strict** — *after we see real-audience widget success.*
-5. **§3.7 RUM** — *before the announcement, so we have data on day one.*
+4. **§3.6–3.8** (Horizons KV cache, message_history compaction, AI model
+   fallback) — *implement per scaling-plan §1B engineering steps when traffic
+   approaches the thresholds documented there.*
+5. **§3.9 Turnstile strict** — *after we see real-audience widget success.*
+6. **§3.10 RUM** — *before the announcement, so we have data on day one.*
 
 Nothing here changes the app's privacy stance: every addition is either at the
 edge or metered server-side, and no new cookies or third-party trackers are

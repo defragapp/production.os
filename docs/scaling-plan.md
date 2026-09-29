@@ -85,6 +85,200 @@ This doc is the ladder from "free and fine" to "paid and unbothered."
 
 ---
 
+## 1B. High-Traffic Bottleneck Deep-Dives
+
+The wall chart (§1) tells you *what* breaks; this section tells you *how* it breaks,
+*when*, and what engineering step removes the ceiling.
+
+### Bottleneck 1 — NASA/JPL Horizons API Fan-Out (`/api/baseline`)
+
+**Shape of the call.** `computeNatalPositions` (`src/lib/nasa-jpl.ts`) queries ten
+planetary bodies (`sun`, `moon`, `mercury`, `venus`, `mars`, `jupiter`, `saturn`,
+`uranus`, `neptune`, `pluto`) via `ssd.jpl.nasa.gov/api/horizons.api`. Requests are
+batched in pairs (`batchSize = 2`) with a 150 ms inter-batch delay, so the full
+sequence is **5 sequential batches × 2 concurrent subrequests = 10 outbound
+HTTP calls** per Baseline computation. Latency per call is typically 1.2–2.5 s;
+the full fan-out takes **6–12 s** in serial batches.
+
+**Failure mode under concurrent signups.**
+
+| Concurrent new users | Horizons requests | Worker subrequests (free limit 50/invocation) | NASA/JPL tolerance |
+|---|---|---|---|
+| 1 | 10 | 10 ✅ | Fine |
+| 10 | 100 (10 × 10) spread over ~10 s | 10 each invocation ✅ | NASA/JPL has no published SLA; rate-limit or timeout at ~50 concurrent / minute is a safe assumption |
+| 50+ | 500+ in seconds | Per-invocation OK, **aggregate egress spikes** | Likely HTTP 429/503; `fetchHorizonsRows` throws; baseline degrades to the error fallback JSON |
+
+Because a Baseline is computed once per account and the route already throttles
+at 5/min burst + 20/hr per user (`BASELINE_BURST_MAX`, `BASELINE_HOURLY_MAX`),
+the realistic ceiling is **~100 signups/hour × 10 calls = 1,000 Horizons calls/hr**
+before we risk being treated as abusive. A media-spike signup burst of 500 users
+in the first 10 minutes is well within our in-app rate limiter but means
+**5,000 Horizons subrequests** in that window — almost certainly met with
+throttling or timeouts from JPL's side.
+
+**Remediation (next engineering pass).**
+
+1. **KV ephemeris cache keyed by `horizons:{targetId}:{utcHourBucket}`**.
+   The Earth-relative geocentric position of each body changes slowly enough
+   that a 1-hour bucket (±6° drift for the Moon, negligible for outer planets)
+   is accurate to ~0.1° of ecliptic longitude — far below the 0.01° precision
+   already used in `extra_prec`. TTL 3,600 s; on cache hit → zero fan-out.
+   At a realistic 100 unique birth-hours in the dataset, a full day of signups
+   hits ≤ 2,400 cached keys instead of 10 × N outbound calls.
+2. **Request coalescing via a Durable Object (DO) `HorizonsBatcher`.**
+   When multiple Workers need the same `{targetId, utcHourBucket}` concurrently,
+   the DO collapses them into one Horizons call, returning the cached result to
+   all waiters. Eliminates the thundering-herd on cold buckets.
+3. **Retry with exponential backoff + jitter.** Current `fetchHorizonsRows`
+   throws on non-2xx. Wrap with 2 retries at 1 s / 3 s backoff before
+   degrading; log the `Retry-After` header if present.
+4. **Pre-computed ephemeris table (long-term).** For the top 10,000 birth
+   dates/hour combinations (covering >95% of actual registrations), store the
+   10-position JSON in D1 or R2 at build/deploy time; `/api/baseline` becomes
+   a table lookup + optional live correction, dropping outbound calls to zero
+   for cached dates.
+
+**What NOT to do.** Caching at the D1-query level (`SELECT from baselines`) is
+irrelevant — the same user already hits cache via `ON CONFLICT DO UPDATE`. The
+bottleneck is the *first-ever computation* of a unique `{instant, targetId}`
+pair against JPL's API. KV/DO caching targets exactly that.
+
+---
+
+### Bottleneck 2 — Workers AI Concurrency, Latency & Unit Economics (`/api/chat`)
+
+**Token budget per turn.**
+
+| Parameter | Value | Source |
+|---|---|---|
+| Input message char cap | 2,000 chars | `MAX_MESSAGE_LENGTH` in `api/chat/route.ts` |
+| Context window | Last 20 messages | `MAX_CONTEXT_MESSAGES` in `sovereign-reasoning.ts` |
+| Output budget | 1,024 tokens | `DEFAULT_MAX_TOKENS` in `sovereign-model.ts` |
+| Worst-case input tokens | ≈ 3,600 (system ~1,200 + 20 × ~120 avg) | Estimated |
+| Worst-case output tokens | 1,024 | Fixed ceiling |
+| Neurons per turn (worst) | ~38 | (3,600+1,024) / 122 ≈ 38; 1 neuron = 122 combined tokens on `llama-3.1-8b-instruct-fp8` |
+| Neurons per turn (typical short reply) | ~21 | ~800-in + ~400-out ≈ 10 |
+
+**Daily D1 atomic ceiling (the hard gate).**
+
+The pipeline claims one slot *before* calling the model:
+
+```sql
+INSERT INTO chat_usage (user_id, day, used, limit_value)
+VALUES (?, ?, 1, ?)
+ON CONFLICT(user_id, day) DO UPDATE SET used = used + 1
+WHERE used < ?
+RETURNING used;
+```
+
+- **Free tier**: `FREE_TIER_DAILY_LIMIT = 5` messages per user per UTC day.
+- **Sovereign+**: `SOVEREIGN_PLUS_DAILY_LIMIT = 150` (fair-use ceiling).
+- **Owner** (`chadowen93@gmail.com`): exempt (no claim made).
+
+A failed claim (row absent because `used >= limit`) returns HTTP 402 or 429
+*without consuming a neuron*. The atomic upsert replaced the old KV
+read-modify-write that was race-prone under concurrent requests.
+
+**Aggregate neuron headroom.**
+
+| Scenario | Users chatting/day | Avg messages/user | Total neurons | vs 10k/day free |
+|---|---|---|---|---|
+| Launch quiet | 10 | 3 | 630 | Well within |
+| Viral day | 200 | 4 | 3,040 | 30% of ceiling |
+| Sustained growth | 500 | 4 | 7,600 | 76% — upgrade trigger |
+| Full free breach | 700+ | 4 | >10,500 | Paid plan needed |
+
+**AI Gateway routing & self-heal.** `sovereign-model.ts` calls AI Gateway
+(`sovereign-ai-gateway`) first; on a gateway error (stale config, spend cap,
+rate-limit 1050) it retries via the direct binding. This ensures one
+misconfiguration cannot take chat offline.
+
+**Remediation (prioritized).**
+
+1. **Enable AI Gateway response caching** (dashboard or API): cache identical
+   prompt+model pairs for 3,600 s. At launch, system prompts are invariant and
+   many free-tier messages will share near-identical context → cache hit rate
+   could reach 15–30% for template-like questions.
+2. **AI Gateway per-IP rate limit**: cap e.g. 60 completions / hour / IP at the
+   gateway layer. This protects neurons even if a user cycles multiple accounts.
+3. **Model fallback routing**: `@cf/meta/llama-3.1-8b-instruct-fp8` is the
+   primary. If regional capacity returns 503 (Workers AI isolates are
+   region-bound), route to `@cf/meta/llama-3.1-8b-instruct` (non-fp8, ~1.2×
+   slower but wider availability). Implement as a `SECONDARY_MODEL` constant
+   in `sovereign-model.ts` tried after the direct-binding tier.
+4. **Reduce max_tokens for short turns**: the reasoning engine can classify a
+   turn as a brief acknowledgment (level-1, no meaning trigger) and pass
+   `maxTokens: 512` instead of 1,024, cutting worst-case per-turn neurons ~12%.
+5. **Upgrade to Workers Paid** when sustained daily neuron use exceeds 7,000
+   (70% threshold). Overage is $0.011 / 1,000 neurons → a full day of 500
+   chats ≈ $0.006 beyond the free block.
+
+---
+
+### Bottleneck 3 — D1 Single-Database Throughput & `threads.message_history` Compaction
+
+**Current storage model.**
+
+- Each thread row stores the full transcript as a **JSON TEXT blob** in
+  `threads.message_history`.
+- `MAX_THREAD_MESSAGES = 200`, `MAX_THREAD_CHARS = 100,000` per thread
+  (enforced in `/api/threads/route.ts`).
+- `/api/chat` calls `mergeChatHistories` (deduplicates by role+content tail,
+  then appends new messages), and writes the merged blob back with one
+  `UPDATE threads SET message_history = ?`.
+- Write amplification is now **linear** per turn (one UPDATE writes only the
+  final merged blob, not a quadratic re-append). This is the post-fix state;
+  the pre-fix quadratic bug is resolved.
+
+**D1 throughput characteristics.**
+
+| Metric | Free limit | Our pattern | Scaling concern |
+|---|---|---|---|
+| Rows written / day | 100,000 | signup + chat persist (1 UPDATE/msg) + journey_events + usage bumps | 5 msgs × 500 users = 2,500 writes/day for chat alone; burst to 100k is unlikely without abuse |
+| Row size | ~200 KB max per TEXT (D1 hard limit per column) | 100k chars ≈ 100 KB JSON; fits | At 200 msgs the blob is near ceiling; archive needed before that |
+| Write latency | <50 ms p50, ~200 ms p99 | Acceptable | Concurrent UPDATEs to same row serialize (single-writer); per-user isolation means cross-user writes parallelize |
+| Database size | 5 GB (free) | ~200 bytes/user × 100 users at launch | 25k users × avg 50 KB transcripts ≈ 1.25 GB — approaching 25% at 25k |
+
+**Compaction / archive strategy.**
+
+1. **Near-term (≤ 5k users):** no change needed. 200-msg threads and 100 KB
+   per blob are well within D1's per-row and per-database limits. The atomic
+   chat_usage UPSERT and single UPDATE per turn keep write volume bounded.
+2. **Medium (5k–25k users):** introduce a `message_archive` pattern.
+   When a thread reaches 150 messages, split the oldest 100 into
+   `journey_events` (append-only, per-message rows) and **truncate**
+   `message_history` to the last 50 messages + a summary note. The
+   reasoning layer reads the last N messages from the live column +
+   optionally the tail of archived rows, keeping the UPDATE payload
+   under 25 KB.
+3. **High (25k+ users):** migrate cold transcripts (threads not touched
+   in 90+ days) to **R2** (credentials already staged in `.dev.vars`).
+   A scheduled Worker (Cron Trigger) moves `message_history` blobs to
+   `r2://archives/{userId}/{threadId}.json`, replaces the D1 column with
+   `{"archived": true, "r2_key": "..."}`, and D1 storage pressure drops
+   to metadata-only (~200 bytes per archived row).
+4. **Write-rate limiter path.** The in-app KV burst limiter (20 req / 60 s
+   per user for chat) and the atomic D1 daily ceiling are the current
+   defenses. At high RPS, KV counters use a **read-modify-write** pattern
+   with no CAS, so two concurrent requests could both admit a 21st call
+   within the burst window (rare, bounded to 1–2 extra). The proper fix at
+   scale is to move burst limiting to **Cloudflare WAF Rate Limiting rules**
+   (zone-level, atomic, no application code) or a **Durable Object**
+   per-user rate limiter (serialized writes, exact counting). The WAF
+   rate limit already covers `/api/chat` via the `Sovereign Rate Limits`
+   ruleset (§4); expanding its window to match the 20/60 burst is a
+   one-line dashboard edit once Workers Paid removes the 1-rule / 10 s
+   constraint.
+5. **Index coverage.** Current indexes: `threads_user_id`,
+   `chat_usage(user_id, day)`, `journeys(user_id, status)`,
+   `journey_events(journey_id)`, `promo_grants(hash)`,
+   `relationships(user_a, user_b)`. All hot-path queries (auth, usage,
+   thread load, journey persist) hit indexed lookups. The only full-scan
+   risk is `SELECT … FROM baselines WHERE user_id = ?` — covered by the
+   PK. No index gap at launch scale.
+
+---
+
 ## 2. Monitoring — knowing where we are *before* the wall
 
 | Signal | Where to look | Grab it programmatically |

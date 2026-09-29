@@ -3,6 +3,22 @@
 ## Overview
 Elevate, polish, condense, and modernize the visual design and user experience across all public, onboarded, and authenticated routes of Sovereign OS (`sovereign.defrag.app`). The implementation sharpens typography hierarchies, unifies surface elevations and glass tokens, tightens layout densities and micro-spacing, introduces fluid responsive polish, and removes rough visual seams without drifting from the warm, dark-first editorial aesthetic (Manrope + Instrument Serif + JetBrains Mono on warm graphite #0d0d0d / hsl(30 8% 4.5%)).
 
+> **Note — this is a historical UI/UX audit plan** (the visual-polish pass that shipped in earlier phases). It is kept for provenance and does NOT enumerate files created since. For the authoritative current architecture, see **§0 Current System State** below and `README.md`.
+
+---
+
+## 0. Current System State (as of release `11586ad`)
+
+The shipped product has grown well beyond this plan's UI scope. Authoritative state:
+
+- **D1 — 10 tables:** `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants`. Notable columns: `users.token_version` (cookie revocation), `users.memory_mode` (`server`/`local`), `users.terms_version` + `users.terms_accepted_at` (clickwrap receipt), `users.gift_expires_at` (owner gift entitlement), `baselines.consent_accepted_at` (18+ receipt at DOB entry), `threads.journey_id`.
+- **Dual memory:** `server` persists threads/journeys in D1; `local` is zero-retention — `/api/chat` skips the D1 write and the browser keeps an AES-GCM-256 non-extractable-key vault in IndexedDB `sovereign-memory` (stores `keys` + `records`).
+- **Deterministic Journey Engine** (`sovereign-journey.ts`) + out-of-flow `.journey-veil` that reveals at `CLS = 0.0000`; server arcs in `journeys`/`journey_events`, Device-Only arcs in the vault.
+- **Compliance:** signup clickwrap checked before Turnstile, 18+ DOB floor (`date-of-birth.ts` + `/api/baseline`), explicit baseline-share opt-in on `/invite`, hardened `/terms` (release, crisis lines, §15 class-action waiver) + `/privacy` disclosures + `security.txt`.
+- **Monetization & owner:** `tier.ts resolveTier()` (owner / paid `sovereign+` / gift / free, auto-revert on lapse); SHA-256-hashed 30-day `sov_gift_` passes (`promo.ts`) redeemed at `/redeem`; owner-only console in `/account` + `/api/owner/*` (404 to non-owners).
+- **AI safety & IP:** pre-model prompt-extraction + safety guard, 2,000-char input cap, `MAX_CONTEXT_MESSAGES=20`, `max_tokens=1024`, atomic D1 daily ceilings (5 free / 150 `sovereign+`).
+- **Verification:** `npm run verify:release` runs **97 checks across 30 gates**; `npx vitest run` is **27 suites / 269 tests**.
+
 ---
 
 ## 1. Scope, Context, & Architectural Alignment
@@ -224,7 +240,7 @@ All changes leverage existing packages already configured in `package.json`:
    - `npm run typecheck` (`tsc --noEmit`) must pass with 0 errors.
    - `npm run lint` (`eslint .`) must pass with 0 errors.
 2. **Unit & Integration Tests**:
-   - `npm run test` (`vitest run`) must maintain 100% pass rate (all 19 test suites, 184 tests).
+   - `npm run test` (`vitest run`) must maintain 100% pass rate (currently **27 suites / 269 tests**).
 3. **Build Validation**:
    - `npx next build` must compile successfully and verify all static & dynamic routes.
 4. **Visual & Responsive Verification**:

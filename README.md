@@ -10,10 +10,12 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 | Frontend | Next.js App Router + React 19 + Tailwind CSS + shadcn/ui |
 | Adapter | `@opennextjs/cloudflare` (OpenNext) |
 | Runtime | Cloudflare Workers (edge, `nodejs_compat`) |
-| Database | Cloudflare D1 (SQLite) — `users`, `baselines`, `threads` |
-| Sessions | Cloudflare KV (`SESSION_KV`) |
-| AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`) |
-| AI Routing | AI Gateway (ID: `sovereign-ai-gateway`) + direct fallback |
+| Database | Cloudflare D1 (SQLite) — **10 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants` |
+| Sessions | Cloudflare KV (`SESSION_KV`) — rate-limit + reset/verify + `ops:` counters (JWTs live in the cookie; `users.token_version` revokes them early) |
+| Device-Only memory | Client-side AES-GCM 256 non-extractable `CryptoKey` in IndexedDB `sovereign-memory` (`memory_mode='local'` → zero-retention edge inference, no D1 thread write) |
+| AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`, explicit `max_tokens=1024`, 2,000-char input cap) |
+| AI Routing | AI Gateway (ID: `sovereign-ai-gateway`) + direct Workers AI fallback |
+| Entitlements | `tier.ts resolveTier()` — Free vs `sovereign+` (Stripe) vs owner (`chadowen93@gmail.com`) vs SHA-256-hashed 30-day gift passes (`promo.ts`) |
 | Baseline Engine | NASA/JPL Horizons API (planetary positions) |
 | Auth | Passkeys (WebAuthn, passkey-first) + Email/Password fallback (PBKDF2-100k + HMAC pepper) + JWT (HS256) |
 | Bot Protection | Cloudflare Turnstile (best-effort, env-gated) |
@@ -32,20 +34,22 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 
 ## Release flow
 
-A push to `main` **does** deploy itself. Cloudflare Workers Builds (the git
-integration) fired on every recent push: `npx wrangler deployments list` shows a
-second version — authored by the build system rather than the API token — landing
-within a couple of minutes of each push. So the canonical path is two steps, not
-three, and the third step is the one that has been biting people:
+The proven, reliable path is **verify → push → confirm → (fallback) deploy**.
+Workers Builds (the git integration) is *supposed* to fire on every push to
+`main`, and sometimes produces a build-system-authored version within a couple
+of minutes. But it is **not dependable on its own**: on release `11586ad` no new
+version had landed ~6 minutes after the push, and the release had to be shipped
+with a single CLI `npm run deploy`. So treat the push as a *candidate* deploy and
+verify it, rather than assuming it:
 
 ```bash
 npm run verify:release                          # every gate green, or do not ship
-git push origin main                            # Workers Builds ships it
-npx wrangler deployments list                   # confirm the new version went out
+git push origin main                            # Workers Builds MAY ship it
+npx wrangler deployments list                   # poll ~2 min for the new version
 ```
 
-Run the CLI deploy only when that listing shows no new version ~3 minutes after
-the push, or when what has to ship is not yet on `main`:
+If `wrangler deployments list` shows no new version within ~2 minutes, run the
+CLI deploy exactly once against the clean tree:
 
 ```bash
 rm -rf .open-next .next && npm run deploy
@@ -53,12 +57,15 @@ rm -rf .open-next .next && npm run deploy
 
 `npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`)
 and then `wrangler deploy`, which rolls out to 100% of traffic; live at
-`sovereign.defrag.app` / `app.defrag.app`. Do not run it straight after a push:
-that is a second build of the same commit in flight at once, and that collision
-stalls static-asset binding propagation (the 503/hang previously seen on `/`,
-`/privacy`, `/terms`). The dashboard still lists a preview-branches trigger for
-non-`main` branches; treat it as unverified until a build from it shows up in
-`wrangler deployments list`.
+`sovereign.defrag.app`. A CLI-authored version shows your email as Author in the
+listing; a build-system version shows `undefined`.
+
+Do **not** run `npm run deploy` while a push-triggered build is still in flight:
+that is a second build of the same commit colliding, and the collision stalls
+static-asset binding propagation (the 503/hang previously seen on `/`, `/privacy`,
+`/terms`). Poll first, deploy from the CLI only once you have confirmed no build
+landed. The dashboard still lists a preview-branches trigger for non-`main`
+branches; treat it as unverified until a build from it shows up in the listing.
 
 ## Setup
 
@@ -135,10 +142,17 @@ npm run preview    # OpenNext build + preview in Workers runtime (workerd)
 npm run deploy     # OpenNext build + deploy to Cloudflare edge
 ```
 
-Run `npm run verify:release` before pushing — it is the whole ratchet (types,
-lint, tests, contract wiring, a clean OpenNext build, the browser vault, the
-zero-CLS veil, and a live authenticated walk over `/chat` in both memory modes,
-against a local preview server).
+Run `npm run verify:release` before pushing — it is the whole ratchet. Its own
+header enumerates the gates and is the single source of truth for the count; at
+release `11586ad` it runs **97 checks across 30 numbered gates**: types, lint, the
+27 Vitest suites (269 tests), committed contract wiring, a clean OpenNext build,
+the browser AES-GCM vault round-trip, the zero-CLS JourneyBar veil, a live
+authenticated walk over every surface in both memory modes, draft/503 recovery,
+whole-surface ergonomics (44px + 0 overflow at 390/768/1440), the PWA manifest,
+and the launch gates — compliance & 18+ age gate, IP & bundle isolation, owner
+console & 30-day gift pass, and the iOS 16px input auto-zoom floor. Preview-backed
+gates run against LOCAL D1 only and report SKIPPED (never a false PASS) if the
+environment cannot boot.
 
 > Note: `next build` alone does NOT produce `.open-next/`. To build the
 > Workers bundle locally, always use `npx opennextjs-cloudflare build`
@@ -149,21 +163,33 @@ against a local preview server).
 ```
 open-next.config.ts            # OpenNext Cloudflare config (defaults)
 wrangler.jsonc                 # Worker config: D1, KV, AI, AI Gateway, static assets
-schema.sql                     # D1 schema (users, baselines, threads)
+schema.sql                     # Canonical D1 baseline — 10 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants); migrations/0001–0004 layer onto existing DBs
 assets/ace-of-cups.jpg         # Canonical brand artwork (source of truth for the mark)
 scripts/build-brand-assets.mjs # Regenerates public/brand/*.png from the source artwork (node scripts/build-brand-assets.mjs)
 public/brand/                  # Emitted raster mark: emblem-full, emblem-core, emblem-core-bold, icon, apple-icon
 src/
 ├── app/
 │   ├── api/
-│   │   ├── auth/route.ts              # POST login/signup, GET session, DELETE logout (Turnstile)
+│   │   ├── auth/route.ts              # POST login/signup (clickwrap-before-Turnstile + 18+ affirm), GET session, DELETE logout; token_version revoke
+│   │   ├── auth/verify/route.ts       # GET email verification
+│   │   ├── auth/resend/route.ts       # POST re-send verification email (KV cooldown)
 │   │   ├── auth/reset/route.ts         # POST password reset (email via Resend)
+│   │   ├── auth/account/route.ts      # DELETE account (self-serve data removal)
+│   │   ├── auth/export/route.ts       # GET portable data export (incl. consent receipt)
 │   │   ├── auth/passkey/register/route.ts   # WebAuthn enrollment (POST options / PUT verify), session-gated
 │   │   ├── auth/passkey/authenticate/route.ts # WebAuthn login (POST options / PUT verify), issues session cookie
-│   │   ├── baseline/route.ts          # GET/POST natal baseline (NASA/JPL Horizons)
-│   │   ├── chat/route.ts              # Sovereign chat: non-streaming generation, delivered as a single SSE event
+│   │   ├── baseline/route.ts          # GET/POST natal baseline (NASA/JPL Horizons; 18+ DOB floor; consent receipt)
+│   │   ├── chat/route.ts              # Sovereign chat: pre-model safety+extraction guard, non-streaming gen as one SSE event, atomic D1 usage ceiling
 │   │   ├── checkout/route.ts          # POST → Stripe Checkout session (JWT-guarded)
+│   │   ├── billing-portal/route.ts    # POST → Stripe customer portal
 │   │   ├── threads/route.ts           # Chat history CRUD (D1) — paginated GET
+│   │   ├── journeys/route.ts + [id]   # Journey lifecycle (active arc, complete/archive, events)
+│   │   ├── invites/route.ts + info/accept/[id] # Connection invitations (Sovereign+ to send; accept sets explicit share opt-in)
+│   │   ├── relationships/route.ts     # Consented two-way connections (derived signals only)
+│   │   ├── redeem/route.ts            # POST claim a sov_gift_ pass (rate-limited, atomic conditional UPDATE)
+│   │   ├── owner/overview/route.ts    # GET live platform metrics — owner only, 404 to everyone else
+│   │   ├── owner/promo/route.ts       # POST mint / DELETE revoke a 30-day gift pass — owner only
+│   │   ├── support/route.ts           # POST support message → SUPPORT_INBOX
 │   │   └── webhooks/stripe/route.ts   # Stripe webhook → subscription_tier
 │   ├── account/page.tsx               # Account management
 │   ├── baseline/page.tsx              # Baselines list
@@ -203,9 +229,28 @@ src/
 │   ├── limits.ts                      # FREE_TIER_DAILY_LIMIT (5 msgs/day) + related ceilings
 │   ├── stripe.ts                      # Stripe pricing tiers + webhook verification
 │   ├── turnstile.ts                   # verifyTurnstileToken (env-gated)
-│   ├── types.ts                       # Shared TypeScript types
+│   ├── terms.ts                       # CURRENT_TERMS_VERSION + clickwrap copy source
+│   ├── date-of-birth.ts               # DOB parse + 18+ age floor (UTC) shared by client + API
+│   ├── usage.ts                       # atomic D1 daily-turn ceiling read/claim
+│   ├── tier.ts                        # resolveTier(): owner / paid sovereign+ / gift / free + auto-revert
+│   ├── promo.ts                       # SHA-256-hashed 30-day gift passes (mint/claim/revoke)
+│   ├── owner.ts                       # requireOwner() — owner-only surface, identical 404 to non-owners
+│   ├── journeys.ts                    # server journey persistence + lifecycle
+│   ├── sovereign-journey.ts           # deterministic Journey Engine (step catalog, milestones, progress)
+│   ├── journey-store.ts               # Device-Only journey vault (sealed envelopes in IndexedDB)
+│   ├── local-memory.ts                # AES-GCM 256 non-extractable key + sovereign-memory IndexedDB primitives
+│   ├── threads.ts                     # thread/transcript CRUD helpers
+│   ├── connections.ts                 # shared auth-payload + user-load helpers for API routes
+│   ├── invite-status.ts               # invite state machine
+│   ├── sovereign-connections.ts       # relationship/baseline-signal derivation for connected people
+│   ├── sovereign-humandesign.ts       # Human Design bodygraph derivation
+│   ├── dictation.ts                   # progressive Web Speech dictation (iOS-resilient)
+│   ├── viewport.ts                    # visualViewport keyboard-height helper
+│   ├── share-card.ts                  # OG/social share-card composition
+│   ├── brand-emblem-data.ts           # inlined brand emblem data
+│   ├── types.ts                       # Shared TypeScript types (incl. MemoryMode)
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 23 files / 229 tests)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 27 files / 269 tests)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
 
@@ -251,7 +296,13 @@ correction, leakage) and §53 regressions are covered in
 - The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Generation is non-streaming (one complete, validated answer); it is delivered to the client as a single SSE `content` event and persisted to D1 threads.
 - The chat route windows conversation context to the most recent 20 messages (`MAX_CONTEXT_MESSAGES`) before inference, capping token spend while full history remains stored in D1.
 - The `GET /api/threads` list is paginated (`page`/`limit`, default 50, max 50) and returns `{ threads, total, page, pageSize }`; the `?id=` detail lookup is unchanged.
-- All routes set security headers (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy) plus a CSP in `next.config.ts`.
+- All routes set security headers (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy) plus a CSP in `next.config.ts`. `Permissions-Policy` ships `camera=(), microphone=(self), geolocation=()` so first-party Web Speech dictation is never blocked; `productionBrowserSourceMaps` is `false`.
+- **Compliance & consent are provable, not just stated.** Signup requires an explicit clickwrap (`termsAccepted: true`) checked before Turnstile, persisting `users.terms_version` + `terms_accepted_at` (a receipt returned in the data export); `date-of-birth.ts` + `/api/baseline` enforce an 18+ floor and stamp `baselines.consent_accepted_at`; `/invite` accept uses an explicit baseline-share opt-in. `/terms` carries the 18+ eligibility, non-therapy + Express Release of Liability, crisis lines (988 / 741741 / 1-800-799-7233), the liability cap, and a §15 class-action waiver; `/privacy` discloses every `localStorage`/`IndexedDB` key, vendor cookies, transfers, retention, and a `#security` anchor that `security.txt` points at.
+- **Dual memory architecture.** `memory_mode='server'` (default) persists threads + journeys in D1 for multi-device continuity; `memory_mode='local'` is zero-retention — `/api/chat` skips the D1 thread write and the client keeps an AES-GCM-256 non-extractable-key vault in IndexedDB `sovereign-memory` (stores `keys` + `records`).
+- **Deterministic Journey Engine** (`sovereign-journey.ts`) drives the out-of-flow `.journey-veil` (reveals with `CLS = 0.0000`); server journeys persist to `journeys`/`journey_events`, Device-Only journeys to the vault.
+- **Monetization & owner.** `tier.ts resolveTier()` elevates the owner (`chadowen93@gmail.com`) and any active gift to `sovereign+` and auto-reverts on lapse. The owner-only console in `/account` mints SHA-256-hashed 30-day `sov_gift_` passes (`promo.ts`) redeemed via `/redeem`; `/api/owner/*` answers non-owners with the same 404 an unknown path gets, so the surface does not leak.
+- **Anti-extraction IP guard + fair-use ceilings.** `/api/chat` deflects prompt-injection/system-prompt-extraction *before* any model call (zero token cost), caps per-message input at 2,000 chars, windows context to 20 messages (`max_tokens=1024`), and enforces atomic D1 daily ceilings (5 free / 150 `sovereign+`, owner exempt).
+- **iOS input floor.** On coarse pointers every `input`/`textarea`/`select`/`contenteditable` computes `font-size ≥ 16px` (`globals.css` `!important` floor) so Safari never auto-zooms on tap.
 - The baseline is computed server-side against the NASA/JPL Horizons API; raw data and derived astrology/numerology/Human Design fields are stored in D1.
 - The AI's system prompt is a "Pattern Interruption" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry. Baseline is context, never a fixed identity or verdict.
 - Transactional emails are sent from `sovereign@defrag.app` via Resend (verified domain with DKIM/SPF, click and open tracking enabled). Fallback to console-log when `RESEND_API_KEY` is unset.

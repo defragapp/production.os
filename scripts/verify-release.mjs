@@ -2,7 +2,8 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, twenty-six gates, all must be green before a commit or deploy:
+ * One command, thirty numbered gates (97 individual checks), all must be green
+ * before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
  *   3. vitest run                          — unit + pure-reducer tests
