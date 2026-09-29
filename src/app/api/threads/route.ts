@@ -59,11 +59,16 @@ export async function GET(request: NextRequest) {
   // opening line is its title, so no extra column or write path is needed and
   // every device sees the same library labels immediately. json_valid guards
   // the list against a single malformed row.
+  // The LEFT JOIN carries the linked arc along (goal / status / current step)
+  // so a returning person recognises a conversation before opening it. A null
+  // journey (unlinked, or its row deleted via ON DELETE SET NULL) reads as a
+  // null badge — never a fabricated one — and a Device-Only journey has no D1
+  // row to join, so nothing that was kept off-server leaks into this list.
   const [countRow, result] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS total FROM threads WHERE user_id = ?").bind(payload.sub).first<{ total: number }>(),
     env.DB.prepare(
-      "SELECT id, created_at, updated_at, CASE WHEN json_valid(message_history) THEN trim(substr(coalesce(json_extract(message_history, '$[0].content'), ''), 1, 48)) ELSE '' END AS title FROM threads WHERE user_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?"
-    ).bind(payload.sub, pageSize, offset).all<{ id: string; created_at: string; updated_at: string; title: string }>(),
+      "SELECT t.id AS id, t.created_at AS created_at, t.updated_at AS updated_at, CASE WHEN json_valid(t.message_history) THEN trim(substr(coalesce(json_extract(t.message_history, '$[0].content'), ''), 1, 48)) ELSE '' END AS title, j.goal AS journey_goal, j.status AS journey_status, j.current_step AS journey_step FROM threads t LEFT JOIN journeys j ON j.id = t.journey_id WHERE t.user_id = ? ORDER BY t.updated_at DESC LIMIT ? OFFSET ?"
+    ).bind(payload.sub, pageSize, offset).all<{ id: string; created_at: string; updated_at: string; title: string; journey_goal: string | null; journey_status: string | null; journey_step: string | null }>(),
   ]);
   return NextResponse.json({ threads: result.results || [], total: countRow?.total ?? 0, page, pageSize });
 }

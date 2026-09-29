@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
+import { Stepper } from "@/components/stepper";
 import { LoadingScreen } from "@/components/ui/loading";
+
+// Accepting an invite is three moves, and the middle one (the Baseline) is
+// enforced by the server's 428 — so the funnel is spelled out here to make it
+// read as a path, not a wall. The person always sees which of the three they
+// are on and that the Baseline is what finishes the connect.
+const INVITE_STEPS = ["Account", "Baseline", "Connected"];
 
 type InviteStatus = "invalid" | "revoked" | "accepted" | "expired" | "pending";
 
@@ -103,8 +110,22 @@ function AcceptCard({
     router.push(`/onboard?mode=login&invite=${encodeURIComponent(token)}`);
   };
 
+  // Where the person stands in the three-step funnel, once we know their
+  // session. `authed === null` is still resolving, so the stepper waits. This
+  // card is only ever shown BEFORE an accept succeeds (the connected screen is
+  // a separate branch), so a signed-in invitee is always on the Baseline step:
+  // Account is done, Connected is still ahead. Claiming Baseline complete here
+  // would be a checkmark the server has not earned yet, so it never moves past
+  // step 2 from this card.
+  const funnel =
+    authed === false ? { current: 0, completed: 0 } : { current: 1, completed: 1 };
+
   return (
-    <Card>
+    <>
+      {authed !== null && (
+        <Stepper steps={INVITE_STEPS} current={funnel.current} completed={funnel.completed} />
+      )}
+      <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-lg">{inviterName} has invited you</CardTitle>
         <CardDescription>
@@ -176,7 +197,8 @@ function AcceptCard({
           </>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </>
   );
 }
 
@@ -316,17 +338,20 @@ export default function InvitePage() {
                 }
               />
               {acceptedAs ? (
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-foreground">
-                      <Check className="h-4 w-4" />
-                      You and {acceptedAs} are now connected.
-                    </div>
-                    <Button className="w-full" onClick={() => router.push(connectedHref)}>
-                      Open chat
-                    </Button>
-                  </CardContent>
-                </Card>
+                <>
+                  <Stepper steps={INVITE_STEPS} current={2} completed={3} />
+                  <Card>
+                    <CardContent className="pt-6 space-y-4">
+                      <div className="flex items-center gap-2 text-sm text-foreground">
+                        <Check className="h-4 w-4" />
+                        You and {acceptedAs} are now connected.
+                      </div>
+                      <Button className="w-full" onClick={() => router.push(connectedHref)}>
+                        Open chat
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </>
               ) : (
                 <AcceptCard
                   info={info}

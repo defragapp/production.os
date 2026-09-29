@@ -2,7 +2,7 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, twenty-five gates, all must be green before a commit or deploy:
+ * One command, twenty-six gates, all must be green before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
  *   3. vitest run                          — unit + pure-reducer tests
@@ -75,8 +75,15 @@
  *                                            read back as a real PNG whose IHDR matches the declared
  *                                            size, because a home-screen icon is the first thing a
  *                                            phone shows of this product.
+ *  26. Phase-2 continuity                 — the thread list carries each row's linked arc + relative
+ *                                            timing (server join + live rail), the invite handoff shows
+ *                                            an Account → Baseline → Connected funnel, `?billing=success`
+ *                                            confirms the unlock from a fixed toast and strips the param,
+ *                                            a two-layer Escape folds the archive sheet then the veil, and
+ *                                            the 44px tap floor leaves neighbours their own space at 320px
+ *                                            and in 844×390 landscape — each wired in source and measured live.
  *
- * Gates 1-8 and 10-25 fail closed. The preview-backed passes (9-24) boot the
+ * Gates 1-8 and 10-26 fail closed. The preview-backed passes (9-24, 26) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -310,6 +317,51 @@ async function gateStaticAnalysis() {
     logo.includes("nav-brand");
   record("the coarse-pointer tap floor is still one block, hooked at every call site", floorHooks,
     floorHooks ? "" : "a `btn` / `tap-line` / `nav-link` / `nav-brand` hook was dropped from the CSS or from the component that carries it");
+
+  // ── Gate 26 · Phase-2 continuity contracts are still wired ──────────
+  // Three journeys were closed in the working tree (thread-list context, the
+  // invite handoff, the upgrade confirmation) and one interaction was hardened
+  // (two-layer Escape). The browser pass measures each live; these ratchets
+  // prove a later refactor cannot quietly unhook the wiring that makes the
+  // measurement possible — without them a dropped JOIN or a removed stepper
+  // would only surface as "the badge count changed", not as a red line.
+  const threadsJoin =
+    threadsRoute.includes("LEFT JOIN journeys") &&
+    threadsRoute.includes("j.goal AS journey_goal") &&
+    threadsRoute.includes("j.status AS journey_status") &&
+    threadsRoute.includes("j.current_step AS journey_step");
+  const threadBadge =
+    threadsJoin &&
+    chat.includes("function journeyBadge") &&
+    chat.includes("function relativeThreadDate") &&
+    chat.includes("journey-thread-badge");
+  record("thread rows carry their linked arc + relative timing (server join + client badge)", threadBadge,
+    threadBadge ? "" : "the threads list lost its journeys join, or the library lost the badge / relative-date rendering");
+  const invitePage = fs.readFileSync(path.join(srcDir, "app/invite/page.tsx"), "utf8");
+  const inviteStepper =
+    invitePage.includes("import { Stepper }") &&
+    /INVITE_STEPS = \["Account", "Baseline", "Connected"\]/.test(invitePage) &&
+    invitePage.includes("<Stepper steps={INVITE_STEPS}");
+  record("the invite handoff shows an Account → Baseline → Connected funnel", inviteStepper,
+    inviteStepper ? "" : "the invite page lost its stepper, so the 428 Baseline hold reads as a dead end again");
+  const billingStart = chat.indexOf("{billingSuccess && (");
+  const billingBlock = billingStart >= 0 ? chat.slice(billingStart, billingStart + 1600) : "";
+  const billingToast =
+    /role="status"[\s\S]{0,120}fixed/.test(billingBlock) &&
+    billingBlock.includes("Sovereign+ is active") &&
+    chat.includes('params.get("billing") === "success"') &&
+    chat.includes('params.delete("billing")') &&
+    chat.includes("history.replaceState");
+  record("?billing=success confirms the unlock from a fixed toast, then strips the param", billingToast,
+    billingToast ? "" : "the billing confirmation lost its fixed toast, its unlock copy, or the URL cleanup");
+  const layeredEscape =
+    canvas.includes('document.addEventListener("keydown", onKey, true)') &&
+    canvas.includes("event.stopPropagation()") &&
+    canvas.includes("onCloseRef") &&
+    chat.includes('querySelector<HTMLButtonElement>(".journey-past-trigger")') &&
+    chat.includes('.journey-veil-compact button');
+  record("two-layer Escape: the sheet wins press one, the veil folds on press two", layeredEscape,
+    layeredEscape ? "" : "the archive sheet lost its capture+stopPropagation, or the page lost one of the two focus handoffs");
 }
 
 async function gateBuild() {
@@ -1170,6 +1222,9 @@ async function gateErgonomics(port, booted) {
     record("keyboard: /onboard keeps its focused field reachable through the same cycle", true, `SKIPPED — ${why}`);
     record("a completed arc stays reachable through Past journeys, in both memories", true, `SKIPPED — ${why}`);
     record("the arc's three decisions are recorded: rewound, completed, started", true, `SKIPPED — ${why}`);
+    record("two-layer Escape closes the archive sheet first, then folds the veil", true, `SKIPPED — ${why}`);
+    record("the thread library surfaces each row's linked arc + timing", true, `SKIPPED — ${why}`);
+    record("?billing=success confirms the unlock and strips the param, shift-free", true, `SKIPPED — ${why}`);
   };
   if (!booted) return skip("preview server did not come up in this environment");
   const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
@@ -2215,6 +2270,152 @@ async function gateErgonomics(port, booted) {
   record("the arc's three decisions are recorded: rewound, completed, started", lifecycle.length === 0,
     lifecycle.slice(0, 3).join(" | ") || "journey_events in D1 and the vault timeline both hold one line per decision");
 
+  // ── Gate 26a · two-layer Escape, measured as two presses, not one ───
+  // walkPastJourneys already proves the FIRST press (the sheet closes and focus
+  // returns to the disclosure). It says nothing about the panel underneath: the
+  // sheet is a fixed overlay on top of a STILL-EXPANDED step panel, so the
+  // second press must fold that panel to its compact band — and the two overlays
+  // must never share one tap. This walks the identical setup and presses twice.
+  const layered = [];
+  let layeredCls = -1;
+  {
+    const seededClean = await cleanJourneys();
+    if (!seededClean.ok) {
+      layered.push(`local seed could not be re-applied (${seededClean.why})`);
+    } else if (!(await setJourneyAtEnd(FIXTURE_JOURNEY_ID))) {
+      layered.push("local D1 would not advance the fixture journey to its last step");
+    } else {
+      try {
+        const { ctx, page, errs } = await openChat(390, 844);
+        await page.getByRole("button", { name: "Show journey steps" }).click();
+        await sleep(700);
+        const complete = page.getByRole("button", { name: "Mark complete", exact: true });
+        if ((await complete.count()) === 0) {
+          layered.push("no Mark complete control, so an archive could not be opened over an expanded panel");
+        } else {
+          await complete.click();
+          await sleep(1400);
+          const trigger = page.locator(".journey-past-trigger");
+          if ((await trigger.count()) === 0) {
+            layered.push("the completed arc left no Past journeys disclosure");
+          } else {
+            await trigger.click();
+            await sleep(700);
+            const sheet = page.locator('[role="dialog"][aria-label="Past journeys"]');
+            if ((await sheet.count()) === 0) {
+              layered.push("the disclosure opened no archive sheet");
+            } else if ((await page.locator("#journey-steps").count()) === 0) {
+              layered.push("the sheet opened without the step panel expanded underneath, so the second layer was absent");
+            } else {
+              await page.evaluate(() => { if (window.__cls) window.__cls.total = 0; });
+              // Press one: the sheet must close and the panel must STAY open.
+              await page.keyboard.press("Escape");
+              await sleep(650);
+              if ((await page.locator('[role="dialog"][aria-label="Past journeys"]').count()) > 0)
+                layered.push("Escape #1 left the archive sheet on screen");
+              if ((await page.locator("#journey-steps").count()) === 0)
+                layered.push("Escape #1 folded the step panel too — one tap dismissed two layers");
+              const f1 = await page.evaluate(() => String(document.activeElement?.className ?? document.activeElement?.tagName ?? "none"));
+              if (!/journey-past-trigger/.test(f1))
+                layered.push(`after Escape #1 focus was ${JSON.stringify(f1.slice(0, 40))}, not the disclosure`);
+              // Press two: the now-exposed panel folds to the compact band.
+              await page.keyboard.press("Escape");
+              await sleep(650);
+              if ((await page.locator("#journey-steps").count()) > 0)
+                layered.push("Escape #2 left the step panel expanded");
+              if ((await page.locator(".journey-veil-compact").count()) === 0)
+                layered.push("Escape #2 did not return the veil to its compact band");
+              const f2in = await page.evaluate(() => Boolean(document.activeElement?.closest?.(".journey-veil-compact")));
+              const f2 = await page.evaluate(() => String(document.activeElement?.className ?? document.activeElement?.tagName ?? "none"));
+              if (!f2in) layered.push(`after Escape #2 focus was ${JSON.stringify(f2.slice(0, 40))}, outside the compact band`);
+              const c = await page.evaluate(() => (window.__cls ? window.__cls.total : -1));
+              if (c < 0) layered.push("no shift observer was installed");
+              else layeredCls = c;
+            }
+          }
+        }
+        const noise = errs.filter((m) => !/status of 503/.test(m));
+        if (noise.length) layered.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+        await ctx.close();
+      } catch (e) {
+        layered.push(`two-layer Escape walk failed: ${String(e).slice(0, 90)}`);
+      }
+    }
+    await cleanJourneys();
+  }
+  record("two-layer Escape closes the archive sheet first, then folds the veil", layered.length === 0 && layeredCls >= 0 && layeredCls <= 0.01,
+    layered.slice(0, 3).join(" | ") || `Escape #1 → sheet only (panel stays open), Escape #2 → compact band, cycle CLS=${layeredCls.toFixed(4)}`);
+
+  // ── Gate 26b · the thread library carries its arc, live ─────────────
+  // The list is server-backed in both memory modes, and both fixture threads
+  // link a journey, so the desktop rail must render a badge on each row plus a
+  // recognisable timestamp — the returning-user context this pass added.
+  const badgeFindings = [];
+  {
+    // Pin thread #1 to "just now" so the relative-timing assertion is
+    // meaningful: the seed's ON CONFLICT never refreshes updated_at, so without
+    // this the row is an indeterminate age and any magnitude would pass. With a
+    // controlled fresh stamp, a correct UTC-anchored read says "just now", while
+    // the raw-`new Date()` bug renders it "8h ago" east of UTC — which is the
+    // exact regression this line now catches.
+    await d1Local(`UPDATE threads SET updated_at = datetime('now') WHERE id = '${FIXTURE_THREAD_ID}';`);
+    try {
+      const { ctx, page, errs } = await openChat(1440, 900, { touch: false });
+      await sleep(1200);
+      const rail = page.locator('nav[aria-label="Thread library"]');
+      if ((await rail.count()) === 0) {
+        badgeFindings.push("the desktop thread rail never rendered at 1440px");
+      } else {
+        const badges = await page.locator(".journey-thread-badge").count();
+        if (badges < 2) badgeFindings.push(`only ${badges} thread badge(s) rendered (both fixture threads link a journey)`);
+        const railText = (await rail.innerText()).replace(/\s+/g, " ");
+        if (!/tension with my partner/i.test(railText)) badgeFindings.push(`the linked journey goal never appeared in the rail (${JSON.stringify(railText.slice(0, 80))})`);
+        if (!/just now|\d+m ago/i.test(railText)) badgeFindings.push(`the freshly-stamped thread did not read as minutes-old (${JSON.stringify(railText.slice(0, 90))})`);
+      }
+      const noise = errs.filter((m) => !/status of 503/.test(m));
+      if (noise.length) badgeFindings.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+      await ctx.close();
+    } catch (e) {
+      badgeFindings.push(`thread-badge walk failed: ${String(e).slice(0, 90)}`);
+    }
+  }
+  record("the thread library surfaces each row's linked arc + timing", badgeFindings.length === 0,
+    badgeFindings.slice(0, 3).join(" | ") || "both fixture threads show a journey badge and a timestamp");
+
+  // ── Gate 26c · ?billing=success confirms, then cleans the URL ───────
+  // The confirmation is a fixed, out-of-flow toast, so arriving on the paid
+  // redirect must not move the conversation, and the param must be gone before
+  // a refresh can re-show it.
+  const billingFindings = [];
+  let billingCls = -1;
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+    await ctx.addCookies([{ name: "sovereign_session", value: token, domain: "localhost", path: "/", httpOnly: false, secure: false, sameSite: "Lax" }]);
+    await ctx.addInitScript(CLS_OBSERVER_SCRIPT);
+    const page = await ctx.newPage();
+    const errs = [];
+    page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+    page.on("pageerror", (e) => errs.push(String(e)));
+    try {
+      await page.goto(`http://localhost:${port}/chat?billing=success`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForSelector('textarea[aria-label="Message Sovereign"]', { timeout: 12000 });
+      await sleep(1600);
+      const toast = page.getByRole("status").filter({ hasText: /Sovereign\+|Confirming/i });
+      if ((await toast.count()) === 0) billingFindings.push("?billing=success rendered no confirmation toast");
+      const search = await page.evaluate(() => location.search);
+      if (/billing=success/.test(search)) billingFindings.push(`the param was left in the URL (${JSON.stringify(search)}) — a refresh would re-trigger it`);
+      billingCls = await page.evaluate(() => (window.__cls ? window.__cls.total : -1));
+      const noise = errs.filter((m) => !/status of 503/.test(m));
+      if (noise.length) billingFindings.push(`console/page errors ${noise.slice(0, 2).join(" | ")}`);
+    } catch (e) {
+      billingFindings.push(`billing-toast walk failed: ${String(e).slice(0, 90)}`);
+    } finally {
+      await ctx.close();
+    }
+  }
+  record("?billing=success confirms the unlock and strips the param, shift-free", billingFindings.length === 0 && billingCls >= 0 && billingCls <= 0.01,
+    billingFindings.slice(0, 3).join(" | ") || `fixed toast names the unlock, URL cleaned, arrival CLS=${billingCls.toFixed(4)}`);
+
   // ── Gate 22 · the keyboard is a viewport, and it comes and goes ───────
   // Nothing may be occluded, spilled, or jolted while the visible height
   // contracts and expands again: on a phone this happens twice a message, and
@@ -2373,6 +2574,7 @@ async function gateSurfaces(port, booted) {
     record("no surface spills sideways at 390 / 768 / 1440 (11 routes)", true, `SKIPPED — ${why}`);
     record("the funnel's own controls are thumb-sized on touch", true, `SKIPPED — ${why}`);
     record("the reading surfaces hold the same tap floor", true, `SKIPPED — ${why}`);
+    record("tap-line links keep their own space at 320px and in landscape", true, `SKIPPED — ${why}`);
   };
   if (!booted) return skip("preview server did not come up in this environment");
   const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
@@ -2477,6 +2679,50 @@ async function gateSurfaces(port, booted) {
     funnelFloor.slice(0, 3).join(" | ") || "baseline, account, upgrade, settings and signup clear 44px");
   record("the reading surfaces hold the same tap floor", readingFloor.length === 0,
     readingFloor.slice(0, 3).join(" | ") || `landing, philosophy, FAQ, support and invite — ${controlsMeasured} controls measured in all`);
+
+  // ── Gate 24b · the 44px floor must not make neighbours collide ──────
+  // The width floor pays for itself only if the links still clear each other at
+  // the two edges a phone actually lives at: 320px (smallest / zoomed) and
+  // 844×390 landscape. Footer + header `.tap-line`/`.nav-link` rows must neither
+  // overlap in a shared line nor spill horizontally.
+  const SPACING_PROBE = `(() => {
+    const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) !== 0 && !el.closest('[aria-hidden=\"true\"]'); };
+    const boxes = [...document.querySelectorAll('.tap-line, .nav-link')].filter(vis).map((el) => { const r = el.getBoundingClientRect(); return { name: (el.textContent || el.getAttribute('aria-label') || el.tagName).trim().slice(0, 20), left: r.left, right: r.right, top: r.top, bottom: r.bottom }; });
+    const overlaps = [];
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], b = boxes[j];
+      const vOverlap = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+      const hOverlap = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+      if (vOverlap > 4 && hOverlap > 1) overlaps.push(a.name + ' / ' + b.name);
+    }
+    return { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, measured: boxes.length, overlaps };
+  })()`;
+  const spacing = [];
+  let spacingMeasured = 0;
+  {
+    for (const vp of [{ w: 320, h: 568 }, { w: 844, h: 390 }]) {
+      const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h }, hasTouch: true });
+      await ctx.addInitScript(CLS_OBSERVER_SCRIPT);
+      const page = await ctx.newPage();
+      try {
+        await page.goto(`http://localhost:${port}/`, { waitUntil: "domcontentloaded", timeout: 20000 });
+        await sleep(1300);
+        // Scroll to the footer so its link row is painted and measurable.
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await sleep(500);
+        const m = await page.evaluate(SPACING_PROBE);
+        spacingMeasured += m.measured;
+        if (m.measured < 3) spacing.push(`${vp.w}×${vp.h}: only ${m.measured} tap-line/nav-link visible — nothing to judge`);
+        if (m.overlaps.length) spacing.push(`${vp.w}×${vp.h}: colliding hit boxes — ${m.overlaps.slice(0, 3).join(", ")}`);
+        if (m.overflow > 1) spacing.push(`${vp.w}×${vp.h}: ${m.overflow}px of horizontal overflow`);
+      } catch (e) {
+        spacing.push(`${vp.w}×${vp.h}: spacing walk failed ${String(e).slice(0, 60)}`);
+      }
+      await ctx.close();
+    }
+  }
+  record("tap-line links keep their own space at 320px and in landscape", spacing.length === 0 && spacingMeasured >= 6,
+    spacing.slice(0, 3).join(" | ") || `${spacingMeasured} tap-line/nav-link boxes measured across 320 + 844×390, 0 overlaps, 0 overflow`);
 
   await browser.close();
 }

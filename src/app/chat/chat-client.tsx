@@ -3,7 +3,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUp, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Shield, Square, Users, X } from "lucide-react";
+import { ArrowUp, Compass, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Shield, Square, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
@@ -15,6 +15,7 @@ import { JourneyBar, PastJourneysSheet, MILESTONE_STEP_LABELS } from "@/componen
 import { useJourney } from "@/lib/journey-store";
 import { useDictation } from "@/lib/dictation";
 import { keyboardPinHeight } from "@/lib/viewport";
+import { parseD1Date } from "@/lib/utils";
 import type { JourneyState } from "@/lib/sovereign-journey";
 import type { ChatMessage, BaselineData, MemoryMode, RelationshipView } from "@/lib/types";
 
@@ -35,6 +36,12 @@ interface ThreadSummary {
   updated_at: string;
   title?: string;
   label?: string;
+  // The arc this conversation is carrying, joined server-side from journeys.
+  // Present only when the thread links a stored journey row; null otherwise,
+  // which the library reads as "no badge" rather than a placeholder.
+  journey_goal?: string | null;
+  journey_status?: string | null;
+  journey_step?: string | null;
 }
 
 function threadLabel(messages: ChatMessage[]): string {
@@ -65,6 +72,42 @@ function chipLabel(t: ThreadSummary): string {
   if (!base) return formatThreadDate(t.updated_at);
   if (base.length <= 36) return base;
   return `${clipWords(base, 36)}…`;
+}
+
+/** Recency a returning person actually wants: "4h ago" for today, "3d ago"
+ *  for this week, the dated stamp only past a week. D1 stores `updated_at` as
+ *  UTC without a zone marker, so it is anchored through parseD1Date before the
+ *  subtraction — a raw `new Date()` reads it as local time and every age drifts
+ *  by the viewer's offset. The thread list is fetched client-side, so this never
+ *  paints on the server and cannot introduce a hydration mismatch. */
+function relativeThreadDate(iso: string): string {
+  const then = parseD1Date(iso)?.getTime();
+  if (then === undefined || !Number.isFinite(then)) return formatThreadDate(iso);
+  const mins = Math.floor((Date.now() - then) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatThreadDate(iso);
+}
+
+// The canonical five-step order, so a linked arc can be named by where it
+// stands, not only what it is about. Mirrors DEFAULT_JOURNEY_STEPS ids.
+const JOURNEY_STEP_ORDER = ["surface-signal", "name-what-landed", "separate-the-parts", "widen-the-frame", "grounded-next-step"];
+
+/** The linked arc in the few words a library row can hold — where it stands and
+ *  what it is about, or that it is finished. No goal means no badge is drawn at
+ *  all, so an unlinked thread never wears a borrowed journey. */
+function journeyBadge(t: ThreadSummary): string | null {
+  if (!t.journey_goal) return null;
+  if (t.journey_status === "complete") return "Journey complete";
+  const goal = t.journey_goal.trim();
+  if (!goal) return null;
+  const idx = t.journey_step ? JOURNEY_STEP_ORDER.indexOf(t.journey_step) : -1;
+  const step = idx >= 0 ? `Step ${idx + 1} of ${JOURNEY_STEP_ORDER.length} · ` : "";
+  return `${step}${goal.length > 40 ? `${clipWords(goal, 40)}…` : goal}`;
 }
 
 // The four levels the AI already reasons across (Reflection, Meaning,
@@ -193,6 +236,7 @@ function ThreadLibrary({
           <nav aria-label="Thread library" className="space-y-1">
             {threads.map((t) => {
               const active = t.id === activeId;
+              const badge = journeyBadge(t);
               return (
                 <button
                   key={t.id}
@@ -200,17 +244,23 @@ function ThreadLibrary({
                   onClick={() => onOpen(t.id)}
                   disabled={isStreaming}
                   aria-current={active ? "true" : undefined}
-                  className={`block w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-[240ms] ${
+                  className={`journey-thread-row block w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-[240ms] ${
                     active
                       ? "border-white/10 bg-white/[0.05] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
                       : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-white/[0.02] hover:text-foreground"
                   }`}
                 >
                   <p className="line-clamp-2 text-[13px] leading-snug">
-                    {t.label?.trim() || formatThreadDate(t.updated_at)}
+                    {t.label?.trim() || "Untitled thread"}
                   </p>
+                  {badge && (
+                    <p className="journey-thread-badge mt-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
+                      <Compass className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{badge}</span>
+                    </p>
+                  )}
                   <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
-                    {formatThreadDate(t.updated_at)}
+                    {relativeThreadDate(t.updated_at)}
                   </p>
                 </button>
               );
@@ -338,8 +388,8 @@ export function ChatClient() {
     try {
       const res = await fetch("/api/threads");
       if (!res.ok) return [];
-      const data = await res.json() as { threads?: { id: string; updated_at: string; title?: string }[] };
-      const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at, title: t.title }));
+      const data = await res.json() as { threads?: { id: string; updated_at: string; title?: string; journey_goal?: string | null; journey_status?: string | null; journey_step?: string | null }[] };
+      const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at, title: t.title, journey_goal: t.journey_goal ?? null, journey_status: t.journey_status ?? null, journey_step: t.journey_step ?? null }));
       setThreads((prev) => items.map((item) => ({
         ...item,
         // Server-derived title wins (re-clipped at a word boundary); the
@@ -968,8 +1018,13 @@ export function ChatClient() {
       <h1 className="sr-only">Chat with Sovereign</h1>
 
       {billingSuccess && (
-        <div className="border-b border-border bg-background px-6 py-4">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+        // A fixed, out-of-flow toast: it announces what the payment unlocked
+        // without entering the `h-[100dvh]` flex column, so the conversation it
+        // floats over never moves — measured arrival CLS stays 0.0000. The URL
+        // param was already stripped on the frame that set this state, so a
+        // refresh can't re-show it.
+        <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[3.75rem] z-50 px-4">
+          <div className="pointer-events-auto mx-auto flex max-w-3xl items-start justify-between gap-4 rounded-panel border border-border/70 bg-surface-2/95 px-4 py-3 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)] backdrop-blur-sm">
             {confirmingPlan ? (
               <p className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <span className="inline-flex items-center gap-1">
@@ -980,16 +1035,20 @@ export function ChatClient() {
                 Confirming your payment and unlocking Sovereign+…
               </p>
             ) : (
-              <p className="text-sm font-medium text-foreground">
-                Welcome to Sovereign+ — your plan is active and your Baseline is now fully unlocked.
-              </p>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Sovereign+ is active — welcome.</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  You now have unlimited conversations, the full depth of your Baseline,
+                  and the ability to invite the people you&apos;re figuring things out with.
+                </p>
+              </div>
             )}
             <Button
               size="sm"
               variant="outline"
               onClick={() => setBillingSuccess(false)}
               aria-label="Dismiss"
-              className="shrink-0"
+              className="tap-line shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -1078,6 +1137,9 @@ export function ChatClient() {
                             : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
                         }`}
                       >
+                        {t.journey_goal && (
+                          <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/45 align-middle" />
+                        )}
                         {chipLabel(t)}
                       </button>
                     );
