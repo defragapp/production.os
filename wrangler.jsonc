@@ -11,10 +11,15 @@
   // possible the moment traffic appears.
   "observability": { "enabled": true, "head_sampling_rate": 1.0 },
   "d1_databases": [
-    { "binding": "DB", "database_name": "production-os-db", "database_id": "f4274cce-4444-4501-85a9-58c28bff27ac" }
+    // ASU account (cjowen93@asu.edu) — created 2026-09-30 during migration.
+    // Source-account D1 (f4274cce-…) is retired after Phase 8 decommission.
+    { "binding": "DB", "database_name": "production-os-db", "database_id": "8d09a3f5-bcda-4153-b63f-7018b1398c0b" }
   ],
   "kv_namespaces": [
-    { "binding": "SESSION_KV", "id": "8ccb87e3a5554f849d69053df7275a29" }
+    // ASU account — created 2026-09-30 during migration. Sessions are
+    // intentionally not copied across accounts; all users re-auth once
+    // after cutover (per KV Session Data Migration Convention).
+    { "binding": "SESSION_KV", "id": "defc15c51e4647d2b48d5b94138f8000" }
   ],
   "ai": { "binding": "AI" },
   "vars": {
