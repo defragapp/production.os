@@ -7,7 +7,7 @@ Elevate, polish, condense, and modernize the visual design and user experience a
 
 ---
 
-## 0. Current System State (as of release `11586ad`)
+## 0. Current System State (as of release `82f825c`)
 
 The shipped product has grown well beyond this plan's UI scope. Authoritative state:
 
@@ -17,7 +17,7 @@ The shipped product has grown well beyond this plan's UI scope. Authoritative st
 - **Compliance:** signup clickwrap checked before Turnstile, 18+ DOB floor (`date-of-birth.ts` + `/api/baseline`), explicit baseline-share opt-in on `/invite`, hardened `/terms` (release, crisis lines, §15 class-action waiver) + `/privacy` disclosures + `security.txt`.
 - **Monetization & owner:** `tier.ts resolveTier()` (owner / paid `sovereign+` / gift / free, auto-revert on lapse); SHA-256-hashed 30-day `sov_gift_` passes (`promo.ts`) redeemed at `/redeem`; owner-only console in `/account` + `/api/owner/*` (404 to non-owners).
 - **AI safety & IP:** pre-model prompt-extraction + safety guard, 2,000-char input cap, `MAX_CONTEXT_MESSAGES=20`, `max_tokens=1024`, atomic D1 daily ceilings (5 free / 150 `sovereign+`).
-- **Verification:** `npm run verify:release` runs **97 checks across 30 gates**; `npx vitest run` is **27 suites / 269 tests**.
+- **Verification:** `npm run verify:release` runs **105 checks across 31 gates**; `npx vitest run` is **28 suites / 296 tests**.
 
 ---
 
@@ -240,7 +240,7 @@ All changes leverage existing packages already configured in `package.json`:
    - `npm run typecheck` (`tsc --noEmit`) must pass with 0 errors.
    - `npm run lint` (`eslint .`) must pass with 0 errors.
 2. **Unit & Integration Tests**:
-   - `npm run test` (`vitest run`) must maintain 100% pass rate (currently **27 suites / 269 tests**).
+   - `npm run test` (`vitest run`) must maintain 100% pass rate (currently **28 suites / 296 tests**).
 3. **Build Validation**:
    - `npx next build` must compile successfully and verify all static & dynamic routes.
 4. **Visual & Responsive Verification**:

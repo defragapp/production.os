@@ -144,8 +144,8 @@ npm run deploy     # OpenNext build + deploy to Cloudflare edge
 
 Run `npm run verify:release` before pushing — it is the whole ratchet. Its own
 header enumerates the gates and is the single source of truth for the count; at
-release `11586ad` it runs **97 checks across 30 numbered gates**: types, lint, the
-27 Vitest suites (269 tests), committed contract wiring, a clean OpenNext build,
+release `82f825c` it runs **105 checks across 31 numbered gates**: types, lint, the
+28 Vitest suites (296 tests), committed contract wiring, a clean OpenNext build,
 the browser AES-GCM vault round-trip, the zero-CLS JourneyBar veil, a live
 authenticated walk over every surface in both memory modes, draft/503 recovery,
 whole-surface ergonomics (44px + 0 overflow at 390/768/1440), the PWA manifest,
@@ -250,7 +250,7 @@ src/
 │   ├── brand-emblem-data.ts           # inlined brand emblem data
 │   ├── types.ts                       # Shared TypeScript types (incl. MemoryMode)
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 27 files / 269 tests)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 28 files / 296 tests)
 └── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 ```
 
