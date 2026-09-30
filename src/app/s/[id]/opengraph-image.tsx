@@ -11,12 +11,13 @@ export const contentType = "image/png";
  * or email before they tap. It renders the same crest the signer saw (via the
  * shared sigil.ts geometry) on the brand's warm-graphite ground.
  *
- * The token is content-addressed: the same `/s/<token>` draws a byte-identical
- * PNG forever. So we mark the response `immutable` — Cloudflare runs Satori once
- * and serves the stored image from the edge thereafter. On the Free tier's 10ms
- * CPU budget this is essential: a launch-spike of social crawlers hitting one
- * shared link would otherwise re-render (and re-bill CPU) on every request and
- * trip error 1102. After the first hit, each view costs 0ms of Worker CPU.
+ * Caching note: the token is content-addressed (same token -> byte-identical
+ * PNG forever), so this image is perfectly cacheable. But the OpenNext Cloudflare
+ * adapter force-stamps "Cache-Control: public, max-age=0, must-revalidate" on
+ * every dynamic response, overriding any header set here, in a route handler, or
+ * in middleware. Edge caching -- essential so a crawler fan-out does not re-run
+ * Satori past the Free tier's 10ms CPU (error 1102) -- is therefore enforced by a
+ * Cloudflare zone Cache Rule for the /s/<id>/opengraph-image path, not in this file.
  */
 export default async function SigilOgImage({
   params,
@@ -74,12 +75,6 @@ export default async function SigilOgImage({
         </div>
       </div>
     ),
-    {
-      ...size,
-      headers: {
-        // Content-addressed by token → safe (and necessary) to cache immutably at the edge.
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
-    },
+    size,
   );
 }
