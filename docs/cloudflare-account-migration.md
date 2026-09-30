@@ -22,9 +22,34 @@ covers the Stripe keys. This document is only about the account move itself.
   response from the adapter layer, so no code path (ImageResponse `headers`,
   middleware rewrite, route-handler `Response`) can override it — the only
   real fix is a Zone Cache Rule (Phase 7) **plus** paid-tier CPU headroom.
-- **Workers Paid on ASU is $0** via the .edu plan. On the personal account
-  it would be $5/mo.
+- **The target account is on Workers Paid via Cloudflare for Students**
+  (announced 2025-09-22:
+  [cloudflare.com/students](https://www.cloudflare.com/students/),
+  [blog.cloudflare.com/workers-for-students](https://blog.cloudflare.com/workers-for-students/)).
+  Eligibility: US students 18+ with a verified `.edu` email. Benefit:
+  **one year of Workers Paid with the $5/mo base fee waived**. After
+  12 months the grant expires and the plan reverts to $5/mo or
+  downgrades to Free. This is a launch-year grant, not a permanent
+  free tier — budget for the reversion or plan a second home before
+  month 12.
+- **ToS angle, framed honestly.** The program is described as for
+  "students building projects." A monetized SaaS running a Stripe
+  subscription is arguably outside that intent. Not a legal ruling,
+  just an owner-side self-check to make before committing to a
+  migration; if the answer is uncomfortable, Path C in Phase -1
+  (upgrade the source account, do not migrate) is the correct call
+  and I would recommend it.
 - ASU has no conflicting resources — a clean build, not a merge.
+- **Tier limits verified against Cloudflare's current docs**
+  (2026-09-05 `workers/platform/limits`, 2026-09-30
+  `workers/observability/logs/workers-logs`): CPU 10 ms → 30 s default
+  (configurable up to 5 min via `limits.cpu_ms`); subrequests 50 →
+  10,000 (up to 10M); requests/day 100k → no limit; Cron Triggers 5 →
+  250; Workers per account 100 → 500; static asset files 20,000 →
+  100,000; Workers Logs retention 3 days → 7 days (Logpush to R2 is
+  required beyond 7 days on either plan). The migration buys you the
+  30s CPU default and the 10k subrequest ceiling, which is what
+  eliminates 1102 risk under crawler fan-out.
 
 ## Scope of the change
 
@@ -69,6 +94,40 @@ step in this document requires editing TypeScript, it's wrong.
    External registrar → Phase 6 Path B (change NS at the registrar).
 
 Everything up to Phase 5 can proceed while these are being resolved.
+
+---
+
+## Phase -1 — Verify the ASU account is actually on Workers Paid
+
+The entire migration assumes the ASU account currently has Workers Paid
+applied via Cloudflare for Students. Verify before creating a single
+resource — five minutes of dashboard time saves a multi-phase rollback
+if the grant is not active or was consumed elsewhere.
+
+1. Sign into `dash.cloudflare.com/?org=ac9a47ddb8928af2f3535e2a1e4d8349`.
+2. **Account Overview** (or the sidebar plan indicator) — does it say
+   **Workers Paid**? "Workers Free" means the grant is not applied to
+   this account, and the migration buys nothing.
+3. **Billing → Subscription** — does it show the Cloudflare for Students
+   credit applied and a **renewal date**? If the grant was activated
+   when `behavioral-observer` was built and has already expired, or was
+   consumed on a different account artifact, there may be no benefit
+   left for `production-os`.
+
+If any check fails, execute **Path C** instead of the migration:
+
+- Flip the source (gmail) account to Workers Paid at $5/mo — that is
+  what Phase 0 does anyway.
+- Apply the Phase 7.2 Zone Cache Rules on the source zone.
+- Configure the AI Gateway caching + rate limit + Bot Fight Mode on
+  the source zone (readiness doc §2 + §3.1).
+- **Skip Phases 1 through 8 entirely.** Same 1102 mitigation, same CPU
+  and subrequest ceilings, none of the DNS-cutover risk, no 14-day
+  rollback window to babysit, no student-plan ToS question.
+
+Path C is the correct default. Only proceed past Phase -1 when all
+three checks confirm the plan grant is real, active, and has at least
+six months remaining before expiry.
 
 ---
 
