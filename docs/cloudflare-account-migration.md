@@ -397,25 +397,62 @@ deploy once as fallback per the skill's canonical release path.
   a valid PNG. Headers will still show `must-revalidate` — that's the
   OpenNext adapter override, not a regression.
 
-### 7.2 Cloudflare Zone Cache Rule for the OG image
+### 7.2 Cloudflare Zone Cache Rules (the real 1102 + SSR-cost fix)
 
-This is the actual fix for the 1102 render path, delivered at the edge
-because the adapter blocks it in code.
+This is what the OpenNext adapter override blocked from code — the adapter
+force-stamps `Cache-Control: public, max-age=0, must-revalidate` on every
+dynamic response and no `ImageResponse` header, middleware rewrite, or
+route-handler `Response` can override it. Only an edge zone rule can.
 
-Dashboard → ASU zone `defrag.app` → Caching → Cache Rules → Create rule:
+Dashboard → ASU zone `defrag.app` → Caching → Cache Rules → Create rule.
+Three rules, all hostname **`sovereign.defrag.app`** (the canonical app
+origin; apex `defrag.app` is not routed to the Worker and must not be
+used as a hostname pattern).
 
-- **Rule name:** `sigil-og-immutable`
-- **If matching:** Hostname `sovereign.defrag.app` **AND** URI Path
-  **starts with** `/s/` **AND** URI Path **ends with** `/opengraph-image`
-- **Cache eligibility:** Eligible for cache
-- **Browser Cache TTL:** Override → 1 month
-- **Edge Cache TTL:** Override → 1 year
+**Rule 1 — `sigil-og-immutable`**
 
-Test: request the same OG image twice within a minute; the second response
-should carry `cf-cache-status: HIT`. This is what breaks the crawler
-fan-out cost — a shared sigil renders Satori once, and every subsequent
-bot hit is a byte-identical edge serve under the paid tier's already
-generous CPU budget.
+- Match: Hostname `sovereign.defrag.app` AND URI Path **starts with**
+  `/s/` AND URI Path **ends with** `/opengraph-image`
+- Cache eligibility: Eligible for cache
+- Browser Cache TTL: Override → 1 month
+- Edge Cache TTL: Override → 1 year
+
+The token is content-addressed, so a shared Sigil renders Satori once and
+serves byte-identical from then on. Kills the crawler fan-out CPU cost
+completely.
+
+**Rule 2 — `legal-static-immutable`**
+
+- Match: Hostname `sovereign.defrag.app` AND URI Path equals any of
+  `/about`, `/faq`, `/privacy`, `/terms`
+- Cache eligibility: Eligible for cache
+- Browser Cache TTL: Override → 1 hour
+- Edge Cache TTL: Override → 1 day
+
+Content changes on the order of weeks, so 1-day edge TTL is conservative
+and safe.
+
+**Rule 3 — `seo-crawlers-immutable`**
+
+- Match: Hostname `sovereign.defrag.app` AND URI Path equals any of
+  `/llms.txt`, `/llms-full.txt`, `/sitemap.xml`, `/robots.txt`
+- Cache eligibility: Eligible for cache
+- Browser Cache TTL: Override → 1 hour
+- Edge Cache TTL: Override → 1 day
+
+`/llms.txt` and `/llms-full.txt` are static files under `public/`; the
+Next.js route handlers `sitemap.ts` and `robots.ts` are also stable per
+build. Crawler-friendly, zero personalization.
+
+**Do NOT add cache rules for:** `/chat`, `/baseline`, `/onboard`,
+`/account`, `/settings`, `/api/*`, `/reset`, `/invite`, `/redeem`,
+`/upgrade`, `/support`, `/s/<id>` (the HTML page — dynamic per-visitor),
+or `/` (the landing page — has client-side state that shouldn't be
+served from a stale edge copy).
+
+Test: `curl -D - https://sovereign.defrag.app/s/<token>/opengraph-image`
+twice within a minute. The second response carries
+`cf-cache-status: HIT`. Same for `/llms.txt`.
 
 ### 7.3 Recreate Workers Builds on ASU
 

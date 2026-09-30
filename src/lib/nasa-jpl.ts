@@ -265,7 +265,18 @@ export async function fetchHorizonsRows(
   return p;
 }
 
-/** Compute natal planetary positions for a given instant. */
+/** Compute natal planetary positions for a given instant.
+ *
+ *  All ten bodies fan out concurrently in one batch. The batch size is
+ *  deliberately equal to `PLANET_IDS` length so the inter-batch courtesy
+ *  delay below never fires — one wave, one wall-clock, ~1.2–2.5 s.
+ *  Workers Free permits 50 subrequests per invocation and Workers Paid
+ *  permits 10,000, so ten concurrent Horizons calls are safe on either
+ *  plan. `fetchWithBackoff` (3 attempts, 250 ms → 1 s → 4 s) is the
+ *  sole protection against transient 5xx/429 from NASA/JPL; the
+ *  isolate-level `inFlight` coalescer above prevents two onboarding
+ *  submissions in the same isolate from doubling the outbound fan-out
+ *  on cold minute buckets. */
 export async function computeNatalPositions(
   env: AppEnv,
   instant: Date,
@@ -273,12 +284,14 @@ export async function computeNatalPositions(
 ): Promise<Record<string, NatalPosition>> {
   const positions: Record<string, NatalPosition> = {};
   const entries = Object.entries(PLANET_IDS);
-  const batchSize = 2;
+  const batchSize = 10;
 
   for (let offset = 0; offset < entries.length; offset += batchSize) {
     const batch = entries.slice(offset, offset + batchSize);
-    // The inter-batch pause exists to be courteous to NASA. A batch answered
-    // entirely from cache never touched the network, so it doesn't wait.
+    // The inter-batch pause exists to be courteous to NASA. With
+    // batchSize === entries.length there is only one wave and the guard
+    // below short-circuits to false; the delay is retained so a future
+    // narrowing of batchSize keeps its safety semantics.
     const trace = { fetched: false };
     const resolved = await Promise.all(
       batch.map(async ([body, targetId]) => {

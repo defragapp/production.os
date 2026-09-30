@@ -161,8 +161,11 @@ describe("computeNatalPositions ephemeris cache", () => {
     await expect(
       computeNatalPositions(envWithKv(null), INSTANT, fetchImpl),
     ).rejects.toThrow(/Horizons unavailable \(400\)/);
-    // First batch of 2 bodies, each tried exactly once — no retry storm.
-    expect(calls).toBe(2);
+    // All 10 bodies fire in one wave (batchSize === PLANET_IDS count); each
+    // is tried exactly once by fetchWithBackoff (deterministic 4xx is never
+    // retried). Promise.all rejects after every started fetch settles its
+    // first attempt — the assertion here is "no retry storm", not "batch = 2".
+    expect(calls).toBe(10);
   });
 });
 

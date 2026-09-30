@@ -127,6 +127,17 @@ throttling or timeouts from JPL's side.
    a Baseline. On an all-cache-hit batch the 150 ms courtesy delay is skipped,
    so repeat/nearby lookups return in <200 ms with zero outbound calls.
    Backward compatible: no KV in the env (pure unit tests) → live fetch only.
+1b. ✅ **SHIPPED — Horizons batch widened from 2 to 10 concurrent
+   subrequests** (`computeNatalPositions` in `src/lib/nasa-jpl.ts`). Ten
+   bodies, one wave, one wall-clock. The 150 ms inter-batch pause is retained
+   in code but short-circuits to false now that `batchSize === entries.length`,
+   so the loop runs exactly once. Safe on both tiers — Workers Free permits 50
+   subrequests/invocation, Workers Paid 10,000; ten concurrent Horizons calls
+   are well inside either. Cuts cold-path Baseline submit from ~6–12 s to
+   ~1.2–2.5 s on the wall clock. `fetchWithBackoff` (250 ms → 1 s → 4 s, max
+   3 attempts) remains the sole protection against transient 5xx/429; the
+   isolate-level `inFlight` coalescer remains the thundering-herd guard for
+   concurrent cold minute buckets landing in the same Worker isolate.
 2. **Request coalescing via a Durable Object (DO) `HorizonsBatcher`.**
    When multiple Workers need the same `{targetId, minute}` concurrently,
    the DO collapses them into one Horizons call, returning the cached result to

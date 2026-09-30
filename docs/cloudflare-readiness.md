@@ -132,9 +132,24 @@ curl -X POST https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets \
    usage counter in KV. Keep reads off D1 where possible; D1 free tier is
    generous on reads but write-limited — signup bursts are writes, so the AI
    Gateway/queue buffering above matters more than DB tuning right now.
-5. **Static asset caching.** Next/OpenNext emits hashed `_next/static` assets;
-   confirm long `Cache-Control` (immutable) so the edge serves the JS/CSS during
-   a spike (the beacon + images should be cache hits, not origin hits).
+5. **Static asset caching + Zone Cache Rules for the SSR surface.** Next/OpenNext
+   emits hashed `_next/static` assets with long `Cache-Control: immutable`
+   so the browser and edge already cache JS/CSS during a spike. That covers
+   the bundle; it does **not** cover the Worker-rendered surfaces. The
+   OpenNext Cloudflare adapter force-stamps `Cache-Control: public, max-age=0,
+   must-revalidate` on every dynamic response, and no code path
+   (`ImageResponse headers`, middleware rewrite, route-handler `Response`)
+   can override it — that override is a platform behavior, not a bug in our
+   code. So the crawler-heavy and OG paths need **Zone Cache Rules** to be
+   cached at the edge. Full spec in
+   [`cloudflare-account-migration.md` Phase 7.2](./cloudflare-account-migration.md)
+   — three rules (all hostname `sovereign.defrag.app`):
+   `sigil-og-immutable` for `/s/*/opengraph-image` (Edge TTL 1 year, kills
+   the 1102 risk), `legal-static-immutable` for `/about`, `/faq`, `/privacy`,
+   `/terms` (Edge TTL 1 day), `seo-crawlers-immutable` for `/llms.txt`,
+   `/llms-full.txt`, `/sitemap.xml`, `/robots.txt` (Edge TTL 1 day). Do NOT
+   cache `/chat`, `/baseline`, `/onboard`, `/account`, `/settings`, `/api/*`,
+   or the landing `/`.
 6. ✅ **SHIPPED — NASA/JPL Horizons ephemeris cache (KV)** — every `/api/baseline`
    call fans out 10 HTTP subrequests to `ssd.jpl.nasa.gov`. A KV cache keyed
    `eph:{targetId}:{utcMinute}` (TTL 90 days — historical ephemeris never
