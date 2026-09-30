@@ -10,6 +10,13 @@ export const contentType = "image/png";
  * The OpenGraph preview for a shared Sigil — what a recipient sees in iMessage
  * or email before they tap. It renders the same crest the signer saw (via the
  * shared sigil.ts geometry) on the brand's warm-graphite ground.
+ *
+ * The token is content-addressed: the same `/s/<token>` draws a byte-identical
+ * PNG forever. So we mark the response `immutable` — Cloudflare runs Satori once
+ * and serves the stored image from the edge thereafter. On the Free tier's 10ms
+ * CPU budget this is essential: a launch-spike of social crawlers hitting one
+ * shared link would otherwise re-render (and re-bill CPU) on every request and
+ * trip error 1102. After the first hit, each view costs 0ms of Worker CPU.
  */
 export default async function SigilOgImage({
   params,
@@ -67,6 +74,12 @@ export default async function SigilOgImage({
         </div>
       </div>
     ),
-    size,
+    {
+      ...size,
+      headers: {
+        // Content-addressed by token → safe (and necessary) to cache immutably at the edge.
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    },
   );
 }
