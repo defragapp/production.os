@@ -82,6 +82,51 @@ step in this document requires editing TypeScript, it's wrong.
 | Prod D1 backup | `.audit-tmp/prod-d1-backup.sql` (132 lines, includes `PRAGMA defer_foreign_keys=TRUE`) |
 | Row counts at backup | users=6, baselines=4, journeys=2, chat_usage=2; relationships/passkeys/promo_grants/invites/journey_events = 0 |
 
+## Migration execution log — 2026-09-30 session
+
+The following steps were completed on this date, in the order shown, from
+the platform-owner's Mac terminal with a scoped `cfat_...` API token held
+in `.dev.vars` under `ASU_MIGRATION_TOKEN`. All resource creation and
+deployment happened on the ASU account; the source account is unchanged
+and still serving `https://sovereign.defrag.app` at commit `ae20ab3` /
+deployment `e456c426`.
+
+| Phase | Step | Result |
+|---|---|---|
+| 2 | `wrangler d1 create production-os-db` | D1 `8d09a3f5-bcda-4153-b63f-7018b1398c0b` (region WNAM) |
+| 2 | `wrangler kv namespace create SESSION_KV` | KV `defc15c51e4647d2b48d5b94138f8000` |
+| 3 | `wrangler delete --name production-os` | ASU "Hello world" stub removed |
+| 3 | branch `migrate-to-asu` created from `main` @ `ae20ab3`; `wrangler.jsonc` D1 + KV bindings updated; commit `26e7f26`; pushed to origin |
+| 4 | D1 import via `wrangler d1 execute --file` | **failed** with `D1_RESET_DO` on the freshly-created DB (transient server-side issue). Workaround used: sync `--command` path with `schema.sql` first, then a FK-dependency-ordered extract of `INSERT INTO` + `CREATE INDEX` statements from `prod-d1-backup.sql`. All 26 rows landed; 21 indexes; verified with `SELECT COUNT(*)`. |
+| 4 | `npm run deploy` initially tried to hit the gmail account. Root cause: `opennextjs-cloudflare deploy`'s child `wrangler` process reads `CLOUDFLARE_ACCOUNT_ID` from `.dev.vars`, overriding the shell env var. Fix: set the `.dev.vars` value to the ASU id (file is gitignored; local-only change). |
+| 5 | First real deploy to ASU | version `1c3f2e93-6453-461c-bc29-a5e8c04e5f8f` at `https://production-os.cjowen2.workers.dev`; `/`, `/about`, `/opengraph-image` all HTTP 200 |
+| 1.4 | `wrangler turnstile widget create sovereign --domain sovereign.defrag.app --mode managed --json` | ASU widget `0x4AAAAAAFKmqD5R_vJ220SR` created via CLI (no dashboard click needed); secret pushed via `wrangler secret put`; `wrangler.jsonc` `TURNSTILE_SITE_KEY` updated; commit `2c079d7`; redeployed |
+| 1.3 / 1.6 | Secrets on ASU Worker: `JWT_SECRET`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` pushed from `.dev.vars` values. `PASSWORD_PEPPER` set via **Fork B** (fresh `crypto.randomBytes(32).toString('hex')`, generated locally, pushed, never printed). | Worker redeployed as version `795878fe-fcf1-416e-86f7-2fd826eac8e1`; `POST /api/auth` returns 400 with a real validation error (proof of D1 round-trip + Turnstile boot + env resolution) |
+| — | **Not completed** | AI Gateway creation, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, Phase 6 DNS move, Phase 7 Cache Rules + custom domain + Bot Fight Mode + rate limit, Phase 8 decommission |
+
+### Why the pepper is Fork B
+
+`PASSWORD_PEPPER` is stored as a write-only Cloudflare Worker secret on the
+source account (`wrangler secret list` shows names only; there is no
+secret-get endpoint). Exhaustive search on this Mac found no copy of the
+value anywhere:
+`.dev.vars` (current + `.bak` + `.bak2` from today's seds), every other
+`.dev.vars` file under `/Users/cjo/`, `~/.qoder/cache` session transcripts,
+`git log --all -S PASSWORD_PEPPER`, `git grep` across every commit, git
+stash, editor swap files, `find . -type f` at depth ≤ 4 excluding vendored
+dirs. The initial commit `52a8117` that introduced the peppered hash format
+never committed the value. Session history itself records the pepper as
+"generated locally, never printed". Fork B is therefore the only autonomous
+path; the reset SQL in Phase 5 is now the mandatory cutover step.
+
+### AI Gateway has no CLI/API path
+
+Every attempted endpoint (`POST /accounts/{id}/ai/gateway`, `PUT
+/accounts/{id}/ai/gateway/{slug}/settings`, and the `ai-gateway` /
+`ai_gateway` variants) returns `7003 No route for that URI` regardless of
+token scope. `wrangler ai-gateway` and `wrangler gateway` subcommands do
+not exist in wrangler 4.131.1. **AI Gateway creation remains dashboard-only.**
+
 ## Two blockers before Phase 5
 
 1. **`PASSWORD_PEPPER` retrieval.** The value is stored as a Worker secret
