@@ -13,6 +13,13 @@ Everything recommended here is available on the **Free** plan unless noted.
 > token, the current free-plan ceilings, a thresholds→action matrix, the upgrade
 > ladder, and ready-to-paste prompts for Cloudflare agent "Lee" for the moment
 > traffic approaches a limit.
+>
+> **Account move:** if the plan tier upgrade path chosen is "migrate to a
+> different Cloudflare account" (e.g. an .edu plan) rather than paying on this
+> one, follow [`cloudflare-account-migration.md`](./cloudflare-account-migration.md)
+> — that runbook assumes every dashboard item in this document is already
+> configured on the source zone and exports them as a bundle for import on the
+> target.
 
 - Account ID: `<CF_ACCOUNT_ID>`
 - Worker: `production-os` · Zone: `defrag.app` · App origin: `sovereign.defrag.app`
