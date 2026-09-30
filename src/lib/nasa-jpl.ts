@@ -128,6 +128,11 @@ function delay(ms: number): Promise<void> {
 const EPHEMERIS_CACHE_TTL_S = 90 * 24 * 60 * 60;
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_MS = 250; // 250ms → 1000ms exponential backoff between attempts
+// A hard wall-clock ceiling on one Horizons call (all retries included). It
+// also bounds the isolate-level coalescing below: the shared in-flight promise
+// is guaranteed to settle, so a stalled socket can never poison a cache key for
+// the rest of the isolate's life.
+const HORIZONS_TIMEOUT_MS = 15000;
 
 /** KV key at minute precision — the exact granularity of the Horizons
  *  START_TIME parameter, so a hit is always an equivalent query. */
@@ -168,15 +173,15 @@ async function fetchWithBackoff(
   throw lastError instanceof Error ? lastError : new Error("Horizons request failed after retries");
 }
 
-async function fetchHorizonsRows(
+async function loadHorizonsRows(
   env: AppEnv,
   targetId: string,
   instant: Date,
+  cacheKey: string,
   fetchImpl: typeof fetch = fetch,
   trace?: { fetched: boolean },
 ): Promise<HorizonsRow[]> {
   const kv: EphemerisKv = env?.SESSION_KV ?? null;
-  const cacheKey = ephemerisCacheKey(targetId, instant);
 
   // Cache reads are best-effort: a KV hiccup must never fail the Baseline —
   // we just fall through to the live API like before the cache existed.
@@ -213,6 +218,7 @@ async function fetchHorizonsRows(
   if (trace) trace.fetched = true;
   const response = await fetchWithBackoff(url.toString(), {
     headers: { "User-Agent": "Sovereign.OS Baseline Engine/2.0" },
+    signal: AbortSignal.timeout(HORIZONS_TIMEOUT_MS),
   }, fetchImpl);
 
   if (!response.ok) throw new Error(`Horizons unavailable (${response.status})`);
@@ -224,6 +230,39 @@ async function fetchHorizonsRows(
     } catch {}
   }
   return rows;
+}
+
+// Isolate-level request coalescing. Historical ephemeris rows for a given
+// target + UTC minute never change, so two onboarding submissions that land in
+// the same isolate for the SAME uncached minute should fan out to NASA once, not
+// twice. A shared in-flight promise keyed by the cache key collapses the
+// concurrent calls; it is cleared the moment the request settles so a later
+// (genuinely new) call still reaches the network. The 90-day KV cache above
+// handles the cross-isolate / repeat case; this handles the thundering-herd one.
+const inFlight = new Map<string, Promise<HorizonsRow[]>>();
+
+/** Internal per-target fetch. Exported only so the isolate-level coalescing
+ *  behaviour can be unit-tested directly; production callers go through
+ *  computeNatalPositions. */
+export async function fetchHorizonsRows(
+  env: AppEnv,
+  targetId: string,
+  instant: Date,
+  fetchImpl: typeof fetch = fetch,
+  trace?: { fetched: boolean },
+): Promise<HorizonsRow[]> {
+  const cacheKey = ephemerisCacheKey(targetId, instant);
+  const shared = inFlight.get(cacheKey);
+  if (shared) {
+    // Joining a call this isolate did not start: it never touched the network
+    // on this caller's behalf, so leave its courtesy-delay trace unset.
+    return shared;
+  }
+  const p = loadHorizonsRows(env, targetId, instant, cacheKey, fetchImpl, trace).finally(() => {
+    inFlight.delete(cacheKey);
+  });
+  inFlight.set(cacheKey, p);
+  return p;
 }
 
 /** Compute natal planetary positions for a given instant. */

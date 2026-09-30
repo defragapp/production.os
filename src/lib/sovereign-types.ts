@@ -81,6 +81,27 @@ export interface CorrectionState {
   rejectedHypotheses: string[];
   confirmedInterpretations: string[];
   userDefinitions: Record<string, string>;
+  /**
+   * Per-correction context captured at extraction time, before the per-turn
+   * filtering that narrows the two arrays above. A reframe the user issued
+   * about a specific pair ("that's not what my mom and I do") is tagged
+   * `relational` with the `peerName`; a solo inquiry must not inherit it.
+   * Optional so hand-built CorrectionStates (tests, journey) need not supply it.
+   */
+  scoped?: {
+    rejected: CorrectionEntry[];
+    confirmed: CorrectionEntry[];
+  };
+}
+
+/** The relational context a single correction was made in. */
+export type CorrectionScope = "self" | "relational" | "system";
+
+export interface CorrectionEntry {
+  text: string;
+  scope: CorrectionScope;
+  /** Present when `scope` is "relational" and a specific peer was named. */
+  peerName?: string;
 }
 
 export interface ExpressionCandidate {

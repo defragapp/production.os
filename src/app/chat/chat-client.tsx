@@ -11,6 +11,8 @@ import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { RichText } from "@/components/rich-text";
 import { ShareCardButton } from "@/components/share-card";
+import { Sigil } from "@/components/sigil";
+import { ACTIVE_SIGIL_KEY, getSigilIntent, sigilSeedFromId, type ActiveSigil } from "@/lib/sigil";
 import { JourneyBar, PastJourneysSheet, MILESTONE_STEP_LABELS } from "@/components/journey-canvas";
 import { useJourney } from "@/lib/journey-store";
 import { useDictation } from "@/lib/dictation";
@@ -1572,9 +1574,26 @@ function PeoplePanel({
 }) {
   const [connections, setConnections] = useState<RelationshipView[] | null>(null);
   const [invites, setInvites] = useState<InviteView[] | null>(null);
+  // The state this person is holding, kept on-device (never a server row).
+  const [activeSigil, setActiveSigil] = useState<ActiveSigil | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    // Read the device-held intent once; a private-mode quota throw is ignored.
+    try {
+      const raw = localStorage.getItem(ACTIVE_SIGIL_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<ActiveSigil>;
+        // Validate the intent id against the real set, so a stale or hand-edited
+        // key can never draw one crest while naming it with a borrowed label. The
+        // stored label is discarded in favour of the intent's own — words and
+        // glyph always agree.
+        const intent = typeof parsed.intentId === "string" ? getSigilIntent(parsed.intentId) : undefined;
+        if (intent && typeof parsed.seed === "number" && typeof parsed.label === "string") {
+          setActiveSigil({ seed: parsed.seed, intentId: intent.id, label: intent.label });
+        }
+      }
+    } catch {}
     (async () => {
       try {
         const [relRes, invRes] = await Promise.all([
@@ -1623,6 +1642,17 @@ function PeoplePanel({
           </button>
         </div>
 
+        {activeSigil && (
+          <div className="mb-3 flex items-center gap-2.5 rounded-panel border border-white/[0.06] bg-surface-1/40 px-3 py-2">
+            <span className="text-foreground">
+              <Sigil seed={activeSigil.seed} intentId={activeSigil.intentId} size={22} />
+            </span>
+            <p className="text-xs text-muted-foreground">
+              You&apos;re holding <span className="font-medium text-foreground">{activeSigil.label.toLowerCase()}</span>
+            </p>
+          </div>
+        )}
+
         {connections === null || invites === null ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : (
@@ -1658,6 +1688,11 @@ function PeoplePanel({
                         {!c.shareBaseline ? " · you’re not sharing yours" : ""}
                       </p>
                     </div>
+                    {/* A quiet crest for this thread — seeded from the pair, never
+                        from either person's birth data. Purely a marker. */}
+                    <span className="shrink-0 text-foreground/35" aria-hidden="true">
+                      <Sigil seed={sigilSeedFromId(c.relationId)} intentId="open" size={20} />
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -35,9 +35,9 @@ function UpgradeContent() {
       try {
         const res = await fetch("/api/auth");
         const data = await res.json() as { user?: { subscription_tier?: string } | null };
-        if (!data.user) { router.push("/onboard?mode=login"); return; }
+        if (!data.user) { router.push("/onboard?mode=signup&next=%2Fupgrade"); return; }
         setIsPlus(data.user.subscription_tier === "sovereign+");
-      } catch { router.push("/onboard?mode=login"); }
+      } catch { router.push("/onboard?mode=signup&next=%2Fupgrade"); }
       finally { setAuthChecked(true); }
     })();
   }, [router]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHorizonsJson, longitudeToSign, computeNatalPositions, ephemerisCacheKey } from "./nasa-jpl";
+import { parseHorizonsJson, longitudeToSign, computeNatalPositions, ephemerisCacheKey, fetchHorizonsRows } from "./nasa-jpl";
 import type { AppEnv } from "./env";
 
 // Faithful excerpt of a real Horizons QUANTITIES=31 CSV response
@@ -162,6 +162,48 @@ describe("computeNatalPositions ephemeris cache", () => {
       computeNatalPositions(envWithKv(null), INSTANT, fetchImpl),
     ).rejects.toThrow(/Horizons unavailable \(400\)/);
     // First batch of 2 bodies, each tried exactly once — no retry storm.
+    expect(calls).toBe(2);
+  });
+});
+
+// ── Isolate-level in-flight coalescing ────────────────────────────────
+
+describe("fetchHorizonsRows request coalescing", () => {
+  it("collapses concurrent calls for the same target+minute into one outbound fetch", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => { calls++; return fakeResponse(200, REAL_PAYLOAD); }) as typeof fetch;
+    // Null KV so the cache can't be what dedupes — only the in-flight map.
+    const env = envWithKv(null);
+    const targetId = "10";
+    const [a, b, c] = await Promise.all([
+      fetchHorizonsRows(env, targetId, INSTANT, fetchImpl),
+      fetchHorizonsRows(env, targetId, INSTANT, fetchImpl),
+      fetchHorizonsRows(env, targetId, INSTANT, fetchImpl),
+    ]);
+    expect(calls).toBe(1);
+    // Every concurrent caller resolves from the single shared promise.
+    expect(a).toEqual(b);
+    expect(b).toEqual(c);
+  });
+
+  it("does not coalesce across different targets or minutes", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => { calls++; return fakeResponse(200, REAL_PAYLOAD); }) as typeof fetch;
+    const env = envWithKv(null);
+    await Promise.all([
+      fetchHorizonsRows(env, "299", INSTANT, fetchImpl),
+      fetchHorizonsRows(env, "499", INSTANT, fetchImpl),
+      fetchHorizonsRows(env, "599", new Date("1990-06-15T19:31:00Z"), fetchImpl),
+    ]);
+    expect(calls).toBe(3);
+  });
+
+  it("clears the in-flight entry so a later call reaches the network again", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => { calls++; return fakeResponse(200, REAL_PAYLOAD); }) as typeof fetch;
+    const env = envWithKv(null);
+    await fetchHorizonsRows(env, "699", INSTANT, fetchImpl);
+    await fetchHorizonsRows(env, "699", INSTANT, fetchImpl);
     expect(calls).toBe(2);
   });
 });

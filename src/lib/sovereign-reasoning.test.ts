@@ -97,6 +97,53 @@ describe("scanCorrections", () => {
     ]);
     expect(confirmed.confirmedInterpretations).toHaveLength(1);
   });
+  it("tags each correction with the relational context it was made in", () => {
+    const scoped = scanCorrections([
+      { role: "assistant", content: "One possibility worth examining is that you withdraw when your mother criticizes you." },
+      { role: "user", content: "No, that's not what happens between my mom and me." },
+    ]);
+    const entry = scoped.scoped?.rejected[0];
+    expect(entry?.scope).toBe("relational");
+    expect(entry?.peerName).toBe("mom");
+  });
+});
+
+describe("context-scoped correction isolation", () => {
+  // A reframe the user issued about a specific pair must not be carried into a
+  // later solo ("self") question, but must survive a relational follow-up.
+  const relationalCorrection: ChatMessage[] = [
+    { role: "assistant", content: "One possibility worth examining is that you shrink around your sister." },
+    { role: "user", content: "No, that's not it with my sister." },
+  ];
+
+  it("drops a pair-specific reframe from a solo inquiry", () => {
+    // The last two turns are solo, so determineScope reads "self" — the earlier
+    // sister reframe must be filtered out of the active set.
+    const solo = buildReasoningContext({
+      history: [
+        ...relationalCorrection,
+        { role: "assistant", content: "Got it. What tends to happen when you're on your own?" },
+        { role: "user", content: "I just feel anxious and I don't know why I do this alone." },
+      ],
+      baseline: BASELINE,
+    });
+    expect(solo.relationshipScope).toBe("self");
+    expect(solo.correctionState.rejectedHypotheses).toHaveLength(0);
+    // The raw scoped record still carries it — it is filtered, not lost.
+    expect(solo.correctionState.scoped?.rejected.some((e) => e.scope === "relational")).toBe(true);
+  });
+
+  it("keeps the reframe when the inquiry is about that pair", () => {
+    const relational = buildReasoningContext({
+      history: [
+        ...relationalCorrection,
+        { role: "user", content: "It's different with my sister — she dominates every conversation." },
+      ],
+      baseline: BASELINE,
+    });
+    expect(relational.relationshipScope).not.toBe("self");
+    expect(relational.correctionState.rejectedHypotheses.length).toBeGreaterThan(0);
+  });
 });
 
 describe("windowHistoryPreservingCorrections", () => {

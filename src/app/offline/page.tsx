@@ -38,9 +38,9 @@ export default function OfflinePage() {
           Your <span className="italic">Baseline</span> is safe. We just can&apos;t reach it right now.
         </h1>
         <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
-          Sovereign keeps everything on its own servers — this page is the only thing stored on
-          your device, and nothing was lost. Once you have a signal again, pick up exactly where
-          you left off.
+          Nothing was lost. Your conversation lives on this device or on our servers, depending on
+          how you set Sovereign up — and it is waiting either way. Once you have a signal again,
+          pick up right where you left off.
         </p>
         <OfflineRetry />
       </main>

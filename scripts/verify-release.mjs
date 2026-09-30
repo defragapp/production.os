@@ -2,7 +2,7 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, thirty-one numbered gates (105 individual checks), all must be green
+ * One command, thirty-two numbered gates (110 individual checks), all must be green
  * before a commit or deploy:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
@@ -65,12 +65,15 @@
  *                                            in journey_events, sourced to the person who decided.
  *  24. whole-surface ergonomics           — the page that stops a person at /baseline?from=chat
  *                                            answers why above the form (and stays quiet without the
- *                                            param), 11 routes spill sideways at zero widths across
+ *                                            param), 13 routes spill sideways at zero widths across
  *                                            390 / 768 / 1440, and every visible control on the
  *                                            funnel and the reading surfaces presents a ≥44px tap box
  *                                            on coarse pointers — prose-inline targets exempted the
  *                                            way WCAG 2.5.8 exempts them, checkboxes measured
- *                                            through the label that forwards their click.
+ *                                            through the label that forwards their click. /offline is
+ *                                            measured on its own terms: it holds its ≥44px retry when
+ *                                            the device is truly offline, and walks an online visitor
+ *                                            onward instead of stranding them.
  *  25. install manifest                   — /manifest.webmanifest declares 192x192 and 512x512 for
  *                                            both `any` and `maskable`, and each entry is fetched and
  *                                            read back as a real PNG whose IHDR matches the declared
@@ -115,8 +118,13 @@
  *                                            privacy-first offline shell is REAL — /sw.js served as JavaScript
  *                                            with its /api/ bypass intact, /offline rendering its ≥44px retry,
  *                                            and a production page registering the worker console-clean.
+ *  32. context-scoped memory & Sigil      — a pair-specific reframe stays out of a solo inquiry (the
+ *                                            reasoning suite runs live), concurrent same-minute Horizons
+ *                                            calls collapse to one outbound fetch (the coalescing suite),
+ *                                            and a shared Intent Sigil renders its page + a real 1200×630
+ *                                            OG PNG through Satori while a forged token dead-ends at 404.
  *
- * Gates 1-8 and 10-31 fail closed. The preview-backed passes (9-24, 26-31) boot the
+ * Gates 1-8 and 10-32 fail closed. The preview-backed passes (9-24, 26-32) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -2680,13 +2688,15 @@ async function gateErgonomics(port, booted) {
  * `min-height` is not the same claim as a box that is.
  */
 async function gateSurfaces(port, booted) {
-  heading("Gate 24 · whole-surface ergonomics — 11 routes at 3 sizes");
+  heading("Gate 24 · whole-surface ergonomics — 13 routes at 3 sizes + the offline shell");
   const skip = (why) => {
     record("the page that stops a person tells them why, above the form it stops them at", true, `SKIPPED — ${why}`);
-    record("no surface spills sideways at 390 / 768 / 1440 (11 routes)", true, `SKIPPED — ${why}`);
+    record("no surface spills sideways at 390 / 768 / 1440 (13 routes)", true, `SKIPPED — ${why}`);
     record("the funnel's own controls are thumb-sized on touch", true, `SKIPPED — ${why}`);
     record("the reading surfaces hold the same tap floor", true, `SKIPPED — ${why}`);
     record("tap-line links keep their own space at 320px and in landscape", true, `SKIPPED — ${why}`);
+    record("/offline renders its retry shell when the device is truly offline", true, `SKIPPED — ${why}`);
+    record("/offline walks an online visitor onward instead of stranding them", true, `SKIPPED — ${why}`);
   };
   if (!booted) return skip("preview server did not come up in this environment");
   const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
@@ -2703,6 +2713,8 @@ async function gateSurfaces(port, booted) {
   const readingFloor = [];
   let surfacesJudged = 0;
   let controlsMeasured = 0;
+  // A real, decodable Sigil share token so /s/[id] renders the live crest path.
+  const sigilToken = Buffer.from(JSON.stringify({ v: 1, i: "empathizing", s: 987654, n: "Chad" })).toString("base64url");
   {
     const authRoutes = [
       { route: "/baseline?from=chat", sink: funnelFloor, banner: true },
@@ -2721,6 +2733,10 @@ async function gateSurfaces(port, booted) {
       { route: "/faq", sink: readingFloor },
       { route: "/support", sink: readingFloor },
       { route: "/invite", sink: readingFloor },
+      // The two new public surfaces this pass adds: the gift redemption card and
+      // a live Intent Sigil share page. Both render signed-out.
+      { route: "/redeem", sink: readingFloor },
+      { route: `/s/${sigilToken}`, sink: readingFloor },
     ];
     // The first-time branch is the one that carries the explanation, and it only
     // renders while no Baseline row exists. The fixture seeds one, so this takes
@@ -2785,7 +2801,7 @@ async function gateSurfaces(port, booted) {
   }
   record("the page that stops a person tells them why, above the form it stops them at", stopped.length === 0,
     stopped.slice(0, 3).join(" | ") || "one box, three answers, above the form — and quiet without ?from=chat");
-  record("no surface spills sideways at 390 / 768 / 1440 (11 routes)", spill.length === 0 && surfacesJudged === 33,
+  record("no surface spills sideways at 390 / 768 / 1440 (13 routes)", spill.length === 0 && surfacesJudged === 39,
     spill.slice(0, 3).join(" | ") || `${surfacesJudged} route×viewport pairs, 0 overflow`);
   record("the funnel's own controls are thumb-sized on touch", funnelFloor.length === 0,
     funnelFloor.slice(0, 3).join(" | ") || "baseline, account, upgrade, settings and signup clear 44px");
@@ -2835,6 +2851,69 @@ async function gateSurfaces(port, booted) {
   }
   record("tap-line links keep their own space at 320px and in landscape", spacing.length === 0 && spacingMeasured >= 6,
     spacing.slice(0, 3).join(" | ") || `${spacingMeasured} tap-line/nav-link boxes measured across 320 + 844×390, 0 overlaps, 0 overflow`);
+
+  // ── Gate 24c · /offline — the honest recovery surface ────────────
+  // It cannot ride the online sweep (by design it walks an online visitor onward,
+  // and it is a single-control shell), so it is measured on its own terms: when
+  // the device is genuinely offline it STAYS and shows its ≥44px retry; when the
+  // visitor is actually online it hands them to the app instead of stranding them.
+  const offlineShell = [];
+  const offlineRedirect = [];
+  {
+    // (a) Truly offline: the shell renders, the retry clears 44px, no spill.
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+    // Force the device to *report* offline rather than using Playwright's
+    // setOffline — on a fresh context with no service worker yet installed,
+    // setOffline kills the very first navigation with ERR_INTERNET_DISCONNECTED
+    // before the shell can even load. Overriding the `navigator.onLine` getter
+    // keeps the socket live (the page fetches fine) while every read says the
+    // device is down, so /offline stays put instead of walking the visitor on.
+    await ctx.addInitScript(() => Object.defineProperty(window.navigator, "onLine", { get: () => false }));
+    await ctx.addInitScript(CLS_OBSERVER_SCRIPT);
+    const page = await ctx.newPage();
+    const errs = [];
+    page.on("console", (m) => { if (m.type() === "error" && !isWidgetNoise(m.location()?.url ?? "")) errs.push(m.text()); });
+    page.on("pageerror", (e) => errs.push(String(e)));
+    try {
+      await page.goto(`http://localhost:${port}/offline`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await sleep(1200);
+      const land = await page.evaluate(() => location.pathname);
+      const body = await page.evaluate(() => document.body.innerText).catch(() => "");
+      const m = await page.evaluate(SURFACE_PROBE);
+      if (!land.endsWith("/offline")) offlineShell.push(`offline device was sent to ${land} — the shell never rendered`);
+      if (!/retry connection/i.test(body)) offlineShell.push("the retry affordance is missing while offline");
+      if (m.under.some((u) => u.h < 44 || u.w < 44)) offlineShell.push(`a control under 44px: ${m.under.map((u) => `${u.tag} ${u.w}×${u.h}`).slice(0, 2).join(", ")}`);
+      if (m.overflow > 1) offlineShell.push(`${m.overflow}px of horizontal overflow`);
+      if (errs.length) offlineShell.push(`console/page errors ${errs.slice(0, 2).join(" | ")}`);
+    } catch (e) {
+      offlineShell.push(`offline shell walk failed ${String(e).slice(0, 60)}`);
+    }
+    await ctx.close();
+
+    // (b) Online visitor: /offline must resolve onward, never sit idle.
+    const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: false });
+    await ctx2.addInitScript(CLS_OBSERVER_SCRIPT);
+    const page2 = await ctx2.newPage();
+    const errs2 = [];
+    page2.on("pageerror", (e) => errs2.push(String(e)));
+    try {
+      await page2.goto(`http://localhost:${port}/offline`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      let moved = false;
+      for (let i = 0; i < 20 && !moved; i++) {
+        const p = await page2.evaluate(() => location.pathname).catch(() => "/offline");
+        if (!p.endsWith("/offline")) moved = true; else await sleep(500);
+      }
+      if (!moved) offlineRedirect.push("an online visitor stayed parked on /offline for 10s");
+      if (errs2.length) offlineRedirect.push(`page errors ${errs2.slice(0, 2).join(" | ")}`);
+    } catch (e) {
+      offlineRedirect.push(`online recovery walk failed ${String(e).slice(0, 60)}`);
+    }
+    await ctx2.close();
+  }
+  record("/offline renders its retry shell when the device is truly offline", offlineShell.length === 0,
+    offlineShell.slice(0, 3).join(" | ") || "stayed put, showed Retry connection, cleared 44px, no spill");
+  record("/offline walks an online visitor onward instead of stranding them", offlineRedirect.length === 0,
+    offlineRedirect.slice(0, 3).join(" | ") || "resolved away from /offline within 10s, no page errors");
 
   await browser.close();
 }
@@ -3397,6 +3476,105 @@ async function gateEvolution(port, booted) {
   }
 }
 
+/**
+ * Gate 32 · the three behaviours this launch pass adds, asserted for real:
+ *  - context-scoped correction memory keeps a pair-specific reframe from
+ *    bleeding into a global solo inquiry (executed against the committed
+ *    reasoning module, not a grep);
+ *  - the JPL layer coalesces concurrent same-minute ephemeris calls into one
+ *    outbound fetch (asserted by the coalescing unit suite);
+ *  - a shared Intent Sigil renders its public page and generates a branded
+ *    OpenGraph PNG through the Satori pipeline — measured live.
+ */
+async function gateSigil(port, booted) {
+  heading("Gate 32 · context-scoped memory, JPL coalescing & the Intent Sigil");
+
+  // (1) + (2) run against the modules directly — no server needed, so they are
+  // never skipped for a boot reason. The scoped suite passing (exit 0) IS the
+  // functional assertion; a source read confirms the specific new cases exist
+  // (the reporter's line format varies with TTY, so it is never parsed).
+  const scoped = await run("npx", ["vitest", "run", "src/lib/sovereign-reasoning.test.ts", "src/lib/nasa-jpl.test.ts", "src/lib/sigil.test.ts"]);
+  const reasoningSrc = fs.readFileSync(path.join(root, "src/lib/sovereign-reasoning.test.ts"), "utf8");
+  const jplSrc = fs.readFileSync(path.join(root, "src/lib/nasa-jpl.test.ts"), "utf8");
+  const reasoningOk = scoped.code === 0 && /context-scoped correction isolation/.test(reasoningSrc) && /drops a pair-specific reframe from a solo inquiry/.test(reasoningSrc);
+  record("context-scoped corrections keep a pair reframe out of a solo inquiry", reasoningOk,
+    scoped.code !== 0 ? `reasoning suite failed (exit ${scoped.code})` : reasoningOk ? "isolation cases present + suite green" : "isolation test names missing from source");
+  const jplOk = scoped.code === 0 && /request coalescing/.test(jplSrc) && /expect\(calls\)\.toBe\(1\)/.test(jplSrc);
+  record("concurrent same-minute Horizons calls coalesce to one outbound fetch", jplOk,
+    scoped.code !== 0 ? `coalescing suite failed (exit ${scoped.code})` : jplOk ? "coalescing case present + suite green" : "coalescing assertions missing from source");
+
+  // (3) the Sigil share surface — live page + generated OG image.
+  if (!booted) {
+    record("a shared Sigil renders its page and generates a branded OG image", true, "SKIPPED — preview server did not come up in this environment");
+    return;
+  }
+  const sigilToken = Buffer.from(JSON.stringify({ v: 1, i: "empathizing", s: 987654, n: "Chad" })).toString("base64url");
+  const ogFindings = [];
+  try {
+    const pageRes = await fetchWithTimeout(`http://localhost:${port}/s/${sigilToken}`, 15000);
+    const html = await pageRes.text();
+    if (pageRes.status !== 200) ogFindings.push(`share page → ${pageRes.status}`);
+    if (!/Chad is holding a state of empathy\./.test(html)) ogFindings.push("the share sentence did not render");
+    if (!html.includes("<svg")) ogFindings.push("no inline Sigil SVG on the page");
+    if (!/noindex/i.test(html)) ogFindings.push("the share page is indexable — it should not be");
+
+    const ogRes = await fetchWithTimeout(`http://localhost:${port}/s/${sigilToken}/opengraph-image`, 20000);
+    const buf = Buffer.from(await ogRes.arrayBuffer());
+    const ctype = ogRes.headers.get("content-type") || "";
+    const dim = pngDimensions(buf);
+    if (ogRes.status !== 200) ogFindings.push(`og image → ${ogRes.status}`);
+    else if (!ctype.startsWith("image/png")) ogFindings.push(`og image served as ${JSON.stringify(ctype)}`);
+    else if (!dim || dim.width !== 1200 || dim.height !== 630) ogFindings.push(`og image is ${dim ? `${dim.width}x${dim.height}` : "not a decodable PNG"}, expected 1200x630`);
+    else if (buf.length < 2000) ogFindings.push(`og image is ${buf.length} bytes — too thin to be a real render`);
+
+    // A crest that rasterises invisible against the dark card would STILL be a
+    // valid 1200×630 PNG — so look at the pixels. Sample the centred crest band
+    // (the sentence sits lower) and require real light strokes in it; the
+    // background's brightest point is ~45, so a floor of 120 only clears when the
+    // crest is actually drawn (a `currentColor`-vanishing regression reads ~13).
+    if (ogRes.status === 200 && dim && dim.width === 1200 && dim.height === 630) {
+      const { chromium } = await import("playwright");
+      const probeBrowser = await chromium.launch({ channel: "chrome", headless: true });
+      try {
+        const pctx = await probeBrowser.newContext({ viewport: { width: 1200, height: 630 } });
+        const ppage = await pctx.newPage();
+        const dataUri = `data:image/png;base64,${buf.toString("base64")}`;
+        await ppage.setContent(`<body style="margin:0"><img id="i" src="${dataUri}" width="1200" height="630"></body>`);
+        await ppage.waitForFunction(() => {
+          const im = document.getElementById("i");
+          return Boolean(im && im.complete && im.naturalWidth > 0);
+        }, null, { timeout: 15000 });
+        const crestLum = await ppage.evaluate(() => {
+          const im = document.getElementById("i");
+          const c = document.createElement("canvas"); c.width = 1200; c.height = 630;
+          const x = c.getContext("2d"); x.drawImage(im, 0, 0);
+          const x0 = Math.floor(0.30 * 1200), x1 = Math.floor(0.70 * 1200);
+          const y0 = Math.floor(0.12 * 630), y1 = Math.floor(0.58 * 630);
+          const d = x.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+          let max = 0;
+          for (let p = 0; p < d.length; p += 4) {
+            const L = 0.2126 * d[p] + 0.7152 * d[p + 1] + 0.0722 * d[p + 2];
+            if (L > max) max = L;
+          }
+          return Math.round(max);
+        });
+        if (crestLum < 120) ogFindings.push(`crest band max luminance ${crestLum} — the Sigil is invisible on the card`);
+        await pctx.close();
+      } finally {
+        await probeBrowser.close();
+      }
+    }
+
+    // A forged token must dead-end, not draw a broken crest.
+    const bad = await fetchWithTimeout(`http://localhost:${port}/s/${Buffer.from(JSON.stringify({ nope: 1 })).toString("base64url")}`, 15000);
+    if (bad.status === 200) ogFindings.push("a forged Sigil token rendered a page instead of a 404");
+  } catch (e) {
+    ogFindings.push(`Sigil surface fetch failed: ${String(e).slice(0, 70)}`);
+  }
+  record("a shared Sigil renders its page and generates a branded OG image", ogFindings.length === 0,
+    ogFindings.slice(0, 3).join(" | ") || "page + 1200×630 PNG rendered, forged token dead-ended");
+}
+
 async function main() {
   const started = Date.now();
   console.log("verify:release — continuous stability & zero-regression ratchet");
@@ -3425,6 +3603,7 @@ async function main() {
     await gateOwnerGift(8788, booted);
     await gateInputFloor(8788, booted);
     await gateEvolution(8788, booted);
+    await gateSigil(8788, booted);
   } finally {
     if (child) child.kill("SIGKILL");
   }
@@ -3451,4 +3630,4 @@ if (!process.env.SOVEREIGN_VERIFY_IMPORT_ONLY) {
 }
 
 // Exported for isolated gate development in .audit-tmp scratch runners.
-export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, FIXTURE_THREAD2_ID, FIXTURE_JOURNEY2_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, isWidgetNoise, gateErgonomics, gateSurfaces, gateManifest, SURFACE_PROBE };
+export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, FIXTURE_THREAD2_ID, FIXTURE_JOURNEY2_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, isWidgetNoise, gateErgonomics, gateSurfaces, gateManifest, gateSigil, SURFACE_PROBE };

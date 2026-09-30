@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "You've been invited to 30 days of Sovereign+",
   description: "Redeem your private 30-day Sovereign+ pass.",
+  // A redemption link is meant for one person, not for search engines — the
+  // OpenGraph tags below still render the preview card for iMessage/email.
+  robots: { index: false, follow: false },
   openGraph: {
     title: "You've been invited to 30 days of Sovereign+",
     description: "Redeem your private 30-day Sovereign+ pass.",

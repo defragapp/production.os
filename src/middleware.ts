@@ -109,7 +109,11 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
-    return NextResponse.redirect(new URL(`/onboard?mode=login${nextIntent}`, request.url));
+    // A stranger who hit the paywall is a prospective member, not a returning
+    // one — send them to Create account, not the "Welcome back" Sign in card.
+    const isPaywall = pathname === "/upgrade" || pathname.startsWith("/upgrade/");
+    const mode = isPaywall ? "signup" : "login";
+    return NextResponse.redirect(new URL(`/onboard?mode=${mode}${nextIntent}`, request.url));
   }
 
   return noStore(NextResponse.next());

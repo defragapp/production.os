@@ -14,7 +14,20 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: ["/", "/about", "/faq", "/terms", "/privacy", "/support", "/llms.txt", "/llms-full.txt"],
-      disallow: ["/api/", "/chat", "/baseline", "/upgrade", "/account", "/onboard"],
+      disallow: [
+        "/api/",
+        "/chat",
+        "/baseline",
+        "/upgrade",
+        "/account",
+        "/onboard",
+        // Utility / transactional surfaces: never meant to be found via search.
+        "/offline",
+        "/redeem",
+        "/reset",
+        // Shared Intent Sigils are link-only artifacts, not search content.
+        "/s/",
+      ],
     },
     sitemap: "https://sovereign.defrag.app/sitemap.xml",
   };

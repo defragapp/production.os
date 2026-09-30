@@ -13,6 +13,7 @@ import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
 import { AddPasskeyButton } from "@/components/passkey";
 import { OwnerConsole } from "@/components/owner-console";
+import { SigilComposer } from "@/components/sigil-composer";
 import { formatD1Date } from "@/lib/utils";
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
@@ -296,6 +297,14 @@ export default function AccountPage() {
                   <span className="text-sm text-muted-foreground">Member since</span>
                   <span className="text-sm font-medium">{memberSince}</span>
                 </div>
+              </div>
+            </Section>
+            <Section
+              title="Intent Sigil"
+              description="Hold a state and share it as your own crest"
+            >
+              <div className="glass-panel p-5">
+                <SigilComposer />
               </div>
             </Section>
             <Section

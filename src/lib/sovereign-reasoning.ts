@@ -25,6 +25,8 @@ import type {
   AuthorizationContext,
   BaselineSignal,
   ConsentedPeer,
+  CorrectionEntry,
+  CorrectionScope,
   CorrectionState,
   Domain,
   ExpressionCandidate,
@@ -271,10 +273,36 @@ function isInterpretive(sentence: string): boolean {
   return INTERPRETATION_MARKERS.some((rx) => rx.test(sentence));
 }
 
+// The relational context a correction was made in, so a reframe about one pair
+// is not carried into a later solo question. Reuses the same cue sets the
+// classifier uses; `peerName` is the first relationship word the message names.
+const PEER_NAME_WORDS = [
+  "partner", "husband", "wife", "spouse", "boyfriend", "girlfriend", "ex", "mother", "mom",
+  "mum", "father", "dad", "sister", "brother", "sibling", "son", "daughter", "friend",
+  "boss", "coworker", "co-worker", "colleague", "parent", "child", "in-law", "family", "team",
+];
+
+function peerNameIn(text: string): string | undefined {
+  const lower = text.toLowerCase();
+  for (const w of PEER_NAME_WORDS) {
+    if (new RegExp(`\\b${w.replace(/[- ]/g, "[- ]")}\\b`, "i").test(lower)) return w;
+  }
+  return undefined;
+}
+
+function scopeOfMessage(text: string): { scope: CorrectionScope; peerName?: string } {
+  const peer = peerNameIn(text);
+  if (SYSTEM_CUES.some((rx) => rx.test(text))) return peer ? { scope: "system", peerName: peer } : { scope: "system" };
+  if (BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return peer ? { scope: "relational", peerName: peer } : { scope: "relational" };
+  return { scope: "self" };
+}
+
 export function scanCorrections(history: ChatMessage[]): CorrectionState {
   const rejectedHypotheses: string[] = [];
   const confirmedInterpretations: string[] = [];
   const recentInterpretive: string[] = [];
+  const scopedRejected: CorrectionEntry[] = [];
+  const scopedConfirmed: CorrectionEntry[] = [];
 
   for (const message of history) {
     if (message.role === "assistant") {
@@ -289,9 +317,11 @@ export function scanCorrections(history: ChatMessage[]): CorrectionState {
       // Reject the most recent interpretive claim the user is correcting.
       const rejected = recentInterpretive[recentInterpretive.length - 1];
       if (!rejectedHypotheses.includes(rejected)) rejectedHypotheses.push(rejected);
+      scopedRejected.push({ text: rejected, ...scopeOfMessage(message.content) });
     } else if (isAffirmation && recentInterpretive.length > 0) {
       const confirmed = recentInterpretive[recentInterpretive.length - 1];
       if (!confirmedInterpretations.includes(confirmed)) confirmedInterpretations.push(confirmed);
+      scopedConfirmed.push({ text: confirmed, ...scopeOfMessage(message.content) });
     }
   }
 
@@ -299,6 +329,7 @@ export function scanCorrections(history: ChatMessage[]): CorrectionState {
     rejectedHypotheses,
     confirmedInterpretations,
     userDefinitions: extractUserDefinitions(history.map((m) => m.content).join("\n")),
+    scoped: { rejected: scopedRejected, confirmed: scopedConfirmed },
   };
 }
 
@@ -561,7 +592,22 @@ export function buildReasoningContext(opts: {
   const safetyMode = detectSafetyMode(history);
 
   const baselineSignals: BaselineSignal[] = buildBaselineSignals(baseline);
+  const relationshipScope = determineScope(history);
   const correlation = scanCorrections(history);
+
+  // Context-scoped correction isolation: a solo ("self") inquiry must not
+  // inherit pair- or group-specific reframes raised in earlier relational
+  // turns. Relational/system inquiries keep the full set — the broader context
+  // legitimately carries them. Narrowing the flat arrays here means the prompt
+  // render, the safety validator, and the journey engine all read one truth.
+  if (relationshipScope === "self" && correlation.scoped) {
+    correlation.rejectedHypotheses = correlation.scoped.rejected
+      .filter((e) => e.scope === "self")
+      .map((e) => e.text);
+    correlation.confirmedInterpretations = correlation.scoped.confirmed
+      .filter((e) => e.scope === "self")
+      .map((e) => e.text);
+  }
 
   const rejected = new Set(correlation.rejectedHypotheses);
   const hypotheses: Hypothesis[] = scanModelHypotheses(history).map((h) => ({
@@ -588,7 +634,7 @@ export function buildReasoningContext(opts: {
     expressions: scanExpressions(history),
     consequences: scanConsequences(history),
     unknowns,
-    relationshipScope: determineScope(history),
+    relationshipScope,
     authorization: {
       self: true,
       people: detectPersons(history),
@@ -688,14 +734,23 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
     lines.push("UNKNOWNS (do not resolve these into facts):");
     for (const u of ctx.unknowns) lines.push(`- ${u.question} — ${u.reason}`);
   }
-  const rejected = ctx.correctionState.rejectedHypotheses;
-  if (rejected.length) {
+  // Corrections arrive already scope-filtered by buildReasoningContext. When a
+  // raw CorrectionState is supplied (defensive), drop pair/group reframes from a
+  // solo inquiry here too so they never bleed into the prompt.
+  const solo = ctx.relationshipScope === "self" && !!ctx.correctionState.scoped;
+  const activeRejected = solo
+    ? ctx.correctionState.scoped!.rejected.filter((e) => e.scope === "self").map((e) => e.text)
+    : ctx.correctionState.rejectedHypotheses;
+  const activeConfirmed = solo
+    ? ctx.correctionState.scoped!.confirmed.filter((e) => e.scope === "self").map((e) => e.text)
+    : ctx.correctionState.confirmedInterpretations;
+  if (activeRejected.length) {
     lines.push("REJECTED HYPOTHESES (do NOT re-assert, do NOT defend):");
-    for (const r of rejected) lines.push(`- ${r}`);
+    for (const r of activeRejected) lines.push(`- ${r}`);
   }
-  if (ctx.correctionState.confirmedInterpretations.length) {
+  if (activeConfirmed.length) {
     lines.push("CONFIRMED INTERPRETATIONS (user accepted these):");
-    for (const c of ctx.correctionState.confirmedInterpretations) lines.push(`- ${c}`);
+    for (const c of activeConfirmed) lines.push(`- ${c}`);
   }
   if (limitations.length) {
     lines.push("LIMITATIONS:");
