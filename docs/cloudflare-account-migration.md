@@ -282,6 +282,41 @@ second should show `cf-cache-status: HIT`; repeat for a real
 `/s/<token>/opengraph-image`, `/llms.txt`, and an `/api/auth` POST burst
 to confirm the block trips.
 
+### Applied result (2026-10-01) — the write vector that works
+
+Correction to the "not doable" framing above: `POST /zones/{id}/rulesets`
+fails for the account token (`10405` auth-scheme), but
+`PUT /zones/{id}/rulesets/phases/{phase}/entrypoint` with body
+`{"rules":[...]}` DOES work for this token — no top-level `name`/`phase`
+fields (the ruleset is named `default` and the phase is in the URL).
+That is how the edge rules below were authored programmatically.
+
+- **Rate limit — DONE via API and verified live.** Ruleset id
+  `d3927b162cc14b549867b434d214fb16`, phase `http_ratelimit`,
+  `enabled:true`. The Free *Website* plan gates the schema hard, so the
+  specced 60s/300s is not entitled; the working values are:
+  ```json
+  {"expression":"http.request.method eq \"POST\" and (http.request.uri.path eq \"/api/auth\" or starts_with(http.request.uri.path, \"/api/auth/\"))","action":"block","ratelimit":{"characteristics":["cf.colo.id","ip.src"],"period":10,"requests_per_period":10,"mitigation_timeout":10}}
+  ```
+  Field-name notes (discovered by probing): the count key is
+  `requests_per_period` (NOT `threshold`/`request_limit`); characteristics
+  MUST include `cf.colo.id`; `period` and `mitigation_timeout` are each
+  pinned to `10` by the free-plan entitlement. Verified with a 16-request
+  burst: 1-10 → `400` (Worker), 11-16 → `429` (CF block), +15s → `400`
+  (recovered). Block returns a clean `429` the JSON client already handles.
+- **Cache Rules — NOT achievable via this token.** The writable
+  `http_request_cache_settings` phase accepts only `{"cache":true}
+  (eligibility) — every TTL field (`edge_cache`, `browser_cache`,
+  `edge_cache_ttl`, `cache_key`, `query_string`) returns `unknown field`;
+  that reduced schema cannot set the edge/browser TTL that is the whole
+  point. The TTL-bearing rule lives on the `/zones/{id}/cache_rules`
+  resource, which returns `7003` for this token (missing
+  `Zone > Cache Rules: Edit`). So the three Cache Rules + the landing-OG
+  rule remain a dashboard task (values above) or a User API Token with
+  Cache Rules edit. Left the `http_request_cache_settings` entrypoint
+  attached but empty (`rules:0`) — inert, and the dashboard writes to
+  this same ruleset.
+
 
 ### Same-day follow-ups (2026-10-01, later session)
 
