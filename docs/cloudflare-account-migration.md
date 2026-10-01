@@ -187,6 +187,45 @@ on gmail belong to unrelated projects — out of scope, keep.
    were pasted into chat; roll them at the next convenient window.
 4. Phase 8 decommission at T+14d green.
 
+### Why the four remaining clicks are not doable with `ASU_MIGRATION_TOKEN`
+
+Re-verified 2026-10-01 with a live token (auth was NOT the failure —
+`whoami`, zone GET, D1, and secret put all succeed on this token). Each
+remaining item fails for a distinct structural reason:
+
+- **Two plan systems, both true.** Account subscriptions
+  (`GET /accounts/{id}/subscriptions`) = `workers_paid` + `teams_free` +
+  `images_v2_full` — these gate **compute**. Zone plan
+  (`GET /zones/{id}` `.plan`) = **Free Website** — this gates the
+  **CDN/WAF security tier** on the DNS zone. They are independent; a
+  Workers-Paid account with a Free-Website zone is normal. Anyone reading
+  only one object will think the other is wrong.
+- **Bot Fight Mode — plan-gated, not token-gated.** It is absent from
+  `GET /zones/{id}/settings`, so the zone does not offer it. Free Website
+  does not include Bot Fight Mode; the dashboard toggle requires a paid
+  website plan. **Drop from Phase 7** or upgrade the zone plan; already
+  covered meanwhile by the Cloudflare Managed Free Ruleset + rate limit.
+- **Cache Rules — needs a token with Zone.Cache Rules:Edit.** The
+  `/zones/{id}/cache_rules` resource returns 7003/7000 (route not exposed
+  to this account token's scopes) and is NOT a Configuration-Rulesets
+  phase (`unknown phase "cache_rules"`). A **User API Token** scoped to
+  defrag.app + Cache Rules:Edit unlocks the API path; otherwise dashboard.
+  Low urgency now that Workers Paid removes the 1102 hard-fail.
+- **Rate limit `/api/auth` — needs a User API Token, not an account
+  token.** `POST /rulesets` (and the zone entrypoint variant) rejects the
+  Account API Token with `10405 Method not allowed for this
+  authentication scheme`; Configuration Rulesets require a user-anchored
+  credential. This is the one item with real security value (login
+  brute-force). Mint a `cfut_` User API Token (Zone|WAF|Edit +
+  Zone|Cache Rules|Edit, resource = defrag.app) to do it + the cache rules
+  via API in one pass; else click it in the dashboard.
+- **Workers AI spend alert** — account Billing surface, no zone/account
+  API path; dashboard-only. The gateway's own rate limit
+  (`PUT .../ai-gateway/gateways/{slug}`, full-body) is the API-reachable
+  substitute for capping AI request volume, and is writable with the
+  current token.
+
+
 ### Same-day follow-ups (2026-10-01, later session)
 
 - **AI Gateway caching enabled via API.** The write path turned out to
