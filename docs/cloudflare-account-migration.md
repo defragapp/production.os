@@ -225,6 +225,14 @@ remaining item fails for a distinct structural reason:
   substitute for capping AI request volume, and is writable with the
   current token.
 
+- **AI Gateway rate limit set (replaces the spend-alert task).** Same
+  full-body `PUT` now carries `rate_limiting_interval=60`,
+  `rate_limiting_limit=120`, `rate_limiting_technique=sliding` — a hard
+  120-req/min ceiling, orders of magnitude above real usage for 6 users
+  but enough to stop a runaway loop draining Workers AI credits. A cap is
+  strictly stronger than the dashboard "spending alert" this supersedes.
+  (`rate_limiting_technique` accepts only `fixed`|`sliding`.)
+
 
 ### Same-day follow-ups (2026-10-01, later session)
 
