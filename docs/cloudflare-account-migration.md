@@ -268,7 +268,10 @@ OG.
    `http.host eq "sovereign.defrag.app" and http.request.uri.path in {"/about" "/faq" "/privacy" "/terms"}`
 3. `seo-crawlers-immutable` — crawler-facing statics. Edge **1 day**,
    browser **1 hour**, ignore query.
-   `http.host eq "sovereign.defrag.app" and http.request.uri.path in {"/llms.txt" "/llms-full.txt" "/sitemap.xml" "/robots.txt" "/security.txt"}`
+   `http.host eq "sovereign.defrag.app" and http.request.uri.path in {"/llms.txt" "/llms-full.txt" "/sitemap.xml" "/robots.txt" "/.well-known/security.txt"}`
+   (verified 2026-10-01: `/security.txt` is a 404 — the real route is
+   `/.well-known/security.txt`; all five paths return `max-age=0,
+   must-revalidate` and no `cf-cache-status` today, so the rule bites.)
 
 Optional 4th, `landing-og-immutable` — site-wide OG,
 `http.host eq "sovereign.defrag.app" and http.request.uri.path eq "/opengraph-image"`,
