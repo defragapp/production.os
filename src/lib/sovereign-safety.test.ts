@@ -122,6 +122,21 @@ describe("detectSafetyMode", () => {
   it("stays standard otherwise", () => {
     expect(detectSafetyMode([{ role: "user", content: "I helped my friend move." }])).toBe("standard");
   });
+  // Regression: the bare "hurt me" rule once routed ordinary relationship
+  // questions to the domestic-violence script. Emotional hurt phrasings must
+  // stay standard — the hotline text should only face a user on a genuine
+  // abuse disclosure.
+  it("stays standard on emotional hurt phrasings", () => {
+    expect(detectSafetyMode([{ role: "user", content: "Did he mean to hurt me?" }])).toBe("standard");
+    expect(detectSafetyMode([{ role: "user", content: "She hurts my feelings when she cancels plans." }])).toBe("standard");
+    expect(detectSafetyMode([{ role: "user", content: "I felt hurt and ignored at the dinner." }])).toBe("standard");
+  });
+  it("still routes genuine physical-abuse disclosures to grounded", () => {
+    expect(detectSafetyMode([{ role: "user", content: "He hits me when he drinks." }])).toBe("grounded");
+    expect(detectSafetyMode([{ role: "user", content: "My ex-boyfriend beats me up." }])).toBe("grounded");
+    expect(detectSafetyMode([{ role: "user", content: "I was strangled by him." }])).toBe("grounded");
+    expect(detectSafetyMode([{ role: "user", content: "He says he hurts me but no one believes me." }])).toBe("grounded");
+  });
 });
 
 describe("extractText (adapter normalization)", () => {
