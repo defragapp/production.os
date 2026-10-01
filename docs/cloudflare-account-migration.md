@@ -367,6 +367,17 @@ That is how the edge rules below were authored programmatically.
   Paid plan removes the 1102 CPU hard-fail that motivated the cache
   rules; the sigil-OG rule is now a cost/latency optimization rather
   than an availability fix.
+- **Post-migration token scope audit (flag for next rotation).**
+  `ASU_MIGRATION_TOKEN` currently grants `Workers Scripts: Edit`,
+  `D1: Edit`, `KV Storage: Edit`, `Zone: Read`, `Member: Read`, and
+  (implicitly, for secret push) `Workers Secrets: Edit`. `Zone: Read` was
+  required only during the DNS cutover for the zone-id lookup and remains
+  the least-privilege item to trim first — the app itself needs no zone
+  reads at runtime; every remaining API surface we touch (D1 branch,
+  secret push, worker deploy) is account-scoped, not zone-scoped. Rotate
+  to drop `Zone: Read` at the next convenient window (Phase 1.1) and set a
+  calendar reminder for annual re-audit. No code change; the token lives
+  only in `.dev.vars` on the owner's Mac.
 
 ## Two blockers before Phase 5
 
