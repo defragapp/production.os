@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
 import { emailVerificationEnabled } from "@/lib/email";
-import { getEnv } from "@/lib/env";
+import { getEnv, waitUntil } from "@/lib/env";
 import { deriveBaseline } from "@/lib/sovereign-prompt";
 import type { DerivedBaseline } from "@/lib/sovereign-prompt";
 import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereign-reasoning";
@@ -15,6 +15,7 @@ import { detectExtractionAttempt, buildExtractionDeflection } from "@/lib/sovere
 import { mergeChatHistories } from "@/lib/chat-history";
 import { deriveJourneyState, type JourneyState } from "@/lib/sovereign-journey";
 import { loadActiveJourney, persistJourneyState, prevStateFromRow } from "@/lib/journeys";
+import { embedLatestTurn } from "@/lib/chat-embeddings";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
 
 /** Max content length per message accepted from the client. 2,000 chars is
@@ -286,6 +287,21 @@ async function handleChat(request: NextRequest) {
     }
   } catch (persistErr) {
     console.error("[chat] Failed to persist thread:", persistErr);
+  }
+  // Semantic recall index (Workers Paid / Vectorize). Kicked off AFTER the
+  // D1 write and BEFORE the SSE stream opens, but never awaited — the
+  // underlying Worker `ExecutionContext.waitUntil` keeps the isolate alive
+  // for us, so the ~150ms Workers AI round-trip stays off the response
+  // critical path. Skipped entirely on memory_mode='local' (zero-retention
+  // contract) and when no thread was persisted. `embedLatestTurn` swallows
+  // its own errors so a Vectorize hiccup can never surface to the user.
+  if (memoryMode === "server" && messagesToStore.length >= 2) {
+    const lastUser = [...messagesToStore].reverse().find((m) => m.role === "user");
+    const lastAssistant = messagesToStore[messagesToStore.length - 1];
+    if (lastUser && lastAssistant && lastAssistant.role === "assistant") {
+      const turnIndex = messagesToStore.length - 2;
+      waitUntil(embedLatestTurn(env, userId, currentThreadId, lastUser.content, lastAssistant.content, turnIndex));
+    }
   }
   const stateEvent = journeyState
     ? { state: journeyState, inquiryLevel: context.level, journeyId: activeJourneyId }

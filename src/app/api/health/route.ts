@@ -32,6 +32,23 @@ export async function GET() {
     // is broken or the namespace was deleted.
     await env.SESSION_KV.get("health-probe");
 
+    // Vectorize: `describe()` is the cheapest round-trip that proves the
+    // binding resolves and the index still exists. Skipped when the binding
+    // is absent (e.g. a local dev environment without a provisioned index)
+    // so the health endpoint still returns 200 in that configuration.
+    // The AI binding itself is intentionally NOT pinged here — a Workers AI
+    // round-trip costs neurons, and the semantic-recall path exercises it
+    // on every chat turn anyway; a real outage would surface as a chat
+    // 500 well before a monitoring poll caught it here.
+    if (env.VECTORIZE) {
+      try {
+        await env.VECTORIZE.describe();
+      } catch (vErr) {
+        // Surface the Vectorize failure without masking which binding broke.
+        throw new Error(`VECTORIZE.describe: ${vErr instanceof Error ? vErr.message : String(vErr)}`);
+      }
+    }
+
     const latency_ms = Math.round(performance.now() - start);
     return NextResponse.json(
       { status: "ok", latency_ms },

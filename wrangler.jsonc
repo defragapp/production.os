@@ -22,6 +22,21 @@
     { "binding": "SESSION_KV", "id": "defc15c51e4647d2b48d5b94138f8000" }
   ],
   "ai": { "binding": "AI" },
+  // Workers Paid feature: Vectorize backs the chat semantic-recall layer
+  // (/api/chat/search). Index `chat-embeddings` (dim=1024, cosine) provisioned
+  // 2026-10-01 via `wrangler vectorize create`. Per-user namespace isolation
+  // is enforced via the `namespace` field on insert, keyed by users.id.
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "chat-embeddings" }
+  ],
+  // Workers Paid feature: Tail Workers stream a copy of every log/exception
+  // this Worker emits into `sovereign-tail`, which forwards alert-worthy
+  // signals to the operator's support inbox (1 email per hour per unique
+  // failure shape). Same-account service binding; deploy sovereign-tail
+  // BEFORE this Worker or the binding rejects on push.
+  "tail_consumers": [
+    { "service": "sovereign-tail" }
+  ],
   "triggers": { "crons": ["0 3 * * *"] },
   "vars": {
     "AI_GATEWAY_ID": "sovereign-ai-gateway",
