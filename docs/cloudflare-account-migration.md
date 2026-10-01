@@ -127,6 +127,66 @@ Every attempted endpoint (`POST /accounts/{id}/ai/gateway`, `PUT
 token scope. `wrangler ai-gateway` and `wrangler gateway` subcommands do
 not exist in wrangler 4.131.1. **AI Gateway creation remains dashboard-only.**
 
+> Superseded 2026-10-01: the gateway was created on the dashboard as
+> planned, and the **read** path since has been proven at
+> `GET /accounts/{id}/ai-gateway/gateways` — `sovereign-ai-gateway`
+> exists on ASU (`workers_ai_billing_mode: postpaid`, cache off,
+> rate-limiting off). The **write** path (`PUT .../settings`) still
+> rejects the account token, so gateway tuning (caching TTL, cost caps)
+> stays dashboard-only.
+
+## Migration execution log — 2026-10-01 cutover completion
+
+Cutover happened in the dashboard (zone moved to ASU, custom domains
+bound) and the hardened build was deployed from this Mac with the
+`ASU_MIGRATION_TOKEN`. Gmail's OAuth session expired mid-audit and was
+not needed: the account token covers Workers Scripts + D1 read/write.
+
+| Item | Result |
+|---|---|
+| Phase -1 (Workers Paid) | **Verified via API** — `GET /accounts/{id}/subscriptions` returns `workers_paid` active on ASU. The 1102-era assumption holds. |
+| Phase 6 DNS cutover | Zone `defrag.app` Active on ASU (`31b13cee5bd4d28aac35e16c0d222eda`), NS pair `ashton`/`dorthy`; gmail's copy reads `moved`. Custom domains `defrag.app` + `sovereign.defrag.app` bound to the ASU `production-os` worker (AAAA `100::` placeholders). No `routes` block in `wrangler.jsonc` needed — dashboard binding owns the routing. |
+| Phase 5 drift closure | No re-import was needed: ASU D1 row counts and max-timestamps matched gmail to the second at bind time (6 users, 2 journeys, 7 events, 4 baselines, 5 threads). |
+| Final deploy | version `5ff452c7-99f3-4541-969f-bec94dfcc0e0` (rollback ref `232be9bc`) — commit `b9d0522` incl. `f5f8398` safety fixes. `STRIPE_SECRET_KEY` set via `secret put` immediately before. |
+| Email DNS (Phase 1.5) | Created via zone DNS API: `resend._domainkey` TXT (DKIM), `send` MX + `send` TXT SPF. **Resend reports the domain `verified`** (DKIM/SPF/Tracking all green). Resend's suggested `sovereign` CNAME was deliberately **not** added — it would hijack the app origin at `sovereign.defrag.app`. |
+| Zone hardening via API | `security_level=medium`, `min_tls_version=1.2`, `always_use_https=on`, `automatic_https_rewrites=on`, `ssl=full`, `browser_cache_ttl=7200`, `early_hints=on`, `0rtt=on`. Cloudflare Managed Free Ruleset (OWASP-class) confirmed present on the zone by default. |
+| Auth-scheme blocks (dashboard-only) | Cache Rules (`/zones/{id}/cache_rules` → 7000 no route for account tokens), rate-limit Configuration Ruleset (`10405 Method not allowed for this authentication scheme`), Bot Fight Mode (`settings/bot_fight_mode` unrecognized via this path), Workers AI spend alert (account billing, no API). |
+
+### ASU resource inventory after cutover (the app's complete footprint)
+
+```
+Workers:  production-os (this app)   behavioral-observer (pre-existing,
+                                      unrelated — leave alone per Scope)
+D1:       production-os-db          KV: SESSION_KV
+AI GW:    sovereign-ai-gateway      Zones: defrag.app (Free Website plan)
+R2:       none (never provisioned on ASU; no worker binding needs it)
+Queues:   none     Pages: none
+Bindings check: d1=DB, kv=SESSION_KV, ai=AI, assets=ASSETS, 12 plain_text
+vars, 6 secret_text (JWT_SECRET, PASSWORD_PEPPER, RESEND_API_KEY,
+TURNSTILE_SECRET_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) — every
+binding the worker declares exists on ASU.
+```
+
+### Gmail residue (all Phase 8, T+14 days after green)
+
+`production-os` worker + `sovereign-ai-gateway` + `production-os-db` +
+2 KV namespaces remain (insurance copies; gmail's `workers.dev` hostname
+already returns NXDOMAIN and the zone is `moved`, so zero traffic can
+reach them). The remaining ~18 workers / 8 other D1s / 8 other gateways
+on gmail belong to unrelated projects — out of scope, keep.
+
+### Open items after 2026-10-01
+
+1. Dashboard clicks (values above): 3 Cache Rules (Phase 7.2), rate limit
+   `/api/auth` 20 req/60 s → managed challenge 300 s, Bot Fight Mode ON,
+   Workers AI spending alert.
+2. Browser sanity: log in as an existing user (password reset emails must
+   go out first — Fork B voided all hashes), send one chat to confirm the
+   gateway clears the old 1050 on ASU billing.
+3. Phase 1.1 rotations: the Stripe key triple + `cfat_`/`art_v2_` tokens
+   were pasted into chat; roll them at the next convenient window.
+4. Phase 8 decommission at T+14d green.
+
 ## Two blockers before Phase 5
 
 1. **`PASSWORD_PEPPER` retrieval.** The value is stored as a Worker secret
