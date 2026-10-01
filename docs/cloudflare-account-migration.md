@@ -233,6 +233,55 @@ remaining item fails for a distinct structural reason:
   strictly stronger than the dashboard "spending alert" this supersedes.
   (`rate_limiting_technique` accepts only `fixed`|`sliding`.)
 
+### Ready-to-apply edge specs (authored 2026-10-01)
+
+Corrects the Phase 7.2 shorthand. Verified against the code: the legal
+pages render auth-agnostic shells (no `cookies()`/`verifySession` server
+side; `Nav` personalizes client-side), so edge-caching their HTML is safe;
+`GET /api/auth` is the every-page session probe and MUST be excluded from
+any rate limit; the auth endpoints are JSON `fetch` targets so the rate
+limit action is `block`, not `managed_challenge` (an HTML challenge page
+breaks the client). Keep the default "bypass cache if response sets a
+Cookie" safeguard on. Query-string policy is "ignore all" except landing
+OG.
+
+**Rate limit — zone → Security → WAF → Rate limiting rules → Create:**
+- Name: `auth-flood-guard`
+- Expression (match credential POSTs only):
+  `http.request.method eq "POST" and (http.request.uri.path eq "/api/auth" or starts_with(http.request.uri.path, "/api/auth/"))`
+- Characteristics: **IP Source Address** (`ip.src`)
+- Threshold: **30 requests over 60 seconds** (generous — campus/carrier
+  NAT; the Worker's own KV limiter already handles per-account abuse)
+- Action: **Block**, for **300 seconds** (5 min)
+- Does NOT need `cf-connecting-ip` — `ip.src` is the real client IP
+  because the zone is proxied.
+
+**Cache Rules — zone → Caching → Cache Rules → Create custom rule**
+(all three: *Eligible for cache*, edge/browser TTL = *Override*):
+
+1. `sigil-og-immutable` — content-addressed share PNGs, byte-identical
+   forever. Edge **1 year** (31536000), browser **1 month** (2592000),
+   ignore query.
+   `http.host eq "sovereign.defrag.app" and starts_with(http.request.uri.path, "/s/") and ends_with(http.request.uri.path, "/opengraph-image")`
+2. `legal-static-immutable` — `/about /faq /privacy /terms` shells. Edge
+   **1 day** (86400), browser **1 hour** (3600), ignore query.
+   `http.host eq "sovereign.defrag.app" and http.request.uri.path in {"/about" "/faq" "/privacy" "/terms"}`
+3. `seo-crawlers-immutable` — crawler-facing statics. Edge **1 day**,
+   browser **1 hour**, ignore query.
+   `http.host eq "sovereign.defrag.app" and http.request.uri.path in {"/llms.txt" "/llms-full.txt" "/sitemap.xml" "/robots.txt" "/security.txt"}`
+
+Optional 4th, `landing-og-immutable` — site-wide OG,
+`http.host eq "sovereign.defrag.app" and http.request.uri.path eq "/opengraph-image"`,
+Edge 1 year / browser 1 month, but **include all query strings** so the
+`?v=` param is the cache-bust hatch on brand change.
+
+**Verify after applying** (HEAD returns empty on OpenNext — use a GET
+header dump):
+`curl -s -D - -o /dev/null https://sovereign.defrag.app/about` twice →
+second should show `cf-cache-status: HIT`; repeat for a real
+`/s/<token>/opengraph-image`, `/llms.txt`, and an `/api/auth` POST burst
+to confirm the block trips.
+
 
 ### Same-day follow-ups (2026-10-01, later session)
 
