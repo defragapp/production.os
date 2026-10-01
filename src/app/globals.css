@@ -489,10 +489,25 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  /* Landscape notch clearance: on iPhone 15/16 Pro in landscape the left/right
+     insets reach 44px. Full-bleed fixed elements (TabBar) need this so
+     interactive content never sits under the camera housing. Only applies
+     in standalone mode (PWA) since browser safe-area insets are zero. */
+  .px-safe {
+    padding-inline: max(env(safe-area-inset-left, 0px), 1rem);
+  }
   /* Reserve clearance so sticky content (chat composer) clears the tab bar in
      standalone mode; a no-op height in the browser where the bar is hidden. */
   .tab-bar-spacer {
     height: 0;
+  }
+}
+
+/* Landscape notch clearance for fixed-position standalone chrome (TabBar).
+   Only active in PWA mode; browser safe-area insets are zero. */
+@media (display-mode: standalone) and (orientation: landscape) {
+  .standalone-only {
+    padding-inline: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px), 0.5rem);
   }
 }
 

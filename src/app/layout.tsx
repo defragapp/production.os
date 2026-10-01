@@ -100,6 +100,12 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  other: {
+    // Prevent iOS Safari from auto-detecting numeric sequences as phone numbers
+    // and inserting blue tel: links. Critical for the Baseline form (dates,
+    // coordinates) and the dark premium aesthetic.
+    "format-detection": "telephone=no",
+  },
 };
 
 export const viewport: Viewport = {
