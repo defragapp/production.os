@@ -12,7 +12,10 @@ out/
 
 # wrangler
 .wrangler/
-.dev.vars
+# .dev.vars and any sed/editor backups of it (`.dev.vars.bak`, `.bak2`) hold
+# live secret values — never commit them. Secrets belong only in `wrangler
+# secret put` per the migration runbook (Appendix C).
+.dev.vars*
 
 # production
 build/

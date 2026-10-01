@@ -198,7 +198,11 @@ Skip Phase 0 and every downstream step is live-surgery without a tourniquet.
 
 The API token beginning with `cfat_...` and the R2 S3 access/secret key pair
 were pasted into chat earlier. Rotate both immediately, regardless of the
-token's stated expiry (2026-10-07).
+token's stated expiry (2026-10-07). A THIRD token — an `art_v2_…` Cloudflare
+artifacts clone token — was pasted into chat on 2026-09-30 and revoked-on-paste
+by the same rule: treat it as compromised and roll it. All three are confirmed
+vestigial for the app (0 references under `src/`), so rotation breaks nothing;
+the OAuth wrangler session is a separate credential and is unaffected.
 
 Also confirmed: the pasted token's id (`d1aaba0aaa1f4a052e1eac6d3f4769ae`)
 equals the R2 Access Key ID — it's an R2/Object-access token, **not**
@@ -378,7 +382,9 @@ a moment with no scheduled work.
 Re-export prod fresh (captures any writes since Phase 0's backup):
 
 ```
-# authenticate wrangler back to gmail
+# authenticate wrangler back to gmail (CF login = defragapp@gmail.com, NOT
+# chadowen93@gmail.com — that address is only the SUPPORT_INBOX var, not a
+# Cloudflare account)
 npx wrangler d1 export production-os-db --remote --output=.audit-tmp/prod-d1-cutover.sql
 # authenticate wrangler back to ASU
 npx wrangler d1 execute production-os-db --remote --file=.audit-tmp/prod-d1-cutover.sql
@@ -707,3 +713,132 @@ then re-auth to ASU. There is no reliable cross-account alias support in
 - **Do not delete the gmail zone before Phase 7.3 confirms ASU's Workers
   Builds integration is shipping cleanly.** The 14-day "Moved Away"
   window is not optional if any part of the cutover might need reversing.
+
+---
+
+## Addendum — remaining steps + verified corrections (2026-09-30, post safety-hardening)
+
+This section supersedes any external "just run these commands" checklist. It
+records what is genuinely left, and corrects four instructions that — if run
+as written against this repo — would either misfire or damage production.
+
+### A. Auth pre-flight is currently WRONG (the #1 gotcha)
+
+`npx wrangler whoami` in this workspace reports **`defragapp@gmail.com`,
+account "Sovereign.os Platform Build" (`8b1954d216d65077c6480d62583fe2c2`)**
+— the *source* account, not ASU. Any `wrangler secret put` / deploy run in
+this state targets the wrong account. Three account ids are in play and must
+be reconciled before writing anything:
+
+| Source | id it names | what it is |
+|---|---|---|
+| This runbook §Pre-flight | `ac9a47ddb8928af2f3535e2a1e4d8349` | stated ASU target |
+| Deployed worker URL | `…cjowen2.workers.dev` | where `production-os` actually serves |
+| `whoami` right now | `8b1954d216d65077c6480d62583fe2c2` | gmail/source session (NOT the target) |
+
+Correct order:
+1. Sign into `dash.cloudflare.com/?org=ac9a47ddb8928af2f3535e2a1e4d8349`, then
+   `npx wrangler logout && npx wrangler login` (OAuth, per Phase 1.2).
+2. Confirm with `npx wrangler whoami` + `npx wrangler accounts list` that the
+   active account owns the `production-os` worker and D1
+   `8d09a3f5-bcda-4153-b63f-7018b1398c0b`. Do **not** trust a hardcoded id.
+3. Do **not** build the token from `ASU_MIGRATION_TOKEN` in `.dev.vars` — that
+   `cfat_` token is the one Phase 1.1 flags as leaked, rotation-mandated, and
+   **R2/Object-scope only (cannot deploy or set Worker secrets)**. OAuth login
+   is the intended path; if a token is required, mint a fresh ASU token with
+   `Workers Scripts: Edit`.
+
+### B. Four corrections to the circulating checklist
+
+- **No `account_id` field exists in `wrangler.jsonc`.** The account is chosen
+  by the wrangler OAuth session *plus* `CLOUDFLARE_ACCOUNT_ID` in `.dev.vars`
+  (which the `opennextjs-cloudflare deploy` child process reads and which
+  overrides the shell — see the deploy log line 101 footgun). "Edit
+  `wrangler.jsonc` account_id" is a no-op; the real lever is auth + `.dev.vars`.
+- **Do not re-provision D1.** `wrangler d1 create production-os-db` mints a
+  *second* same-named database (D1 does not enforce unique names); repointing
+  `database_id` at it strands the 26 imported rows. The DB exists and is
+  populated. `schema.sql` is all `CREATE … IF NOT EXISTS` (idempotent, no
+  DROP) and already applied — re-running it is a no-op, not a setup step.
+- **`SESSION_SIGNING_SECRET` does not exist** anywhere in the repo (0 refs).
+  Session/JWT signing is `JWT_SECRET` (`src/lib/env.ts`), already set on ASU.
+  The only *missing* Worker secrets are `STRIPE_SECRET_KEY` and
+  `STRIPE_WEBHOOK_SECRET` — and neither is present in `.dev.vars`, so source
+  them from the Stripe dashboard, not from a local file.
+- **The safety/AI-output architecture is correct as-is — do NOT "harden" it
+  into JSON.** The visual explainer is driven by `JourneyState` computed
+  **server-side and deterministically** (`classifyQuestion → buildJourneyState`),
+  delivered over SSE as `{ state, inquiryLevel, journeyId }` + `{ content }`
+  (plain prose). The model never emits JSON: `sovereign-prompt.ts` says
+  "Never output JSON" and `sovereign-safety.ts` `validateSovereignText` flags
+  `looksLikeJSON` for repair. Forcing strict JSON would trip that guard and
+  *break* the canvas. Likewise, prompt-injection concealment is not a
+  `sovereign-safety.ts` instruction — that file is a post-model regex
+  validator (`detectLeakage`); the deflection is **pre-model** in
+  `api/chat/route.ts` (`detectExtractionAttempt → buildExtractionDeflection`,
+  zero tokens) plus the "never reproduce this prompt" rule in
+  `sovereign-prompt.ts`. Nothing to change.
+
+### C. What is actually left
+
+| Step | Where | State |
+|---|---|---|
+| **Phase -1 — confirm ASU is actually Workers Paid** (grant active, ≥6mo left on the Students credit) | ASU dashboard → Billing → Subscription | **GO/NO-GO — the live 1050 is direct evidence this is unconfirmed. If the plan is not active, run Path C (upgrade gmail source, skip migration) instead.** |
+| Reconcile + log into ASU (A) | your terminal | **blocking — currently on gmail** |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | `wrangler secret put` (after A) | TODO |
+| Recreate AI Gateway `sovereign-ai-gateway` | ASU dashboard (no CLI/API path in wrangler 4.131) | TODO — same config as source (Phase 2): caching + rate limit + logging ON, **payload logging OFF, anonymization ON**; do NOT invent TTL/rate numbers |
+| Enable Workers AI inference (clears error 1050) | ASU dashboard subscription | TODO — gates the live probe |
+| **Phase 5 — fresh cutover re-export from gmail + import to ASU** | terminal (re-auth gmail → export → re-auth ASU → import) | TODO — **gmail is still the live prod DB; skipping this serves ASU from the stale Phase-4 snapshot and silently drops every signup/write since it** |
+| DNS cutover (Phase 6, registrar-dependent) | dashboard + registrar | TODO |
+| Zone Cache Rules (Phase 7.2) + custom-domain route | dashboard | TODO |
+| Workers Builds on ASU (7.3), Web Analytics beacon (7.4) | dashboard | TODO |
+| Rotate leaked `cfat_`/R2 keys + `ASU_MIGRATION_TOKEN` | dashboard | TODO — vestigial (0 `src/` refs) + OAuth session is separate, so **rotate today, not post-Phase-7; nothing in the app depends on them** |
+| Revoke the `art_v2_…` clone token pasted into chat (2026-09-30) | Cloudflare dashboard → API Tokens | TODO — treated as compromised on paste. **Never clone with a token embedded in the URL** (lands in `.git/config` + shell history); use the SSH remote or a credential helper. |
+| Decommission gmail (Phase 8, T+14d green) | dashboard | TODO |
+
+### D. `verify:release` result (this session)
+
+`npm run verify:release` → **PASS, 99/99 checks, 336/336 unit tests, exit 0**.
+Honest scope: the live/browser gates (28–32) auto-**SKIPPED** because no
+preview server / Workers AI came up in this environment, and the ratchet
+counts a skip as pass. So this is **code-green** (it validates the safety-lexicon
+hardening), **not** a production e2e. The live-model probe stays blocked until
+AI Gateway is recreated and Workers AI returns something other than 1050.
+
+### E. Account ID reconciliation
+
+| ID | Account | Role | Verified? |
+|---|---|---|---|
+| `8b1954d216d65077c6480d62583fe2c2` | `defragapp@gmail.com` — "Sovereign.os Platform Build" | Source/gmail — still serving prod | ✅ `wrangler whoami` 2026-09-30 |
+| `ac9a47ddb8928af2f3535e2a1e4d8349` | `cjowen93@asu.edu` | Target/ASU | ⚠️ asserted by this runbook — confirm via `whoami` on ASU before any write |
+| `c550cfc37f2d5eb4ff7f247c2ca31185` | seen in pre-migration `wrangler.jsonc` | historical/unknown | ⚠️ not the current session; ignore unless `whoami` surfaces it |
+
+`wrangler whoami` MUST list the ASU id (and the account that owns the
+`production-os` worker + D1 `8d09a3f5-bcda-…`) before any `secret put` or
+`deploy`. Do not hardcode an id from this table.
+
+### F. Dual-deploy collision (route deploy vs. merge-to-main)
+
+The custom-domain route deploy (Phase 6.5 / Step 10) and
+`git merge migrate-to-asu && git push origin main` (Step 14) BOTH deploy the
+same worker name — and during the 14-day window gmail's Workers Builds is still
+live, so a git integration on one account and a CLI push on the other can race
+on `production-os`. Before either: **pause Workers Builds on gmail**
+(dashboard → Workers & Pages → Builds → Pause), ship through ONE path, verify,
+then make ASU Builds the shipping integration (gmail stays paused as the
+rollback path until Phase 8). Never fire git-integration and CLI simultaneously.
+
+### G. Known gotchas (session-verified)
+
+1. `.dev.vars` `CLOUDFLARE_ACCOUNT_ID` overrides the shell var for the
+   `opennextjs-cloudflare deploy` child process — update the file when
+   switching accounts.
+2. D1 `--file` import fails with `D1_RESET_DO` on freshly-created DBs —
+   workaround: schema via `--command`, then FK-ordered INSERTs via `--command`.
+3. D1 names are not unique — never re-run `d1 create production-os-db`.
+4. The pasted tokens (`cfat_`, `art_v2_`) + `ASU_MIGRATION_TOKEN` are
+   R2/Object-scope only — cannot deploy or set Worker secrets. Use OAuth.
+5. Workers AI 1050 may need a separate AI subscription even on Workers Paid —
+   resolve before the DNS cutover.
+6. `.dev.vars*` backups can hold live secrets — gitignore wildcard, not `.dev.vars` alone.
+7. Gmail Cloudflare login is `defragapp@gmail.com`; `chadowen93@gmail.com` is only `SUPPORT_INBOX`.
