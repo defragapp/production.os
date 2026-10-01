@@ -11,7 +11,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile";
 import { syncStripeTier } from "@/lib/stripe";
 import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
 import { readUsage } from "@/lib/usage";
-import { CURRENT_TERMS_VERSION } from "@/lib/terms";
+import { CURRENT_TERMS_VERSION, termsNeedReaccept } from "@/lib/terms";
 import { resolveTier } from "@/lib/tier";
 import type { User } from "@/lib/types";
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   // email_verified column. Fall back rather than 500ing the session check.
   let user: User | null;
   try {
-    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, memory_mode, gift_expires_at, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
+    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, memory_mode, gift_expires_at, created_at, terms_version FROM users WHERE id = ?").bind(payload.sub).first<User>();
   } catch {
     try {
       user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
@@ -74,6 +74,15 @@ export async function GET(request: NextRequest) {
     turnstileSiteKey: env.TURNSTILE_SITE_KEY || null,
     usage,
     hasBaseline,
+    // Terms state for the in-app re-acceptance gate (see <TermsGate /> and
+    // POST /api/auth/accept-terms). null/undefined `stored` is treated as
+    // “not yet applicable” and never triggers the modal — the login path
+    // backfills it silently.
+    terms: {
+      stored: user.terms_version ?? null,
+      current: CURRENT_TERMS_VERSION,
+      needsReaccept: termsNeedReaccept(user.terms_version),
+    },
     // Effective-entitlement detail for the account/upgrade surfaces: a gifted
     // pass reads as Sovereign+ (with its expiry) but is not a paid subscription.
     tier: {

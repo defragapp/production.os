@@ -4,6 +4,7 @@ import { WebAnalytics } from "@/components/web-analytics";
 import { TabBar } from "@/components/tab-bar";
 import { InstallPrompt } from "@/components/install-prompt";
 import { ServiceWorkerRegistration } from "@/components/sw-registration";
+import { TermsGate } from "@/components/terms-gate";
 import "./globals.css";
 
 const sans = Manrope({
@@ -146,6 +147,7 @@ export default function RootLayout({
         <InstallPrompt />
         <ServiceWorkerRegistration />
         <WebAnalytics />
+        <TermsGate />
       </body>
     </html>
   );

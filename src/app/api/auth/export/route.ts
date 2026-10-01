@@ -101,6 +101,73 @@ export async function GET(request: NextRequest) {
     journeys = [];
   }
 
+  // ── Journey events (append-only audit trail of milestone unlocks) ──
+  let journeyEvents: unknown[] = [];
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT id, journey_id, milestone, source, created_at FROM journey_events WHERE user_id = ? ORDER BY created_at",
+    )
+      .bind(userId)
+      .all<Record<string, unknown>>();
+    journeyEvents = rows.results ?? [];
+  } catch {
+    journeyEvents = [];
+  }
+
+  // ── Chat usage (per-UTC-day message counters; no content, just counts) ──
+  let chatUsage: Array<{ day: string; used: number }> = [];
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT day, used FROM chat_usage WHERE user_id = ? ORDER BY day",
+    )
+      .bind(userId)
+      .all<{ day: string; used: number }>();
+    chatUsage = rows.results ?? [];
+  } catch {
+    chatUsage = [];
+  }
+
+  // ── Passkeys (metadata only — public_key stays in D1; it's a crypto
+  // artefact whose disclosure has no user-facing value and only widens blast
+  // radius if the export file leaks). ──
+  let passkeys: Array<Record<string, unknown>> = [];
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT credential_id, label, transports, counter, created_at, last_used_at FROM passkeys WHERE user_id = ? ORDER BY created_at",
+    )
+      .bind(userId)
+      .all<Record<string, unknown>>();
+    passkeys = rows.results ?? [];
+  } catch {
+    passkeys = [];
+  }
+
+  // ── Promo grants (both directions: passes this account minted, and any
+  // pass this account redeemed — see schema.sql promo_grants). The raw code
+  // is never stored (only its SHA-256), so `code_hash` is safe to include. ──
+  let promoGrantsCreated: Array<Record<string, unknown>> = [];
+  let promoGrantsRedeemed: Array<Record<string, unknown>> = [];
+  try {
+    const created = await env.DB.prepare(
+      "SELECT code_hash, duration_days, max_redemptions, redeemed_count, note, expires_at, revoked_at, created_at FROM promo_grants WHERE created_by = ? ORDER BY created_at",
+    )
+      .bind(userId)
+      .all<Record<string, unknown>>();
+    promoGrantsCreated = created.results ?? [];
+  } catch {
+    promoGrantsCreated = [];
+  }
+  try {
+    const redeemed = await env.DB.prepare(
+      "SELECT code_hash, duration_days, redeemed_count, expires_at, revoked_at, created_at FROM promo_grants WHERE redeemed_by_user_id = ?",
+    )
+      .bind(userId)
+      .all<Record<string, unknown>>();
+    promoGrantsRedeemed = redeemed.results ?? [];
+  } catch {
+    promoGrantsRedeemed = [];
+  }
+
   // ── Connections (name + role + consent flags — never another person's data) ──
   let connections: unknown[] = [];
   try {
@@ -135,7 +202,7 @@ export async function GET(request: NextRequest) {
 
   const payload = {
     exportedAt: new Date().toISOString(),
-    formatVersion: 1,
+    formatVersion: 2,
     account: {
       id: user.id,
       email: user.email,
@@ -144,18 +211,30 @@ export async function GET(request: NextRequest) {
       subscriptionTier: user.subscription_tier,
       stripeCustomerId: user.stripe_customer_id ?? null,
       memberSince: user.created_at,
+      // Server-side memory preference — 'local' accounts keep their chat
+      // history only in the browser's encrypted IndexedDB, so it is not
+      // present in this payload and cannot be reconstructed from the server.
+      memoryMode: user.memory_mode ?? "server",
       // The consent receipt travels with the data it authorises.
       consent,
     },
     baseline,
     conversations,
     journeys,
+    journeyEvents,
+    chatUsage,
+    passkeys,
     connections,
     invitations,
+    promoGrantsCreated,
+    promoGrantsRedeemed,
     notes: [
       "Passwords are stored only as a salted, one-way hash and are not included in this export.",
       "Live email-verification and password-reset tokens are not included; they expire on their own.",
       "Payment records (invoices, receipts, card details) are held by Stripe as our payment processor and are not stored on our servers. Open the billing portal to retrieve them from Stripe.",
+      "Passkey public keys are not included — they are cryptographic material only your device and this server ever need, and copying them into a downloadable file only widens exposure.",
+      "If your memory mode is set to 'local', your chat history is kept encrypted in this browser only and is not stored on our servers — nothing under `conversations` will appear for those threads.",
+      "Semantic-recall embeddings for your messages are stored in Cloudflare Vectorize as high-dimensional coordinates with no readable text; deleting your account sweeps them.",
       "Deleting your account removes every row above immediately. A few operational records survive only until their short expiry: rate-limit counters (up to an hour) and email-delivery markers (up to 30 days).",
     ],
   };

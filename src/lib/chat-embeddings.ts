@@ -229,6 +229,54 @@ export async function searchChat(
 }
 
 /**
+ * Full erasure sweep for a single account. Called from DELETE /api/auth/account
+ * before the D1 cascade runs, so a GDPR/CCPA right-to-erasure request removes
+ * the vector coordinates as well as the underlying rows. Because Vectorize
+ * ids are deterministic (userId::threadId::turnIndex::role) and the account's
+ * threads are still readable in D1 at this point, we can enumerate every id
+ * without a metadata query.
+ *
+ * Vectorize's `deleteByIds` has a per-request cap (currently 1000), so this
+ * batches. Batches are issued sequentially — a burst in parallel would blow
+ * the per-index write budget and mask real errors behind rate-limit noise.
+ * Failures are swallowed with a log line: the D1 cascade is the authoritative
+ * deletion, and orphaned Vectorize metadata (userId + threadId + turnIndex +
+ * role, with no plaintext) has no informational value on its own.
+ *
+ * Returns the total number of ids we asked Vectorize to delete. Zero when the
+ * binding isn't configured (dev without a Vectorize index) — the D1 DELETE
+ * still runs and the account is legitimately gone.
+ */
+export async function deleteUserEmbeddings(
+  env: AppEnv,
+  userId: string,
+  threads: Array<{ threadId: string; turnCount: number }>,
+): Promise<number> {
+  const index = getIndex(env);
+  if (!index) return 0;
+  const ids: string[] = [];
+  for (const t of threads) {
+    for (let i = 0; i < t.turnCount; i++) {
+      ids.push(vectorId({ threadId: t.threadId, turnIndex: i, role: "user", text: "" }, userId));
+      ids.push(vectorId({ threadId: t.threadId, turnIndex: i, role: "assistant", text: "" }, userId));
+    }
+  }
+  if (ids.length === 0) return 0;
+  const BATCH = 500;
+  let deleted = 0;
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const slice = ids.slice(i, i + BATCH);
+    try {
+      await index.deleteByIds(slice);
+      deleted += slice.length;
+    } catch (err) {
+      console.error("[deleteUserEmbeddings] batch failed:", err instanceof Error ? `${err.name}: ${err.message}` : err);
+    }
+  }
+  return deleted;
+}
+
+/**
  * Backfill helper — embeds every (user, assistant) pair in a thread that
  * is not already indexed. Idempotent via `upsert`; safe to re-run. The
  * chat route does NOT use this — it only calls `embedLatestTurn`. The

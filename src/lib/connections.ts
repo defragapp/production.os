@@ -36,7 +36,7 @@ export async function getAuthPayload(request: NextRequest) {
 
 export async function loadUser(env: { DB: D1Database }, userId: string): Promise<User | null> {
   try {
-    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at FROM users WHERE id = ?").bind(userId).first<User>();
+    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at, terms_version FROM users WHERE id = ?").bind(userId).first<User>();
   } catch {
     return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(userId).first<User>();
   }
