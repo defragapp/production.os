@@ -149,8 +149,8 @@ not needed: the account token covers Workers Scripts + D1 read/write.
 | Phase 5 drift closure | No re-import was needed: ASU D1 row counts and max-timestamps matched gmail to the second at bind time (6 users, 2 journeys, 7 events, 4 baselines, 5 threads). |
 | Final deploy | version `5ff452c7-99f3-4541-969f-bec94dfcc0e0` (rollback ref `232be9bc`) — commit `b9d0522` incl. `f5f8398` safety fixes. `STRIPE_SECRET_KEY` set via `secret put` immediately before. |
 | Email DNS (Phase 1.5) | Created via zone DNS API: `resend._domainkey` TXT (DKIM), `send` MX + `send` TXT SPF. **Resend reports the domain `verified`** (DKIM/SPF/Tracking all green). Resend's suggested `sovereign` CNAME was deliberately **not** added — it would hijack the app origin at `sovereign.defrag.app`. |
-| Zone hardening via API | `security_level=medium`, `min_tls_version=1.2`, `always_use_https=on`, `automatic_https_rewrites=on`, `ssl=full`, `browser_cache_ttl=7200`, `early_hints=on`, `0rtt=on`. Cloudflare Managed Free Ruleset (OWASP-class) confirmed present on the zone by default. |
-| Auth-scheme blocks (dashboard-only) | Cache Rules (`/zones/{id}/cache_rules` → 7000 no route for account tokens), rate-limit Configuration Ruleset (`10405 Method not allowed for this authentication scheme`), Bot Fight Mode (`settings/bot_fight_mode` unrecognized via this path), Workers AI spend alert (account billing, no API). |
+| Zone hardening via API | `security_level=medium`, `min_tls_version=1.2`, `always_use_https=on`, `automatic_https_rewrites=on`, `ssl=full`, `browser_cache_ttl=7200`, `early_hints=on`, `0rtt=on`, **`security_header` HSTS max_age=63072000 includeSubDomains preload nosniff=on**. Cloudflare Managed Free Ruleset (OWASP-class) confirmed present. |
+| Auth-scheme blocks (remaining) | Cache Rules TTL (`/zones/{id}/cache_rules` → 7003, needs Cache Rules:Edit), Bot Fight Mode (plan-gated, absent on Free Website). **Rate limit and custom WAF are DONE via `PUT .../phases/{phase}/entrypoint`** — the earlier "not writable" was about `POST /zones/{id}/rulesets` (shared create), not the phase entrypoint. Workers AI spend alert superseded by gateway rate limit (enforced). |
 
 ### ASU resource inventory after cutover (the app's complete footprint)
 
@@ -175,11 +175,12 @@ already returns NXDOMAIN and the zone is `moved`, so zero traffic can
 reach them). The remaining ~18 workers / 8 other D1s / 8 other gateways
 on gmail belong to unrelated projects — out of scope, keep.
 
-### Open items after 2026-10-01
+### Open items after 2026-10-01 (force-pass update)
 
-1. Dashboard clicks (values above): 3 Cache Rules (Phase 7.2), rate limit
-   `/api/auth` 20 req/60 s → managed challenge 300 s, Bot Fight Mode ON,
-   Workers AI spending alert.
+1. **Cache Rules ×3 + optional 4th** — dashboard-only (values above,
+   `npm run verify:edge` to confirm). Rate limit DONE (edge 10/10s block,
+   verified 429). Bot Fight Mode struck (plan-gated). AI spend alert
+   superseded by gateway rate limit (120/min enforced).
 2. Browser sanity: log in as an existing user (password reset emails must
    go out first — Fork B voided all hashes), send one chat to confirm the
    gateway clears the old 1050 on ASU billing.
@@ -328,6 +329,19 @@ That is how the edge rules below were authored programmatically.
   Cache Rules edit. Left the `http_request_cache_settings` entrypoint
   attached but empty (`rules:0`) — inert, and the dashboard writes to
   this same ruleset.
+- **Custom WAF scan-block — DONE via API and verified live.** Ruleset id
+  `54404a0f98e04a64946c6c7410b1b5f8`, phase `http_request_firewall_custom`,
+  action `block`. Blocks 13 common bot-scanner path fragments (`/.env`,
+  `/wp-admin`, `/wp-login`, `/xmlrpc.php`, `/phpmyadmin`, `/cgi-bin`,
+  `/.git`, `/.htaccess`, `/phpinfo`, `/server-status`, `/shell`, `/eval`,
+  `/vendor/phpunit`) before they reach the Worker. Verified: each
+  returns 403; legitimate paths (/, /about, /llms.txt, /api/auth) pass
+  through at 200.
+- **HSTS enabled via zone settings PATCH.** `security_header` now carries
+  `strict_transport_security: {enabled:true, max_age:63072000
+  (2 years), includeSubDomains:true, preload:true, nosniff:true}`.
+  Live header confirmed: `max-age=63072000; includeSubDomains; preload`.
+  Preload-qualified (submit to hstspreload.org when ready).
 
 
 ### Same-day follow-ups (2026-10-01, later session)
