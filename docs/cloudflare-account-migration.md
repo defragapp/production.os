@@ -187,6 +187,30 @@ on gmail belong to unrelated projects — out of scope, keep.
    were pasted into chat; roll them at the next convenient window.
 4. Phase 8 decommission at T+14d green.
 
+### Same-day follow-ups (2026-10-01, later session)
+
+- **AI Gateway caching enabled via API.** The write path turned out to
+  exist: full-body `PUT /accounts/{id}/ai-gateway/gateways/{slug}` (the
+  `/settings` suffix is the one that 404s). `cache_ttl=3600` confirmed
+  live on `sovereign-ai-gateway` — repeated identical chat prompts now
+  serve from gateway cache instead of re-billing Workers AI.
+- **Password-reset emails (Fork B) kicked off.** `POST /api/auth/reset`
+  fired for the owner account; the route is ungated and needs no
+  Turnstile. Remaining accounts self-serve the same button.
+- **Origin-header OG caching tested and reverted.** Added
+  `/s/:path*/opengraph-image` + `/opengraph-image` immutable rules to
+  `next.config.ts`, proved against a local `opennextjs-cloudflare
+  preview`: the header still came back `max-age=0, must-revalidate` —
+  the adapter's stamp overrides config rules on these dynamic routes,
+  exactly as the sigil-OG file's comment documented. Change reverted;
+  the zone Cache Rule is the only working half. Re-deployed clean HEAD
+  as version `8f7a7b7e-3d71-4e3f-b3cd-52e00ee7aa58` (rollback refs:
+  `5ff452c7`, then `232be9bc`).
+- **Note for Phase 7 re-evaluation:** on the ASU account the Workers
+  Paid plan removes the 1102 CPU hard-fail that motivated the cache
+  rules; the sigil-OG rule is now a cost/latency optimization rather
+  than an availability fix.
+
 ## Two blockers before Phase 5
 
 1. **`PASSWORD_PEPPER` retrieval.** The value is stored as a Worker secret
