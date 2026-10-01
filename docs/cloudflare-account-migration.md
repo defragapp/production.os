@@ -285,6 +285,15 @@ second should show `cf-cache-status: HIT`; repeat for a real
 `/s/<token>/opengraph-image`, `/llms.txt`, and an `/api/auth` POST burst
 to confirm the block trips.
 
+This is now a permanent gate: **`npm run verify:edge`**
+(`scripts/verify-edge-cache.mjs`) warms each path and reads
+`cf-cache-status` on the second hit, printing pass/fail per rule group and
+exiting non-zero until all are cached. Baseline (pre-rules, 2026-10-01):
+2/10 — `/llms.txt` + `/llms-full.txt` already `HIT` (public/ statics are
+edge-cached by default), the other 8 `MISS`. Pass a real share token with
+`node scripts/verify-edge-cache.mjs --sigil <token>` to also check
+`sigil-og-immutable`.
+
 ### Applied result (2026-10-01) — the write vector that works
 
 Correction to the "not doable" framing above: `POST /zones/{id}/rulesets`
