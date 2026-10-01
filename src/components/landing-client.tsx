@@ -8,6 +8,8 @@ import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { Testimonials } from "@/components/testimonials";
+import { PricingTable } from "@/components/pricing-table";
 import { cn } from "@/lib/utils";
 import type { BaselineData } from "@/lib/types";
 
@@ -562,6 +564,10 @@ export function LandingClient() {
           </div>
         </section>
 
+        {/* Social proof slot — see src/content/testimonials.ts for why the
+            array is empty today and what it takes to fill it honestly. */}
+        <Testimonials />
+
 {/* ── Plans ────────────────────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
         <section className="relative overflow-hidden px-6 py-20 md:py-28">
@@ -616,6 +622,8 @@ export function LandingClient() {
                 </Link>
               </div>
             </div>
+
+            <PricingTable />
           </Reveal>
         </section>
 
@@ -655,6 +663,9 @@ export function LandingClient() {
           <div className="flex flex-wrap items-center gap-6">
             <Link href="/about" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               Philosophy
+            </Link>
+            <Link href="/blog" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
+              Field Notes
             </Link>
             <Link href="/faq" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               FAQ
