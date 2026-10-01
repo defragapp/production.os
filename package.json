@@ -22,7 +22,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify:release": "node scripts/verify-release.mjs"
+    "verify:release": "node scripts/verify-release.mjs",
+    "verify:edge": "node scripts/verify-edge-cache.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.2",
