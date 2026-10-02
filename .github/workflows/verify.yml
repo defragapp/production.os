@@ -28,6 +28,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # worker-configuration.d.ts is committed (tsconfig "types" points at it),
+      # so a stale copy means someone edited wrangler.jsonc bindings and forgot
+      # to re-run `npm run cf-typegen` — or that the config and the types
+      # disagree about what a binding is. `--check` fails CI instead of letting
+      # a drifted file land.
+      - name: Verify generated Worker types are current
+        run: npm run cf-typegen:check
+
       # The ratchet boots a real OpenNext preview worker (workerd) and drives
       # it with system Chrome (`channel: "chrome"`, preinstalled on the
       # runner) against a LOCAL miniflare D1 only — never production.

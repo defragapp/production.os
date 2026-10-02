@@ -294,7 +294,22 @@ async function handleChat(request: NextRequest) {
     return new Response(JSON.stringify({ error: "Sovereign couldn't finish that answer — try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
   const tGen = Date.now();
-  console.log(`[chat] timing pre=${tPre - tStart}ms gen=${tGen - tPre}ms total_to_response=${tGen - tStart}ms`);
+  // Object form, not template-string form. Workers Logs extracts top-level keys
+  // from `console.log({...})` and indexes them, so these become real filterable
+  // dimensions (`WHERE total_ms > 2000`). Interpolated strings only produce one
+  // blob of message text that has to be substring-matched in the dashboard —
+  // which is precisely the "find the slow chat turn" query you want to be one
+  // click rather than a regex.
+  // https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+  console.log({
+    event: "chat_timing",
+    pre_ms: tPre - tStart,
+    gen_ms: tGen - tPre,
+    total_ms: tGen - tStart,
+    used_fallback: result.usedFallback,
+    repair_attempts: result.repairAttempts,
+    validated: result.validated,
+  });
   const currentThreadId = threadId ?? generateUUID();
   const userId = payload.sub;
   const messagesToStore: ChatMessage[] = [...conversation, { role: "assistant", content: result.text }];

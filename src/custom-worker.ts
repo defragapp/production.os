@@ -197,7 +197,10 @@ export default {
   ): Promise<void> {
     try {
       const results = await runCleanup(env);
-      console.log(`[cron ${controller.cron}] ${results.join(" | ")}`);
+      // Object form so `cron` is a filterable field, not text you have to
+      // regex for. Keeps the per-step detail in `steps` while leaving the
+      // happy-path log itself greppable by schedule.
+      console.log({ event: "cron_cleanup", cron: controller.cron, steps: results });
     } catch (err) {
       // Log but don't throw — Cloudflare retries a failed scheduled handler
       // up to 3 times. Most cleanup failures are transient (D1 cold path).
@@ -210,7 +213,7 @@ export default {
     // re-throw here — that would re-trigger the cleanup pass above.
     try {
       const scan = await runTransitScan(env as unknown as AppEnv);
-      console.log(`[cron ${controller.cron}] ${scan}`);
+      console.log({ event: "cron_transit_scan", cron: controller.cron, detail: scan });
     } catch (err) {
       console.error(`[cron ${controller.cron}] transit scan FAILED:`, err);
     }

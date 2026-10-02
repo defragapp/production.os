@@ -35,25 +35,33 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 ## Release flow
 
 The proven, reliable path is **verify → push → confirm → (fallback) deploy**.
-Workers Builds (the git integration) is *supposed* to fire on every push to
-`main`, and sometimes produces a build-system-authored version within a couple
-of minutes. But it is **not dependable on its own**: on release `11586ad` no new
-version had landed ~6 minutes after the push, and the release had to be shipped
-with a single CLI `npm run deploy`. So treat the push as a *candidate* deploy and
-verify it, rather than assuming it:
+Workers Builds (the git integration) is **not connected to this repo**. There is
+no Git integration on the Worker in the dashboard, so a push to `main` changes
+the repository and nothing else — no build is triggered, and
+`wrangler versions list` shows only CLI-authored versions with zero `push_event`
+source. The old `11586ad` incident that made it look "flaky" was in fact this:
+nothing was ever wired up to fire.
+
+Until the dashboard integration is enabled (repo `defragapp/production.os`,
+production branch `main`, root directory `/`), **the CLI is the only deploy
+path**. Verify, then ship exactly once:
 
 ```bash
 npm run verify:release                          # every gate green, or do not ship
-git push origin main                            # Workers Builds MAY ship it
+rm -rf .open-next .next && npm run deploy       # the deploy
+npx wrangler deployments list                   # confirm the new version
+```
+
+Once Git integration is enabled, the push path becomes valid again:
+
+```bash
+git push origin main
 npx wrangler deployments list                   # poll ~2 min for the new version
 ```
 
-If `wrangler deployments list` shows no new version within ~2 minutes, run the
-CLI deploy exactly once against the clean tree:
-
-```bash
-rm -rf .open-next .next && npm run deploy
-```
+If a build is genuinely triggered, do not also run the CLI deploy while it is in
+flight — two builds of the same commit collide and stall static-asset binding
+propagation (the 503/hang seen on `/`, `/privacy`, `/terms`).
 
 `npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`)
 and then `wrangler deploy`, which rolls out to 100% of traffic; live at

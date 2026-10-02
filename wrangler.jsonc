@@ -3,13 +3,43 @@
   "name": "production-os",
   "main": "./src/custom-worker.ts",
   "compatibility_date": "2026-09-10",
-  "compatibility_flags": ["nodejs_compat"],
+  // nodejs_compat is intentionally NOT declared. As of compatibility_date
+  // 2026-08-04 the runtime enables nodejs_compat AND nodejs_compat_v2 by
+  // default, and the docs say verbatim to omit them from new configurations.
+  // v2 bundles extra polyfills/globals, so re-declaring the old flag only
+  // invited confusion about which behaviour was active.
+  // https://developers.cloudflare.com/workers/configuration/compatibility-flags/
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   // head_sampling_rate 1.0 for the launch window; revert to 0.1 at T+10d.
   // Full-trace logs during launch week are the whole point of a paid
   // Workers Logs plan — this is what makes the 1102 / JPL 429 diagnosis
   // possible the moment traffic appears.
-  "observability": { "enabled": true, "head_sampling_rate": 1.0 },
+  //
+  // redact_query_string is the load-bearing setting here, and it DEFAULTS TO
+  // FALSE. Email-verification tokens, invite tokens and password-reset tokens
+  // all ride in query strings (`/api/auth/verify?token=`,
+  // `/onboard?reset=`, `/api/invites/info?token=`), so at the default every
+  // one of them lands in Workers Logs in cleartext for the full 7-day
+  // retention window — retrievable by anyone with dashboard access to the
+  // log store. Turned on here so the log URL keeps path and status but drops
+  // the query. Flip this back only together with moving those tokens to
+  // POST bodies or fragments.
+  // https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0,
+    "redact_query_string": true
+  },
+  // Smart Placement is deliberately NOT enabled. Every hot backend this
+  // Worker talks to is Cloudflare-native and already colocated — D1, KV,
+  // Vectorize and Workers AI all run in the same network the Worker does, so
+  // there is no round trip left to remove. The only true external hop is the
+  // NASA/JPL Horizons API (a single, anycasted, far-away host) and the docs
+  // are explicit that host/hostname hints "do not work correctly for
+  // broadcast, anycast, multicast, or replicated resources". Enabling it would
+  // add a forwarding hop and, per the docs, only helps fetch handlers — at the
+  // cost of an extra leg for every request.
+  // https://developers.cloudflare.com/workers/configuration/placement/
   "d1_databases": [
     // ASU account (cjowen93@asu.edu) — created 2026-09-30 during migration.
     // Source-account D1 (f4274cce-…) is retired after Phase 8 decommission.

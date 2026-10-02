@@ -2,13 +2,14 @@
   "name": "production-os",
   "version": "0.1.0",
   "private": true,
-  "//release": "CANONICAL RELEASE PATH, in this order: (1) `npm run verify:release` — every gate in scripts/verify-release.mjs green (the count grows with each ratchet; the script's own header is the source of truth), (2) `git push origin main`, (3) `npx wrangler deployments list` POLLED for ~2 minutes to see whether a new version rolled out. Workers Builds on the git integration is SUPPOSED to fire on every push to main, but it is NOT dependable on its own — on release 11586ad no build-system-authored version had landed ~6 minutes after the push, so the release had to be shipped by hand. Treat step 3 as a CHECK of the push, not an assumption: if no new version appears within ~2 minutes, run `rm -rf .open-next .next && npm run deploy` exactly once. A CLI-authored version shows your email as Author; a build-system version shows undefined. NEVER run the CLI deploy while a push-triggered build is still in flight — that is a second build of the same commit at once, and colliding builds stall static-asset binding propagation (the 503/hang seen on /, /privacy, /terms).",
+  "//release": "CANONICAL RELEASE PATH, in this order: (1) `npm run verify:release` — every gate in scripts/verify-release.mjs green (the count grows with each ratchet; the script's own header is the source of truth), (2) `git push origin main`, (3) poll `npx wrangler deployments list` ~2 min to see whether a new version rolled out. AS OF 2026-10-02 Workers Builds is NOT CONNECTED to this repo (no Git integration in the dashboard), so step 2 does NOT deploy anything and the poll will always time out — `wrangler versions list` shows only CLI-authored versions, zero push_event. Until the dashboard Git integration is enabled (repo defragapp/production.os, branch main, root /), treat the CLI as the ONLY deploy path: `rm -rf .open-next .next && npm run deploy`, exactly once per release. Do NOT run the CLI deploy while a push-triggered build is in flight — colliding builds stall static-asset binding propagation (the 503/hang seen on /, /privacy, /terms).",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env cloudflare",
+    "cf-typegen": "wrangler types",
+    "cf-typegen:check": "wrangler types --check",
     "db:migrate": "wrangler d1 execute production-os-db --local --file=./schema.sql",
     "db:migrate:remote": "wrangler d1 execute production-os-db --remote --file=./schema.sql",
     "db:migrate:0001": "wrangler d1 execute production-os-db --local --file=./migrations/0001_token_version.sql",
@@ -50,7 +51,6 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260910.1",
     "@opennextjs/cloudflare": "^1.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",

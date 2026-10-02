@@ -28,11 +28,12 @@
       ]
     },
     "types": [
-      "@cloudflare/workers-types"
+      "./worker-configuration.d.ts"
     ]
   },
   "include": [
     "next-env.d.ts",
+    "worker-configuration.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
