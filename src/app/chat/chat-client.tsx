@@ -3,7 +3,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUp, Compass, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Shield, Square, Users, X } from "lucide-react";
+import { ArrowUp, Compass, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Search, Shield, Square, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
@@ -313,6 +313,24 @@ export function ChatClient() {
   // The archive is opened, not navigated to: a person finishing an arc should be
   // able to see the one they just closed without leaving the conversation.
   const [pastOpen, setPastOpen] = useState(false);
+  // ── Semantic recall (Workers Paid / Vectorize) ────────────────────
+  // A slide-down panel above the transcript that turns a natural-language
+  // question ("what did we say about sleep last month?") into ranked
+  // snippets from server-memory threads. Debounced 350ms; the search
+  // endpoint itself is rate-limited to 20/min, and the panel is inert
+  // for Device-Only accounts (nothing to index). `indexed` reflects
+  // whether *any* vectors exist for this user yet, so the empty-state
+  // copy can differentiate "you have no matches for this phrase" from
+  // "your history has not been embedded yet — start chatting".
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<
+    Array<{ threadId: string; turnIndex: number; role: "user" | "assistant"; snippet: string; score: number; updatedAt: string | null }> | null
+  >(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchIndexed, setSearchIndexed] = useState(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
   // The exact text of a turn that couldn't be delivered, plus why: `unreachable`
   // never got an answer at all (dropped connection, 429, 503), `incomplete` means
   // the stream opened and then died before an answer arrived. Holding it lets us
@@ -459,6 +477,72 @@ export function ChatClient() {
       await linkJourneyToThread(data.thread?.journey_id ?? null);
     } catch {}
   }, [clearThreadContext, linkJourneyToThread]);
+
+  // Open a thread from a search hit and scroll the referenced turn into the
+  // middle of the viewport, flashing a short highlight so the eye can find
+  // it. Two nested rAFs: the first lets setMessages commit, the second lets
+  // the transcript paint before we ask the browser to scroll — otherwise
+  // the anchor node does not yet exist and the call is silently a no-op.
+  const jumpToTurn = useCallback(async (targetThreadId: string, turnIndex: number) => {
+    setSearchOpen(false);
+    await openThread(targetThreadId);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const node = document.querySelector<HTMLElement>(`[data-turn="${turnIndex}"]`);
+      if (!node) return;
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+      node.classList.add("turn-highlight");
+      window.setTimeout(() => node.classList.remove("turn-highlight"), 1800);
+    }));
+  }, [openThread]);
+
+  // Debounced semantic search. Every keystroke resets the pending request
+  // via AbortController; the network call itself fires 350ms after typing
+  // stops. Escape closes the panel; empty/short queries clear results
+  // without a fetch.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      searchAbortRef.current?.abort();
+      searchAbortRef.current = null;
+      return;
+    }
+    setSearchLoading(true);
+    const timeoutId = window.setTimeout(async () => {
+      searchAbortRef.current?.abort();
+      const ac = new AbortController();
+      searchAbortRef.current = ac;
+      try {
+        const res = await fetch("/api/chat/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q, topK: 8 }),
+          signal: ac.signal,
+        });
+        if (!res.ok) {
+          setSearchResults([]);
+          setSearchIndexed(false);
+          return;
+        }
+        const data = await res.json() as {
+          results?: Array<{ threadId: string; turnIndex: number; role: "user" | "assistant"; snippet: string; score: number; updatedAt: string | null }>;
+          indexed?: boolean;
+        };
+        setSearchResults(data.results ?? []);
+        setSearchIndexed(Boolean(data.indexed));
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        setSearchResults([]);
+      } finally {
+        if (searchAbortRef.current === ac) setSearchLoading(false);
+      }
+    }, 350);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchOpen, searchQuery]);
 
   const startNewThread = useCallback(() => {
     clearThreadContext();
@@ -922,6 +1006,19 @@ export function ChatClient() {
                   };
                   return u;
                 });
+                continue;
+              }
+              // The `{ recall: true }` frame follows the answer text and simply
+              // flags the assistant message being built. The reserved label slot
+              // above the bubble already holds its height, so flipping this on
+              // reveals the caption with zero layout shift. Session-only: the
+              // flag is stripped before anything is persisted.
+              if (parsed.recall) {
+                setMessages((prev) => {
+                  const u = [...prev];
+                  u[u.length - 1] = { ...u[u.length - 1], recalled: true };
+                  return u;
+                });
               }
             } catch {}
           }
@@ -1208,6 +1305,26 @@ export function ChatClient() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => {
+                  setSearchOpen((v) => {
+                    const next = !v;
+                    if (next) requestAnimationFrame(() => searchInputRef.current?.focus());
+                    else { setSearchResults(null); setSearchQuery(""); }
+                    return next;
+                  });
+                }}
+                disabled={isStreaming}
+                aria-expanded={searchOpen}
+                title="Search past conversations"
+                className="shrink-0"
+              >
+                <Search className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden lg:inline">Search</span>
+                <span className="sr-only">Search past conversations</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPeopleOpen((v) => !v)}
                 disabled={isStreaming}
                 aria-expanded={peopleOpen}
@@ -1220,6 +1337,73 @@ export function ChatClient() {
           </div>
 
           {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
+
+          {/* Semantic search panel — slides down between the header and the
+              transcript. Escape closes; a result click calls `jumpToTurn`
+              which opens the referenced thread and scrolls to the exact
+              turn. Local accounts get a different hint because there is
+              literally nothing to search server-side. */}
+          {searchOpen && (
+            <div className="border-b border-border bg-surface-1/95 px-4 py-3 backdrop-blur-sm">
+              <div className="mx-auto max-w-3xl">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setSearchOpen(false); setSearchQuery(""); setSearchResults(null); } }}
+                    placeholder="Search your past conversations…"
+                    aria-label="Search your past conversations"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  />
+                  {searchLoading && (
+                    <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-current border-t-transparent text-muted-foreground" aria-hidden="true" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults(null); }}
+                    aria-label="Close search"
+                    className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {memoryMode === "local" ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Device-Only memory keeps your history off our servers, so there is nothing to search here. Switch to All devices in the memory menu to enable semantic recall.
+                  </p>
+                ) : searchQuery.trim().length < 2 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">Type at least two characters. Search is semantic — ask “what did we say about sleep?” and it will find the moment.</p>
+                ) : searchResults && searchResults.length === 0 && !searchLoading ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {!searchIndexed
+                      ? "Nothing indexed yet. New conversations appear here within a moment of being sent."
+                      : "No matches for that phrase. Try asking the way you'd say it out loud."}
+                  </p>
+                ) : searchResults && searchResults.length > 0 ? (
+                  <ul className="mt-2 space-y-1.5">
+                    {searchResults.map((r) => (
+                      <li key={`${r.threadId}:${r.turnIndex}:${r.role}`}>
+                        <button
+                          type="button"
+                          onClick={() => void jumpToTurn(r.threadId, r.turnIndex)}
+                          className="w-full rounded-lg border border-border/50 bg-surface-2/40 px-3 py-2 text-left transition-colors hover:border-border hover:bg-surface-2"
+                        >
+                          <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {r.role === "assistant" ? "Sovereign" : "You"}
+                            {r.updatedAt ? ` · ${(() => { try { return new Date(r.updatedAt.endsWith("Z") ? r.updatedAt : r.updatedAt + "Z").toLocaleDateString(); } catch { return ""; } })()}` : ""}
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 block text-sm text-foreground">{r.snippet}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          )}
 
           {/* Rendered as a sibling of the veil, never a descendant: the veil
               carries `backdrop-filter`, which makes it the containing block for
@@ -1343,10 +1527,23 @@ export function ChatClient() {
                   return (
                     <div
                       key={idx}
+                      data-turn={idx}
                       className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                     >
                       {msg.role === "assistant" ? (
                         <div className="flex flex-col gap-1.5">
+                          {/* Reserved from mount in both states (only visibility
+                              toggles), so the recall caption arriving after the
+                              answer text never shifts the bubble — measured CLS
+                              stays 0.0000. Quiet, non-interactive, adds no data. */}
+                          <div
+                            aria-hidden={!msg.recalled}
+                            style={{ visibility: msg.recalled ? "visible" : "hidden" }}
+                            className="flex h-4 items-center gap-1.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/55"
+                          >
+                            <span className="h-1 w-1 shrink-0 rounded-full bg-current" aria-hidden="true" />
+                            From your history
+                          </div>
                           <AssistantTurn>
                             {streamingEmpty ? (
                               <>

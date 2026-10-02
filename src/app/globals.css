@@ -489,10 +489,25 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  /* Landscape notch clearance: on iPhone 15/16 Pro in landscape the left/right
+     insets reach 44px. Full-bleed fixed elements (TabBar) need this so
+     interactive content never sits under the camera housing. Only applies
+     in standalone mode (PWA) since browser safe-area insets are zero. */
+  .px-safe {
+    padding-inline: max(env(safe-area-inset-left, 0px), 1rem);
+  }
   /* Reserve clearance so sticky content (chat composer) clears the tab bar in
      standalone mode; a no-op height in the browser where the bar is hidden. */
   .tab-bar-spacer {
     height: 0;
+  }
+}
+
+/* Landscape notch clearance for fixed-position standalone chrome (TabBar).
+   Only active in PWA mode; browser safe-area insets are zero. */
+@media (display-mode: standalone) and (orientation: landscape) {
+  .standalone-only {
+    padding-inline: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px), 0.5rem);
   }
 }
 
@@ -685,6 +700,29 @@ a,[role="button"] {
 }
 .msg-in {
   animation: msg-in 0.24s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+/* Semantic-search jump-to-turn flash. Applied imperatively from the
+   chat client after `data-turn="N"` scrolls into view, removed after
+   the animation window. Uses an outline (not a border) so the flash
+   never changes layout on the message row itself. */
+@keyframes turn-flash {
+  0%   { outline-color: hsla(38, 55%, 78%, 0); }
+  15%  { outline-color: hsla(38, 55%, 78%, 0.55); }
+  70%  { outline-color: hsla(38, 55%, 78%, 0.35); }
+  100% { outline-color: hsla(38, 55%, 78%, 0); }
+}
+.turn-highlight {
+  outline: 2px solid hsla(38, 55%, 78%, 0);
+  outline-offset: 6px;
+  border-radius: 12px;
+  animation: turn-flash 1.8s ease-in-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-highlight {
+    animation: none;
+    outline-color: hsla(38, 55%, 78%, 0.5);
+  }
 }
 
 /* Typing dots for the assistant turn — three real dots with a staggered

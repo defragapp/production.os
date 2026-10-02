@@ -1,9 +1,10 @@
-# Implementation Plan — Sovereign OS Comprehensive UI/UX Audit & Modernization
+# Archive — Sovereign OS UI/UX Audit (Historical)
+
+> **Historical batch plan.** Batches 1–4 completed and shipped as the UI/UX overhaul (commit `6218c4d`). Retained for design-system reference and provenance only. This file does NOT enumerate files created since — for the authoritative current architecture see **§0 Current System State** below and `README.md`. Not part of any active roadmap; new work is tracked in the launch-readiness plan owned by the assistant.
 
 ## Overview
 Elevate, polish, condense, and modernize the visual design and user experience across all public, onboarded, and authenticated routes of Sovereign OS (`sovereign.defrag.app`). The implementation sharpens typography hierarchies, unifies surface elevations and glass tokens, tightens layout densities and micro-spacing, introduces fluid responsive polish, and removes rough visual seams without drifting from the warm, dark-first editorial aesthetic (Manrope + Instrument Serif + JetBrains Mono on warm graphite #0d0d0d / hsl(30 8% 4.5%)).
 
-> **Note — this is a historical UI/UX audit plan** (the visual-polish pass that shipped in earlier phases). It is kept for provenance and does NOT enumerate files created since. For the authoritative current architecture, see **§0 Current System State** below and `README.md`.
 
 ---
 

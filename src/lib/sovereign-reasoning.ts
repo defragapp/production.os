@@ -18,6 +18,7 @@ import {
   validateSovereignText,
 } from "./sovereign-safety";
 import { buildRelationalSignals, buildSystemSignals } from "./sovereign-signals";
+import { parseD1Date } from "./utils";
 import type { SovereignModel } from "./sovereign-model";
 import type { ChatMessage } from "./types";
 import type { HumanDesignComputation } from "./sovereign-humandesign";
@@ -36,6 +37,7 @@ import type {
   ModelInput,
   Observation,
   PatternCandidate,
+  PriorSignal,
   ReasoningClassification,
   ReasoningContext,
   RelationshipScope,
@@ -571,21 +573,25 @@ function detectPersons(history: ChatMessage[]): AuthorizationContext["people"] {
   return labels;
 }
 
-function determineScope(history: ChatMessage[]): RelationshipScope {
+export function determineScope(history: ChatMessage[]): RelationshipScope {
   const text = history.slice(-2).map((m) => m.content).join(" ");
   if (SYSTEM_CUES.some((rx) => rx.test(text))) return "system";
   if (BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return "dyadic";
   return "self";
 }
 
-export function buildReasoningContext(opts: {
+export async function buildReasoningContext(opts: {
   history: ChatMessage[];
   baseline: DerivedBaseline;
   consented?: ConsentedPeer[];
   /** Self's HD computation — enables deterministic relational/system signals. */
   myHd?: HumanDesignComputation;
-}): ReasoningContext {
-  const { history, baseline, consented = [], myHd } = opts;
+  /** Semantic recall from the user's own earlier conversations. The caller
+   *  resolves these asynchronously (see chat-recall.recallPriorSignals) and
+   *  passes them in; this function does no I/O itself. Defaults to empty. */
+  priorSignals?: PriorSignal[];
+}): Promise<ReasoningContext> {
+  const { history, baseline, consented = [], myHd, priorSignals = [] } = opts;
   const latestUser = [...history].reverse().find((m) => m.role === "user");
   const latestText = latestUser?.content ?? "";
   const classification = classifyQuestion(latestText);
@@ -644,6 +650,7 @@ export function buildReasoningContext(opts: {
     correctionState: correlation,
     hypotheses,
     consented,
+    priorSignals,
   };
 
   if (consented.length > 0) {
@@ -759,14 +766,28 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   if (ctx.consented && ctx.consented.length > 0) {
     lines.push("CONSENTED CONTEXT (both sides authorized this to be present):");
     for (const p of ctx.consented) {
-      const q = p.derived.qualities.slice(0, 4);
-      lines.push(`- ${p.name} (${p.role}) — derived baseline: ${p.derived.sunSign} Sun / ${p.derived.moonSign} Moon. ${q.length ? `Qualities: ${q.join("; ")}.` : ""} Human Design: ${p.derived.humanDesignType}${p.derived.humanDesignCenters.length ? `, defined centers ${p.derived.humanDesignCenters.join(", ")}` : ""}. Strategy ${p.derived.humanDesignStrategy}, authority ${p.derived.humanDesignAuthority}.`);
-      if (p.betweenDesign.length) {
-        lines.push(`  Between-design notes (${p.name} & the user):`);
-        for (const note of p.betweenDesign) lines.push(`  - ${note}`);
+      // A history-only peer shares chat recollections but no baseline derivation;
+      // their EMPTY_DERIVED placeholder must never render as a blank chart line.
+      const hasBaseline = !!(p.derived.sunSign || p.derived.humanDesignType);
+      if (hasBaseline) {
+        const q = p.derived.qualities.slice(0, 4);
+        lines.push(`- ${p.name} (${p.role}) — derived baseline: ${p.derived.sunSign} Sun / ${p.derived.moonSign} Moon. ${q.length ? `Qualities: ${q.join("; ")}.` : ""} Human Design: ${p.derived.humanDesignType}${p.derived.humanDesignCenters.length ? `, defined centers ${p.derived.humanDesignCenters.join(", ")}` : ""}. Strategy ${p.derived.humanDesignStrategy}, authority ${p.derived.humanDesignAuthority}.`);
+        if (p.betweenDesign.length) {
+          lines.push(`  Between-design notes (${p.name} & the user):`);
+          for (const note of p.betweenDesign) lines.push(`  - ${note}`);
+        }
+        if (p.derived.geneKeysLabels.length) {
+          lines.push(`  Their active Gene Keys: ${p.derived.geneKeysLabels.slice(0, 4).join("; ")}.`);
+        }
       }
-      if (p.derived.geneKeysLabels.length) {
-        lines.push(`  Their active Gene Keys: ${p.derived.geneKeysLabels.slice(0, 4).join("; ")}.`);
+      // Consented peer history: the peer's OWN verbatim past statements, read
+      // from the peer's namespace under the peer's share_history flag. Same
+      // quote-faithfully guardrail as self-recall, framed as context not verdict.
+      if (p.recollections?.length) {
+        lines.push(`PEER RECALLED — shared with ${p.name}'s consent. Verbatim statements from ${p.name}'s own history, offered as context about them, not a verdict on them. Quote faithfully or not at all:`);
+        for (const snippet of p.recollections) {
+          lines.push(`  - [${p.name}] "${snippet.slice(0, 240)}"`);
+        }
       }
     }
     lines.push("  Use consented context to explore what happens BETWEEN people — never to claim certainty about the other person's inner world, and never as a verdict on them.");
@@ -786,6 +807,20 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
     lines.push("  These describe group-level energy patterns derived from combining multiple designs. Frame them as one possible structural reading of how this group naturally organizes — not as a fixed hierarchy or inevitable dynamic.");
   }
   const consentedNames = ctx.consented?.map((p) => p.name).join(", ");
+  // Semantic recall: the user's OWN verbatim statements from earlier
+  // conversations, offered as pattern-visibility. Only role==='user' snippets
+  // enter the prompt — echoing the model's own past answers invites it to
+  // recycle its phrasing rather than meet the person afresh. Placed before the
+  // AUTHORIZATION line so that guardrail stays the closing framing statement.
+  const recalled = (ctx.priorSignals ?? []).filter((s) => s.role === "user" && s.snippet);
+  if (recalled.length) {
+    lines.push('RECALLED — verbatim user statements from earlier conversations, offered as pattern-visibility, not correction. Quote faithfully or not at all:');
+    for (const s of recalled) {
+      const d = parseD1Date(s.occurredAt);
+      const dateTag = d ? `, ${d.toISOString().slice(0, 10)}` : "";
+      lines.push(`- [user${dateTag}] "${s.snippet}"`);
+    }
+  }
   lines.push(
     consentedNames
       ? `AUTHORIZATION: what the user described PLUS consented baseline derivations for: ${consentedNames}. No birth data, coordinates, or raw chart data is present — only derived summaries and between-design comparisons.`

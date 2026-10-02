@@ -200,8 +200,72 @@ Pinned by `sovereign-signals.test.ts` (18 tests) and release gate #31.
 
 ## 11. Operations notes
 
-- Bindings: `DB` (D1), `SESSION_KV`, `AI`, `AI_GATEWAY_ID`, `BASELINE_HORIZONS_URL`.
+- Bindings: `DB` (D1), `SESSION_KV`, `AI`, `VECTORIZE` (chat-embeddings), `AI_GATEWAY_ID`, `BASELINE_HORIZONS_URL`.
 - Secrets: `JWT_SECRET`, `RESEND_API_KEY`, `STRIPE_*`, `TURNSTILE_SECRET_KEY`,
-  `SUPPORT_INBOX`.
+  `SUPPORT_INBOX`. The Tail Worker owns its own copy of `RESEND_API_KEY` so
+  alert delivery does not depend on the parent's secret store.
 - Messages are never logged server-side; failures are logged at the pipeline layer only.
 - Cost/eval context lives in `docs/ai-evaluation-and-cost.md`.
+
+## 12. Semantic recall & Tail-Worker alerting (Workers Paid)
+
+**Chat embeddings (`src/lib/chat-embeddings.ts`)** — every turn written to
+`threads` under `memory_mode='server'` is embedded once via Workers AI
+`@cf/baai/bge-large-en-v1.5` (1024-dim cosine) and upserted into the
+Vectorize index `chat-embeddings`. Vectors live in a per-user namespace
+keyed on `users.id`, so a search on Alice's account cannot return Bob's
+turn even if the raw vectors are close. Metadata carries only the
+turn coordinates (`threadId`, `turnIndex`, `role`, `indexedAt`) — never
+the plaintext. `POST /api/chat/search` embeds the query once, asks
+Vectorize for top-K scoped to that namespace, then hydrates the
+snippets from D1 in a single read for the whole result set. The chat
+route fires the embed path through `waitUntil` (see `src/lib/env.ts`),
+so the Workers AI round-trip is off the response's critical path. A
+Vectorize or AI failure is swallowed and logged; chat itself never
+fails because of the semantic layer.
+
+Zero-retention contract preserved: `memory_mode='local'` bypasses the
+embed path entirely. `DELETE /api/threads?id=…` sweeps the
+corresponding Vectorize ids deterministically (built from the same
+`{userId, threadId, turnIndex, role}` tuple), so deleting a thread or
+an account also deletes its vectors.
+
+**Tail Worker (`tail-worker/`)** — `sovereign-tail` is a separate
+Cloudflare Worker attached as a `tail_consumer` on `production-os`. It
+receives a copy of every log/exception the parent emits and forwards
+alert-worthy signals (an explicit list of `[module] …` prefixes plus
+any unhandled exception) to the support inbox via Resend, deduped to
+one email per (fingerprint, cooldown-window) — default 60 minutes.
+In-memory fingerprint cache bounded to 512 entries. Redaction markers
+(`message_history`, `userMessage`, `password`, `token`) prevent user
+content from ever reaching the alert body. Deploys independently:
+`npm run tail:deploy`. Parent deploys will fail if `sovereign-tail` is
+not present on the account.
+
+## 13. Transit nudges & peer-history recollection
+
+Two additions ride the existing relational and recall machinery. They add
+no new AI model call — both are deterministic and reuse the safety layer.
+
+**Transit nudges (`transit-signals.ts`, migration `0007_nudge.sql`,
+`runTransitScan` in `src/custom-worker.ts`, `/api/nudge/dismiss`)** — the daily
+`0 3 * * *` cron (and any manual scan) computes each user's current
+planetary transits against their stored natal baseline and, when an
+orb-threshold conjunction fires, writes at most **one** `nudge` row per
+user per day. `TRANSIT_CONJUNCTION_ORB` (default `1.5°`) gates the
+conjunction window. The `/api/auth` GET surfaces the newest undismissed
+nudge within a 72-hour freshness window; `/api/nudge/dismiss` marks it
+read. Nudges are framed as open observations, never predictions, and are
+delivered only through the app shell (no outbound email/push in this
+stage).
+
+**Peer-history recollection (`sovereign-connections.ts`, migration
+`0006_relationship_history.sql`)** — the relational engine may now cite a
+consented peer's *own past messages* alongside their Baseline. This is
+strictly opt-in per side: `a_share_history`/`b_share_history` default to
+`0` (share Baseline only). When enabled, recollections are capped to a
+few peers per turn, ranked by the same score floor and a 7-day freshness
+window as §12 recall, restricted to the peer's `role='user'` snippets,
+and gated to server-memory + relational scope. Birth data and the raw
+conversation still never cross — only a bounded, scored set of the peer's
+own stated context, and only under their explicit consent flag.

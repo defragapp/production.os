@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "sovereign-tail",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-10",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0
+  },
+  "vars": {
+    "SUPPORT_INBOX": "chadowen93@gmail.com",
+    "FROM_EMAIL": "sovereign@defrag.app",
+    "ALERT_COOLDOWN_MINUTES": "60"
+  }
+}

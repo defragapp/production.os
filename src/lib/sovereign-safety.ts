@@ -58,6 +58,11 @@ const LEXICON: LexiconRule[] = [
       /\bavoidant(?: |-)attachment\b/i,
       /\banxious(?: |-)attachment\b/i,
       /\bthis sounds like a?\s*(?:textbook |classic |clear |case of )?\w+\s*(?:disorder|syndrome)\b/i,
+      // Paraphrase-resistant pathologizing: a pop-clinical noun asserted as the
+      // cause ("your fear of abandonment is driving this"). The causal frame is
+      // required so a hedged interpretive question ("could a fear of
+      // abandonment be why…?") stays allowed — only diagnosis-as-fact is blocked.
+      /\b(?:fear of (?:abandonment|rejection|intimacy|engulfment)|inner\s+child|wounded\s+child|abandonment\s+(?:issue|wound|trauma)|attachment\s+(?:issue|wound)|trust\s+issue|control\s+issue)[^.]{0,24}\b(?:is|are|was|were)\s+(?:why|driving|causing|behind|the\s+reason)\b/i,
     ],
   },
   {
@@ -72,6 +77,13 @@ const LEXICON: LexiconRule[] = [
       /\byou attract (?:people|partners|relationships) who (?:take advantage|hurt|use|leave)\b/i,
       /\bthe real you (?:is|is that|wants)\b/i,
       /\bdeep down you(?:'re| are)\b/i,
+      // "You attract toxic partners" — the original rule required a trailing
+      // "who…" clause; the derogatory-qualified object form is the same verdict
+      // and must be caught too.
+      /\byou\s+(?:always\s+)?(?:attract|draw\s+in|pull\s+in|surround\s+yourself\s+with)\s+(?:toxic|narcissis\w*|abusive|manipulative|selfish|emotionally\s+unavailable|the\s+wrong|bad|damaged)\s+(?:people|partners?|relationships?|friends?|them)\b/i,
+      // "You're someone who makes everything about yourself" — an identity
+      // verdict wrapped in "someone who…" that never names a listed adjective.
+      /\byou(?:'re| are)\s+(?:just\s+)?(?:a\s+)?(?:person|someone|type\s+of\s+person)\s+who\s+(?:makes?\s+everything\s+about|only\s+thinks\s+about|can'?t\s+(?:hear|take|accept|see)|never\s+(?:listens?|admits?))\b/i,
     ],
   },
   {
@@ -99,6 +111,13 @@ const LEXICON: LexiconRule[] = [
       /\byou\s+intimidate\s+(?:him|her)\b/i,
       /\b(?:he|she)\s+misses\s+you\s+but\s+(?:won'?t|can'?t)\s+say\s+it\b/i,
       /\bthey\s+actually\s+(?:do\s+care|care)\b\s?about you\b/i,
+      // Bare declarative inner-state claims (no adverb present): "She cares
+      // about you", "He loves you", "He misses you". The 40-char negation look-
+      // back in flagged() still spares the honest "I can't tell whether she
+      // cares about you" framing, so this lifts recall without killing hedged text.
+      /\b(?:he|she|they)\s+(?:deep\s+down\s+|secretly\s+|actually\s+|truly\s+|genuinely\s+|clearly\s+)?(?:cares?\s+about|loves?|misses?|needs?)\s+you\b/i,
+      // "He's just too scared to say it" — asserting the felt reason for silence.
+      /\b(?:he|she|they)\s+(?:is|'s|are|'re)\s+(?:just\s+|too\s+)?(?:scared|afraid|terrified)\s+to\s+(?:say|admit|open|commit|love|be\s+with)\b/i,
     ],
   },
   {
@@ -277,6 +296,11 @@ const LEAK_MARKERS: RegExp[] = [
   /\bUSER DEFINITIONS\b/i,
   /\breasoning context\b/i,
   /\bepistemic status\b/i,
+  // Internal enum tokens and derived-data labels never occur in natural prose;
+  // if the model echoes them ("your baseline-supported signals", "derived
+  // baseline") it is leaking the reasoning layer and must be repaired.
+  /\b(?:baseline-supported|model-hypothesis|user-interpretation)\b/i,
+  /\bderived (?:baseline|signals?|summaries?)\b/i,
 ];
 
 function detectLeakage(text: string): { index: number; length: number } | null {
@@ -368,8 +392,19 @@ const GROUNDED_PATTERNS = [
   /\bmolest(?:ed|ation)?\b/i,
   /\bdomestic\s+violence\b/i,
   /\bhit\s+me\b(?!\s+with\s+an\s+(?:idea|emotion))/i,
-  /\b(?:hits|hit|beat|beats|beaten|slapped|slaps|punched|kicks|kicked|strangled|hurt)\s+(?:me|my)\b/i,
-  /\bmy\s+(?:partner|husband|wife|boyfriend|girlfriend|dad|father|mom|mother|stepdad|stepmom|parent)\s+(?:hits|hits?|beat|beats|hurts?|pushes|slaps|abuses|abused)\b/i,
+  // Bare verb+me forms are ambiguous in writing, so this rule stays silent
+  // unless the sentence is unambiguous physical violence — a clear past/passive
+  // act ("I was hit", "he knocked me down"), a non-idiomatic verb ("strangles
+  // me"), or a verb that can't parse as emotional hurt ("slaps me"). "Did he
+  // mean to hurt me?" and "she hurts my feelings" must NOT route a plain
+  // relationship question to the DV script. Named-abuser disclosures are
+  // covered by the next rule; sexual-abuse and "hit me with an idea"-style
+  // idioms keep their own dedicated handling.
+  /\b(?:hits?|slaps?|punch(?:es|ed)?|kicks?|strangl(?:es|ed)|chokes?|shoves)\s+me\b/i,
+  /\bwas\s+(?:hit|beaten|strangled|choked|knocked\s+down|slapped|punched|kicked|burned)\b/i,
+  /\b(?:beat|beats|hit|hits)\s+me\s+(?:up\b|with\b|by\b|when\b|and\b|black(?:ed|s)?\b|knocks?\b)/i,
+  /\b(?:my\s+)?(?:ex(?:-\w+)?|partner|husband|wife|boyfriend|girlfriend|dad|father|mom|mother|stepdad|stepmom|parent)\s+(?:hits?|beats?|hurts?|pushes|slaps|abuses|abused)\s+me\b/i,
+  /\b(?:he|she|they)(?:'s|\s+is|\s+was)?\s+hurts?\s+me\b/i,
   /\bforced\s+me\s+to\b/i,
   /\b(?:touches?|touched)\s+me\s+without\s+(?:my\s+)?consent\b/i,
   /\bwas\s+(?:sexually\s+)?abused\b/i,

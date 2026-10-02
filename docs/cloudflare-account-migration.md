@@ -82,6 +82,303 @@ step in this document requires editing TypeScript, it's wrong.
 | Prod D1 backup | `.audit-tmp/prod-d1-backup.sql` (132 lines, includes `PRAGMA defer_foreign_keys=TRUE`) |
 | Row counts at backup | users=6, baselines=4, journeys=2, chat_usage=2; relationships/passkeys/promo_grants/invites/journey_events = 0 |
 
+## Migration execution log — 2026-09-30 session
+
+The following steps were completed on this date, in the order shown, from
+the platform-owner's Mac terminal with a scoped `cfat_...` API token held
+in `.dev.vars` under `ASU_MIGRATION_TOKEN`. All resource creation and
+deployment happened on the ASU account; the source account is unchanged
+and still serving `https://sovereign.defrag.app` at commit `ae20ab3` /
+deployment `e456c426`.
+
+| Phase | Step | Result |
+|---|---|---|
+| 2 | `wrangler d1 create production-os-db` | D1 `8d09a3f5-bcda-4153-b63f-7018b1398c0b` (region WNAM) |
+| 2 | `wrangler kv namespace create SESSION_KV` | KV `defc15c51e4647d2b48d5b94138f8000` |
+| 3 | `wrangler delete --name production-os` | ASU "Hello world" stub removed |
+| 3 | branch `migrate-to-asu` created from `main` @ `ae20ab3`; `wrangler.jsonc` D1 + KV bindings updated; commit `26e7f26`; pushed to origin |
+| 4 | D1 import via `wrangler d1 execute --file` | **failed** with `D1_RESET_DO` on the freshly-created DB (transient server-side issue). Workaround used: sync `--command` path with `schema.sql` first, then a FK-dependency-ordered extract of `INSERT INTO` + `CREATE INDEX` statements from `prod-d1-backup.sql`. All 26 rows landed; 21 indexes; verified with `SELECT COUNT(*)`. |
+| 4 | `npm run deploy` initially tried to hit the gmail account. Root cause: `opennextjs-cloudflare deploy`'s child `wrangler` process reads `CLOUDFLARE_ACCOUNT_ID` from `.dev.vars`, overriding the shell env var. Fix: set the `.dev.vars` value to the ASU id (file is gitignored; local-only change). |
+| 5 | First real deploy to ASU | version `1c3f2e93-6453-461c-bc29-a5e8c04e5f8f` at `https://production-os.cjowen2.workers.dev`; `/`, `/about`, `/opengraph-image` all HTTP 200 |
+| 1.4 | `wrangler turnstile widget create sovereign --domain sovereign.defrag.app --mode managed --json` | ASU widget `0x4AAAAAAFKmqD5R_vJ220SR` created via CLI (no dashboard click needed); secret pushed via `wrangler secret put`; `wrangler.jsonc` `TURNSTILE_SITE_KEY` updated; commit `2c079d7`; redeployed |
+| 1.3 / 1.6 | Secrets on ASU Worker: `JWT_SECRET`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` pushed from `.dev.vars` values. `PASSWORD_PEPPER` set via **Fork B** (fresh `crypto.randomBytes(32).toString('hex')`, generated locally, pushed, never printed). | Worker redeployed as version `795878fe-fcf1-416e-86f7-2fd826eac8e1`; `POST /api/auth` returns 400 with a real validation error (proof of D1 round-trip + Turnstile boot + env resolution) |
+| — | **Not completed** | AI Gateway creation, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, Phase 6 DNS move, Phase 7 Cache Rules + custom domain + Bot Fight Mode + rate limit, Phase 8 decommission |
+
+### Why the pepper is Fork B
+
+`PASSWORD_PEPPER` is stored as a write-only Cloudflare Worker secret on the
+source account (`wrangler secret list` shows names only; there is no
+secret-get endpoint). Exhaustive search on this Mac found no copy of the
+value anywhere:
+`.dev.vars` (current + `.bak` + `.bak2` from today's seds), every other
+`.dev.vars` file under `/Users/cjo/`, `~/.qoder/cache` session transcripts,
+`git log --all -S PASSWORD_PEPPER`, `git grep` across every commit, git
+stash, editor swap files, `find . -type f` at depth ≤ 4 excluding vendored
+dirs. The initial commit `52a8117` that introduced the peppered hash format
+never committed the value. Session history itself records the pepper as
+"generated locally, never printed". Fork B is therefore the only autonomous
+path; the reset SQL in Phase 5 is now the mandatory cutover step.
+
+### AI Gateway has no CLI/API path
+
+Every attempted endpoint (`POST /accounts/{id}/ai/gateway`, `PUT
+/accounts/{id}/ai/gateway/{slug}/settings`, and the `ai-gateway` /
+`ai_gateway` variants) returns `7003 No route for that URI` regardless of
+token scope. `wrangler ai-gateway` and `wrangler gateway` subcommands do
+not exist in wrangler 4.131.1. **AI Gateway creation remains dashboard-only.**
+
+> Superseded 2026-10-01: the gateway was created on the dashboard as
+> planned, and the **read** path since has been proven at
+> `GET /accounts/{id}/ai-gateway/gateways` — `sovereign-ai-gateway`
+> exists on ASU (`workers_ai_billing_mode: postpaid`, cache off,
+> rate-limiting off). The **write** path (`PUT .../settings`) still
+> rejects the account token, so gateway tuning (caching TTL, cost caps)
+> stays dashboard-only.
+
+## Migration execution log — 2026-10-01 cutover completion
+
+Cutover happened in the dashboard (zone moved to ASU, custom domains
+bound) and the hardened build was deployed from this Mac with the
+`ASU_MIGRATION_TOKEN`. Gmail's OAuth session expired mid-audit and was
+not needed: the account token covers Workers Scripts + D1 read/write.
+
+| Item | Result |
+|---|---|
+| Phase -1 (Workers Paid) | **Verified via API** — `GET /accounts/{id}/subscriptions` returns `workers_paid` active on ASU. The 1102-era assumption holds. |
+| Phase 6 DNS cutover | Zone `defrag.app` Active on ASU (`31b13cee5bd4d28aac35e16c0d222eda`), NS pair `ashton`/`dorthy`; gmail's copy reads `moved`. Custom domains `defrag.app` + `sovereign.defrag.app` bound to the ASU `production-os` worker (AAAA `100::` placeholders). No `routes` block in `wrangler.jsonc` needed — dashboard binding owns the routing. |
+| Phase 5 drift closure | No re-import was needed: ASU D1 row counts and max-timestamps matched gmail to the second at bind time (6 users, 2 journeys, 7 events, 4 baselines, 5 threads). |
+| Final deploy | version `5ff452c7-99f3-4541-969f-bec94dfcc0e0` (rollback ref `232be9bc`) — commit `b9d0522` incl. `f5f8398` safety fixes. `STRIPE_SECRET_KEY` set via `secret put` immediately before. |
+| Email DNS (Phase 1.5) | Created via zone DNS API: `resend._domainkey` TXT (DKIM), `send` MX + `send` TXT SPF. **Resend reports the domain `verified`** (DKIM/SPF/Tracking all green). Resend's suggested `sovereign` CNAME was deliberately **not** added — it would hijack the app origin at `sovereign.defrag.app`. |
+| Zone hardening via API | `security_level=medium`, `min_tls_version=1.2`, `always_use_https=on`, `automatic_https_rewrites=on`, `ssl=full`, `browser_cache_ttl=7200`, `early_hints=on`, `0rtt=on`, **`security_header` HSTS max_age=63072000 includeSubDomains preload nosniff=on**. Cloudflare Managed Free Ruleset (OWASP-class) confirmed present. |
+| Auth-scheme blocks (remaining) | Cache Rules TTL (`/zones/{id}/cache_rules` → 7003, needs Cache Rules:Edit), Bot Fight Mode (plan-gated, absent on Free Website). **Rate limit and custom WAF are DONE via `PUT .../phases/{phase}/entrypoint`** — the earlier "not writable" was about `POST /zones/{id}/rulesets` (shared create), not the phase entrypoint. Workers AI spend alert superseded by gateway rate limit (enforced). |
+
+### ASU resource inventory after cutover (the app's complete footprint)
+
+```
+Workers:  production-os (this app)   behavioral-observer (pre-existing,
+                                      unrelated — leave alone per Scope)
+D1:       production-os-db          KV: SESSION_KV
+AI GW:    sovereign-ai-gateway      Zones: defrag.app (Free Website plan)
+R2:       none (never provisioned on ASU; no worker binding needs it)
+Queues:   none     Pages: none
+Bindings check: d1=DB, kv=SESSION_KV, ai=AI, assets=ASSETS, 12 plain_text
+vars, 6 secret_text (JWT_SECRET, PASSWORD_PEPPER, RESEND_API_KEY,
+TURNSTILE_SECRET_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) — every
+binding the worker declares exists on ASU.
+```
+
+### Gmail residue (all Phase 8, T+14 days after green)
+
+`production-os` worker + `sovereign-ai-gateway` + `production-os-db` +
+2 KV namespaces remain (insurance copies; gmail's `workers.dev` hostname
+already returns NXDOMAIN and the zone is `moved`, so zero traffic can
+reach them). The remaining ~18 workers / 8 other D1s / 8 other gateways
+on gmail belong to unrelated projects — out of scope, keep.
+
+### Open items after 2026-10-01 (force-pass update)
+
+1. **Cache Rules ×3 + optional 4th** — dashboard-only (values above,
+   `npm run verify:edge` to confirm). Rate limit DONE (edge 10/10s block,
+   verified 429). Bot Fight Mode struck (plan-gated). AI spend alert
+   superseded by gateway rate limit (120/min enforced).
+2. Browser sanity: log in as an existing user (password reset emails must
+   go out first — Fork B voided all hashes), send one chat to confirm the
+   gateway clears the old 1050 on ASU billing.
+3. Phase 1.1 rotations: the Stripe key triple + `cfat_`/`art_v2_` tokens
+   were pasted into chat; roll them at the next convenient window.
+4. Phase 8 decommission at T+14d green.
+
+### Why the four remaining clicks are not doable with `ASU_MIGRATION_TOKEN`
+
+Re-verified 2026-10-01 with a live token (auth was NOT the failure —
+`whoami`, zone GET, D1, and secret put all succeed on this token). Each
+remaining item fails for a distinct structural reason:
+
+- **Two plan systems, both true.** Account subscriptions
+  (`GET /accounts/{id}/subscriptions`) = `workers_paid` + `teams_free` +
+  `images_v2_full` — these gate **compute**. Zone plan
+  (`GET /zones/{id}` `.plan`) = **Free Website** — this gates the
+  **CDN/WAF security tier** on the DNS zone. They are independent; a
+  Workers-Paid account with a Free-Website zone is normal. Anyone reading
+  only one object will think the other is wrong.
+- **Bot Fight Mode — plan-gated, not token-gated.** It is absent from
+  `GET /zones/{id}/settings`, so the zone does not offer it. Free Website
+  does not include Bot Fight Mode; the dashboard toggle requires a paid
+  website plan. **Drop from Phase 7** or upgrade the zone plan; already
+  covered meanwhile by the Cloudflare Managed Free Ruleset + rate limit.
+- **Cache Rules — needs a token with Zone.Cache Rules:Edit.** The
+  `/zones/{id}/cache_rules` resource returns 7003/7000 (route not exposed
+  to this account token's scopes) and is NOT a Configuration-Rulesets
+  phase (`unknown phase "cache_rules"`). A **User API Token** scoped to
+  defrag.app + Cache Rules:Edit unlocks the API path; otherwise dashboard.
+  Low urgency now that Workers Paid removes the 1102 hard-fail.
+- **Rate limit `/api/auth` — needs a User API Token, not an account
+  token.** `POST /rulesets` (and the zone entrypoint variant) rejects the
+  Account API Token with `10405 Method not allowed for this
+  authentication scheme`; Configuration Rulesets require a user-anchored
+  credential. This is the one item with real security value (login
+  brute-force). Mint a `cfut_` User API Token (Zone|WAF|Edit +
+  Zone|Cache Rules|Edit, resource = defrag.app) to do it + the cache rules
+  via API in one pass; else click it in the dashboard.
+- **Workers AI spend alert** — account Billing surface, no zone/account
+  API path; dashboard-only. The gateway's own rate limit
+  (`PUT .../ai-gateway/gateways/{slug}`, full-body) is the API-reachable
+  substitute for capping AI request volume, and is writable with the
+  current token.
+
+- **AI Gateway rate limit set (replaces the spend-alert task).** Same
+  full-body `PUT` now carries `rate_limiting_interval=60`,
+  `rate_limiting_limit=120`, `rate_limiting_technique=sliding` — a hard
+  120-req/min ceiling, orders of magnitude above real usage for 6 users
+  but enough to stop a runaway loop draining Workers AI credits. A cap is
+  strictly stronger than the dashboard "spending alert" this supersedes.
+  (`rate_limiting_technique` accepts only `fixed`|`sliding`.)
+
+### Ready-to-apply edge specs (authored 2026-10-01)
+
+Corrects the Phase 7.2 shorthand. Verified against the code: the legal
+pages render auth-agnostic shells (no `cookies()`/`verifySession` server
+side; `Nav` personalizes client-side), so edge-caching their HTML is safe;
+`GET /api/auth` is the every-page session probe and MUST be excluded from
+any rate limit; the auth endpoints are JSON `fetch` targets so the rate
+limit action is `block`, not `managed_challenge` (an HTML challenge page
+breaks the client). Keep the default "bypass cache if response sets a
+Cookie" safeguard on. Query-string policy is "ignore all" except landing
+OG.
+
+**Rate limit — zone → Security → WAF → Rate limiting rules → Create:**
+- Name: `auth-flood-guard`
+- Expression (match credential POSTs only):
+  `http.request.method eq "POST" and (http.request.uri.path eq "/api/auth" or starts_with(http.request.uri.path, "/api/auth/"))`
+- Characteristics: **IP Source Address** (`ip.src`)
+- Threshold: **30 requests over 60 seconds** (generous — campus/carrier
+  NAT; the Worker's own KV limiter already handles per-account abuse)
+- Action: **Block**, for **300 seconds** (5 min)
+- Does NOT need `cf-connecting-ip` — `ip.src` is the real client IP
+  because the zone is proxied.
+
+**Cache Rules — zone → Caching → Cache Rules → Create custom rule**
+(all three: *Eligible for cache*, edge/browser TTL = *Override*):
+
+1. `sigil-og-immutable` — content-addressed share PNGs, byte-identical
+   forever. Edge **1 year** (31536000), browser **1 month** (2592000),
+   ignore query.
+   `http.host eq "sovereign.defrag.app" and starts_with(http.request.uri.path, "/s/") and ends_with(http.request.uri.path, "/opengraph-image")`
+2. `legal-static-immutable` — `/about /faq /privacy /terms` shells. Edge
+   **1 day** (86400), browser **1 hour** (3600), ignore query.
+   `http.host eq "sovereign.defrag.app" and http.request.uri.path in {"/about" "/faq" "/privacy" "/terms"}`
+3. `seo-crawlers-immutable` — crawler-facing statics. Edge **1 day**,
+   browser **1 hour**, ignore query.
+   `http.host eq "sovereign.defrag.app" and http.request.uri.path in {"/llms.txt" "/llms-full.txt" "/sitemap.xml" "/robots.txt" "/.well-known/security.txt"}`
+   (verified 2026-10-01: `/security.txt` is a 404 — the real route is
+   `/.well-known/security.txt`; all five paths return `max-age=0,
+   must-revalidate` and no `cf-cache-status` today, so the rule bites.)
+
+Optional 4th, `landing-og-immutable` — site-wide OG,
+`http.host eq "sovereign.defrag.app" and http.request.uri.path eq "/opengraph-image"`,
+Edge 1 year / browser 1 month, but **include all query strings** so the
+`?v=` param is the cache-bust hatch on brand change.
+
+**Verify after applying** (HEAD returns empty on OpenNext — use a GET
+header dump):
+`curl -s -D - -o /dev/null https://sovereign.defrag.app/about` twice →
+second should show `cf-cache-status: HIT`; repeat for a real
+`/s/<token>/opengraph-image`, `/llms.txt`, and an `/api/auth` POST burst
+to confirm the block trips.
+
+This is now a permanent gate: **`npm run verify:edge`**
+(`scripts/verify-edge-cache.mjs`) warms each path and reads
+`cf-cache-status` on the second hit, printing pass/fail per rule group and
+exiting non-zero until all are cached. Baseline (pre-rules, 2026-10-01):
+2/10 — `/llms.txt` + `/llms-full.txt` already `HIT` (public/ statics are
+edge-cached by default), the other 8 `MISS`. Pass a real share token with
+`node scripts/verify-edge-cache.mjs --sigil <token>` to also check
+`sigil-og-immutable`.
+
+### Applied result (2026-10-01) — the write vector that works
+
+Correction to the "not doable" framing above: `POST /zones/{id}/rulesets`
+fails for the account token (`10405` auth-scheme), but
+`PUT /zones/{id}/rulesets/phases/{phase}/entrypoint` with body
+`{"rules":[...]}` DOES work for this token — no top-level `name`/`phase`
+fields (the ruleset is named `default` and the phase is in the URL).
+That is how the edge rules below were authored programmatically.
+
+- **Rate limit — DONE via API and verified live.** Ruleset id
+  `d3927b162cc14b549867b434d214fb16`, phase `http_ratelimit`,
+  `enabled:true`. The Free *Website* plan gates the schema hard, so the
+  specced 60s/300s is not entitled; the working values are:
+  ```json
+  {"expression":"http.request.method eq \"POST\" and (http.request.uri.path eq \"/api/auth\" or starts_with(http.request.uri.path, \"/api/auth/\"))","action":"block","ratelimit":{"characteristics":["cf.colo.id","ip.src"],"period":10,"requests_per_period":10,"mitigation_timeout":10}}
+  ```
+  Field-name notes (discovered by probing): the count key is
+  `requests_per_period` (NOT `threshold`/`request_limit`); characteristics
+  MUST include `cf.colo.id`; `period` and `mitigation_timeout` are each
+  pinned to `10` by the free-plan entitlement. Verified with a 16-request
+  burst: 1-10 → `400` (Worker), 11-16 → `429` (CF block), +15s → `400`
+  (recovered). Block returns a clean `429` the JSON client already handles.
+- **Cache Rules — NOT achievable via this token.** The writable
+  `http_request_cache_settings` phase accepts only `{"cache":true}
+  (eligibility) — every TTL field (`edge_cache`, `browser_cache`,
+  `edge_cache_ttl`, `cache_key`, `query_string`) returns `unknown field`;
+  that reduced schema cannot set the edge/browser TTL that is the whole
+  point. The TTL-bearing rule lives on the `/zones/{id}/cache_rules`
+  resource, which returns `7003` for this token (missing
+  `Zone > Cache Rules: Edit`). So the three Cache Rules + the landing-OG
+  rule remain a dashboard task (values above) or a User API Token with
+  Cache Rules edit. Left the `http_request_cache_settings` entrypoint
+  attached but empty (`rules:0`) — inert, and the dashboard writes to
+  this same ruleset.
+- **Custom WAF scan-block — DONE via API and verified live.** Ruleset id
+  `54404a0f98e04a64946c6c7410b1b5f8`, phase `http_request_firewall_custom`,
+  action `block`. Blocks 13 common bot-scanner path fragments (`/.env`,
+  `/wp-admin`, `/wp-login`, `/xmlrpc.php`, `/phpmyadmin`, `/cgi-bin`,
+  `/.git`, `/.htaccess`, `/phpinfo`, `/server-status`, `/shell`, `/eval`,
+  `/vendor/phpunit`) before they reach the Worker. Verified: each
+  returns 403; legitimate paths (/, /about, /llms.txt, /api/auth) pass
+  through at 200.
+- **HSTS enabled via zone settings PATCH.** `security_header` now carries
+  `strict_transport_security: {enabled:true, max_age:63072000
+  (2 years), includeSubDomains:true, preload:true, nosniff:true}`.
+  Live header confirmed: `max-age=63072000; includeSubDomains; preload`.
+  Preload-qualified (submit to hstspreload.org when ready).
+
+
+### Same-day follow-ups (2026-10-01, later session)
+
+- **AI Gateway caching enabled via API.** The write path turned out to
+  exist: full-body `PUT /accounts/{id}/ai-gateway/gateways/{slug}` (the
+  `/settings` suffix is the one that 404s). `cache_ttl=3600` confirmed
+  live on `sovereign-ai-gateway` — repeated identical chat prompts now
+  serve from gateway cache instead of re-billing Workers AI.
+- **Password-reset emails (Fork B) kicked off.** `POST /api/auth/reset`
+  fired for the owner account; the route is ungated and needs no
+  Turnstile. Remaining accounts self-serve the same button.
+- **Origin-header OG caching tested and reverted.** Added
+  `/s/:path*/opengraph-image` + `/opengraph-image` immutable rules to
+  `next.config.ts`, proved against a local `opennextjs-cloudflare
+  preview`: the header still came back `max-age=0, must-revalidate` —
+  the adapter's stamp overrides config rules on these dynamic routes,
+  exactly as the sigil-OG file's comment documented. Change reverted;
+  the zone Cache Rule is the only working half. Re-deployed clean HEAD
+  as version `8f7a7b7e-3d71-4e3f-b3cd-52e00ee7aa58` (rollback refs:
+  `5ff452c7`, then `232be9bc`).
+- **Note for Phase 7 re-evaluation:** on the ASU account the Workers
+  Paid plan removes the 1102 CPU hard-fail that motivated the cache
+  rules; the sigil-OG rule is now a cost/latency optimization rather
+  than an availability fix.
+- **Post-migration token scope audit (flag for next rotation).**
+  `ASU_MIGRATION_TOKEN` currently grants `Workers Scripts: Edit`,
+  `D1: Edit`, `KV Storage: Edit`, `Zone: Read`, `Member: Read`, and
+  (implicitly, for secret push) `Workers Secrets: Edit`. `Zone: Read` was
+  required only during the DNS cutover for the zone-id lookup and remains
+  the least-privilege item to trim first — the app itself needs no zone
+  reads at runtime; every remaining API surface we touch (D1 branch,
+  secret push, worker deploy) is account-scoped, not zone-scoped. Rotate
+  to drop `Zone: Read` at the next convenient window (Phase 1.1) and set a
+  calendar reminder for annual re-audit. No code change; the token lives
+  only in `.dev.vars` on the owner's Mac.
+
 ## Two blockers before Phase 5
 
 1. **`PASSWORD_PEPPER` retrieval.** The value is stored as a Worker secret
@@ -153,7 +450,11 @@ Skip Phase 0 and every downstream step is live-surgery without a tourniquet.
 
 The API token beginning with `cfat_...` and the R2 S3 access/secret key pair
 were pasted into chat earlier. Rotate both immediately, regardless of the
-token's stated expiry (2026-10-07).
+token's stated expiry (2026-10-07). A THIRD token — an `art_v2_…` Cloudflare
+artifacts clone token — was pasted into chat on 2026-09-30 and revoked-on-paste
+by the same rule: treat it as compromised and roll it. All three are confirmed
+vestigial for the app (0 references under `src/`), so rotation breaks nothing;
+the OAuth wrangler session is a separate credential and is unaffected.
 
 Also confirmed: the pasted token's id (`d1aaba0aaa1f4a052e1eac6d3f4769ae`)
 equals the R2 Access Key ID — it's an R2/Object-access token, **not**
@@ -333,7 +634,9 @@ a moment with no scheduled work.
 Re-export prod fresh (captures any writes since Phase 0's backup):
 
 ```
-# authenticate wrangler back to gmail
+# authenticate wrangler back to gmail (CF login = defragapp@gmail.com, NOT
+# chadowen93@gmail.com — that address is only the SUPPORT_INBOX var, not a
+# Cloudflare account)
 npx wrangler d1 export production-os-db --remote --output=.audit-tmp/prod-d1-cutover.sql
 # authenticate wrangler back to ASU
 npx wrangler d1 execute production-os-db --remote --file=.audit-tmp/prod-d1-cutover.sql
@@ -662,3 +965,132 @@ then re-auth to ASU. There is no reliable cross-account alias support in
 - **Do not delete the gmail zone before Phase 7.3 confirms ASU's Workers
   Builds integration is shipping cleanly.** The 14-day "Moved Away"
   window is not optional if any part of the cutover might need reversing.
+
+---
+
+## Addendum — remaining steps + verified corrections (2026-09-30, post safety-hardening)
+
+This section supersedes any external "just run these commands" checklist. It
+records what is genuinely left, and corrects four instructions that — if run
+as written against this repo — would either misfire or damage production.
+
+### A. Auth pre-flight is currently WRONG (the #1 gotcha)
+
+`npx wrangler whoami` in this workspace reports **`defragapp@gmail.com`,
+account "Sovereign.os Platform Build" (`8b1954d216d65077c6480d62583fe2c2`)**
+— the *source* account, not ASU. Any `wrangler secret put` / deploy run in
+this state targets the wrong account. Three account ids are in play and must
+be reconciled before writing anything:
+
+| Source | id it names | what it is |
+|---|---|---|
+| This runbook §Pre-flight | `ac9a47ddb8928af2f3535e2a1e4d8349` | stated ASU target |
+| Deployed worker URL | `…cjowen2.workers.dev` | where `production-os` actually serves |
+| `whoami` right now | `8b1954d216d65077c6480d62583fe2c2` | gmail/source session (NOT the target) |
+
+Correct order:
+1. Sign into `dash.cloudflare.com/?org=ac9a47ddb8928af2f3535e2a1e4d8349`, then
+   `npx wrangler logout && npx wrangler login` (OAuth, per Phase 1.2).
+2. Confirm with `npx wrangler whoami` + `npx wrangler accounts list` that the
+   active account owns the `production-os` worker and D1
+   `8d09a3f5-bcda-4153-b63f-7018b1398c0b`. Do **not** trust a hardcoded id.
+3. Do **not** build the token from `ASU_MIGRATION_TOKEN` in `.dev.vars` — that
+   `cfat_` token is the one Phase 1.1 flags as leaked, rotation-mandated, and
+   **R2/Object-scope only (cannot deploy or set Worker secrets)**. OAuth login
+   is the intended path; if a token is required, mint a fresh ASU token with
+   `Workers Scripts: Edit`.
+
+### B. Four corrections to the circulating checklist
+
+- **No `account_id` field exists in `wrangler.jsonc`.** The account is chosen
+  by the wrangler OAuth session *plus* `CLOUDFLARE_ACCOUNT_ID` in `.dev.vars`
+  (which the `opennextjs-cloudflare deploy` child process reads and which
+  overrides the shell — see the deploy log line 101 footgun). "Edit
+  `wrangler.jsonc` account_id" is a no-op; the real lever is auth + `.dev.vars`.
+- **Do not re-provision D1.** `wrangler d1 create production-os-db` mints a
+  *second* same-named database (D1 does not enforce unique names); repointing
+  `database_id` at it strands the 26 imported rows. The DB exists and is
+  populated. `schema.sql` is all `CREATE … IF NOT EXISTS` (idempotent, no
+  DROP) and already applied — re-running it is a no-op, not a setup step.
+- **`SESSION_SIGNING_SECRET` does not exist** anywhere in the repo (0 refs).
+  Session/JWT signing is `JWT_SECRET` (`src/lib/env.ts`), already set on ASU.
+  The only *missing* Worker secrets are `STRIPE_SECRET_KEY` and
+  `STRIPE_WEBHOOK_SECRET` — and neither is present in `.dev.vars`, so source
+  them from the Stripe dashboard, not from a local file.
+- **The safety/AI-output architecture is correct as-is — do NOT "harden" it
+  into JSON.** The visual explainer is driven by `JourneyState` computed
+  **server-side and deterministically** (`classifyQuestion → buildJourneyState`),
+  delivered over SSE as `{ state, inquiryLevel, journeyId }` + `{ content }`
+  (plain prose). The model never emits JSON: `sovereign-prompt.ts` says
+  "Never output JSON" and `sovereign-safety.ts` `validateSovereignText` flags
+  `looksLikeJSON` for repair. Forcing strict JSON would trip that guard and
+  *break* the canvas. Likewise, prompt-injection concealment is not a
+  `sovereign-safety.ts` instruction — that file is a post-model regex
+  validator (`detectLeakage`); the deflection is **pre-model** in
+  `api/chat/route.ts` (`detectExtractionAttempt → buildExtractionDeflection`,
+  zero tokens) plus the "never reproduce this prompt" rule in
+  `sovereign-prompt.ts`. Nothing to change.
+
+### C. What is actually left
+
+| Step | Where | State |
+|---|---|---|
+| **Phase -1 — confirm ASU is actually Workers Paid** (grant active, ≥6mo left on the Students credit) | ASU dashboard → Billing → Subscription | **GO/NO-GO — the live 1050 is direct evidence this is unconfirmed. If the plan is not active, run Path C (upgrade gmail source, skip migration) instead.** |
+| Reconcile + log into ASU (A) | your terminal | **blocking — currently on gmail** |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | `wrangler secret put` (after A) | TODO |
+| Recreate AI Gateway `sovereign-ai-gateway` | ASU dashboard (no CLI/API path in wrangler 4.131) | TODO — same config as source (Phase 2): caching + rate limit + logging ON, **payload logging OFF, anonymization ON**; do NOT invent TTL/rate numbers |
+| Enable Workers AI inference (clears error 1050) | ASU dashboard subscription | TODO — gates the live probe |
+| **Phase 5 — fresh cutover re-export from gmail + import to ASU** | terminal (re-auth gmail → export → re-auth ASU → import) | TODO — **gmail is still the live prod DB; skipping this serves ASU from the stale Phase-4 snapshot and silently drops every signup/write since it** |
+| DNS cutover (Phase 6, registrar-dependent) | dashboard + registrar | TODO |
+| Zone Cache Rules (Phase 7.2) + custom-domain route | dashboard | TODO |
+| Workers Builds on ASU (7.3), Web Analytics beacon (7.4) | dashboard | TODO |
+| Rotate leaked `cfat_`/R2 keys + `ASU_MIGRATION_TOKEN` | dashboard | TODO — vestigial (0 `src/` refs) + OAuth session is separate, so **rotate today, not post-Phase-7; nothing in the app depends on them** |
+| Revoke the `art_v2_…` clone token pasted into chat (2026-09-30) | Cloudflare dashboard → API Tokens | TODO — treated as compromised on paste. **Never clone with a token embedded in the URL** (lands in `.git/config` + shell history); use the SSH remote or a credential helper. |
+| Decommission gmail (Phase 8, T+14d green) | dashboard | TODO |
+
+### D. `verify:release` result (this session)
+
+`npm run verify:release` → **PASS, 99/99 checks, 336/336 unit tests, exit 0**.
+Honest scope: the live/browser gates (28–32) auto-**SKIPPED** because no
+preview server / Workers AI came up in this environment, and the ratchet
+counts a skip as pass. So this is **code-green** (it validates the safety-lexicon
+hardening), **not** a production e2e. The live-model probe stays blocked until
+AI Gateway is recreated and Workers AI returns something other than 1050.
+
+### E. Account ID reconciliation
+
+| ID | Account | Role | Verified? |
+|---|---|---|---|
+| `8b1954d216d65077c6480d62583fe2c2` | `defragapp@gmail.com` — "Sovereign.os Platform Build" | Source/gmail — still serving prod | ✅ `wrangler whoami` 2026-09-30 |
+| `ac9a47ddb8928af2f3535e2a1e4d8349` | `cjowen93@asu.edu` | Target/ASU | ⚠️ asserted by this runbook — confirm via `whoami` on ASU before any write |
+| `c550cfc37f2d5eb4ff7f247c2ca31185` | seen in pre-migration `wrangler.jsonc` | historical/unknown | ⚠️ not the current session; ignore unless `whoami` surfaces it |
+
+`wrangler whoami` MUST list the ASU id (and the account that owns the
+`production-os` worker + D1 `8d09a3f5-bcda-…`) before any `secret put` or
+`deploy`. Do not hardcode an id from this table.
+
+### F. Dual-deploy collision (route deploy vs. merge-to-main)
+
+The custom-domain route deploy (Phase 6.5 / Step 10) and
+`git merge migrate-to-asu && git push origin main` (Step 14) BOTH deploy the
+same worker name — and during the 14-day window gmail's Workers Builds is still
+live, so a git integration on one account and a CLI push on the other can race
+on `production-os`. Before either: **pause Workers Builds on gmail**
+(dashboard → Workers & Pages → Builds → Pause), ship through ONE path, verify,
+then make ASU Builds the shipping integration (gmail stays paused as the
+rollback path until Phase 8). Never fire git-integration and CLI simultaneously.
+
+### G. Known gotchas (session-verified)
+
+1. `.dev.vars` `CLOUDFLARE_ACCOUNT_ID` overrides the shell var for the
+   `opennextjs-cloudflare deploy` child process — update the file when
+   switching accounts.
+2. D1 `--file` import fails with `D1_RESET_DO` on freshly-created DBs —
+   workaround: schema via `--command`, then FK-ordered INSERTs via `--command`.
+3. D1 names are not unique — never re-run `d1 create production-os-db`.
+4. The pasted tokens (`cfat_`, `art_v2_`) + `ASU_MIGRATION_TOKEN` are
+   R2/Object-scope only — cannot deploy or set Worker secrets. Use OAuth.
+5. Workers AI 1050 may need a separate AI subscription even on Workers Paid —
+   resolve before the DNS cutover.
+6. `.dev.vars*` backups can hold live secrets — gitignore wildcard, not `.dev.vars` alone.
+7. Gmail Cloudflare login is `defragapp@gmail.com`; `chadowen93@gmail.com` is only `SUPPORT_INBOX`.

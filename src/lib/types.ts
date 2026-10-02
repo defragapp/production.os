@@ -59,6 +59,8 @@ export interface RelationshipView {
   peerHasBaseline: boolean;
   peerSharesBaseline: boolean;
   shareBaseline: boolean;
+  peerSharesHistory: boolean;
+  shareHistory: boolean;
   createdAt: string;
 }
 
@@ -75,6 +77,14 @@ export interface Baseline {
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+  /**
+   * Client-session marker: this assistant answer wove in the person's own
+   * earlier words (the SSE `{ recall: true }` frame). Transient by design — it
+   * is never sent to the server (performTurn strips to role/content) and never
+   * persisted in `threads.message_history`, only used to render the quiet
+   * "from your history" label and to feed the future Living Orb 'clarity' cue.
+   */
+  recalled?: boolean;
 }
 
 export interface Thread {

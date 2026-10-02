@@ -10,6 +10,7 @@ import { Nav } from "@/components/nav";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { LoadingScreen } from "@/components/ui/loading";
+import { PricingTable } from "@/components/pricing-table";
 
 function PlanFeature({ children }: { children: React.ReactNode }) {
   return (
@@ -29,14 +30,22 @@ function UpgradeContent() {
   const [isPlus, setIsPlus] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  // Free-tier daily counter, mirrored from /api/auth → `usage` (see
+  // src/app/api/auth/route.ts). null while loading; {used:0,limit:5} for
+  // brand-new free accounts; null for sovereign+ accounts (no cap to show).
+  const [usage, setUsage] = useState<{ used: number; limit: number | null } | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch("/api/auth");
-        const data = await res.json() as { user?: { subscription_tier?: string } | null };
+        const data = await res.json() as {
+          user?: { subscription_tier?: string } | null;
+          usage?: { used: number; limit: number | null };
+        };
         if (!data.user) { router.push("/onboard?mode=signup&next=%2Fupgrade"); return; }
         setIsPlus(data.user.subscription_tier === "sovereign+");
+        if (data.usage) setUsage(data.usage);
       } catch { router.push("/onboard?mode=signup&next=%2Fupgrade"); }
       finally { setAuthChecked(true); }
     })();
@@ -109,7 +118,23 @@ function UpgradeContent() {
           ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="card-lift flex flex-col">
-              <CardHeader><CardTitle className="text-base">Free</CardTitle><CardDescription>Five good answers a day</CardDescription></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between gap-2 text-base">
+                  <span>Free</span>
+                  {usage && usage.limit !== null && (
+                    // Usage pill — a live “you’ve used X of 5 today”, so the
+                    // cap is a fact the user can see rather than an abstract
+                    // promise. Renders only once /api/auth has responded.
+                    <span
+                      className="rounded-full border border-foreground/20 bg-foreground/[0.04] px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
+                      aria-label={`You have used ${usage.used} of ${usage.limit} AI messages today`}
+                    >
+                      {usage.used}/{usage.limit} today
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription>Five good answers a day</CardDescription>
+              </CardHeader>
               <CardContent className="flex flex-1 flex-col">
                 <p className="mb-4 font-display text-3xl font-normal">$0</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
@@ -145,6 +170,11 @@ function UpgradeContent() {
             </Card>
           </div>
           )}
+          {/* Comparison table — same data the landing shows, but reached
+              already-warm: the reader is on the account, deciding. */}
+          <div className="mt-2">
+            <PricingTable />
+          </div>
           {error && <div className="mt-4"><Alert>{error}</Alert></div>}
           <div className="mt-6 flex justify-center gap-2">
             <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>

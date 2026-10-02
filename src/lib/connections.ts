@@ -36,7 +36,7 @@ export async function getAuthPayload(request: NextRequest) {
 
 export async function loadUser(env: { DB: D1Database }, userId: string): Promise<User | null> {
   try {
-    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at FROM users WHERE id = ?").bind(userId).first<User>();
+    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at, terms_version FROM users WHERE id = ?").bind(userId).first<User>();
   } catch {
     return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(userId).first<User>();
   }
@@ -85,6 +85,8 @@ export interface RelationshipRow {
   b_label: string;
   a_share_baseline: number;
   b_share_baseline: number;
+  a_share_history: number;
+  b_share_history: number;
   created_at: string;
 }
 
@@ -99,7 +101,7 @@ export async function relationshipViews(
   me: User,
 ): Promise<RelationshipView[]> {
   const rows = await env.DB.prepare(
-    "SELECT id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline, created_at FROM relationships WHERE user_a = ? OR user_b = ? ORDER BY created_at DESC",
+    "SELECT id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline, a_share_history, b_share_history, created_at FROM relationships WHERE user_a = ? OR user_b = ? ORDER BY created_at DESC",
   ).bind(me.id, me.id).all<RelationshipRow>();
 
   const views: RelationshipView[] = [];
@@ -122,6 +124,8 @@ export async function relationshipViews(
       peerHasBaseline: peerBaseline,
       peerSharesBaseline: iAmA ? Number(row.b_share_baseline) === 1 : Number(row.a_share_baseline) === 1,
       shareBaseline: iAmA ? Number(row.a_share_baseline) === 1 : Number(row.b_share_baseline) === 1,
+      peerSharesHistory: iAmA ? Number(row.b_share_history) === 1 : Number(row.a_share_history) === 1,
+      shareHistory: iAmA ? Number(row.a_share_history) === 1 : Number(row.b_share_history) === 1,
       createdAt: row.created_at,
     });
   }

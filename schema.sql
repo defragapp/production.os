@@ -85,6 +85,11 @@ CREATE TABLE IF NOT EXISTS relationships (
   b_label          TEXT NOT NULL DEFAULT 'friend',  -- B's label for A
   a_share_baseline INTEGER NOT NULL DEFAULT 1,      -- A consents to B reading A's baseline
   b_share_baseline INTEGER NOT NULL DEFAULT 1,      -- B consents to A reading B's baseline
+  -- History sharing is a stricter, separate consent (migration 0006): it lets a
+  -- peer's own earlier chat snippets surface in the other person's reasoning, so
+  -- it is opt-IN and defaults to 0 (baseline sharing above defaults to 1).
+  a_share_history  INTEGER NOT NULL DEFAULT 0,      -- A consents to B reading A's chat history
+  b_share_history  INTEGER NOT NULL DEFAULT 0,      -- B consents to A reading B's chat history
   created_at       TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_relationships_pair ON relationships(user_a, user_b);
@@ -176,5 +181,22 @@ CREATE TABLE IF NOT EXISTS promo_grants (
   created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_promo_grants_owner ON promo_grants(created_by, created_at);
+
+-- Deterministic transit-nudge queue (Turn 10, migration 0007). The daily cron
+-- (custom-worker.ts runTransitScan) computes significant transits against each
+-- account's natal baseline and enqueues one short, epistemically soft nudge per
+-- user per UTC day. `kind` is 'transit' today; TEXT so future nudge sources can
+-- share the queue. dismissed_at stays NULL until the user sees or dismisses it;
+-- the read path (/api/auth GET) surfaces only the newest undismissed row inside
+-- 72 hours. Cascades away with the user (no transit nudge outlives its account).
+CREATE TABLE IF NOT EXISTS nudge (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind          TEXT NOT NULL,
+  text          TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  dismissed_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_nudge_user_dismissed ON nudge(user_id, dismissed_at);
 
 
