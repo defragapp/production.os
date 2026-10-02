@@ -167,11 +167,11 @@ describe("buildSystemSignals (Level 4, group)", () => {
 describe("signal engine wired into the reasoning context", () => {
   const BASELINE = deriveBaseline({});
 
-  it("level-3 inquiry with consented peers gets relationalSignals but no systemSignals", () => {
+  it("level-3 inquiry with consented peers gets relationalSignals but no systemSignals", async () => {
     const history: ChatMessage[] = [
       { role: "user", content: "My partner and I keep circling the same argument about money." },
     ];
-    const ctx = buildReasoningContext({
+    const ctx = await buildReasoningContext({
       history,
       baseline: BASELINE,
       myHd: SELF,
@@ -182,11 +182,11 @@ describe("signal engine wired into the reasoning context", () => {
     expect(ctx.systemSignals).toBeUndefined();
   });
 
-  it("level-4 inquiry with 2+ consented peers also gets group signals", () => {
+  it("level-4 inquiry with 2+ consented peers also gets group signals", async () => {
     const history: ChatMessage[] = [
       { role: "user", content: "My whole family reacts differently — my partner and my sister never align." },
     ];
-    const ctx = buildReasoningContext({
+    const ctx = await buildReasoningContext({
       history,
       baseline: BASELINE,
       myHd: SELF,
@@ -200,9 +200,9 @@ describe("signal engine wired into the reasoning context", () => {
     expect(ctx.systemSignals && ctx.systemSignals.length > 0).toBe(true);
   });
 
-  it("skips signal computation below level 3 or without myHd", () => {
+  it("skips signal computation below level 3 or without myHd", async () => {
     const history: ChatMessage[] = [{ role: "user", content: "Why do I always feel rushed on Sunday nights?" }];
-    const ctx = buildReasoningContext({
+    const ctx = await buildReasoningContext({
       history,
       baseline: BASELINE,
       myHd: SELF,
@@ -211,7 +211,7 @@ describe("signal engine wired into the reasoning context", () => {
     expect(ctx.level).toBe(1);
     expect(ctx.relationalSignals).toBeUndefined();
 
-    const noHd = buildReasoningContext({
+    const noHd = await buildReasoningContext({
       history: [{ role: "user", content: "My partner and I keep circling the same argument." }],
       baseline: BASELINE,
       consented: [peerFixture("Sam", "partner", PEER_A, SELF)],
@@ -219,11 +219,11 @@ describe("signal engine wired into the reasoning context", () => {
     expect(noHd.relationalSignals).toBeUndefined();
   });
 
-  it("renders the deterministic signals into the model prompt with guardrails", () => {
+  it("renders the deterministic signals into the model prompt with guardrails", async () => {
     const history: ChatMessage[] = [
       { role: "user", content: "My partner and I keep circling the same argument about money." },
     ];
-    const ctx = buildReasoningContext({
+    const ctx = await buildReasoningContext({
       history,
       baseline: BASELINE,
       myHd: SELF,

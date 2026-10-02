@@ -183,6 +183,13 @@ export type ChatSearchMatch = {
   turnIndex: number;
   role: "user" | "assistant";
   score: number;
+  /**
+   * Per-turn index time (ISO, from Vectorize metadata `indexedAt`). This is
+   * what the recall freshness gate compares against — NOT the owning thread's
+   * `updated_at`, which stays 'today' for a long-lived thread and would blind
+   * recall to genuinely-old turns. Null when the vector predates the field.
+   */
+  indexedAt: string | null;
 };
 
 /**
@@ -207,7 +214,10 @@ export async function searchChat(
     const emb = await env.AI.run(EMBEDDING_MODEL as never, { text: [trimmed] } as never) as unknown as { data?: number[][] };
     const vector = emb?.data?.[0];
     if (!vector) return [];
-    const res = await index.query(vector, { topK, namespace: userId, returnMetadata: "indexed" });
+    // `all`, not `indexed`: the freshness gate needs `indexedAt`, which is
+    // stored metadata but not declared an indexed dimension on the index, so
+    // `returnMetadata: "indexed"` would omit it and drop every match.
+    const res = await index.query(vector, { topK, namespace: userId, returnMetadata: "all" });
     const matches: ChatSearchMatch[] = [];
     for (const m of res.matches ?? []) {
       const meta = m.metadata as Record<string, unknown> | undefined;
@@ -219,7 +229,8 @@ export async function searchChat(
       // Namespace-scoped queries should never leak across users, but
       // belt-and-braces on the userId check costs nothing.
       if (typeof meta.userId === "string" && meta.userId !== userId) continue;
-      matches.push({ threadId, turnIndex, role, score: m.score });
+      const indexedAt = typeof meta.indexedAt === "string" ? meta.indexedAt : null;
+      matches.push({ threadId, turnIndex, role, score: m.score, indexedAt });
     }
     return matches;
   } catch (err) {

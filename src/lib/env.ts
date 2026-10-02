@@ -41,6 +41,26 @@ export interface AppEnv {
    * that can't load the widget still gets through. See lib/turnstile.ts.
    */
   TURNSTILE_REQUIRED?: string;
+  /**
+   * Optional cosine-similarity floor for auto-recall, overriding the hardcoded
+   * default in chat-recall.ts so sensitivity can be tuned from prod logs
+   * without a code change. Unset → the module default (0.82) applies. Values
+   * outside 0..1 or non-numeric are ignored and fall back to the default.
+   *
+   * Typed as number for the module contract, but the Workers runtime delivers
+   * plain-text [vars] as a STRING (see wrangler.jsonc, "0.82"); chat-recall's
+   * resolveScoreFloor coerces it, so do not assume native-number methods here.
+   */
+  RECALL_MIN_SCORE?: number;
+  /**
+   * Angular orb (in degrees) within which a transiting Saturn/Jupiter crossing a
+   * natal Sun/Moon counts as an exact conjunction for the transit-nudge engine
+   * (transit-signals.ts). Default 1.5 when unset; out-of-range/non-numeric are
+   * ignored and fall back to the default. Same string-delivery caveat as
+   * RECALL_MIN_SCORE: the runtime passes plain-text [vars] as a STRING ("1.5"),
+   * coerced by resolveConjunctionOrb — do not call native-number methods here.
+   */
+  TRANSIT_CONJUNCTION_ORB?: number;
 }
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";

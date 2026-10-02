@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import {
   classifyQuestion,
   detectMeaningTargets,
@@ -116,10 +116,10 @@ describe("context-scoped correction isolation", () => {
     { role: "user", content: "No, that's not it with my sister." },
   ];
 
-  it("drops a pair-specific reframe from a solo inquiry", () => {
+  it("drops a pair-specific reframe from a solo inquiry", async () => {
     // The last two turns are solo, so determineScope reads "self" — the earlier
     // sister reframe must be filtered out of the active set.
-    const solo = buildReasoningContext({
+    const solo = await buildReasoningContext({
       history: [
         ...relationalCorrection,
         { role: "assistant", content: "Got it. What tends to happen when you're on your own?" },
@@ -133,8 +133,8 @@ describe("context-scoped correction isolation", () => {
     expect(solo.correctionState.scoped?.rejected.some((e) => e.scope === "relational")).toBe(true);
   });
 
-  it("keeps the reframe when the inquiry is about that pair", () => {
-    const relational = buildReasoningContext({
+  it("keeps the reframe when the inquiry is about that pair", async () => {
+    const relational = await buildReasoningContext({
       history: [
         ...relationalCorrection,
         { role: "user", content: "It's different with my sister — she dominates every conversation." },
@@ -176,7 +176,12 @@ describe("buildReasoningContext", () => {
     { role: "assistant", content: "One possibility worth examining is whether helping is tied to feeling valuable." },
     { role: "user", content: "Maybe. What does being good mean to me?" },
   ];
-  const ctx = buildReasoningContext({ history, baseline: BASELINE });
+  // buildReasoningContext is async since Turn 8 (it takes a resolved
+  // priorSignals array). Resolve once for the shared assertions below.
+  let ctx: Awaited<ReturnType<typeof buildReasoningContext>>;
+  beforeAll(async () => {
+    ctx = await buildReasoningContext({ history, baseline: BASELINE });
+  });
 
   it("assembles observations, baseline signals, and meaning targets", () => {
     expect(ctx.observations.length).toBeGreaterThanOrEqual(2);
@@ -189,8 +194,8 @@ describe("buildReasoningContext", () => {
   it("stays standard-mode for normal disclosure", () => {
     expect(ctx.safetyMode).toBe("standard");
   });
-  it("exposes the rejected-hypothesis state when corrected", () => {
-    const corrected = buildReasoningContext({
+  it("exposes the rejected-hypothesis state when corrected", async () => {
+    const corrected = await buildReasoningContext({
       history: [
         { role: "assistant", content: "One possibility worth examining is that you overextend to feel needed." },
         { role: "user", content: "No, that's not it." },
@@ -199,8 +204,8 @@ describe("buildReasoningContext", () => {
     });
     expect(corrected.correctionState.rejectedHypotheses.length).toBeGreaterThan(0);
   });
-  it("records consented peers and flips authorization when present", () => {
-    const initWithPerson = buildReasoningContext({
+  it("records consented peers and flips authorization when present", async () => {
+    const initWithPerson = await buildReasoningContext({
       history,
       baseline: BASELINE,
       consented: [{
@@ -224,12 +229,12 @@ describe("buildReasoningContext", () => {
     expect(initWithPerson.authorization.systemContext).toBe("consented");
     expect(initWithPerson.authorization.people.some((p) => p.consentStatus === "consented")).toBe(true);
 
-    const orphan = buildReasoningPrompt(buildReasoningContext({ history, baseline: BASELINE }), history, BASELINE);
+    const orphan = buildReasoningPrompt(await buildReasoningContext({ history, baseline: BASELINE }), history, BASELINE);
     // The renderer must only claim consented data exists when it actually does.
     expect(orphan[0].content).toContain("No consented third-party data exists");
 
     const withConsent = buildReasoningPrompt(
-      buildReasoningContext({
+      await buildReasoningContext({
         history,
         baseline: BASELINE,
         consented: [{
@@ -272,12 +277,45 @@ describe("first-turn framing (no false shared history)", () => {
     expect(single?.description).not.toMatch(/described so far|mentioned/i);
   });
 
-  it("instructs the model never to inventory the user's disclosures", () => {
+  it("instructs the model never to inventory the user's disclosures", async () => {
     const prompt = buildReasoningPrompt(
-      buildReasoningContext({ history: singleEventHistory, baseline: BASELINE }),
+      await buildReasoningContext({ history: singleEventHistory, baseline: BASELINE }),
       singleEventHistory,
       BASELINE,
     );
     expect(prompt[0].content).toContain("Never inventory the user's disclosures");
+  });
+});
+
+describe("semantic recall (priorSignals → RECALLED section)", () => {
+  const history: ChatMessage[] = [
+    { role: "user", content: "I keep circling the same worry about work." },
+  ];
+  const priorSignals = [
+    { snippet: "I feel most alive when the work is mine.", role: "user" as const, score: 0.91, occurredAt: "2026-01-15 09:00:00", threadId: "t-old", turnIndex: 2 },
+    { snippet: "One possibility worth examining is that you overextend.", role: "assistant" as const, score: 0.9, occurredAt: "2026-01-15 09:00:00", threadId: "t-old", turnIndex: 3 },
+  ];
+
+  it("round-trips priorSignals onto the context, defaulting to []", async () => {
+    const withSignals = await buildReasoningContext({ history, baseline: BASELINE, priorSignals });
+    expect(withSignals.priorSignals).toEqual(priorSignals);
+    const bare = await buildReasoningContext({ history, baseline: BASELINE });
+    expect(bare.priorSignals).toEqual([]);
+  });
+
+  it("renders only the user's own statements under the exact RECALLED header", async () => {
+    const ctx = await buildReasoningContext({ history, baseline: BASELINE, priorSignals });
+    const prompt = buildReasoningPrompt(ctx, history, BASELINE);
+    const system = prompt[0].content;
+    expect(system).toContain("RECALLED — verbatim user statements from earlier conversations, offered as pattern-visibility, not correction. Quote faithfully or not at all:");
+    // Verbatim user snippet, dated YYYY-MM-DD, reaches the prompt...
+    expect(system).toContain('- [user, 2026-01-15] "I feel most alive when the work is mine."');
+    // ...while the assistant-role echo is excluded to prevent self-recycling.
+    expect(system).not.toContain("One possibility worth examining is that you overextend.");
+  });
+
+  it("emits no RECALLED section when there are no signals", async () => {
+    const ctx = await buildReasoningContext({ history, baseline: BASELINE });
+    expect(buildReasoningPrompt(ctx, history, BASELINE)[0].content).not.toContain("RECALLED");
   });
 });

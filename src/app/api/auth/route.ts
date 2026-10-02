@@ -69,11 +69,27 @@ export async function GET(request: NextRequest) {
   // never disagree with the gate.
   const isFree = user.subscription_tier === "free";
   const usage = { used: isFree ? await readUsage(env, payload.sub) : 0, limit: isFree ? FREE_TIER_DAILY_LIMIT : null };
+  // Newest undismissed transit nudge within the last 72h (Turn 10). The daily
+  // cron enqueues at most one per user per UTC day; this surfaces the freshest
+  // one for the front-end's quiet nudge affordance. Read defensively — a
+  // pre-migration D1 with no `nudge` table must never 500 the session probe,
+  // which every page calls. A miss simply means "no nudge right now".
+  let nudge: { id: string; text: string; kind: string } | null = null;
+  try {
+    const nudgeRow = await env.DB.prepare(
+      "SELECT id, text, kind FROM nudge WHERE user_id = ? AND dismissed_at IS NULL AND created_at >= datetime('now','-72 hours') ORDER BY created_at DESC LIMIT 1",
+    ).bind(payload.sub).first<{ id: string; text: string; kind: string }>();
+    nudge = nudgeRow ? { id: nudgeRow.id, text: nudgeRow.text, kind: nudgeRow.kind } : null;
+  } catch (e) {
+    console.error("[auth] nudge read failed:", e);
+    nudge = null;
+  }
   return NextResponse.json({
     user,
     turnstileSiteKey: env.TURNSTILE_SITE_KEY || null,
     usage,
     hasBaseline,
+    nudge,
     // Terms state for the in-app re-acceptance gate (see <TermsGate /> and
     // POST /api/auth/accept-terms). null/undefined `stored` is treated as
     // “not yet applicable” and never triggers the modal — the login path

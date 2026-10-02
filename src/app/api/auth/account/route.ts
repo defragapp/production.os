@@ -9,7 +9,7 @@ import type { User } from "@/lib/types";
  * DELETE /api/auth/account — self-serve account deletion (right to erasure).
  * Cancels active Stripe billing (best-effort), then deletes the user row.
  * baselines, threads, invites, relationships, passkeys, journeys, journey_events,
- * and chat_usage are all removed via ON DELETE CASCADE on the user row.
+ * chat_usage, and nudge are all removed via ON DELETE CASCADE on the user row.
  * promo_grants.created_by CASCADE-deletes grants this account minted; a grant
  * this account *redeemed* becomes anonymous via ON DELETE SET NULL so the
  * minting owner still sees their redemption count without knowing who did it.

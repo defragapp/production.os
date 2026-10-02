@@ -40,6 +40,18 @@
   "triggers": { "crons": ["0 3 * * *"] },
   "vars": {
     "AI_GATEWAY_ID": "sovereign-ai-gateway",
+    // Auto-recall cosine floor for /api/chat + /api/chat/search (chat-recall.ts).
+    // The Workers runtime delivers [vars] as text strings; chat-recall coerces
+    // this to a number at read time and ignores anything outside 0..1 (falling
+    // back to the module default). Lower it (e.g. "0.78") to widen recall,
+    // raise it to tighten. Declared here so it is a visible knob, not a hidden
+    // magic number.
+    "RECALL_MIN_SCORE": "0.82",
+    // Transit-nudge conjunction orb in degrees (transit-signals.ts resolveConjunctionOrb).
+    // Delivered as a text string; coerced to a number and clamped 0..5, falling back
+    // to 1.5 when unset/invalid. Widen (e.g. "2.5") to fire nudges earlier, tighten
+    // for only dead-exact transits. Visible tuning knob, not a hidden constant.
+    "TRANSIT_CONJUNCTION_ORB": "1.5",
     "FROM_EMAIL": "sovereign@defrag.app",
     "SUPPORT_INBOX": "chadowen93@gmail.com",
     "BASELINE_HORIZONS_URL": "https://ssd.jpl.nasa.gov/api/horizons.api",

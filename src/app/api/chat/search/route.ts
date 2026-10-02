@@ -26,22 +26,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
-import { getEnv, type AppEnv } from "@/lib/env";
-import { searchChat, type ChatSearchMatch } from "@/lib/chat-embeddings";
-import type { ChatMessage, Thread, User } from "@/lib/types";
+import { getEnv } from "@/lib/env";
+import { searchChat } from "@/lib/chat-embeddings";
+import { hydrateMatches } from "@/lib/chat-recall";
+import type { User } from "@/lib/types";
 
 const MAX_QUERY_CHARS = 200;
 const SEARCH_RATE_LIMIT_MAX = 20;
 const SEARCH_RATE_LIMIT_WINDOW_MS = 60_000;
-
-type HydratedResult = {
-  threadId: string;
-  turnIndex: number;
-  role: "user" | "assistant";
-  score: number;
-  snippet: string;
-  updatedAt: string | null;
-};
 
 async function getPayload(request: NextRequest) {
   const env = await getEnv();
@@ -52,44 +44,6 @@ async function getPayload(request: NextRequest) {
   const payload = await verifyJWT(token, secret);
   if (!payload) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
   return { env, payload } as const;
-}
-
-/**
- * Fetch every distinct thread referenced by the match list once and pull the
- * exact turn text out of the JSON blob in memory. One D1 read for the whole
- * result set rather than one per match.
- */
-async function hydrate(env: AppEnv, userId: string, matches: ChatSearchMatch[]): Promise<HydratedResult[]> {
-  if (matches.length === 0) return [];
-  const ids = Array.from(new Set(matches.map((m) => m.threadId)));
-  const placeholders = ids.map(() => "?").join(",");
-  const rows = await env.DB.prepare(
-    `SELECT id, message_history, updated_at FROM threads WHERE user_id = ? AND id IN (${placeholders})`,
-  )
-    .bind(userId, ...ids)
-    .all<Pick<Thread, "id" | "message_history" | "updated_at">>();
-  const byId = new Map<string, { messages: ChatMessage[]; updatedAt: string | null }>();
-  for (const r of rows.results ?? []) {
-    let parsed: ChatMessage[] = [];
-    try { parsed = JSON.parse(r.message_history) as ChatMessage[]; } catch { parsed = []; }
-    byId.set(r.id, { messages: parsed, updatedAt: r.updated_at ?? null });
-  }
-  const out: HydratedResult[] = [];
-  for (const m of matches) {
-    const entry = byId.get(m.threadId);
-    if (!entry) continue;
-    const msg = entry.messages[m.turnIndex];
-    if (!msg) continue;
-    // Belt-and-braces: the vector's role hint and the row's role must agree.
-    // A mismatch means the stored thread was truncated/edited after
-    // indexing; skip the stale vector rather than show the wrong bubble.
-    if (msg.role !== m.role) continue;
-    const raw = String(msg.content ?? "").replace(/\s+/g, " ").trim();
-    const snippet = raw.length > 320 ? `${raw.slice(0, 317)}…` : raw;
-    if (!snippet) continue;
-    out.push({ threadId: m.threadId, turnIndex: m.turnIndex, role: m.role, score: m.score, snippet, updatedAt: entry.updatedAt });
-  }
-  return out;
 }
 
 export async function POST(request: NextRequest) {
@@ -125,6 +79,6 @@ export async function POST(request: NextRequest) {
   }
 
   const matches = await searchChat(env, payload.sub, q, { topK });
-  const results = await hydrate(env, payload.sub, matches);
+  const results = await hydrateMatches(env, payload.sub, matches);
   return NextResponse.json({ results, indexed: matches.length > 0, memoryMode: "server" });
 }

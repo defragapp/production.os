@@ -241,3 +241,31 @@ In-memory fingerprint cache bounded to 512 entries. Redaction markers
 content from ever reaching the alert body. Deploys independently:
 `npm run tail:deploy`. Parent deploys will fail if `sovereign-tail` is
 not present on the account.
+
+## 13. Transit nudges & peer-history recollection
+
+Two additions ride the existing relational and recall machinery. They add
+no new AI model call — both are deterministic and reuse the safety layer.
+
+**Transit nudges (`transit-signals.ts`, migration `0007_nudge.sql`,
+`runTransitScan` in `src/custom-worker.ts`, `/api/nudge/dismiss`)** — the daily
+`0 3 * * *` cron (and any manual scan) computes each user's current
+planetary transits against their stored natal baseline and, when an
+orb-threshold conjunction fires, writes at most **one** `nudge` row per
+user per day. `TRANSIT_CONJUNCTION_ORB` (default `1.5°`) gates the
+conjunction window. The `/api/auth` GET surfaces the newest undismissed
+nudge within a 72-hour freshness window; `/api/nudge/dismiss` marks it
+read. Nudges are framed as open observations, never predictions, and are
+delivered only through the app shell (no outbound email/push in this
+stage).
+
+**Peer-history recollection (`sovereign-connections.ts`, migration
+`0006_relationship_history.sql`)** — the relational engine may now cite a
+consented peer's *own past messages* alongside their Baseline. This is
+strictly opt-in per side: `a_share_history`/`b_share_history` default to
+`0` (share Baseline only). When enabled, recollections are capped to a
+few peers per turn, ranked by the same score floor and a 7-day freshness
+window as §12 recall, restricted to the peer's `role='user'` snippets,
+and gated to server-memory + relational scope. Birth data and the raw
+conversation still never cross — only a bounded, scored set of the peer's
+own stated context, and only under their explicit consent flag.

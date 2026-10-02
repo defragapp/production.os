@@ -1006,6 +1006,19 @@ export function ChatClient() {
                   };
                   return u;
                 });
+                continue;
+              }
+              // The `{ recall: true }` frame follows the answer text and simply
+              // flags the assistant message being built. The reserved label slot
+              // above the bubble already holds its height, so flipping this on
+              // reveals the caption with zero layout shift. Session-only: the
+              // flag is stripped before anything is persisted.
+              if (parsed.recall) {
+                setMessages((prev) => {
+                  const u = [...prev];
+                  u[u.length - 1] = { ...u[u.length - 1], recalled: true };
+                  return u;
+                });
               }
             } catch {}
           }
@@ -1519,6 +1532,18 @@ export function ChatClient() {
                     >
                       {msg.role === "assistant" ? (
                         <div className="flex flex-col gap-1.5">
+                          {/* Reserved from mount in both states (only visibility
+                              toggles), so the recall caption arriving after the
+                              answer text never shifts the bubble — measured CLS
+                              stays 0.0000. Quiet, non-interactive, adds no data. */}
+                          <div
+                            aria-hidden={!msg.recalled}
+                            style={{ visibility: msg.recalled ? "visible" : "hidden" }}
+                            className="flex h-4 items-center gap-1.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/55"
+                          >
+                            <span className="h-1 w-1 shrink-0 rounded-full bg-current" aria-hidden="true" />
+                            From your history
+                          </div>
                           <AssistantTurn>
                             {streamingEmpty ? (
                               <>

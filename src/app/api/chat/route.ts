@@ -4,7 +4,7 @@ import { emailVerificationEnabled } from "@/lib/email";
 import { getEnv, waitUntil } from "@/lib/env";
 import { deriveBaseline } from "@/lib/sovereign-prompt";
 import type { DerivedBaseline } from "@/lib/sovereign-prompt";
-import { buildReasoningContext, generateSovereignResponse } from "@/lib/sovereign-reasoning";
+import { buildReasoningContext, generateSovereignResponse, determineScope } from "@/lib/sovereign-reasoning";
 import { buildConsentedPeers, positionsFromBaseline } from "@/lib/sovereign-connections";
 import { computeHumanDesign } from "@/lib/sovereign-humandesign";
 import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
@@ -16,6 +16,7 @@ import { mergeChatHistories } from "@/lib/chat-history";
 import { deriveJourneyState, type JourneyState } from "@/lib/sovereign-journey";
 import { loadActiveJourney, persistJourneyState, prevStateFromRow } from "@/lib/journeys";
 import { embedLatestTurn } from "@/lib/chat-embeddings";
+import { recallPriorSignals, type PriorSignal } from "@/lib/chat-recall";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
 
 /** Max content length per message accepted from the client. 2,000 chars is
@@ -134,20 +135,21 @@ async function handleChat(request: NextRequest) {
   const baseline = await env.DB.prepare("SELECT tob, pob, dob, nasa_jpl_json_data FROM baselines WHERE user_id = ?").bind(payload.sub).first<Baseline>();
   if (!baseline || !baseline.nasa_jpl_json_data) return new Response(JSON.stringify({ error: "Baseline not found. Please complete onboarding first." }), { status: 403, headers: { "Content-Type": "application/json" } });
 
+  // Semantic recall (server-memory only): kicked off here so its one embed +
+  // one Vectorize query overlap with the consent read and thread merge below,
+  // then awaited at context build. Started AFTER the extraction guard so a
+  // deflected prompt never pays the embed cost. memory_mode='local' short-
+  // circuits to [] and never touches Vectorize. Best-effort: a miss is just
+  // "no recall this turn", never an error.
+  const lastUserContent = [...incoming].reverse().find((m) => m.role === "user")?.content ?? "";
+  const recallPromise: Promise<PriorSignal[]> =
+    memoryMode === "server" && lastUserContent
+      ? recallPriorSignals(env, payload.sub, lastUserContent, body.threadId)
+      : Promise.resolve([]);
+
   let rawBaselineData: Record<string, unknown> = {};
   try { rawBaselineData = JSON.parse(baseline.nasa_jpl_json_data) as Record<string, unknown>; } catch { rawBaselineData = {}; }
   const derived: DerivedBaseline = deriveBaseline(rawBaselineData);
-
-  // Consent-gated connections: each person controls their own sharing flag.
-  // Allowed-to-share peers contribute a derived summary + between-design notes
-  // (never their raw chart or birth data).
-  let consented: Awaited<ReturnType<typeof buildConsentedPeers>>;
-  try {
-    consented = await buildConsentedPeers(env, payload.sub, rawBaselineData);
-  } catch (consentErr) {
-    console.error("[chat] building consented peers failed:", consentErr);
-    consented = [];
-  }
 
   let threadId = body.threadId;
   let conversation: ChatMessage[] = incoming;
@@ -161,6 +163,34 @@ async function handleChat(request: NextRequest) {
       threadId = undefined;
     }
   }
+
+  // Consent-gated connections: each person controls their own sharing flag.
+  // Allowed-to-share peers contribute a derived summary + between-design notes
+  // (never their raw chart or birth data). Peer HISTORY recollection additionally
+  // requires a Sovereign+ account asking a relational question (scope !== self) in
+  // server-memory mode; scope is derived from the merged conversation, so this
+  // build runs after the thread merge above.
+  const scope = determineScope(conversation);
+  let consented: Awaited<ReturnType<typeof buildConsentedPeers>>;
+  try {
+    consented = await buildConsentedPeers(env, payload.sub, rawBaselineData, {
+      latestUserText: lastUserContent,
+      scope,
+      canShareHistory: tier === "sovereign+",
+      memoryMode,
+    });
+  } catch (consentErr) {
+    console.error("[chat] building consented peers failed:", consentErr);
+    consented = [];
+  }
+
+  // Motion-graphics signal (the "second marble"): peers whose consented history
+  // was woven into this turn. The recollection fan-out already caps at two, so
+  // this is a defensive slice. Each entry becomes one compact SSE frame below.
+  const peerRecollections = consented
+    .filter((p) => (p.recollections?.length ?? 0) > 0)
+    .slice(0, 2)
+    .map((p) => ({ name: p.name, count: p.recollections!.length }));
 
   // Daily caps, claimed atomically in D1 (KV had no compare-and-swap, so
   // concurrent requests could both pass the old read-modify-write check).
@@ -201,8 +231,11 @@ async function handleChat(request: NextRequest) {
   // is created lazily: the first turn with an unlock or a suggested goal
   // materializes it.
   let context;
+  let usedRecall = false;
   try {
-    context = buildReasoningContext({ history: conversation, baseline: derived, consented, myHd: computeHumanDesign(positionsFromBaseline(rawBaselineData)) });
+    const priorSignals = await recallPromise;
+    usedRecall = priorSignals.length > 0;
+    context = await buildReasoningContext({ history: conversation, baseline: derived, consented, myHd: computeHumanDesign(positionsFromBaseline(rawBaselineData)), priorSignals });
   } catch (err) {
     console.error("[chat] reasoning prelude failed:", err instanceof Error ? `${err.name}: ${err.message}` : err);
     if (usageClaimed) await releaseAnswer(env, payload.sub);
@@ -313,6 +346,15 @@ async function handleChat(request: NextRequest) {
       // paints, then the single validated `{ content }` event, then DONE.
       if (stateEvent) controller.enqueue(encoder.encode(`data: ${JSON.stringify(stateEvent)}\n\n`));
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: result.text })}\n\n`));
+      // Pure client signal: this turn's answer wove in the person's own earlier
+      // words. Carries no snippet — the UI shows a quiet "from your history"
+      // marker, and this is the future Living Orb 'clarity' trigger.
+      if (usedRecall) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ recall: true })}\n\n`));
+      // Second-marble signal: consented peer history surfaced this turn, one
+      // frame per contributing peer (no snippet text — just who + how many).
+      for (const pr of peerRecollections) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ peerRecollection: pr })}\n\n`));
+      }
       controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
     },
