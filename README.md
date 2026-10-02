@@ -176,9 +176,9 @@ npm run deploy     # OpenNext build + deploy to Cloudflare edge
 ```
 
 Run `npm run verify:release` before pushing — it is the whole ratchet. Its own
-header enumerates the gates and is the single source of truth for the count; at
-release `82f825c` it runs **105 checks across 31 numbered gates**: types, lint, the
-28 Vitest suites (296 tests), committed contract wiring, a clean OpenNext build,
+header enumerates the gates and is the single source of truth for the count; it
+currently runs **116 checks across 33 numbered gates**: types, lint, the
+34 Vitest suites (396 tests), committed contract wiring, a clean OpenNext build,
 the browser AES-GCM vault round-trip, the zero-CLS JourneyBar veil, a live
 authenticated walk over every surface in both memory modes, draft/503 recovery,
 whole-surface ergonomics (44px + 0 overflow at 390/768/1440), the PWA manifest,
@@ -189,7 +189,19 @@ environment cannot boot.
 
 > Note: `next build` alone does NOT produce `.open-next/`. To build the
 > Workers bundle locally, always use `npx opennextjs-cloudflare build`
-> (or `npm run preview` / `npm run deploy`).
+
+> **Do not shorten the release path to `typecheck && lint && test`.**
+> Those three are necessary but not sufficient: they passed 100% green on a
+> commit whose Workers bundle could not build at all. A dependency override
+> pinning `brace-expansion` to v5 forced an ESM-only package onto
+> `minimatch@3`, which imports the CommonJS default export — so the OpenNext
+> bundle died with `does not provide an export named 'default'`, while
+> `tsc`, ESLint and all 396 Vitest tests reported success. Nothing in the
+> type system or the unit suite loads `.open-next/worker.js`.
+>
+> Gate 1 (the clean OpenNext build) is the **only** check that catches
+> ESM/CJS interop and bundling regressions. If you are ever tempted to run a
+> subset of the gates, run Gate 1 too, or run the whole ratchet.
 
 ## Project Structure
 
