@@ -511,7 +511,7 @@ export function OnboardContent() {
                               setTsFailed(false);
                               setTsKey((k) => k + 1);
                             }}
-                            className="shrink-0 underline underline-offset-4 hover:text-foreground"
+                            className="tap-line tap-line-center shrink-0 underline underline-offset-4 hover:text-foreground"
                           >
                             Retry
                           </button>

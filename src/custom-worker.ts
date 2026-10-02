@@ -22,7 +22,7 @@
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — .open-next/worker.js is generated at build time
-import { default as handler } from "../.open-next/worker.js";
+import handler, { DOQueueHandler, DOShardedTagCache } from "../.open-next/worker.js";
 import type { AppEnv } from "./lib/env";
 import { computeNatalPositions } from "./lib/nasa-jpl";
 import { detectSignificantTransits, nudgeText, resolveConjunctionOrb, type NatalPositions } from "./lib/transit-signals";
@@ -217,7 +217,14 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-// Required for DO Queue / Tag Cache support (unused now but future-safe).
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore — these may not exist on the generated handler object
-export const { DOQueueHandler, DOShardedTagCache } = handler;
+// OpenNext's Durable Object exports must be re-exported BY NAME from this
+// module. They used to be destructured off the default export
+// (`export const { DOQueueHandler, DOShardedTagCache } = handler`), but the
+// default export only carries `fetch` — so both names re-exported `undefined`,
+// and workerd refused to start the Worker at all ("Cannot initialize
+// ExportedHandler with required members from an undefined or null value").
+// Deploys kept working (the platform tolerates undefined exports), which is
+// why this went unnoticed, but every LOCAL boot failed — and because
+// verify:release SKIPS its live gates when the preview worker cannot come up,
+// the ratchet reported 99/99 PASS with ~60 checks never actually executed.
+export { DOQueueHandler, DOShardedTagCache };

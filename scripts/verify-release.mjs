@@ -147,14 +147,21 @@ const npmRun = process.platform === "win32" ? "npm.cmd" : "npm";
 
 let failures = 0;
 const results = [];
+// A gate that could not run is NOT a pass. Counting skips separately keeps the
+// headline honest: before, `record(name, true, "SKIPPED — …")` folded into
+// `passed`, so a preview worker that refused to boot still printed "99/99
+// checks green / RESULT: PASS" with ~60 live gates never executed.
+let skipped = 0;
 
 function heading(text) {
   console.log(`\n\u2500\u2500\u2500 ${text} \u2500\u2500\u2500`.padEnd(64, "\u2500"));
 }
 function record(name, ok, detail = "") {
-  results.push({ name, ok, detail });
+  const isSkip = /^SKIPPED\b/.test(detail);
+  if (isSkip) skipped += 1;
+  results.push({ name, ok, detail, skipped: isSkip });
   if (!ok) failures += 1;
-  const mark = ok ? "\u2713" : "\u2717";
+  const mark = ok ? (isSkip ? "-" : "\u2713") : "\u2717";
   console.log(`  ${mark} ${name}${detail ? `  — ${detail}` : ""}`);
 }
 
@@ -3609,13 +3616,23 @@ async function main() {
   }
 
   heading("Summary");
-  const passed = results.filter((r) => r.ok).length;
-  console.log(`  ${passed}/${results.length} checks green in ${Math.round((Date.now() - started) / 1000)}s`);
+  const passed = results.filter((r) => r.ok && !r.skipped).length;
+  const reallyRan = results.length - skipped;
+  console.log(`  ${passed}/${reallyRan} checks green in ${Math.round((Date.now() - started) / 1000)}s`);
+  if (skipped > 0) {
+    console.log(`  ${skipped} check(s) SKIPPED — they did not run and do not count as green:`);
+    for (const r of results.filter((x) => x.skipped)) console.log(`    - ${r.name}  — ${r.detail}`);
+  }
   if (failures > 0) {
     console.log(`\n  RESULT: FAIL (${failures} failing gate(s)) — do NOT commit or deploy.`);
     process.exit(1);
   }
-  console.log("\n  RESULT: PASS — safe to commit and deploy.");
+  if (skipped > 0) {
+    console.log("\n  RESULT: PASS WITH SKIPS — every gate that ran is green, but this run proved LESS than a full pass.");
+    console.log("  Read the skip list above before treating this as a release gate.");
+  } else {
+    console.log("\n  RESULT: PASS — safe to commit and deploy.");
+  }
   // Harness bundles live under node_modules/.cache (gitignored) — no cleanup needed.
   process.exit(0);
 }

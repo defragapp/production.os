@@ -76,11 +76,26 @@ export function RedeemCard() {
   };
 
   // ── Still resolving the link + session ──────────────────────────────
+  // The Card shell is rendered here for the SAME reason /invite keeps its card
+  // while it resolves: the loading state used to return a bare LoadingScreen
+  // (min-h of the whole viewport) and was then swapped for a short card, so
+  // every resolved branch moved the layout by ~0.21 CLS the moment the session
+  // check answered. Holding the shell and reserving the content box means the
+  // arrival is a fade, not a jump. The PageHeader wording still changes, but
+  // both are a single-line title over a one-line description, so its own box
+  // height does not move.
   if (code === undefined || authed === null) {
     return (
       <PageShell className="max-w-md">
         <PageHeader title="Your invitation" description="Checking your pass…" />
-        <LoadingScreen className="py-8" label="Checking your account" />
+        <Card>
+          <CardContent className="pt-6">
+            {/* LoadingScreen defaults to a full-viewport min-height; inside the
+                reserved card that would defeat the point, so the override
+                pins it to the content box the resolved card will occupy. */}
+            <LoadingScreen className="min-h-[9rem] py-8" label="Checking your account" />
+          </CardContent>
+        </Card>
       </PageShell>
     );
   }
