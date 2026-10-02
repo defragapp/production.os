@@ -165,6 +165,11 @@ function record(name, ok, detail = "") {
   console.log(`  ${mark} ${name}${detail ? `  — ${detail}` : ""}`);
 }
 
+/** Read a UTF-8 file, rejecting the gate on ENOENT rather than returning undefined. */
+function readFile(p) {
+  return fs.promises.readFile(p, "utf8");
+}
+
 /** Run a command, resolve {code, stdout, stderr}. Does not reject on non-zero. */
 function run(cmd, args, opts = {}) {
   return new Promise((resolve) => {
@@ -3493,6 +3498,100 @@ async function gateEvolution(port, booted) {
  *  - a shared Intent Sigil renders its public page and generates a branded
  *    OpenGraph PNG through the Satori pipeline — measured live.
  */
+/**
+ * Gate 33 · release-path completeness and secret hygiene.
+ *
+ * The bug this exists to prevent: `redact_query_string: true` was committed to
+ * BOTH wrangler configs, and the main Worker got it live — but the Tail Worker
+ * kept running the old config for months because NOTHING in the documented
+ * release path ever ran `tail:deploy`. A correct value in git is not a shipped
+ * value. It only surfaced when someone noticed the drift by hand and PATCHed
+ * the setting over the API, which is a manual step no gate would catch.
+ *
+ * So this gate asserts the SHAPE OF THE RELEASE, not just today's values:
+ *  1. `deploy` must actually chain the tail-worker deploy. If someone later
+ *     "simplifies" the script back to a main-only deploy, this fails.
+ *  2. The observability redaction must be present in the tail-worker config,
+ *     since that Worker mirrors every request event and can email payloads off
+ *     the platform. It is the specific regression that motivated the gate.
+ *  3. Both configs must omit `nodejs_compat`, which the runtime ignores at this
+ *     compatibility date and which signals a config drifted from the docs.
+ *
+ * Deliberately NOT checked: live Cloudflare state. Reaching the API here would
+ * make the gate non-hermetic (it would fail on a laptop with no token, and in
+ * CI without the secret), and the thing being verified is the release path
+ * itself — which is a property of the repo, testable everywhere.
+ */
+async function gateReleasePath() {
+  heading("Gate 33 · release-path completeness & secret hygiene");
+
+  const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+  const scripts = pkg.scripts || {};
+  const deploy = scripts.deploy || "";
+
+  // 1. The tail worker must be inside the canonical deploy, not a parallel
+  //    script nobody remembers to run.
+  const chainsTail = /tail:deploy|--config\s+tail-worker/.test(deploy);
+  record(
+    "deploy ships the Tail Worker, not just the main Worker",
+    chainsTail,
+    chainsTail
+      ? "`deploy` chains tail:deploy — config changes reach production"
+      : "`deploy` is main-only; tail-worker/wrangler.jsonc would never ship",
+  );
+
+  // The tail deploy must name the right config, or it targets the default one.
+  const tailDeploy = scripts["tail:deploy"] || "";
+  const tailTargetsConfig = /tail-worker\/wrangler\.jsonc/.test(tailDeploy);
+  record(
+    "tail:deploy targets the Tail Worker's own config",
+    tailTargetsConfig,
+    tailTargetsConfig ? tailDeploy : `tail:deploy is "${tailDeploy}" — wrong config`,
+  );
+
+  // 2. The regression that motivated this gate. The Tail Worker receives a copy
+  //    of every production-os request event and emails alerts to SUPPORT_INBOX,
+  //    so unredacted query strings are a live token-exfiltration path.
+  const tailCfgRaw = await readFile(path.join(root, "tail-worker", "wrangler.jsonc"), "utf8");
+  const tailRedacts = /"redact_query_string"\s*:\s*true/.test(tailCfgRaw);
+  record(
+    "Tail Worker redacts query strings",
+    tailRedacts,
+    tailRedacts
+      ? "redact_query_string: true — tokens stay off the alert path"
+      : "MISSING redact_query_string: true — tokens reach the support inbox in cleartext",
+  );
+
+  // 3. Redundant flag: implicit at compatibility_date >= 2026-08-04. If it
+  //    reappears, the config was hand-edited against current docs.
+  for (const [label, file] of [
+    ["main Worker", "wrangler.jsonc"],
+    ["Tail Worker", "tail-worker/wrangler.jsonc"],
+  ]) {
+    const raw = await readFile(path.join(root, file), "utf8");
+    const declaresCompat = /"compatibility_flags"/.test(raw);
+    record(
+      `${label} omits the redundant nodejs_compat flag`,
+      !declaresCompat,
+      declaresCompat
+        ? "compatibility_flags present — nodejs_compat is implicit at this date"
+        : "implicit at compatibility_date ≥ 2026-08-04, as documented",
+    );
+  }
+
+  // 4. The generated types file is COMMITTED (tsconfig points at it), so it must
+  //    be tracked. If it were gitignored, a clean clone — i.e. CI, i.e. any
+  //    future Workers Builds run — would fail to typecheck.
+  const gitCheck = await run("git", ["check-ignore", "-q", "worker-configuration.d.ts"]);
+  record(
+    "worker-configuration.d.ts is tracked, not gitignored",
+    gitCheck.code === 1,
+    gitCheck.code === 1
+      ? "clean clones can typecheck without a network round-trip"
+      : "gitignored — clean clones (CI, Workers Builds) cannot typecheck",
+  );
+}
+
 async function gateSigil(port, booted) {
   heading("Gate 32 · context-scoped memory, JPL coalescing & the Intent Sigil");
 
@@ -3611,6 +3710,7 @@ async function main() {
     await gateInputFloor(8788, booted);
     await gateEvolution(8788, booted);
     await gateSigil(8788, booted);
+    await gateReleasePath();
   } finally {
     if (child) child.kill("SIGKILL");
   }

@@ -34,7 +34,7 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 
 ## Release flow
 
-The proven, reliable path is **verify → push → confirm → (fallback) deploy**.
+The proven, reliable path is **verify → deploy → confirm**.
 Workers Builds (the git integration) is **not connected to this repo**. There is
 no Git integration on the Worker in the dashboard, so a push to `main` changes
 the repository and nothing else — no build is triggered, and
@@ -48,9 +48,24 @@ path**. Verify, then ship exactly once:
 
 ```bash
 npm run verify:release                          # every gate green, or do not ship
-rm -rf .open-next .next && npm run deploy       # the deploy
+rm -rf .open-next .next && npm run deploy       # ships BOTH Workers
 npx wrangler deployments list                   # confirm the new version
 ```
+
+> **This deploys two Workers, not one.** `production-os` and `sovereign-tail`
+> are separate Workers with separate `wrangler.jsonc` files and separate
+> version streams. `npm run deploy` chains `npm run tail:deploy` after the main
+> OpenNext deploy, so a Tail Worker config change reaches production with the
+> same command.
+>
+> Do not drop that chain. `redact_query_string: true` was committed to
+> `tail-worker/wrangler.jsonc` and still sat unapplied in production, because
+> only the main deploy ran; the drift was only caught by hand. Gate 33 in
+> `verify:release` now asserts the chain exists, so a main-only deploy fails the
+> ratchet instead of shipping half a release.
+>
+> If you deploy the main Worker by any *other* route — including a future
+> Workers Builds wiring — you must run `npm run tail:deploy` yourself.
 
 Once Git integration is enabled, the push path becomes valid again:
 
@@ -63,10 +78,20 @@ If a build is genuinely triggered, do not also run the CLI deploy while it is in
 flight — two builds of the same commit collide and stall static-asset binding
 propagation (the 503/hang seen on `/`, `/privacy`, `/terms`).
 
-`npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`)
-and then `wrangler deploy`, which rolls out to 100% of traffic; live at
-`sovereign.defrag.app`. A CLI-authored version shows your email as Author in the
-listing; a build-system version shows `undefined`.
+`npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`),
+then `wrangler deploy` for `production-os` (100% of traffic; live at
+`sovereign.defrag.app`), then `npm run tail:deploy` for `sovereign-tail`. Both
+land at 100%. A CLI-authored version shows your email as Author in the listing; a
+build-system version shows `undefined`; a version created by a direct API PATCH
+shows `Automatic deployment on upload` — which is how you can tell a config was
+hand-patched into production rather than shipped through the release path.
+
+Confirm both landed:
+
+```bash
+npx wrangler versions list                      # production-os
+cd tail-worker && npx wrangler versions list    # sovereign-tail
+```
 
 Do **not** run `npm run deploy` while a push-triggered build is still in flight:
 that is a second build of the same commit colliding, and the collision stalls
