@@ -54,7 +54,10 @@ migrations 0001–0007 applied, backup at
       (full migration visibility; README documents the steady state as 0.1).
       Edit back to `0.1`, then ship via the canonical path (push → poll
       `npx wrangler deployments status` ~3 min → one CLI `npm run deploy`
-      only if no build-system version appeared).
+      only if no build-system version appeared). Do **not** shortcut this
+      with `PATCH …/environments/production/settings` alone: the value lives
+      in `wrangler.jsonc`, so the next deploy re-applies `1.0` and silently
+      undoes the API change. File edit + deploy is the only durable path.
 
 ## 5. T+14 days green (by 2026-10-16) — Phase 8, decommission gmail
 
