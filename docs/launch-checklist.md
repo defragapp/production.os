@@ -71,6 +71,14 @@ migrations 0001–0007 applied, backup at
 
 ## 6. Next credential rotation — token scope trim + vestigial secrets
 
+- [ ] **Revoke immediately** the token `steep-smoke-dc94` and its companion
+      R2 S3 access/secret-key pair shown on its creation panel — both were
+      pasted into chat on 2026-10-02, so both are compromised-on-paste by
+      this project's standing rule (same incident class as the 2026-09-30
+      `cfat_` token). Never hand external agents credentials through chat;
+      create scoped tokens directly in the target environment. Reminder:
+      Cloudflare tokens cannot clone GitHub repos — repo access needs a
+      read-only GitHub PAT/deploy key instead.
 - [ ] Rotate `ASU_MIGRATION_TOKEN` down: drop `Zone > Read` (the app needs no
       zone scopes; deploy + secret push are account-scoped).
 - [ ] Rotate/revoke the vestigial `R2_*` keys in `.dev.vars` (no `src/`
