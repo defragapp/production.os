@@ -1,0 +1,41 @@
+name: Release gate
+
+# Runs the canonical ratchet (`scripts/verify-release.mjs`) on every change
+# aimed at main. It does NOT deploy — the single canonical release path stays
+# verify → push → poll `wrangler deployments list` → CLI fallback (see
+# docs/launch-checklist.md and the runbook). This workflow's only job is to
+# prove the commit green before it can merge/land.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The ratchet boots a real OpenNext preview worker (workerd) and drives
+      # it with system Chrome (`channel: "chrome"`, preinstalled on the
+      # runner) against a LOCAL miniflare D1 only — never production.
+      # AI/Vectorize bindings are remote, so CLOUDFLARE_API_TOKEN lets the
+      # model-path gates actually run; without it those gates SKIPPED-count
+      # and the run still passes on everything else.
+      - name: Run release-gate ratchet
+        run: npm run verify:release
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
