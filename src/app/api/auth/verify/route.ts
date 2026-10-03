@@ -8,6 +8,14 @@ import type { User } from "@/lib/types";
  * Marks the signed-in user's account as verified when the token matches a
  * stored (hashed) verification token that has not expired. The token is only
  * accepted for the account it was issued to.
+ *
+ * Why GET (vs the invite-status lookup, which is POST): this URL is the target
+ * of a link clicked in an email, and a browser can only open a clicked link with
+ * GET — a POST is not achievable here. The token is therefore protected at rest
+ * rather than by transport placement: it is SHA-hashed (`hashResetToken`) before
+ * storage, single-use, expiring, and requires the caller's session cookie. The
+ * Worker config also sets `redact_query_string: true`, so the token never lands
+ * in Workers Logs. See docs/auth.md.
  */
 export async function GET(request: NextRequest) {
   const env = await getEnv();

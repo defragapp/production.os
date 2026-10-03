@@ -236,7 +236,11 @@ export default function InvitePage() {
       return;
     }
     let cancelled = false;
-    fetch(`/api/invites/info?token=${encodeURIComponent(t)}`)
+    fetch("/api/invites/info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: t }),
+    })
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled) setInfo(d as InfoData);

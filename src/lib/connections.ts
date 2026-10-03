@@ -34,6 +34,32 @@ export async function getAuthPayload(request: NextRequest) {
   return { env, error: undefined, payload } as const;
 }
 
+/**
+ * Read a single `token` string from a JSON POST body, defensively. Returns the
+ * trimmed token, or `null` on a malformed body, absent key, non-string value,
+ * or empty string.
+ *
+ * Why POST: one-time tokens that arrive via a *client-issued* call (the /invite
+ * page's status lookup) should not ride the request line / query string, where
+ * they would surface in Workers Logs and any intermediary URL logs. Emailed
+ * click-throughs (`/api/auth/verify`, password reset) stay GET — a browser can
+ * only open a clicked link with GET — and are instead protected at rest (the
+ * token is SHA-hashed, single-use, and expiring) plus `redact_query_string` in
+ * the Worker config. See docs/auth.md.
+ */
+export async function tokenFromPost(request: NextRequest): Promise<string | null> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return null;
+  }
+  const raw = (body as { token?: unknown } | null)?.token;
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed || null;
+}
+
 export async function loadUser(env: { DB: D1Database }, userId: string): Promise<User | null> {
   try {
     return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at, terms_version FROM users WHERE id = ?").bind(userId).first<User>();
