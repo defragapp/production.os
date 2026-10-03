@@ -15,7 +15,7 @@ const CARDS = [
   },
   {
     eyebrow: "Beyond blame",
-    title: "Map the pattern that keeps everyone in place.",
+    title: "Map the dynamic that keeps everyone in place.",
     body:
       "The goal is clarity: where the pressure lands, what each person is protecting, and which change is actually yours to make.",
   },

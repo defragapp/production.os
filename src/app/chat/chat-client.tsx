@@ -119,7 +119,7 @@ function journeyBadge(t: ThreadSummary): string | null {
 const STARTING_POINTS = [
   {
     level: "About me",
-    prompt: "Help me see a pattern in how I show up that I might not be naming.",
+    prompt: "Help me see what keeps happening in how I show up that I might not be naming.",
   },
   {
     level: "What this means",

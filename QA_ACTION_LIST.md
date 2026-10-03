@@ -1,0 +1,50 @@
+# QA_ACTION_LIST.md — items held for owner review
+
+Source: full-platform UX/copy walkthrough (Perspectives A/B/C), 2026-10-03.
+Unauthenticated visitor, free/unverified user, and Sovereign+ owner lenses were crawled
+across every public and authed route. Surface-level copy and link issues were fixed in
+the same pass (see the commit). The items below are **copy-accuracy / positioning /
+structural** calls that need the owner's decision rather than a blind edit.
+
+## 1. Astrology-adjacency framing is internally inconsistent (content accuracy)
+The product openly presents astrological natal bodies, yet two public surfaces claim it
+is not astrology and name the systems inconsistently:
+
+- `src/app/about/page.tsx` metadata description: _"…not a diagnosis, **not astrology**,
+  not a verdict."_ — but the landing shows zodiac placements (Sun/Moon/Rising, "Ten natal
+  bodies", Human Design, Gene Keys). The on-page PRINCIPLES card already uses the safer,
+  defensible framing **"Grounded, not fortune-telling"** (about/page.tsx:20). Recommend
+  aligning the meta description to "not fortune-telling" for consistency and honesty.
+- `src/app/faq/page.tsx` "Where does my Baseline come from?" says the reference systems
+  are **"(numerology and Human Design)"**. The actual Baseline combines **astrology**
+  (natal bodies), **Human Design**, and **Gene Keys** — "numerology" mislabels astrology
+  and Gene Keys is omitted. Recommend naming the systems the same way the landing does.
+
+Owner call: pick ONE canonical framing of the astrological basis and propagate it through
+`about`, `faq`, `terms` §2, and the landing provenance strip.
+
+## 2. `middleware.ts` doc-comment drift (harmless, auth logic — leave unless re-touching)
+The header comment (src/middleware.ts:21, 30–31) lists `/invite` as a public page, but the
+`publicPages` array (line 55) omits it. `/invite` is still publicly reachable because it
+falls through the "not an API and not a PROTECTED_PAGE" branch (line 86). Behaviour is
+correct; only the comment is stale. Not edited here to avoid touching the auth gate.
+
+## 3. No `/team` (or founder) page (trust signal / structural)
+`src/app/about/page.tsx` carries a code comment noting the operator's background "belongs
+on a real /team page once one is authored." For an AI platform selling a paid tier, a
+credibility surface (who builds this, why trustworthy) is a conversion/trust lever. New
+route + copy — deferred, not a quick patch.
+
+## 4. Observability sampling still at full cost (operational reminder, out of UX scope)
+`wrangler.jsonc` `head_sampling_rate: 1.0` was a launch-window setting to revert to `0.1`
+around T+10d (~Oct 11–12). Not a UI issue; surfacing so it isn't forgotten during the
+acquisition push. Confirm before changing (it feeds Gate 33 expectations).
+
+---
+### Notes on what was NOT changed
+- No whole-page rewrites; every fix was a minimal in-place string edit preserving all
+  routes, bindings, and logic.
+- Client-bundle isolation (Gate 28), auth boundaries (401/404/redirect), touch/CLS/a11y
+  floors are enforced by `verify:release`; interactions were not hand-regressed.
+- Backend `/api/agent-lee` + `src/lib/agent-lee.ts` remain in place and protected (401) —
+  correct, just unlinked from public surfaces (prior hotfix).
