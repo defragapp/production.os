@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { AgentLeeConsole } from "@/components/agent-lee-console";
 import { LensPage } from "@/components/lens-page";
 
 export const metadata: Metadata = {
   title: "Self",
-  description: "A private lens for understanding yourself, grounded in your Baseline and a calm Agent Lee console.",
+  description: "A private lens for understanding yourself, grounded in your Baseline — what happened, what it came to mean, and the next honest step.",
 };
 
 const CARDS = [
@@ -12,19 +11,19 @@ const CARDS = [
     eyebrow: "Why this lens",
     title: "Start with the part that keeps repeating.",
     body:
-      "Use this space when you want a steady read on your own reactions, pressure points, and the questions that keep coming back.",
+      "Use this space when you want a clearer view of your own reactions, pressure points, and the questions that keep coming back.",
   },
   {
     eyebrow: "What it keeps apart",
     title: "What happened is not the same as what you made it mean.",
     body:
-      "Agent Lee helps keep observation, interpretation, and next steps separate so the answer stays clear without becoming clinical.",
+      "Sovereign keeps observation, interpretation, and next steps separate so the answer stays clear without becoming clinical.",
   },
   {
     eyebrow: "What to do next",
     title: "Ask for the next smallest step.",
     body:
-      "When you need a path forward, the console can turn the current launch state, route, or question into a short, actionable sequence.",
+      "When you need a way forward, this lens turns what you are living through into a short, honest sequence you can actually act on.",
   },
 ] as const;
 
@@ -38,9 +37,7 @@ export default function SelfPage() {
       cta={{ label: "Open the full chat", href: "/chat" }}
       secondaryCta={{ label: "Build your Baseline", href: "/baseline" }}
       note="Best when you want to name the shape of something before you bring anyone else into it."
-    >
-      <AgentLeeConsole />
-    </LensPage>
+    />
   );
 }
 
