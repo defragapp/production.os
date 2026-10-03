@@ -5,7 +5,7 @@ import { ArrowUp, RefreshCw } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 
 const QUICK_PROMPTS = [
-  "Summarize the current launch risks in priority order.",
+  "Summarize the launch risks in priority order.",
   "Give me the next three checks before a public release.",
   "Review the route and worker wiring for anything unfinished.",
 ];
@@ -16,7 +16,7 @@ export function AgentLeeConsole() {
       {
         role: "assistant",
         content:
-          "I’m Agent Lee. Ask me to check launch readiness, Cloudflare wiring, or the next smallest step, and I’ll keep it concise.",
+          "I’m Agent Lee. I’ll review launch readiness, Cloudflare wiring, and the next smallest step, and I’ll keep it concise.",
       },
     ],
     [],
@@ -77,7 +77,7 @@ export function AgentLeeConsole() {
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Agent Lee</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            A small launch-focused console wired to the Cloudflare AI Gateway.
+            A launch-focused console for direct checks, route review, and clear next steps.
           </p>
         </div>
         {loading && (
@@ -130,7 +130,7 @@ export function AgentLeeConsole() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={3}
-          placeholder="Ask Agent Lee to review launch readiness, routes, or Cloudflare wiring…"
+          placeholder="Ask Agent Lee to review launch readiness, routes, or Cloudflare wiring"
           className="min-h-[84px] flex-1 rounded-panel border border-border/70 bg-background/50 px-4 py-3 text-sm leading-6 text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/30"
         />
         <button

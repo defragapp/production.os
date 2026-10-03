@@ -686,6 +686,15 @@ export function LandingClient() {
             <Link href="/about" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               Philosophy
             </Link>
+            <Link href="/self" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
+              Self
+            </Link>
+            <Link href="/people" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
+              People
+            </Link>
+            <Link href="/systems" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
+              Systems
+            </Link>
             <Link href="/blog" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
               Field Notes
             </Link>
