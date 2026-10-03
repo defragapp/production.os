@@ -429,19 +429,19 @@ export function LandingClient() {
                 <div className="mt-6 flex flex-wrap gap-2">
                   <Link
                     href="/self"
-                    className="rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                    className="tap-line rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
                   >
                     Self
                   </Link>
                   <Link
                     href="/people"
-                    className="rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                    className="tap-line rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
                   >
                     People
                   </Link>
                   <Link
                     href="/systems"
-                    className="rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                    className="tap-line rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
                   >
                     Systems
                   </Link>
