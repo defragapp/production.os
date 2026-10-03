@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { ArrowUp, Check, Plus } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { Eyebrow } from "@/components/ui/eyebrow";
-import { Testimonials } from "@/components/testimonials";
 import { PricingTable } from "@/components/pricing-table";
 import { cn } from "@/lib/utils";
 import type { BaselineData } from "@/lib/types";
@@ -27,7 +27,7 @@ function Reveal({
   delay = 0,
   from = "up",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   delay?: number;
   from?: "up" | "left";
@@ -275,7 +275,7 @@ function ProductDemo() {
 
 /** Pricing feature line with a quiet check marker — bare text lists read as
     unfinished next to premium pricing tables. */
-function PlanFeature({ children }: { children: React.ReactNode }) {
+function PlanFeature({ children }: { children: ReactNode }) {
   return (
     <li className="flex items-start gap-2.5">
       <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-foreground/60" strokeWidth={2.2} aria-hidden="true" />
@@ -301,8 +301,8 @@ function SectionCrown({
   className,
 }: {
   eyebrow: string;
-  title: React.ReactNode;
-  deck?: React.ReactNode;
+  title: ReactNode;
+  deck?: ReactNode;
   align?: "center" | "left";
   className?: string;
 }) {
@@ -408,9 +408,13 @@ export function LandingClient() {
                   <Link href="/onboard?mode=signup" className="btn-focal px-7 py-3 text-sm font-semibold">
                     Start free
                   </Link>
-                  <Link href="#how" className="tap-line text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="tap-line text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground"
+                  >
                     See how it works →
-                  </Link>
+                  </button>
                 </div>
 
                 <ul className="mt-7 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px] text-muted-foreground lg:text-sm">
@@ -421,6 +425,27 @@ export function LandingClient() {
                     </li>
                   ))}
                 </ul>
+
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <Link
+                    href="/self"
+                    className="rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                  >
+                    Self
+                  </Link>
+                  <Link
+                    href="/people"
+                    className="rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                  >
+                    People
+                  </Link>
+                  <Link
+                    href="/systems"
+                    className="rounded-full border border-border/70 bg-white/[0.03] px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                  >
+                    Systems
+                  </Link>
+                </div>
               </div>
             </Reveal>
 
@@ -564,9 +589,6 @@ export function LandingClient() {
           </div>
         </section>
 
-        {/* Social proof slot — see src/content/testimonials.ts for why the
-            array is empty today and what it takes to fill it honestly. */}
-        <Testimonials />
 
 {/* ── Plans ────────────────────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />

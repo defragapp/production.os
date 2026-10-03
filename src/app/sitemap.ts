@@ -13,6 +13,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: BASE + "/", changeFrequency: "weekly", priority: 1 },
     { url: BASE + "/about", changeFrequency: "monthly", priority: 0.7 },
+    { url: BASE + "/self", changeFrequency: "monthly", priority: 0.7 },
+    { url: BASE + "/people", changeFrequency: "monthly", priority: 0.7 },
+    { url: BASE + "/systems", changeFrequency: "monthly", priority: 0.7 },
     { url: BASE + "/blog", changeFrequency: "weekly", priority: 0.7 },
     { url: BASE + "/support", changeFrequency: "monthly", priority: 0.4 },
     { url: BASE + "/faq", changeFrequency: "monthly", priority: 0.5 },

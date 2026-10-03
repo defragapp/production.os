@@ -145,7 +145,7 @@ function redactBody(evt: TailEvent): string {
   if (REDACT_MARKERS.some((m) => lower.includes(m))) {
     // Keep the leading `[module] …` tag so the operator still sees which
     // codepath fired, but drop the rest of the line.
-    const m = /^\[[^\]]+\][^:]*:/.exec(evt.message);
+    const m = /^\[[^]]+][^:]*:/.exec(evt.message);
     return `${m ? m[0] : "[redacted]"} <redacted: contains user content>`;
   }
   return evt.message.slice(0, 800);
@@ -192,18 +192,6 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
 }
 
-/**
- * Best-effort post-send bookkeeping on the parent Worker: we bump a
- * per-day KV counter (via a self-service REST call to the parent's
- * internal /api/owner/tail-ping endpoint) so the owner console can render
- * "alerts fired today". Disabled by default until that endpoint exists —
- * set to a full URL via `PARENT_PING_URL` to enable. Kept here so future
- * activation is a single env var.
- */
-async function pingParent(_evt: TailEvent, _env: Env): Promise<void> {
-  // no-op placeholder — deliberately NOT wired to a real endpoint yet.
-}
-
 export default {
   async tail(events: TailEvent[], env: Env): Promise<void> {
     if (!Array.isArray(events) || events.length === 0) return;
@@ -228,7 +216,9 @@ export default {
       const hits = (prior?.hits ?? 0) + 1;
       seen.set(fp, { lastSent: now, hits: 0 });
       fired.push({ fp, promise: sendAlert(env, evt, fp, hits) });
-      void pingParent(evt, env);
+      // TODO(day-1): if the owner console gets a real sovereign-ops-monitor
+      // endpoint, add a best-effort fetch here. Until then, keep the worker
+      // focused on alert email only; do not call a dead bookkeeping hook.
     }
     if (fired.length === 0) return;
     pruneIfNeeded();
@@ -237,7 +227,7 @@ export default {
     // few Resend fetches per batch.
     const results = await Promise.allSettled(fired.map((f) => f.promise));
     results.forEach((r, i) => {
-      if (r.status === "rejected" || r.value === false) {
+      if (r.status === "rejected" || !r.value) {
         // On failure, drop the fingerprint so the next batch can retry
         // without waiting for the full cooldown.
         seen.delete(fired[i].fp);

@@ -49,7 +49,7 @@ export function Nav() {
           setTier(data.user?.subscription_tier === "sovereign+" ? "sovereign+" : data.user?.subscription_tier === "free" ? "free" : null);
         })
         .catch(() => setAuthed(false));
-    load();
+    void load();
     // Auth is client-side (fetch + cookie), so a soft navigation after login
     // never remounts this persistent layout component. Any sign-in/passkey
     // success dispatches `sovereign:auth` to pull the chrome in sync
@@ -67,7 +67,7 @@ export function Nav() {
     pathname === href ? ("page" as const) : undefined;
 
   return (
-    <header className="pt-safe relative sticky top-0 z-50 bg-background/80 backdrop-blur-xl transition-all border-b border-border/40">
+    <header className="pt-safe sticky top-0 z-50 bg-background/80 backdrop-blur-xl transition-all border-b border-border/40">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
 
@@ -92,6 +92,9 @@ export function Nav() {
           ) : (
             <>
               <Link href="/about" className={linkClass("/about")} aria-current={ariaCurrent("/about")}>Philosophy</Link>
+              <Link href="/self" className={linkClass("/self")} aria-current={ariaCurrent("/self")}>Self</Link>
+              <Link href="/people" className={linkClass("/people")} aria-current={ariaCurrent("/people")}>People</Link>
+              <Link href="/systems" className={linkClass("/systems")} aria-current={ariaCurrent("/systems")}>Systems</Link>
               <Link href="/faq" className={linkClass("/faq")} aria-current={ariaCurrent("/faq")}>FAQ</Link>
               <Link href="/support" className={linkClass("/support")} aria-current={ariaCurrent("/support")}>Support</Link>
               <Link href="/onboard?mode=login" className={linkClass("/onboard")}>Sign in</Link>
@@ -203,6 +206,27 @@ export function Nav() {
                 className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
                 Philosophy
+              </Link>
+              <Link
+                href="/self"
+                onClick={() => setOpen(false)}
+                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+              >
+                Self
+              </Link>
+              <Link
+                href="/people"
+                onClick={() => setOpen(false)}
+                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+              >
+                People
+              </Link>
+              <Link
+                href="/systems"
+                onClick={() => setOpen(false)}
+                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+              >
+                Systems
               </Link>
               <Link
                 href="/faq"
