@@ -13,22 +13,22 @@ The user then converses with an AI in their own words. The AI's job is to help t
 Every AI answer is generated per user from four sources:
 
 1. **Baseline signals** — derived from the user's computed Baseline (sun/moon themes, qualities, pressure responses, underused capacities, Human Design type/strategy/authority, Gene Keys, life path). These are tendencies used to support reflection.
-2. **The conversation itself** — a window of prior exchanges in the same thread (bounded to the last 20 messages).
+2. **The conversation itself** — the recent exchanges in the same thread, kept within a bounded window.
 3. **Consent-gated relationship context** — the profiles of people who have explicitly accepted the user's invitation and consented to appear in that user's context. A person can never appear in another's AI context without consent, and each side is read through its own Baseline.
 4. **Static system directives** — model instructions and safety caps that are part of the codebase, not user data.
 
-The pipeline is deterministic in structure: compute baseline → derive signals → classify the user's question into an inquiry level → reason with evidence discipline → generate through a local cloud model (Llama 3.1 8B Instruct) via an AI Gateway with automatic fallback → validate the output through three safety layers. A pre-model prompt-extraction guard deflects injection attempts before any model call is made, at zero token cost.
+Every answer is grounded, generated per user, and validated before it is returned. Sovereign reasons over the Baseline and the live conversation, keeps that reasoning disciplined, and checks the output against its honesty commitments before showing it. The specific model, routing, and validation internals are not part of this public description — what matters to a reader is the contract: answers are grounded in what the user actually said and in what is computed for them, never invented.
 
-## Evidence discipline (in full)
+## Evidence discipline
 
-Every response distinguishes four states and never collapses them:
+Every answer separates what is known from what is inferred, and never collapses the two:
 
-- **Observed** — what the user said happened, or what is factually known. ("You said…", "According to your Baseline…")
-- **Baseline-supported** — interpretation grounded in the computed Baseline. ("Your Baseline suggests…", "One quality that appears in your Baseline is…")
-- **Interpretive** — a plausible reading that requires the user's confirmation. ("One possibility worth examining…", "It may be that…", "This could indicate…")
-- **Unknown** — cannot be determined from available information. ("I can't determine that…", "That would require knowing…")
+- **Observed** — what the user said happened, or what is factually known.
+- **Baseline-supported** — interpretation grounded in the user's computed Baseline.
+- **Interpretive** — a plausible reading offered for the user to confirm or reject.
+- **Unknown** — what cannot be determined; declared plainly.
 
-An interpretation is never presented as an observation. An unknown is never presented as an interpretation.
+An interpretation is never presented as an observation, and an unknown is never presented as an interpretation.
 
 ## The four levels of inquiry
 
@@ -39,24 +39,23 @@ The AI classifies each question into a level and adapts:
 3. **Level 3 — Relationship** ("Help me understand what happens between us"): requires consent-gated context about the other person; if none exists, the AI works only with what the user described and explicitly separates what happened from what the user made it mean.
 4. **Level 4 — System** ("Help me understand what happens when these people interact"): roles, loyalties, and unwritten rules inside a family or group; requires consent-gated context about multiple participants.
 
-## Reasoning model: Meaning → Expression → Consequence
+## How the AI reasons about a pattern
 
-When a pattern is identified, the AI walks through: (1) Meaning — what the user attached to the experience; (2) Expression — how that shows up in behavior; (3) Consequence — what results; (4) Reinforcement — what temporarily confirms the meaning; (5) Cost — what becomes harder; (6) Question — what reframes without diagnosing.
+When something recurring surfaces, Sovereign helps the user trace it: what the experience came to mean, how that meaning shows up in behavior, what it costs, and what question could reframe it — without ever turning the reading into a diagnosis or a verdict.
 
-## Safety and boundaries (in full)
+## Safety and boundaries
 
-- **18+ eligibility.** The platform enforces a minimum age server-side (DOB check at baseline computation) and requires a provable terms-of-service clickthrough with stored receipt before account creation.
-- **No diagnosis.** The AI does not pathologize, does not install identity labels ("you have low self-worth"), and does not treat the Baseline as a clinical signal.
-- **No relational verdicts.** It does not claim knowledge of another person's hidden emotions or intentions, and does not judge who is right.
-- **No overvalidation or moralizing.** It does not say what the user should do.
-- **No destiny.** It never predicts outcomes.
-- **User correction is integral.** The user can reject any interpretation; the AI accepts it, integrates it, and does not re-assert it.
-- **Crisis handling.** If a user discloses trauma, self-harm, abuse, or danger, the AI acknowledges what was shared, does not attempt to analyze it, and directs the user to appropriate professional resources.
-- **Prompt-extraction guard.** Before reaching the model, a turn that requests the system prompt or instructions is deflected with a grounded reply, ensuring internal directives never leak.
-- **Content safety layer.** A lexicon-based moderation layer (negation-aware) blocks prohibited categories (diagnosis, pathology, self-harm encouragement, harassment/abuse, explicit content, dangerous/illegal action). Higher-risk turns are answered with a grounded, repair-style response rather than silence or fabrication.
-- **Answer integrity.** If the model does not return a complete, valid answer, the API retries the model once and, on repeat failure, returns an honest "couldn't finish" message — never a hallucinated placeholder.
+- **18+ only.** A minimum-age check and a provable terms-of-service clickthrough are required before an account is created.
+- **No diagnosis.** Sovereign never pathologizes, never installs identity labels, and never treats the Baseline as a clinical signal.
+- **No relational verdicts.** It does not claim to know another person's hidden feelings or intentions, and does not judge who is right.
+- **No moralizing, no fortune-telling.** It does not tell the user what to do and does not predict outcomes.
+- **User correction is integral.** The user can reject any interpretation; Sovereign accepts it and does not re-assert it.
+- **Crisis handling.** If someone discloses trauma, self-harm, abuse, or danger, Sovereign acknowledges it, does not analyze it, and points to appropriate professional resources.
+- **Private instructions.** Internal directives are never disclosed to users, and attempts to extract them are deflected.
+- **Content boundaries.** Prohibited categories (diagnosis, self-harm encouragement, harassment, explicit content, dangerous or illegal action) are filtered, and higher-risk turns are met with a grounded reply rather than silence or fabrication.
+- **Answer integrity.** If an answer cannot be completed and validated, Sovereign returns an honest "couldn't finish" message — never a hallucinated placeholder.
 
-## Data, privacy, and consent (in full)
+## Data, privacy, and consent
 
 - Birth data is used for one purpose only: computing the Baseline. It is never shared, sold, or used to train anyone else's view of the user.
 - The raw baseline JSON and conversation history are scoped to the owning account in that account's D1 row.
@@ -64,14 +63,14 @@ When a pattern is identified, the AI walks through: (1) Meaning — what the use
 - Relationships appear only through explicit invitations; each participant's data is visible only through their own authenticated session. The invited person must accept and consent before their derived profile can be used in another user's AI context.
 - Accounts can be deleted in one click, which cascades and removes the account and all its data.
 - **Dual memory architecture.** By default (`server` mode), transcripts persist in D1 for multi-device continuity. In `local` (Device-Only) mode, the server writes no thread data; the browser encrypts conversation history with an AES-GCM 256 non-extractable key sealed in IndexedDB, and the AI edge retains nothing.
-- Sessions are httpOnly JWTs with server-side early revocation (a token_version counter invalidates outstanding cookies on logout or password reset without a denylist).
-- Free tier: 5 AI messages/day (enforced by an atomic D1 counter), 20 requests/min burst cap. Sovereign+ (subscription or 30-day gift pass): 150 messages/day fair-use ceiling and the full relationship feature set.
+- Sessions are secure (httpOnly) and can be revoked server-side the moment a user signs out or resets a password.
+- A free tier is available with daily limits, and Sovereign+ (subscription or 30-day gift pass) raises those limits and unlocks the full relationship feature set. Specific quotas and enforcement internals are set in the product and may change; they are not part of this public description.
 
 ## Journey Engine & progressive features
 
 - **Journey** (deterministic, not model-run): a structured self-reflection arc derived from the conversation's reasoning context. Milestones unlock as the user explores new inquiry levels or domains. The arc renders in an out-of-flow overlay with zero Cumulative Layout Shift.
 - **Voice dictation:** Web Speech API integration for hands-free input; progressive enhancement (works where the browser supports it, silent otherwise).
-- **Gift passes:** SHA-256-hashed 30-day Sovereign+ codes the platform owner can distribute; atomic single-use claim prevents reuse.
+- **Gift passes:** time-limited Sovereign+ codes the platform owner can distribute; each code is single-use.
 
 ## What Sovereign is NOT
 
@@ -91,4 +90,4 @@ When a pattern is identified, the AI walks through: (1) Meaning — what the use
 
 ---
 
-*This file intentionally mirrors how Sovereign works so that AI crawlers and search engines can represent the product accurately. If you have questions, contact sovereign@defrag.app.*
+*This file describes what Sovereign does and the commitments it keeps, so that AI crawlers and search engines can represent the product accurately. If you have questions, contact sovereign@defrag.app.*

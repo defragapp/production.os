@@ -27,7 +27,7 @@ It does not diagnose, does not pathologize, does not moralize, does not issue re
 - Follow a deterministic **Journey** — a guided self-reflection arc that tracks milestones and adapts prompts to what the conversation has already surfaced.
 - Use voice dictation for hands-free input (Web Speech API, progressive enhancement).
 - Choose **Device-Only** memory: all conversation data encrypted client-side with AES-GCM 256 in IndexedDB; the edge never stores a transcript for that account.
-- Upgrade to Sovereign+ (subscription or gift pass) for 150 messages/day and the full people/relationships feature set.
+- Upgrade to Sovereign+ (subscription or gift pass) for expanded daily capacity and the full people/relationships feature set.
 
 ## What Sovereign is not
 
@@ -51,4 +51,4 @@ It does not diagnose, does not pathologize, does not moralize, does not issue re
 
 ## Privacy
 
-User birth data and conversations are private. Sovereign never sells data, never trains third-party models on user conversations, and every AI answer is generated per-user — one person's conversations never feed another's answers. Relationships appear only through invitations the other person accepted. In Device-Only memory mode, transcripts are sealed in the user's browser vault and the server retains nothing. Sessions are revocable server-side before expiry. A pre-model safety guard deflects prompt-injection attempts without reaching the AI, ensuring system instructions remain private.
+User birth data and conversations are private. Sovereign never sells data, never trains third-party models on user conversations, and every AI answer is generated per-user — one person's conversations never feed another's answers. Relationships appear only through invitations the other person accepted. In Device-Only memory mode, transcripts are sealed in the user's browser vault and the server retains nothing. Sessions are revocable server-side before expiry. Attempts to extract Sovereign's internal instructions are deflected, so its system directives stay private.
