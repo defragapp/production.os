@@ -29,7 +29,7 @@ function passkeysSupported(): boolean {
  * If the browser has no passkey for this site, the ceremony aborts and we fall
  * back to the password form (never a dead end).
  */
-export function PasskeySignInButton({ className }: { className?: string }) {
+export function PasskeySignInButton({ className, focal = false }: { className?: string; focal?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
@@ -113,7 +113,13 @@ export function PasskeySignInButton({ className }: { className?: string }) {
 
   return (
     <div className="space-y-2">
-      <Button type="button" variant="outline" className={className ?? "w-full"} onClick={onClick} disabled={busy}>
+      <Button
+        type="button"
+        variant={focal ? "aurora" : "outline"}
+        className={className ?? "w-full"}
+        onClick={onClick}
+        disabled={busy}
+      >
         {busy ? "Waiting for your device…" : "Continue with passkey"}
       </Button>
       {error && <p role="alert" className="text-center text-sm text-muted-foreground">{error}</p>}

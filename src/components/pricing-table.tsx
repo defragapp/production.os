@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { Check, Minus } from "lucide-react";
 
 type Row = {
@@ -58,6 +61,30 @@ function Cell({ value, tone }: { value: string | boolean; tone: "free" | "plus" 
 }
 
 export function PricingTable() {
+  // Progressive-disclosure entry for the comparison rows: reuse the landing's
+  // hand-rolled `.reveal` system (240ms easeOut, opacity-only on a table-row,
+  // reduced-motion safe). A single observer on <tbody> flips every row to `.in`
+  // when the table scrolls into view; per-row `transitionDelay` staggers them.
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const rows = Array.from(el.querySelectorAll("tr"));
+    rows.forEach((r) => r.classList.add("js-ok", "reveal-from-up"));
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            rows.forEach((r) => r.classList.add("in"));
+            io.disconnect();
+          }
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   return (
     <div className="mt-14 overflow-hidden rounded-lg border border-foreground/15 bg-surface/40">
       <table className="w-full border-collapse text-left">
@@ -83,11 +110,12 @@ export function PricingTable() {
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody ref={bodyRef}>
           {ROWS.map((row, i) => (
             <tr
               key={row.feature}
-              className={i < ROWS.length - 1 ? "border-b border-foreground/[0.08]" : ""}
+              className={`reveal ${i < ROWS.length - 1 ? "border-b border-foreground/[0.08]" : ""}`}
+              style={{ transitionDelay: `${i * 55}ms` }}
             >
               <th scope="row" className="px-5 py-4 text-left text-sm font-normal leading-snug text-foreground/90">
                 {row.feature}

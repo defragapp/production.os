@@ -74,5 +74,14 @@ export function TurnstileWidget({ siteKey, onToken, onError }: TurnstileWidgetPr
   }, [siteKey]);
 
   if (!siteKey) return null;
-  return <div ref={containerRef} className="flex min-h-[65px] justify-center" />;
+  // Sized to the standard Turnstile footprint (300×65) on the graphite surface
+  // token, so the container reads as an intentional dark slot from first paint.
+  // Without it the wrapper is an unstyled box and the iframe's brief pre-theme
+  // default flash lands on raw page background instead of dark graphite.
+  return (
+    <div
+      ref={containerRef}
+      className="mx-auto flex min-h-[65px] w-[300px] max-w-full items-center justify-center overflow-hidden rounded-md bg-surface-1"
+    />
+  );
 }

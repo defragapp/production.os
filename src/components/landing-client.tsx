@@ -153,15 +153,15 @@ const DEMO_REFLECTION = "What would change if you let one person see the full we
 const ANSWER_ANATOMY = [
   {
     label: "What you brought",
-    body: "You both say the fight is about the number. The useful signal isn't the amount — it's that it keeps returning to the same trigger.",
+    body: "You both say the fight is about the number. The signal isn't the amount — it's that it keeps returning to the same trigger.",
   },
   {
     label: "What your Baseline suggests · a tendency, not a verdict",
-    body: "Your chart leans toward deciding through other people's angles — you feel what a choice costs someone before you feel what it costs you. Over time that can turn into yielding, then resenting the yield.",
+    body: "Your Baseline leans toward deciding through other people's angles — you feel what a choice costs someone before it costs you. Over time that becomes yielding, then resenting the yield.",
   },
   {
     label: "What's only worth examining",
-    body: "One possibility is that the money stands in for a quieter argument about who holds authority here. It's also allowed to be only about the money.",
+    body: "One possibility: the money stands in for a quieter argument about who holds authority here. It's also allowed to be only about the money.",
   },
   {
     label: "The question it leaves with you",
@@ -188,7 +188,7 @@ const PERSPECTIVE = {
   },
   commonLabel: "The common ground",
   commonText:
-    "You both value the connection. You just regulate pressure at different speeds — and that difference is negotiable, not a verdict on either of you.",
+    "You both value the connection — you just regulate pressure at different speeds. That difference is negotiable, not a verdict on either of you.",
   note: "An illustrative example — the shape of a real conversation, not a transcript.",
 } as const;
 
@@ -420,7 +420,11 @@ export function LandingClient() {
                 <ul className="mt-7 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[13px] text-muted-foreground lg:text-sm">
                   {TRUST_NOTES.map((note, i) => (
                     <li key={note} className="flex items-center gap-3.5">
-                      {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/50" aria-hidden="true" />}
+                      {/* The separator dot only earns its place on one line (sm+).
+                          Below that the list wraps to two lines, and a dot leading
+                          the wrapped line stranded "Free to start" like a stray
+                          bullet — so it shows only where the row can't wrap. */}
+                      {i > 0 && <span className="hidden h-1 w-1 rounded-full bg-muted-foreground/50 sm:block" aria-hidden="true" />}
                       {note}
                     </li>
                   ))}

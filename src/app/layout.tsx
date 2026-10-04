@@ -5,6 +5,7 @@ import { TabBar } from "@/components/tab-bar";
 import { InstallPrompt } from "@/components/install-prompt";
 import { ServiceWorkerRegistration } from "@/components/sw-registration";
 import { TermsGate } from "@/components/terms-gate";
+import { RouteFade } from "@/components/route-fade";
 import "./globals.css";
 
 const sans = Manrope({
@@ -142,7 +143,7 @@ export default function RootLayout({
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        {children}
+        <RouteFade>{children}</RouteFade>
         <TabBar />
         <InstallPrompt />
         <ServiceWorkerRegistration />

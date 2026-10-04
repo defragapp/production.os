@@ -71,6 +71,12 @@ export function LensPage({
   children?: ReactNode;
   note?: string;
 }) {
+  // The third lens card only restated the call to action beneath it, so the grid
+  // now shows the two genuinely distinct cards and the third card's directional
+  // headline folds into the CTA block — one fewer glass box, a tighter scroll,
+  // and a clearer hierarchy between "what this is" and "what to do next."
+  const gridCards = cards.slice(0, 2);
+  const direction = cards.length > 2 ? cards[2] : undefined;
   return (
     <PageShell center={false} wide="wide" rule className="space-y-10">
       <Reveal className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
@@ -82,8 +88,8 @@ export function LensPage({
 
       {children && <Reveal className="mx-auto w-full max-w-3xl">{children}</Reveal>}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {cards.map((card, index) => (
+      <div className="grid gap-4 md:grid-cols-2">
+        {gridCards.map((card, index) => (
           <Reveal key={card.title} delay={index * 80} className="h-full">
             <div className="glass-panel card-lift flex h-full flex-col rounded-panel p-6 md:p-7">
               {card.eyebrow && (
@@ -101,7 +107,12 @@ export function LensPage({
       </div>
 
       <Reveal className="mx-auto max-w-3xl text-center">
-        {note && <p className="mb-5 text-sm leading-7 text-muted-foreground">{note}</p>}
+        {direction && (
+          <p className="mx-auto mb-3 max-w-xl font-display text-lg leading-snug text-foreground md:text-xl">
+            {direction.title}
+          </p>
+        )}
+        {note && <p className="mb-6 text-sm leading-7 text-muted-foreground">{note}</p>}
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href={cta.href} className="btn-focal inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold">
             {cta.label}

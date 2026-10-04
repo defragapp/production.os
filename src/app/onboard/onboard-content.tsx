@@ -403,7 +403,15 @@ export function OnboardContent() {
               <CardContent className="pt-6">
                 {isLogin && (
                   <>
-                    <PasskeySignInButton />
+                    {/* Passkey-first: the credential-less, one-tap path is the
+                        focal action at the top of the card (solid cream), with
+                        the email/password form demoted to the fallback beneath
+                        an explicit divider. Registration still needs a session,
+                        so this focal path lives on sign-in only. */}
+                    <p className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+                      Recommended · fastest way back in
+                    </p>
+                    <PasskeySignInButton focal />
                     <div className="my-4 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
                       <span className="h-px flex-1 bg-border" />
                       or use your password

@@ -905,6 +905,29 @@ a,[role="button"] {
   }
 }
 
+/* Route-level crossfade — a short opacity-only fade replayed whenever the
+   pathname changes (see components/route-fade.tsx), so navigating between
+   marketing routes reads as one continuous surface rather than a hard cut.
+   Opacity is exempt from the Layout Instability API (spends no CLS budget) and
+   does not create a containing block for the page's fixed overlays. With JS off
+   or reduced-motion, content simply renders at full opacity. */
+.route-fade {
+  animation: route-fade 0.18s ease-out;
+}
+@keyframes route-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-fade {
+    animation: none;
+  }
+}
+
 /* ── Zero-CLS JourneyBar veil ────────────────────────────────
    Measured truth (see verify:release Gate 8): ANY in-flow height change above
    a visible element is a layout shift in Chrome — animated or not, scroll
