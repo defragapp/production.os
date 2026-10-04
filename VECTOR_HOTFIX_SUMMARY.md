@@ -102,6 +102,11 @@ sources** (Workers Builds is still not connected), so the CLI was the only deplo
 `npm run deploy` exited 0 (`DEPLOY_EXIT=0`, `.audit-tmp/deploy-vector-fix.log`). Worker URL
 `https://production-os.cjowen2.workers.dev` → canonical `https://sovereign.defrag.app`.
 
+Later commits in this set change comments and markdown only — `git diff 2a9dbb3 -- src/lib/chat-embeddings.ts`
+has no non-comment line, so `410c3bcd-…` remains the correct artifact for `HEAD` and no redeploy was
+warranted. The wording pass was still re-ratcheted: a third full `verify:release` after §8 came back
+116/116 with zero failures.
+
 **4.1 Write path — one live turn, captured against the new version.** Posted a real turn to
 `POST /api/chat` as the test account (`defragapp@gmail.com`, `memory_mode='server'`); thread
 `8f5e7725-37e2-41af-8e53-d68fcb327ca1`, 213 chars, 5.4s wall. `wrangler tail` for that request shows
@@ -198,10 +203,34 @@ mints mock ids as `${USER}::${threadId}::${turnIndex}::${role}`. `searchChat` re
 the tests pass either way and the fixture never asserts on id shape; left alone for scope discipline,
 but it no longer mirrors production ids.
 
+**6d. `embedThread` is dead code with a fabricated docstring.** Its comment claimed a
+`scripts/backfill-embeddings.mjs` and an "on-demand reindex path from /api/chat/search" both route
+through it. Neither exists: the script is not in `scripts/`, `searchChat`'s route never calls
+`embedThread`, and the symbol has zero callers repo-wide. It also claimed to skip already-indexed turns;
+it does not, it re-upserts the whole thread. Corrected in the same pass as the other docstring
+overclaims. Practical consequence for §7: there is currently **no** path that indexes pre-existing
+history — writing one is a real (small) feature, not a script to run.
+
 ## 7. What is now true
 
-Semantic recall is live on the edge: every server-memory turn indexes two 1024-dim vectors under an
-18-byte deterministic id, and paraphrased retrieval returns them. The `memory_mode='local'` contract is
-untouched (that path never reaches this code). Existing pre-fix threads have no vectors — the
-`embedThread` backfill helper and the owner backfill script path are the way to index history if you
-want it, and are idempotent by `upsert`.
+Semantic recall is live on the edge: every server-memory turn produced by `/api/chat` indexes two
+1024-dim vectors under an 18-byte deterministic id, and paraphrased retrieval returns them. The
+`memory_mode='local'` contract is untouched (that path never reaches this code). Pre-fix threads and
+any thread written by a non-chat route have no vectors, and there is no backfill tooling to change that
+yet — see §6d.
+
+## 8. Follow-up: evidential wording pass over `chat-embeddings.ts`
+
+A claim audit flagged two unqualified absolutes in this file's docstrings. Both were real overclaims, and
+sweeping the file for the same pattern turned up more. What changed (comments only — no executable line):
+
+| Claim as written | Why it was wrong | Now says |
+|---|---|---|
+| "`embedTurn` … Never throws" | `truncate(turn.text)` throws on a non-string `text`, before the `try` is entered | error posture is scoped to the store/model path; malformed arguments do surface |
+| "Every public function swallows its errors" | `embedLatestTurn` / `embedThread` have no `try` of their own; they lean on `embedTurn` | each function's own Vectorize / Workers AI calls are wrapped, and the fallback values are named per outcome |
+| "Every turn written to `threads` … is embedded" | only `/api/chat` embeds; the `PUT /api/threads` merge path and pre-feature history do not | each turn produced by /api/chat; other writers need `embedThread` |
+| "Deleting a thread or account therefore also deletes the vectors" | disproved live in §6a — the thread sweep never fires | thread path called out as a current no-op; account deletion does sweep |
+| "the two sides of the vector index are always consistent with … thread history" | a swallowed embedding failure breaks exactly that | index is aimed at the visible turn; consistency is best-effort in the failure direction |
+| `embedThread`: "embeds every pair … not already indexed", "backfill script … reindex path from /api/chat/search both go through here" | it checks nothing and re-upserts the whole thread; the script does not exist and there are zero callers | no skip check, and currently dead code kept as the intended backfill entry point (§6d) |
+| `deleteThreadEmbeddings`: "ids built from a caller-supplied list of `(turnIndex, role)` pairs" | the caller passes one number, not a list | caller supplies the message count; under-counting leaves tail vectors orphaned |
+| "EVERY upsert was rejected" / "two turns never land on the same id" | my own new comments in this change — the first is an inference from sampled logs, the second is stronger than a 64-bit digest can promise | scoped to the captured production tail; collisions stated as remote, backed by the 800/800 sample |

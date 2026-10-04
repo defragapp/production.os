@@ -1,10 +1,12 @@
 /**
  * Chat Embeddings — semantic recall over server-memory chat history.
  *
- * Workers Paid feature surface. Every turn written to `threads` under
+ * Workers Paid feature surface. Each turn produced by /api/chat under
  * memory_mode='server' is embedded via Workers AI
  * (`@cf/baai/bge-large-en-v1.5`, 1024-dim cosine) and upserted into the
- * Vectorize index `chat-embeddings` under a per-user namespace. Search
+ * Vectorize index `chat-embeddings` under a per-user namespace. Threads
+ * written by other paths (the PUT /api/threads merge, pre-feature history)
+ * are not embedded until something calls `embedThread`. Search
  * embeds the query once and asks Vectorize for the top-K matches scoped
  * to that namespace.
  *
@@ -13,19 +15,27 @@
  *     `{ userId, threadId, turnIndex, role }` coordinates needed to
  *     hydrate the snippet back out of D1 on demand. Those coordinates ride
  *     in the vector's `metadata`, and the vector id itself is an opaque,
- *     fixed-length digest of them (see `vectorId`). Deleting a thread
- *     or account therefore also deletes the vectors (via
- *     `deleteThreadEmbeddings` called from the D1 cascade hooks) — the
- *     only persistent artifact is a fixed-length float vector that is
+ *     fixed-length digest of them (see `vectorId`). The erasure hooks are
+ *     meant to remove the vectors along with the rows
+ *     (`deleteThreadEmbeddings` on thread delete, `deleteUserEmbeddings`
+ *     on account delete) — note the thread path is currently a no-op
+ *     because its turn-count SQL returns NULL, so a deleted thread can
+ *     leave its vectors behind until that is fixed; account deletion does
+ *     sweep. Either way the only
+ *     persistent artifact is a fixed-length float vector that is
  *     not reversible.
  *   - memory_mode='local' bypasses this path entirely: no server-side
  *     write, no embedding. The 'Device-Only' contract stays true.
  *
  * Failure posture:
- *   - Every public function swallows its errors and returns a benign
- *     fallback (0 vectors upserted / empty match list). Chat writes and
- *     reads must never fail because of the semantic layer — the plain
- *     thread listing is the source of truth; embeddings are an index.
+ *   - Each public function wraps its own Vectorize / Workers AI calls in a
+ *     try/catch and returns a benign fallback (0 vectors upserted, empty
+ *     match list, 0 ids deleted) when those calls fail, so a chat write or
+ *     read is not failed by the semantic layer — the plain thread listing
+ *     is the source of truth; embeddings are an index. This is scoped to
+ *     the store/model path, not a blanket no-throw guarantee: a malformed
+ *     argument still surfaces, e.g. a non-string `turn.text` reaching
+ *     `truncate()` throws before any try block is entered.
  *   - Callers schedule these via `waitUntil` (see `src/lib/env.ts`) so
  *     the network round-trip to Workers AI never enters the TTFB path.
  */
@@ -68,9 +78,10 @@ function getIndex(env: AppEnv): VectorizeIndexLike | null {
 /**
  * FNV-1a, 32-bit. Synchronous, dependency-free, and sufficient as an identity
  * digest: the inputs are our own coordinates (not adversarial fingerprints),
- * and we only need determinism plus a wide-enough space that two turns never
- * land on the same id. `seed` picks between two independent passes so the
- * combined digest carries 64 bits, not 32.
+ * and what we need is determinism plus a space wide enough that collisions
+ * between two turns are remote rather than ruled out — 800 sampled turns
+ * produced 800 distinct ids. `seed` picks between two independent passes so
+ * the combined digest carries 64 bits, not 32.
  */
 function fnv1a32(str: string, seed: number): number {
   let h = seed >>> 0;
@@ -86,11 +97,12 @@ function fnv1a32(str: string, seed: number): number {
  *
  * Vectorize caps ids at 64 BYTES. The previous composite
  * `${userId}::${threadId}::${turnIndex}::${role}` measured 87 bytes for a user
- * turn and 92 for an assistant turn (two 36-char UUIDs plus separators), so
- * EVERY upsert was rejected with `VECTOR_UPSERT_ERROR (code 40008)` — and
- * because `embedTurn` is fire-and-forget under `waitUntil` and swallows its own
- * errors, semantic recall was silently dead platform-wide while chat kept
- * returning 200s.
+ * turn and 92 for an assistant turn (two 36-char UUIDs plus separators), so it
+ * could never be accepted: every turn captured in the production `wrangler
+ * tail` during the latency study was rejected with
+ * `VECTOR_UPSERT_ERROR (code 40008)` — and because `embedTurn` is
+ * fire-and-forget under `waitUntil` and swallows its own errors, semantic
+ * recall stayed silently dead while chat kept returning 200s.
  *
  * The tuple is now folded into a fixed-length digest: `ce` + 8 hex from
  * FNV-1a(seed A) + 8 hex from FNV-1a(seed B) = 18 bytes, constant regardless of
@@ -101,10 +113,11 @@ function fnv1a32(str: string, seed: number): number {
  *   - `userId` stays INSIDE the digest. It is no longer merely decorative:
  *     `threadId` is partly caller-supplied, so hashing it in keeps one account
  *     from ever composing the id of another account's turn.
- *   - Nothing reads structure OUT of the id. `searchChat` hydrates matches from
- *     Vectorize `metadata` (userId / threadId / turnIndex / role / indexedAt),
- *     and recall ordering uses `metadata.indexedAt` — not the id — so losing
- *     the old natural sort by id costs nothing.
+ *   - No call site reads structure OUT of the id (checked this file and its
+ *     importers). `searchChat` hydrates matches from Vectorize `metadata`
+ *     (userId / threadId / turnIndex / role / indexedAt), and recall ordering
+ *     uses `metadata.indexedAt` — not the id — so losing the old natural sort
+ *     by id costs nothing.
  */
 function vectorId(turn: Turn, userId: string): string {
   const tuple = `${userId}\u0000${turn.threadId}\u0000${turn.turnIndex}\u0000${turn.role}`;
@@ -120,14 +133,18 @@ function truncate(text: string): string {
 }
 
 /**
- * Batch-embed one turn (user + assistant) and upsert into Vectorize.
- * Both texts go through the model in a single request — the Workers AI
- * embeddings endpoint supports array input, so this is one round-trip
- * regardless of pair size. Returns the number of vectors upserted (0, 1,
- * or 2 — empty sides are skipped).
+ * Batch-embed one turn and upsert it into Vectorize. The endpoint takes an
+ * array, so the single-text call here could be widened to a pair without an
+ * extra round-trip if a caller ever needs that; today it embeds exactly one
+ * side and returns 1 on success or 0 (binding missing, empty text after
+ * truncation, no vector back, or a logged failure). `embedLatestTurn` is the
+ * one that pairs a user message with its reply, so it returns 0..2.
  *
- * Never throws: any error is logged and returns 0 so the caller's
- * `waitUntil` stays cheap and the chat response is unaffected.
+ * Error posture: a failed model call or upsert is logged and returns 0, so
+ * the caller's `waitUntil` stays cheap and the chat response is unaffected.
+ * That covers the store/model path only — `truncate()` throws on a
+ * non-string `turn.text` before the try block is entered, which is a caller
+ * bug rather than a transient failure worth swallowing.
  */
 export async function embedTurn(
   env: AppEnv,
@@ -168,8 +185,10 @@ export async function embedTurn(
 /**
  * Embed the most recent turn of a thread (user msg + assistant reply).
  * Called from /api/chat/route.ts via `waitUntil` after the D1 write has
- * landed, so the two sides of the vector index are always consistent
- * with the source-of-truth thread history.
+ * landed, so a turn that the person can see in the thread listing is also
+ * the turn the index is aimed at. It is best-effort in the other direction:
+ * a swallowed embedding failure leaves that turn unindexed while D1 stays
+ * authoritative.
  */
 export async function embedLatestTurn(
   env: AppEnv,
@@ -187,14 +206,15 @@ export async function embedLatestTurn(
 }
 
 /**
- * Delete every vector associated with a thread. Uses deterministic ids
- * built from a caller-supplied list of `(turnIndex, role)` pairs so the
- * sweep is a single `deleteByIds` call rather than a metadata query
- * (Vectorize has no filter-delete).
+ * Delete every vector associated with a thread. The caller supplies the
+ * thread's message count, and this builds the deterministic id for every
+ * `(turnIndex, user|assistant)` pair below it, so the sweep is a single
+ * `deleteByIds` call rather than a metadata query (Vectorize has no
+ * filter-delete). Passing a count lower than the thread's real length
+ * leaves the tail vectors orphaned.
  *
- * For account deletion, use `deleteAllUserEmbeddings` with a scanned id
- * list — Vectorize namespaces can also be truncated by reindexing, but
- * the deterministic sweep is the reliable path.
+ * For account deletion, use `deleteUserEmbeddings`, which does the same
+ * enumeration across every thread the account still has rows for.
  */
 export async function deleteThreadEmbeddings(
   env: AppEnv,
@@ -283,8 +303,8 @@ export async function searchChat(
 
 /**
  * Full erasure sweep for a single account. Called from DELETE /api/auth/account
- * before the D1 cascade runs, so a GDPR/CCPA right-to-erasure request removes
- * the vector coordinates as well as the underlying rows. Because Vectorize
+ * before the D1 cascade runs, so a GDPR/CCPA right-to-erasure request aims to
+ * remove the vector coordinates as well as the underlying rows. Because Vectorize
  * ids are deterministic digests of (userId, threadId, turnIndex, role) and
  * the account's threads are still readable in D1 at this point, we can
  * enumerate every id without a metadata query.
@@ -330,11 +350,15 @@ export async function deleteUserEmbeddings(
 }
 
 /**
- * Backfill helper — embeds every (user, assistant) pair in a thread that
- * is not already indexed. Idempotent via `upsert`; safe to re-run. The
- * chat route does NOT use this — it only calls `embedLatestTurn`. The
- * owner-launched backfill script (`scripts/backfill-embeddings.mjs`) and
- * the on-demand reindex path from /api/chat/search both go through here.
+ * Backfill helper: embed and upsert every user/assistant message in a
+ * thread. It does NOT check whether a turn is already indexed — it
+ * re-upserts the whole thread, which is idempotent in content (same
+ * deterministic ids) but pays for the embeddings again.
+ *
+ * Currently has no callers in the repo: /api/chat only uses
+ * `embedLatestTurn`, and neither a backfill script nor a reindex-on-search
+ * path exists yet. Kept exported as the intended entry point for indexing
+ * pre-existing history once the feature is wired up.
  */
 export async function embedThread(
   env: AppEnv,
