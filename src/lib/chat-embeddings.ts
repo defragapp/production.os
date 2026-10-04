@@ -11,7 +11,9 @@
  * Privacy posture (aligned with the rest of the platform):
  *   - The plaintext of a message NEVER lives inside Vectorize — only the
  *     `{ userId, threadId, turnIndex, role }` coordinates needed to
- *     hydrate the snippet back out of D1 on demand. Deleting a thread
+ *     hydrate the snippet back out of D1 on demand. Those coordinates ride
+ *     in the vector's `metadata`, and the vector id itself is an opaque,
+ *     fixed-length digest of them (see `vectorId`). Deleting a thread
  *     or account therefore also deletes the vectors (via
  *     `deleteThreadEmbeddings` called from the D1 cascade hooks) — the
  *     only persistent artifact is a fixed-length float vector that is
@@ -63,12 +65,52 @@ function getIndex(env: AppEnv): VectorizeIndexLike | null {
   return idx ?? null;
 }
 
+/**
+ * FNV-1a, 32-bit. Synchronous, dependency-free, and sufficient as an identity
+ * digest: the inputs are our own coordinates (not adversarial fingerprints),
+ * and we only need determinism plus a wide-enough space that two turns never
+ * land on the same id. `seed` picks between two independent passes so the
+ * combined digest carries 64 bits, not 32.
+ */
+function fnv1a32(str: string, seed: number): number {
+  let h = seed >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Deterministic Vectorize id for one turn.
+ *
+ * Vectorize caps ids at 64 BYTES. The previous composite
+ * `${userId}::${threadId}::${turnIndex}::${role}` measured 87 bytes for a user
+ * turn and 92 for an assistant turn (two 36-char UUIDs plus separators), so
+ * EVERY upsert was rejected with `VECTOR_UPSERT_ERROR (code 40008)` — and
+ * because `embedTurn` is fire-and-forget under `waitUntil` and swallows its own
+ * errors, semantic recall was silently dead platform-wide while chat kept
+ * returning 200s.
+ *
+ * The tuple is now folded into a fixed-length digest: `ce` + 8 hex from
+ * FNV-1a(seed A) + 8 hex from FNV-1a(seed B) = 18 bytes, constant regardless of
+ * how long any coordinate grows. Properties that mattered and are preserved:
+ *   - Deterministic, so `deleteThreadEmbeddings` / `deleteUserEmbeddings` still
+ *     enumerate ids instead of needing a metadata query (Vectorize has no
+ *     filter-by-prefix delete).
+ *   - `userId` stays INSIDE the digest. It is no longer merely decorative:
+ *     `threadId` is partly caller-supplied, so hashing it in keeps one account
+ *     from ever composing the id of another account's turn.
+ *   - Nothing reads structure OUT of the id. `searchChat` hydrates matches from
+ *     Vectorize `metadata` (userId / threadId / turnIndex / role / indexedAt),
+ *     and recall ordering uses `metadata.indexedAt` — not the id — so losing
+ *     the old natural sort by id costs nothing.
+ */
 function vectorId(turn: Turn, userId: string): string {
-  // userId is embedded in the id itself so a delete-by-thread sweep can
-  // enumerate deterministic ids without a metadata query (Vectorize does
-  // not support id-prefix delete). turnIndex is zero-padded to sort
-  // naturally and to avoid `:10` matching a prefix of `:100`.
-  return `${userId}::${turn.threadId}::${String(turn.turnIndex).padStart(5, "0")}::${turn.role}`;
+  const tuple = `${userId}\u0000${turn.threadId}\u0000${turn.turnIndex}\u0000${turn.role}`;
+  const a = fnv1a32(tuple, 0x811c9dc5).toString(16).padStart(8, "0");
+  const b = fnv1a32(tuple, 0x9e3779b9).toString(16).padStart(8, "0");
+  return `ce${a}${b}`;
 }
 
 function truncate(text: string): string {
@@ -243,9 +285,9 @@ export async function searchChat(
  * Full erasure sweep for a single account. Called from DELETE /api/auth/account
  * before the D1 cascade runs, so a GDPR/CCPA right-to-erasure request removes
  * the vector coordinates as well as the underlying rows. Because Vectorize
- * ids are deterministic (userId::threadId::turnIndex::role) and the account's
- * threads are still readable in D1 at this point, we can enumerate every id
- * without a metadata query.
+ * ids are deterministic digests of (userId, threadId, turnIndex, role) and
+ * the account's threads are still readable in D1 at this point, we can
+ * enumerate every id without a metadata query.
  *
  * Vectorize's `deleteByIds` has a per-request cap (currently 1000), so this
  * batches. Batches are issued sequentially — a burst in parallel would blow
