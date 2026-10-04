@@ -1,6 +1,7 @@
 # Sovereign.OS — Vector Identity Hotfix Summary
 
-**Branch:** `migrate-to-asu` → trunk `main`, both at `2a9dbb3` · **Date:** 2026-10-04 · **Status:** shipped to production and proven live
+**Branch:** `migrate-to-asu` → trunk `main`, both synced · **Date:** 2026-10-04 · **Status:** shipped to production and proven live
+**Commits:** `2a9dbb3` carries the code fix plus the two diagnostic reports; this file landed in the docs commit that follows it. `production-os` runs `410c3bcd-3305-4de5-943c-bc67c9f21afe`.
 **Scope:** one function (`vectorId`) plus its comments. No other chat-pipeline logic touched.
 
 ---
@@ -150,9 +151,9 @@ No other account's data was touched.
 
 Commit `2a9dbb3` — `fix(ai): enforce 64-character limit on vector embeddings and sync diagnostic reports` —
 contains `src/lib/chat-embeddings.ts`, `LATENCY_PROFILE_REPORT.md` (new) and `REMEDIATION_SUMMARY.md`
-(amended). `git ls-tree --name-only origin/main` lists both report files; `main`,
-`origin/main`, `migrate-to-asu` and `origin/migrate-to-asu` all point at `2a9dbb3` (fast-forward, no
-divergence).
+(amended). `git ls-tree --name-only origin/main` lists all three report files, including this one; local
+`main`, `origin/main`, `migrate-to-asu` and `origin/migrate-to-asu` point at the same commit with no
+divergence (both pushes were fast-forwards).
 
 The amendment: `REMEDIATION_SUMMARY.md` §3 previously asserted a cross-account **negative control** was
 run against a sibling account and "behaved correctly". **It never ran.** The paragraph now says so
