@@ -493,10 +493,19 @@ export function OnboardContent() {
                       returning user and their account. */}
                   {!isLogin && (
                     <>
-                      {/* min-h reserves the widget's exact 65px footprint from
-                          first paint, so the async site-key fetch + mount cannot
-                          push the rows below it down (the onboard CLS blip). */}
-                      <div className="min-h-[65px] space-y-2 pt-1">
+                      {/* min-h reserves the widget's MEASURED steady footprint so
+                          nothing below it ever moves: turnstile.render() settles
+                          its host box at 71px (65px box + 6px of dead space it
+                          carries), and this wrapper adds `pt-1` = 4px → 75px.
+                          The 65px floor was 6px short, which is the residual
+                          0.0019 /onboard signup shift (measured live: the box ran
+                          69px empty → 75px mounted). A floor only ever floors, so
+                          the larger number is safe in both states and never
+                          clips: the slot keeps its own min-height in
+                          components/turnstile.tsx for a challenge that needs more
+                          room — that expansion happens on click, which the Layout
+                          Instability API already exempts as recent-input. */}
+                      <div className="min-h-[75px] space-y-2 pt-1">
                         {turnstileSiteKey && !tsFailed && (
                           <TurnstileWidget
                             key={tsKey}
