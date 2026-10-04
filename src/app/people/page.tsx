@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
+import { resolveLensState } from "@/lib/lens-state";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "People",
@@ -27,7 +30,8 @@ const CARDS = [
   },
 ] as const;
 
-export default function PeoplePage() {
+export default async function PeoplePage() {
+  const { isAuthed, hasBaseline } = await resolveLensState();
   return (
     <LensPage
       eyebrow="People"
@@ -37,6 +41,8 @@ export default function PeoplePage() {
       cta={{ label: "Open the chat", href: "/chat" }}
       secondaryCta={{ label: "Invite someone", href: "/invite" }}
       note="Use this when the question is relational, but you want to stay honest about what you know and what you do not."
+      isAuthed={isAuthed}
+      hasBaseline={hasBaseline}
     />
   );
 }

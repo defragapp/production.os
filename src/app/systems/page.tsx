@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
+import { resolveLensState } from "@/lib/lens-state";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Systems",
@@ -27,7 +30,8 @@ const CARDS = [
   },
 ] as const;
 
-export default function SystemsPage() {
+export default async function SystemsPage() {
+  const { isAuthed, hasBaseline } = await resolveLensState();
   return (
     <LensPage
       eyebrow="Systems"
@@ -37,6 +41,8 @@ export default function SystemsPage() {
       cta={{ label: "Open the chat", href: "/chat" }}
       secondaryCta={{ label: "Read the philosophy", href: "/about" }}
       note="Best when the real question is structural: who is carrying what, and how the room keeps arranging itself."
+      isAuthed={isAuthed}
+      hasBaseline={hasBaseline}
     />
   );
 }

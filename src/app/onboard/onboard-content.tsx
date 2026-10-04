@@ -493,7 +493,10 @@ export function OnboardContent() {
                       returning user and their account. */}
                   {!isLogin && (
                     <>
-                      <div className="space-y-2 pt-1">
+                      {/* min-h reserves the widget's exact 65px footprint from
+                          first paint, so the async site-key fetch + mount cannot
+                          push the rows below it down (the onboard CLS blip). */}
+                      <div className="min-h-[65px] space-y-2 pt-1">
                         {turnstileSiteKey && !tsFailed && (
                           <TurnstileWidget
                             key={tsKey}

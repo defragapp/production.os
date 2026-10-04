@@ -61,15 +61,22 @@ export function LensPage({
   secondaryCta,
   children,
   note,
+  isAuthed = false,
+  hasBaseline = false,
 }: {
   eyebrow: string;
   title: string;
   description: string;
   cards: readonly LensCard[];
   cta: { label: string; href: string };
-  secondaryCta?: { label: string; href: string };
+  secondaryCta?: { label: string; href: string; stateAware?: boolean };
   children?: ReactNode;
   note?: string;
+  // Resolved server-side by the page (see lib/lens-state) — the booleans are
+  // identical in the RSC payload and the client tree, so reading them here
+  // cannot cause a hydration mismatch or a post-paint CTA swap.
+  isAuthed?: boolean;
+  hasBaseline?: boolean;
 }) {
   // The third lens card only restated the call to action beneath it, so the grid
   // now shows the two genuinely distinct cards and the third card's directional
@@ -77,6 +84,12 @@ export function LensPage({
   // and a clearer hierarchy between "what this is" and "what to do next."
   const gridCards = cards.slice(0, 2);
   const direction = cards.length > 2 ? cards[2] : undefined;
+  // A state-aware secondary CTA must never tell a visitor to build the thing
+  // they already built: with a Baseline on file, the lens itself is the way in.
+  const secondary =
+    secondaryCta?.stateAware && isAuthed && hasBaseline
+      ? { label: "Enter your Lens", href: "/chat" }
+      : secondaryCta;
   return (
     <PageShell center={false} wide="wide" rule className="space-y-10">
       <Reveal className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
@@ -118,9 +131,9 @@ export function LensPage({
             {cta.label}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
-          {secondaryCta && (
-            <Link href={secondaryCta.href} className="tap-line rounded-full border border-border/70 px-5 py-3 text-sm text-muted-foreground transition-colors hover:bg-white/[0.04] hover:text-foreground">
-              {secondaryCta.label}
+          {secondary && (
+            <Link href={secondary.href} className="tap-line rounded-full border border-border/70 px-5 py-3 text-sm text-muted-foreground transition-colors hover:bg-white/[0.04] hover:text-foreground">
+              {secondary.label}
             </Link>
           )}
         </div>

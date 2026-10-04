@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
+import { resolveLensState } from "@/lib/lens-state";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Self",
@@ -27,7 +30,8 @@ const CARDS = [
   },
 ] as const;
 
-export default function SelfPage() {
+export default async function SelfPage() {
+  const { isAuthed, hasBaseline } = await resolveLensState();
   return (
     <LensPage
       eyebrow="Self"
@@ -35,8 +39,10 @@ export default function SelfPage() {
       description="A quiet place to ask what keeps happening, what you actually feel, and what the next honest step could be."
       cards={CARDS}
       cta={{ label: "Open the full chat", href: "/chat" }}
-      secondaryCta={{ label: "Build your Baseline", href: "/baseline" }}
+      secondaryCta={{ label: "Build your Baseline", href: "/baseline", stateAware: true }}
       note="Best when you want to name the shape of something before you bring anyone else into it."
+      isAuthed={isAuthed}
+      hasBaseline={hasBaseline}
     />
   );
 }

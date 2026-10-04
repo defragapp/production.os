@@ -80,7 +80,11 @@ export function PricingTable() {
           }
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" },
+      // A tall tbody never reaches 15% visible while entering, so the old
+      // threshold kept the whole panel blank mid-scroll. A negative bottom
+      // rootMargin fires the stagger as soon as the rows cross the lower
+      // 85% of the viewport — early enough to read as motion, not as a void.
+      { threshold: 0, rootMargin: "0px 0px -15% 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
