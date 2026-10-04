@@ -211,10 +211,18 @@ This is arithmetic, not a hiccup. `vectorId()` at
 builds `${userId}::${threadId}::${turnIndex.padStart(5)}::${role}` = 36 + 2 + 36 + 2 + 5 + 2 + (4|9)
 = **87 or 92 bytes**, against Vectorize's 64-byte id ceiling. It runs under `waitUntil`, so users never
 wait for it and no turn fails — but nothing is ever indexed, so the recall layer can only ever return
-nothing. The index (`chat-embeddings`, created 2026-10-01T22:23:29Z) still shows `modified` == `created`.
+nothing. The index (`chat-embeddings`, created 2026-10-01T22:23:29Z) reported `vectorCount: 0` and
+`list-vectors` returned no ids.
 Smallest fix shape: hash the composed id (e.g. first 16 hex of SHA-256 over the same tuple) or drop the
 redundant 36-byte userId, since Vectorize `namespace` already scopes by user. Needs your go-ahead —
 the repo is frozen.
+
+*Two updates, added when the fix shipped.* (1) The freeze was lifted for exactly this patch and it is
+live: the id is now a fixed-length digest of the same tuple, and `VECTOR_HOTFIX_SUMMARY.md` carries the
+change, the measurements and the proof that recall works. (2) This paragraph originally also offered
+`modified == created` as corroboration. That field proves nothing — Vectorize does not advance it on
+data writes, and it still read `2026-10-01T22:23:29Z` after the hotfix's first successful upserts. The
+100% `VECTOR_UPSERT_ERROR` rate above is the real evidence (`VECTOR_HOTFIX_SUMMARY.md` §6b).
 
 **5b. A claim in `REMEDIATION_SUMMARY.md` is false and should be retracted.** That file states a negative
 control was run against a sibling account and "behaved correctly". It was never run: the transcript
