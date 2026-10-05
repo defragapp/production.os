@@ -57,7 +57,7 @@ export function SigilComposer() {
         localStorage.setItem(ACTIVE_SIGIL_KEY, JSON.stringify({ intentId: share.intent, seed: share.seed, label: share.label }));
       } catch {}
     } catch (err) {
-      setNote(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      setNote(err instanceof Error ? err.message : "Couldn't create your Sigil just now — try again in a moment.");
     } finally {
       setBusy(false);
     }

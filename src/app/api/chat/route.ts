@@ -83,12 +83,12 @@ async function handleChat(request: NextRequest) {
 
   // Email verification gate — active only when email delivery is configured.
   if (emailVerificationEnabled(env) && !user.email_verified) {
-    return new Response(JSON.stringify({ error: "Please verify your email address to use AI chat.", code: "email_unverified" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Verify your email to keep chatting — the link is in your inbox.", code: "email_unverified" }), { status: 403, headers: { "Content-Type": "application/json" } });
   }
 
   // Gate: must have completed baseline (onboarding) — required for API access too.
   const userBaseline = await env.DB.prepare("SELECT user_id FROM baselines WHERE user_id = ?").bind(payload.sub).first<{ user_id: string }>();
-  if (!userBaseline) return new Response(JSON.stringify({ error: "Please complete your Baseline before using AI chat.", code: "baseline_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+  if (!userBaseline) return new Response(JSON.stringify({ error: "Set up your Baseline first — it's what grounds every answer.", code: "baseline_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   // Gate: must have chosen a subscription tier (free or sovereign+).
   if (!tier) return new Response(JSON.stringify({ error: "Choose a plan to keep chatting — the free tier is always available.", code: "subscription_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
@@ -133,7 +133,7 @@ async function handleChat(request: NextRequest) {
   }
 
   const baseline = await env.DB.prepare("SELECT tob, pob, dob, nasa_jpl_json_data FROM baselines WHERE user_id = ?").bind(payload.sub).first<Baseline>();
-  if (!baseline || !baseline.nasa_jpl_json_data) return new Response(JSON.stringify({ error: "Baseline not found. Please complete onboarding first." }), { status: 403, headers: { "Content-Type": "application/json" } });
+  if (!baseline || !baseline.nasa_jpl_json_data) return new Response(JSON.stringify({ error: "We can't find your Baseline yet — finish onboarding first." }), { status: 403, headers: { "Content-Type": "application/json" } });
 
   // Semantic recall (server-memory only): kicked off here so its one embed +
   // one Vectorize query overlap with the consent read and thread merge below,

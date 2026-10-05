@@ -20,7 +20,7 @@ const CARDS = [
     eyebrow: "Consent first",
     title: "Only the context people actually shared belongs here.",
     body:
-      "The system keeps consented context distinct from private inference, so you can think clearly without overreaching into someone else’s inner world.",
+      "The system keeps consented context distinct from private inference, so you can think clearly without overreaching into someone else's inner world.",
   },
   {
     eyebrow: "Use it for",

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.turnstileToken && !(await verifyTurnstile(env, body.turnstileToken))) {
-    return NextResponse.json({ error: "Security check failed. Please try again." }, { status: 400 });
+    return NextResponse.json({ error: "That security check didn't go through — try again in a moment." }, { status: 400 });
   }
 
   const ip = clientIp(request);
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     stamps = stamps.filter((t) => now - t < window);
     if (stamps.length >= max) {
       return NextResponse.json(
-        { error: "Too many messages. Please wait a bit before sending another." },
+        { error: "Too many messages — give it a minute and send another." },
         { status: 429 },
       );
     }

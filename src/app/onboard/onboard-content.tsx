@@ -118,11 +118,11 @@ export function OnboardContent() {
 
       if (!authRes.ok) {
         const err = await readJsonSafe<{ error?: string }>(authRes);
-        throw new Error(err?.error || `We couldn't create your account right now (${authRes.status}). Please try again.`);
+        throw new Error(err?.error || "That didn't go through on our end — try again in a moment.");
       }
 
       const data = await readJsonSafe<{ user?: { email?: string }; hasBaseline?: boolean }>(authRes);
-      if (!data) throw new Error("Unexpected response from the server. Please try again.");
+      if (!data) throw new Error("We couldn't read the response — try again in a moment.");
       if (data.user?.email) setEmail(data.user.email);
       // Session cookie is set — sync the persistent Nav chrome before the soft
       // navigation, which alone would not remount it (logged-out menu bug).
@@ -150,7 +150,7 @@ export function OnboardContent() {
       }
       setTurnstileToken(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
       setTurnstileToken(null);
     } finally {
       setLoading(false);
@@ -171,12 +171,12 @@ export function OnboardContent() {
 
       if (!res.ok) {
         const err = await readJsonSafe<{ error?: string }>(res);
-        throw new Error(err?.error || "Failed to send reset email");
+        throw new Error(err?.error || "Couldn't send that email — try again in a moment.");
       }
 
       setResetSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -196,13 +196,13 @@ export function OnboardContent() {
 
       if (!res.ok) {
         const err = await readJsonSafe<{ error?: string }>(res);
-        throw new Error(err?.error || "Failed to reset password");
+        throw new Error(err?.error || "Couldn't reset that password — check the link and try again.");
       }
 
-      setNotice("Password reset successfully. You can now sign in.");
+      setNotice("All set — sign in with your new password.");
       router.push("/onboard?mode=login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
     } finally {
       setLoading(false);
     }

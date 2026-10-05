@@ -60,7 +60,7 @@ function UpgradeContent() {
       if (!res.ok || !data.url) throw new Error(data.error || "Couldn't open billing — try again in a moment.");
       window.location.href = data.url;
     } catch (err) {
-      setPortalError(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      setPortalError(err instanceof Error ? err.message : "Couldn't open billing — try again in a moment.");
       setPortalLoading(false);
     }
   };
@@ -78,7 +78,7 @@ function UpgradeContent() {
       if (!res.ok || !data.url) throw new Error(data.error || "Couldn't start checkout — try again in a moment.");
       window.location.href = data.url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      setError(err instanceof Error ? err.message : "Couldn't start checkout — try again in a moment.");
     } finally { setLoading(null); }
   };
 
@@ -93,7 +93,7 @@ function UpgradeContent() {
             description={
               isPlus
                 ? "Update your payment method, download receipts, or cancel — all in one place."
-                : "Free includes your full Baseline and five AI answers a day. Sovereign+ lifts the daily cap entirely."
+                : "Free includes your full Baseline and five AI answers a day. Sovereign+ lifts that to 150 a day and opens invites."
             }
           />
           {isPlus ? (
@@ -104,14 +104,14 @@ function UpgradeContent() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
+                  <PlanFeature>Up to 150 AI messages a day</PlanFeature>
                   <PlanFeature>Invite people into your relationships</PlanFeature>
                   <PlanFeature>Your full Baseline, same private engine</PlanFeature>
                 </ul>
                 <Button className="w-full" onClick={handleManageBilling} disabled={portalLoading}>
                   {portalLoading ? "Opening billing..." : "Manage subscription"}
                 </Button>
-                <p className="text-center text-xs text-muted-foreground/70">Cancel anytime — two clicks, no emails.</p>
+                <p className="text-center text-xs text-muted-foreground/70">Cancel anytime — no emails needed.</p>
                 {portalError && <Alert>{portalError}</Alert>}
               </CardContent>
             </Card>
@@ -148,12 +148,12 @@ function UpgradeContent() {
               </CardContent>
             </Card>
             <Card className="card-backlight card-lift relative border border-foreground/25 shadow-[0_0_35px_-12px_rgba(244,239,228,0.12)]">
-              <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>No daily cap — go as deep as you want</CardDescription></CardHeader>
+              <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>150 messages a day — room to go as deep as you want</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>
                 <p className="mb-4 text-sm text-muted-foreground">Best value when billed yearly</p>
                 <ul className="flex-1 space-y-2 text-sm text-muted-foreground">
-                  <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
+                  <PlanFeature>Up to 150 AI messages a day</PlanFeature>
                   <PlanFeature>Invite people into your relationships</PlanFeature>
                   <PlanFeature>Your full Baseline, same private engine</PlanFeature>
                 </ul>

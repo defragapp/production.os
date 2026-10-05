@@ -79,15 +79,15 @@ export default function AboutPage() {
                 Large language models made it cheap to build a chat interface for everything, and
                 the market answered by shipping assistants that reset the moment you close the tab.
                 They remember your questions but not your life. The value you give them — context,
-                candour, the actual shape of your relationships — leaks out as training data or ad
-                targeting, and comes back as a slightly better autocorrect to a stranger’s phone.
+                candor, the actual shape of your relationships — leaks out as training data or ad
+                targeting, and comes back as a slightly better autocorrect to a stranger&apos;s phone.
               </p>
               <p className="mt-4 text-base leading-7 text-muted-foreground">
                 The other option — a static personality quiz, a horoscope app — is honest about
                 being entertainment but cannot meet you where your life actually is. Neither is what
-                most people want when they’re trying to make sense of a hard week. There is a
+                most people want when they&apos;re trying to make sense of a hard week. There is a
                 middle lane no one has built seriously yet: an assistant that <em className="text-foreground/90 not-italic">remembers only
-                you</em>, grounded in a stable reference frame, and doesn’t pretend to be an oracle.
+                you</em>, grounded in a stable reference frame, and doesn&apos;t pretend to be an oracle.
                 That is what Sovereign is for.
               </p>
             </div>

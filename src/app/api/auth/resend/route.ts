@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const rlKey = `verify-resend:${payload.sub}`;
   if (await env.SESSION_KV.get(rlKey)) {
-    return NextResponse.json({ error: "Verification email already sent. Please check your inbox — you can request another in 10 minutes." }, { status: 429 });
+    return NextResponse.json({ error: "That email's already on its way — check your inbox. You can ask for another in 10 minutes." }, { status: 429 });
   }
   await env.SESSION_KV.put(rlKey, "1", { expirationTtl: RESEND_COOLDOWN });
 

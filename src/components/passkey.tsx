@@ -39,7 +39,7 @@ export function PasskeySignInButton({ className, focal = false }: { className?: 
   const getOptions = async (): Promise<{ requestId: string; options: PublicKeyCredentialRequestOptionsJSON }> => {
     const optRes = await fetch("/api/auth/passkey/authenticate", { method: "POST" });
     const opts = await readJson<{ requestId?: string; options?: PublicKeyCredentialRequestOptionsJSON; error?: string }>(optRes);
-    if (!opts?.options || !opts.requestId) throw new Error(opts?.error || "Could not start sign-in.");
+    if (!opts?.options || !opts.requestId) throw new Error(opts?.error || "Couldn't start sign-in — try again.");
     return { requestId: opts.requestId, options: opts.options };
   };
 
@@ -50,7 +50,7 @@ export function PasskeySignInButton({ className, focal = false }: { className?: 
       body: JSON.stringify({ requestId, response }),
     });
     const data = await readJson<{ error?: string; hasBaseline?: boolean }>(verRes);
-    if (!verRes.ok) throw new Error(data?.error || "Passkey sign-in failed.");
+    if (!verRes.ok) throw new Error(data?.error || "Passkey sign-in didn't go through — try again, or use your email and password.");
     // Same intent carry-through as password sign-in: return to the page the
     // middleware bounced the person from, not always the chat.
     const next = data?.hasBaseline ? (safeInAppPath(searchParams.get("next")) ?? "/chat") : "/baseline";
@@ -106,7 +106,7 @@ export function PasskeySignInButton({ className, focal = false }: { className?: 
       const cancelled = /abort/i.test(name) || /cancel|not allowed|timed out/i.test(text);
       if (name === "Error" && !cancelled && text) setError(text);
       else if (cancelled) setError("No passkey found on this device — sign in with your email and password.");
-      else setError("We couldn't complete the passkey prompt. Please try again, or sign in with your email and password.");
+      else setError("We couldn't complete that passkey prompt — try again, or sign in with your email and password.");
       setBusy(false);
     }
   };
@@ -146,7 +146,7 @@ export function AddPasskeyButton({ onDone }: { onDone?: () => void }) {
     try {
       const optRes = await fetch("/api/auth/passkey/register", { method: "POST" });
       const opts = await readJson<PublicKeyCredentialCreationOptionsJSON & { error?: string }>(optRes);
-      if (!opts?.challenge) throw new Error((opts as { error?: string })?.error || "Could not start passkey setup.");
+      if (!opts?.challenge) throw new Error((opts as { error?: string })?.error || "Couldn't start passkey setup — try again in a moment.");
 
       const response = await startRegistration({ optionsJSON: opts, useAutoRegister: true });
 
@@ -156,7 +156,7 @@ export function AddPasskeyButton({ onDone }: { onDone?: () => void }) {
         body: JSON.stringify(response),
       });
       const data = await readJson<{ ok?: boolean; error?: string }>(verRes);
-      if (!verRes.ok || !data?.ok) throw new Error(data?.error || "Passkey setup failed.");
+      if (!verRes.ok || !data?.ok) throw new Error(data?.error || "Passkey setup didn't go through — try again in a moment.");
 
       setMessage({ kind: "ok", text: "Passkey added. You can now sign in with Face ID, Touch ID, or your device." });
       onDone?.();
@@ -169,7 +169,7 @@ export function AddPasskeyButton({ onDone }: { onDone?: () => void }) {
       const cancelled = /abort/i.test(name) || /cancel|not allowed|timed out/i.test(text);
       if (name === "Error" && !cancelled && text) setMessage({ kind: "error", text });
       else if (cancelled) setMessage({ kind: "error", text: "Passkey setup was cancelled." });
-      else setMessage({ kind: "error", text: "We couldn't set up the passkey. Please try again, or keep using your password." });
+      else setMessage({ kind: "error", text: "We couldn't set up the passkey — try again, or keep using your password." });
     } finally {
       setBusy(false);
     }

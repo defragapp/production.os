@@ -12,18 +12,19 @@ type Row = {
 };
 
 // The full value stack in one place. Cells use booleans (✓/—) for features
-// and short strings for numeric differences ("5/day" vs "Unlimited").
+// and short strings for numeric differences ("5/day" vs "150/day").
 // Ordered so the reader's eye hits the differentiators before the shared
-// fundamentals — Free is genuinely useful, Sovereign+ removes the ceiling.
+// fundamentals — Free is genuinely useful; Sovereign+ lifts the cap to the
+// fair-use ceiling defined in lib/limits.ts (150/day).
 const ROWS: Row[] = [
-  { feature: "Unlimited AI messages", free: "5/day", plus: "Unlimited" },
+  { feature: "AI messages per day", free: "5/day", plus: "150/day" },
   { feature: "Invite people into your relationships", free: false, plus: true },
-  { feature: "Priority support (responds within 24h)", free: false, plus: true },
+  { feature: "Priority support (a person replies first)", free: false, plus: true },
   { feature: "Your full Baseline — astrology, Human Design, Gene Keys", free: true, plus: true },
   { feature: "Chat history saved across devices", free: true, plus: true },
-  { feature: "Semantic recall — search what you two talked about", free: true, plus: true },
+  { feature: "Semantic recall — search your past conversations", free: true, plus: true },
   { feature: "Journeys & shared reflection cards", free: true, plus: true },
-  { feature: "Data export & one-click account deletion", free: true, plus: true },
+  { feature: "Data export & self-service account deletion", free: true, plus: true },
 ];
 
 function Cell({ value, tone }: { value: string | boolean; tone: "free" | "plus" }) {
@@ -136,7 +137,7 @@ export function PricingTable() {
         <tfoot>
           <tr className="border-t border-foreground/15 bg-foreground/[0.03]">
             <td className="px-5 py-4 text-xs text-muted-foreground">
-              Billed yearly. Cancel any time from the Account page — two clicks, no emails.
+              Billed yearly. Cancel any time from your Account page — no emails.
             </td>
             <td className="px-5 py-4 text-center">
               <Link

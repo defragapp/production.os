@@ -32,7 +32,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "What is a Baseline?",
     description:
       "The reference frame Sovereign builds from your birth data — what it is, what it isn't, and why it earns the word 'baseline' instead of 'chart'.",
-    published: "2026-10-05",
+    published: "2026-09-21",
     readingMinutes: 4,
     sections: [
       {
@@ -46,7 +46,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         kind: "p",
-        text: "Sovereign does the rest of the math against NASA/JPL ephemeris data — the same numbers astronomers use. The Sun's position at the moment of your birth is an observable, not a metaphor. Nothing is 'read'; positions are computed and mapped onto plain-language themes we chose because they've held up in clinical and non-clinical writing for a century.",
+        text: "Sovereign does the rest of the math against NASA/JPL planetary data — the same numbers astronomers use. The Sun's position at the moment of your birth is an observable, not a metaphor. Nothing is foretold; positions are computed and mapped onto plain-language themes we chose because they've held up in clinical and non-clinical writing for a century.",
       },
       { kind: "h2", text: "What comes out" },
       {
@@ -74,7 +74,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Why we built Sovereign",
     description:
       "Assistant software got amnesic at exactly the moment it got good. Here's the specific gap we tried to close, and why a solo-operator Cloudflare stack was the right shape for it.",
-    published: "2026-10-12",
+    published: "2026-09-28",
     readingMinutes: 5,
     sections: [
       {
@@ -93,7 +93,7 @@ export const BLOG_POSTS: BlogPost[] = [
       { kind: "h2", text: "Why the shape is what it is" },
       {
         kind: "p",
-        text: "Sovereign is a solo-operated product on Cloudflare Workers, D1, KV, and Vectorize. That's not a compromise; it's the reason the product can honestly say the things it says. A single operator, with a runtime that costs roughly nothing at small scale, doesn't need to monetize your data to break even. There's no venture round that has to be paid back by growing MAU, no ad network to introduce, no telemetry pipeline whose only justification is that it exists.",
+        text: "Sovereign is a solo-operated product on Cloudflare Workers, D1, KV, and Vectorize. That's not a compromise; it's the reason the product can honestly say the things it says. A single operator, with a runtime that costs roughly nothing at small scale, doesn't need to monetize your data to break even. There's no venture round that has to be paid back by chasing growth metrics, no ad network to introduce, no tracking pipeline whose only justification is that it exists.",
       },
       {
         kind: "ul",
@@ -111,7 +111,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         kind: "p",
-        text: "If that's the kind of thing you want to use, the free tier is on the landing page. If you want to build a company this way, we'd honestly love the company; hit support@ and start a conversation.",
+        text: "If that's the kind of thing you want to use, the free tier is on the landing page. If you want to build a company this way, we'd honestly love the company; write us through the support page and start a conversation.",
       },
     ],
   },
@@ -120,7 +120,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "The relationship moat",
     description:
       "Journaling apps are solo tools. Assistants are solo tools. The hard, unpatented thing Sovereign does is hold two Baselines in the same conversation without flattening either.",
-    published: "2026-10-19",
+    published: "2026-10-05",
     readingMinutes: 4,
     sections: [
       {
@@ -149,7 +149,7 @@ export const BLOG_POSTS: BlogPost[] = [
         kind: "p",
         text: "That is the moat, and it's unpatented. There's no proprietary model that lets us do it. It's just the product decision to make the second Baseline consented, first-class, and legible to the AI at the moment of the conversation. Most assistants won't do it because they don't have a place for another whole person to be. Most journaling apps won't do it because they'd have to add accounts, invites, and privacy review to a solo tool.",
       },
-      { kind: "h2", text: "Why this is worth the friction" },
+      { kind: "h2", text: "Why this is worth the awkward two minutes" },
       {
         kind: "p",
         text: "Inviting someone costs you the awkward two minutes of sending the link. The answer you get back is calibrated to both of you, and neither of you is being described behind the other's back. If your partner, parent, or best friend ever declines — their Baseline is not in the room, and Sovereign will say so plainly instead of quietly guessing. You can decide what to do with a real relationship that has its own real consent.",

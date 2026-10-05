@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // failing the whole session check.
     console.error("[accept-terms] write failed:", err);
     return NextResponse.json(
-      { error: "We couldn't record your affirmation just now — please try again.", previousVersion: typeof body.previousVersion === "string" ? body.previousVersion : null },
+      { error: "We couldn't record your affirmation just now — try again in a moment.", previousVersion: typeof body.previousVersion === "string" ? body.previousVersion : null },
       { status: 500 },
     );
   }

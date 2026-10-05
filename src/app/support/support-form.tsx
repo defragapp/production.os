@@ -48,10 +48,10 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
         }),
       });
       const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error || "Something went wrong. Please try again.");
+      if (!res.ok) throw new Error(data.error || "Couldn't send that message — try again in a moment.");
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? err.message : "Couldn't send that message — try again in a moment.");
       setTurnstileToken(null);
     } finally {
       setBusy(false);

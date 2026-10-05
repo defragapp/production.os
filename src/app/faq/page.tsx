@@ -27,15 +27,15 @@ const FAQS = [
   },
   {
     q: "What do you do with my birth data?",
-    a: "One thing only: computing your Baseline. It is never sold or shared. You can delete your entire account — Baseline, chats, and data — in one click from your Account page, and we remove it.",
+    a: "One thing only: computing your Baseline. It is never sold or shared. You can delete your entire account — Baseline, chats, and data — yourself from the Account page, and it's gone.",
   },
   {
     q: "What's the difference between Free and Sovereign+?",
-    a: "Free includes your full Baseline and 5 AI messages a day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $99/year, or $20/month. You can cancel anytime.",
+    a: "Free includes your full Baseline and 5 AI messages a day. Sovereign+ lifts that to 150 a day — room for any real conversation, with a fair-use ceiling that keeps scripted loops out — and lets you invite people into your relationships: $99/year, or $20/month. You can cancel anytime.",
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Subscriptions run through Stripe — cancel in two clicks from your Account page, and your access continues through the end of the paid period.",
+    a: "Yes. Subscriptions run through Stripe — open your billing portal from the Account page and cancel there. Your access continues through the end of the paid period.",
   },
 ];
 
@@ -49,7 +49,7 @@ export default function FaqPage() {
         />
 
         <Link
-          href="/upgrade"
+          href="/#plans"
           className="tap-line-center mx-auto mb-10 block text-center text-sm text-muted-foreground underline-offset-4 transition-colors duration-[240ms] hover:text-foreground hover:underline"
         >
           Compare Free and Sovereign+ →

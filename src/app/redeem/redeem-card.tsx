@@ -67,9 +67,9 @@ export function RedeemCard() {
         setRedeemedAt(data.giftExpiresAt ?? new Date().toISOString());
         return;
       }
-      setError(data.error || "We couldn't apply that pass. Please check the link and try again.");
+      setError(data.error || "We couldn't apply that pass — check the link and try again.");
     } catch {
-      setError("We couldn't reach Sovereign just now — please try again in a moment.");
+      setError("We couldn't reach Sovereign just now — try again in a moment.");
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +132,7 @@ export function RedeemCard() {
               Your pass runs through {formatD1Date(redeemedAt)}.
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Unlimited reflections, your relationships, and the full journey canvas are open
+              Up to 150 AI messages a day, your relationships, and the full journey canvas are open
               to you. When the pass ends you drop back to the free tier — nothing is charged.
             </p>
             <div className="flex flex-col gap-2">
@@ -156,8 +156,8 @@ export function RedeemCard() {
           <CardHeader className="text-center">
             <CardTitle className="text-lg">Claim your pass</CardTitle>
             <CardDescription>
-              Thirty days of Sovereign+ — unlimited reflections and connections. No card needed,
-              and it ends on its own.
+              Thirty days of Sovereign+ — 150 messages a day and invitations for your people.
+              No card needed, and it ends on its own.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

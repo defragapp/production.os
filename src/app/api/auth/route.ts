@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
   if (intent !== "login") {
     const turnstileValid = await verifyTurnstileToken(env, body.turnstileToken);
     if (!turnstileValid) {
-      return NextResponse.json({ error: "Security verification failed. Please try again." }, { status: 400 });
+      return NextResponse.json({ error: "That security check didn't go through — try again in a moment." }, { status: 400 });
     }
   }
 
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
   const emailForRl = body.email?.trim().toLowerCase() || "unknown";
   const rlKey = `login-rl:${ip}:${emailForRl}`;
   const rlCount = parseInt((await env.SESSION_KV.get(rlKey)) || "0", 10);
-  if (rlCount >= LOGIN_RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  if (rlCount >= LOGIN_RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many attempts — try again in a few minutes." }, { status: 429 });
   await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: LOGIN_RATE_LIMIT_TTL });
 
   if (intent !== "login") {

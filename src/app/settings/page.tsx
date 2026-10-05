@@ -191,7 +191,7 @@ export default function SettingsPage() {
       const data = await res.json() as { error?: string; code?: string; invite?: InviteRow };
       if (!res.ok) {
         if (data.code === "plus_required") setInviteRequiresPlus(true);
-        else setInviteError(data.error || "Could not send the invitation.");
+        else setInviteError(data.error || "Couldn't send that invitation — try again in a moment.");
         return;
       }
       setInviteEmail("");
@@ -200,7 +200,7 @@ export default function SettingsPage() {
       setInviteSuccess(`Invitation sent to ${data.invite?.name || data.invite?.emailMasked || email}.`);
       await loadPeople();
     } catch {
-      setInviteError("Could not send the invitation.");
+      setInviteError("Couldn't send that invitation — try again in a moment.");
     } finally {
       setInviteSending(false);
     }
@@ -698,7 +698,7 @@ export default function SettingsPage() {
                     Choose where your conversations live. Server memory keeps every thread in your
                     account so you can start on one device and finish on another. Device-Only keeps
                     new conversations encrypted on this device with a key that never leaves it — they
-                    never reach our servers, and they don’t follow you between devices.
+                    never reach our servers, and they don&apos;t follow you between devices.
                   </p>
                   <div role="radiogroup" aria-label="Memory mode" className="grid gap-2 sm:grid-cols-2">
                     {([

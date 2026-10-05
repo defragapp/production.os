@@ -121,13 +121,13 @@ export function BaselineForm({
 
       if (!res.ok) {
         const err = await res.json() as { error?: string };
-        throw new Error(err.error || "Failed to compute baseline");
+        throw new Error(err.error || "Couldn't compute your Baseline just now — try again in a moment.");
       }
 
       onSaved();
       onDone?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
     } finally {
       setLoading(false);
     }

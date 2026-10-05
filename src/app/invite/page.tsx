@@ -100,9 +100,9 @@ function AcceptCard({
         onAccepted(inviterName);
         return;
       }
-      setError(data.error || "Could not accept the invitation.");
+      setError(data.error || "Couldn't accept that invitation — try again in a moment.");
     } catch {
-      setError("Could not accept the invitation. Please try again.");
+      setError("Couldn't accept that invitation — try again in a moment.");
     } finally {
       setAccepting(false);
     }
@@ -288,7 +288,7 @@ export default function InvitePage() {
             <PageHeader title="Invitation" description="Checking your invitation…" />
           ) : info.status === "invalid" ? (
             <>
-              <PageHeader title="Invitation" description="This invitation isn't valid." />
+              <PageHeader title="Invitation" description="This invitation doesn't look right." />
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-sm text-muted-foreground">

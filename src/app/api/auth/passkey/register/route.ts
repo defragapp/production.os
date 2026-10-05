@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(options);
   } catch (e) {
     console.error("[passkey:register:options]", e);
-    return NextResponse.json({ error: "Could not start passkey setup." }, { status: 500 });
+    return NextResponse.json({ error: "Couldn't start passkey setup — try again in a moment." }, { status: 500 });
   }
 }
 

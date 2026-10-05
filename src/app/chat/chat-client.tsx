@@ -952,7 +952,7 @@ export function ChatClient() {
         setFailedTurn({ text: sentText, kind: "unreachable" });
         setMessages((prev) => {
           const u = [...prev];
-          u[u.length - 1] = { role: "assistant", content: err.error || "Something went wrong — your message is safe, tap Try again." };
+          u[u.length - 1] = { role: "assistant", content: err.error || "Couldn't finish that answer — your message is safe, tap Try again." };
           return u;
         });
         return;
@@ -1137,7 +1137,7 @@ export function ChatClient() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">Sovereign+ is active — welcome.</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  You now have unlimited conversations, the full depth of your Baseline,
+                  You now have up to 150 AI messages a day, the full depth of your Baseline,
                   and the ability to invite the people you&apos;re figuring things out with.
                 </p>
               </div>
@@ -1184,9 +1184,9 @@ export function ChatClient() {
                   try {
                     const r = await fetch("/api/auth/resend", { method: "POST" });
                     const d = await r.json() as { ok?: boolean; error?: string };
-                    setResendState(d.ok ? "sent" : `error: ${d.error || "Could not send verification email."}`);
+                    setResendState(d.ok ? "sent" : `error: ${d.error || "Couldn't send that email — try again in a moment."}`);
                   } catch {
-                    setResendState("error: Could not send verification email.");
+                    setResendState("error: Couldn't send that email — try again in a moment.");
                   }
                 }}
               >
@@ -1602,7 +1602,7 @@ export function ChatClient() {
                       </span>
                       <div>
                         <p className="text-sm font-medium text-foreground">You&apos;ve used today&apos;s answers.</p>
-                        <p className="text-xs text-muted-foreground">Sovereign+ removes the daily cap — go as deep as you need.</p>
+                        <p className="text-xs text-muted-foreground">Sovereign+ lifts the cap to 150 messages a day — go as deep as you need.</p>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -1881,8 +1881,8 @@ function PeoplePanel({
                       <p className="mt-0.5 text-xs text-muted-foreground/70">
                         {c.peerSharesBaseline
                           ? "Shares their baseline with you"
-                          : "Hasn’t shared their baseline yet"}
-                        {!c.shareBaseline ? " · you’re not sharing yours" : ""}
+                          : "Hasn't shared their baseline yet"}
+                        {!c.shareBaseline ? " · you're not sharing yours" : ""}
                       </p>
                     </div>
                     {/* A quiet crest for this thread — seeded from the pair, never

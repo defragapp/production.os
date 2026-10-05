@@ -99,11 +99,11 @@ export function TermsGate() {
       });
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error || "Something went wrong — please try again.");
+        throw new Error(payload.error || "Couldn't save your agreement — try again in a moment.");
       }
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      setError(err instanceof Error ? err.message : "Couldn't save your agreement — try again in a moment.");
     } finally {
       setSubmitting(false);
     }

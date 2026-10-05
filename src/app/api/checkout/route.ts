@@ -45,6 +45,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url });
   } catch (err) {
     console.error("[checkout] Stripe checkout session failed:", err);
-    return NextResponse.json({ error: "Failed to create checkout session. Please try again." }, { status: 502 });
+    return NextResponse.json({ error: "Couldn't start checkout — try again in a moment." }, { status: 502 });
   }
 }

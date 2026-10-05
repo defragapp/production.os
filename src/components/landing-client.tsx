@@ -594,9 +594,11 @@ export function LandingClient() {
         </section>
 
 
-{/* ── Plans ────────────────────────────────────────── */}
+{/* ── Plans ───────────────────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
-        <section className="relative overflow-hidden px-6 py-20 md:py-28">
+        {/* `#plans` is the canonical public anchor for the Free vs Sovereign+
+            split — the FAQ's compare link lands here, not behind the paywall. */}
+        <section id="plans" className="relative overflow-hidden px-6 py-20 md:py-28">
           <Reveal className="mx-auto max-w-4xl">
             <span className="crown-gold mx-auto mb-4" aria-hidden="true" />
             <Eyebrow accent className="mb-3 text-center">Plans</Eyebrow>
@@ -604,7 +606,7 @@ export function LandingClient() {
               Free to start. Keep going when it gets deep.
             </h2>
             <p className="mb-10 text-center text-sm text-muted-foreground md:text-base">
-              Every plan includes your full Baseline and saves your conversations.
+              Every plan includes your full Baseline, and your conversations stay with you.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -636,7 +638,7 @@ export function LandingClient() {
                   <span className="font-sans text-sm text-muted-foreground">/yr · or $20/mo</span>
                 </p>
                 <ul className="flex-1 space-y-2.5 text-sm text-muted-foreground">
-                  <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
+                  <PlanFeature>Up to 150 AI messages a day</PlanFeature>
                   <PlanFeature>Invite people into your relationships</PlanFeature>
                   <PlanFeature>Your full Baseline, same private engine</PlanFeature>
                 </ul>

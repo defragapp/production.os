@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ requestId, options });
   } catch (e) {
     console.error("[passkey:auth:options]", e);
-    return NextResponse.json({ error: "Could not start passkey sign-in." }, { status: 500 });
+    return NextResponse.json({ error: "Couldn't start sign-in — try again." }, { status: 500 });
   }
 }
 
@@ -43,7 +43,7 @@ export async function PUT(request: NextRequest) {
   const rlKey = `pkauth-rl:${ip}:${response.id}`;
   const count = parseInt((await env.SESSION_KV.get(rlKey)) || "0", 10);
   if (count >= AUTH_RATE_LIMIT_MAX) {
-    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+    return NextResponse.json({ error: "Too many attempts — try again in a few minutes." }, { status: 429 });
   }
   await env.SESSION_KV.put(rlKey, String(count + 1), { expirationTtl: AUTH_RATE_LIMIT_TTL });
 

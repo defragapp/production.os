@@ -4,9 +4,9 @@
 
 ## Overview
 
-Sovereign OS ("Sovereign") is a personal intelligence layer. A user provides their date, time, and place of birth once. Sovereign computes a **Baseline** — a computational picture of tendencies — from the ten natal bodies using NASA/JPL Horizons coordinates (astrological placements), Human Design (type, strategy, authority, profile, defined centers, active channels), Gene Keys (active gates, lines, frequencies, themes), and numerology (life path number). The Baseline is a frame of reference, not a verdict: it describes how a person tends to communicate, feel, and decide, and it is never presented as identity or destiny.
+Sovereign OS ("Sovereign") is a personal intelligence layer. A user provides their date, time, and place of birth once. Sovereign computes a **Baseline** — a plain-language picture of tendencies — from the ten natal bodies using NASA/JPL Horizons coordinates (astrological placements), Human Design (type, strategy, authority, profile, defined centers, active channels), Gene Keys (active gates, lines, frequencies, themes), and numerology (life path number). The Baseline is a frame of reference, not a verdict: it describes how a person tends to communicate, feel, and decide, and it is never presented as identity or destiny.
 
-The user then converses with an AI in their own words. The AI's job is to help the user see their own patterns more clearly and decide for themselves — not to diagnose, not to deliver fixed answers, and not to behave as an authority.
+The user then converses with an AI in their own words. The AI's job is to help the user see what keeps happening in their own life more clearly and decide for themselves — not to diagnose, not to deliver fixed answers, and not to behave as an authority.
 
 ## How conversations are grounded
 
@@ -25,7 +25,7 @@ Every answer separates what is known from what is inferred, and never collapses 
 
 - **Observed** — what the user said happened, or what is factually known.
 - **Baseline-supported** — interpretation grounded in the user's computed Baseline.
-- **Interpretive** — a plausible reading offered for the user to confirm or reject.
+- **Interpretive** — a plausible interpretation offered for the user to confirm or reject.
 - **Unknown** — what cannot be determined; declared plainly.
 
 An interpretation is never presented as an observation, and an unknown is never presented as an interpretation.
@@ -34,14 +34,14 @@ An interpretation is never presented as an observation, and an unknown is never 
 
 The AI classifies each question into a level and adapts:
 
-1. **Level 1 — Reflection** ("Help me understand myself"): uses the Baseline to identify qualities, patterns, pressure responses, and underused capacities.
+1. **Level 1 — Reflection** ("Help me understand myself"): uses the Baseline to identify qualities, recurring dynamics, pressure responses, and underused capacities.
 2. **Level 2 — Meaning** ("Help me understand what I mean by what I'm experiencing"): when a loaded concept materially changes the interpretation — love, success, failure, enough, respect, loyalty, responsibility, safety, trust, family, commitment, freedom, helping, fairness, betrayal, abandonment, control, strength, weakness, independence, being needed, being good, being selfish — the AI asks what the concept means to the user before interpreting.
 3. **Level 3 — Relationship** ("Help me understand what happens between us"): requires consent-gated context about the other person; if none exists, the AI works only with what the user described and explicitly separates what happened from what the user made it mean.
 4. **Level 4 — System** ("Help me understand what happens when these people interact"): roles, loyalties, and unwritten rules inside a family or group; requires consent-gated context about multiple participants.
 
-## How the AI reasons about a pattern
+## How the AI reasons about what keeps happening
 
-When something recurring surfaces, Sovereign helps the user trace it: what the experience came to mean, how that meaning shows up in behavior, what it costs, and what question could reframe it — without ever turning the reading into a diagnosis or a verdict.
+When something recurring surfaces, Sovereign helps the user trace it: what the experience came to mean, how that meaning shows up in behavior, what it costs, and what question could reframe it — without ever turning the interpretation into a diagnosis or a verdict.
 
 ## Safety and boundaries
 
@@ -61,7 +61,7 @@ When something recurring surfaces, Sovereign helps the user trace it: what the e
 - The raw baseline JSON and conversation history are scoped to the owning account in that account's D1 row.
 - AI answers are generated per request; there is no training on user conversations at all.
 - Relationships appear only through explicit invitations; each participant's data is visible only through their own authenticated session. The invited person must accept and consent before their derived profile can be used in another user's AI context.
-- Accounts can be deleted in one click, which cascades and removes the account and all its data.
+- Accounts can be deleted self-service from the Account page, which cascades and removes the account and all its data.
 - **Dual memory architecture.** By default (`server` mode), transcripts persist in D1 for multi-device continuity. In `local` (Device-Only) mode, the server writes no thread data; the browser encrypts conversation history with an AES-GCM 256 non-extractable key sealed in IndexedDB, and the AI edge retains nothing.
 - Sessions are secure (httpOnly) and can be revoked server-side the moment a user signs out or resets a password.
 - A free tier is available with daily limits, and Sovereign+ (subscription or 30-day gift pass) raises those limits and unlocks the full relationship feature set. Specific quotas and enforcement internals are set in the product and may change; they are not part of this public description.
