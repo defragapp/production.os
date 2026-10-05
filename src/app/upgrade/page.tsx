@@ -164,7 +164,7 @@ function UpgradeContent() {
                   <Button variant="outline" className="w-full" onClick={() => handleUpgrade("monthly")} disabled={loading !== null}>
                     {loading === "monthly" ? "Redirecting..." : "Or pay monthly — $20/mo"}
                   </Button>
-                  <p className="text-center text-xs text-muted-foreground/70">Secure checkout by Stripe. Cancel anytime.</p>
+                  <p className="text-center text-xs text-muted-foreground/70">US dollars. Secure checkout by Stripe. Cancel anytime.</p>
                 </div>
               </CardContent>
             </Card>

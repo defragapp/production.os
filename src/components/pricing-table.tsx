@@ -137,7 +137,7 @@ export function PricingTable() {
         <tfoot>
           <tr className="border-t border-foreground/15 bg-foreground/[0.03]">
             <td className="px-5 py-4 text-xs text-muted-foreground">
-              Billed yearly. Cancel any time from your Account page — no emails.
+              Billed yearly in US dollars. Cancel any time from your Account page — no emails.
             </td>
             <td className="px-5 py-4 text-center">
               <Link
