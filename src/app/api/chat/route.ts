@@ -206,7 +206,7 @@ async function handleChat(request: NextRequest) {
     if (!claim.claimed) {
       if (tier === "free") {
         return new Response(JSON.stringify({
-          error: `You've used today's answers — come back tomorrow, or continue without limit with Sovereign+`,
+          error: `You've used today's answers — come back tomorrow, or lift the cap to 150 a day with Sovereign+`,
           upgradeRequired: true,
           limit: FREE_TIER_DAILY_LIMIT,
           used: claim.used,
