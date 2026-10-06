@@ -4,22 +4,24 @@ Companion to `cloudflare-account-migration.md` (the runbook is the source of
 truth for rule values, ids, and history). Every item below is either gated on
 an external surface (Stripe dashboard, zone tokens, the source account) or on
 calendar time — nothing here is blocked on code. Cutover completed
-2026-10-01/02; production runs version `11a39179` on the ASU account, D1
-migrations 0001–0007 applied, backup at
-`.audit-tmp/asu-prod-backup-20261002T172232Z.sql`.
+2026-10-01/02; production runs on the ASU account, D1 migrations 0001–0007
+applied, backup at
+`.audit-tmp/asu-prod-backup-20261002T172232Z.sql`. Workers Builds is connected
+and verified 2026-10-06: a push to `main` builds and deploys BOTH Workers
+(check-runs `Workers Builds: production-os` / `sovereign-tail`); the CLI
+`npm run deploy` is the fallback only.
 
 ## 1. Now — full release-gate coverage (no external dependency)
 
-- [ ] Run `npm run verify:release` in a host terminal where the OpenNext
-      preview worker boots. In the agent sandbox the preview-backed gates
-      (~48) skip because workerd refuses the ESM-default interop of
-      `.open-next/worker.js` locally — production is unaffected; CI
-      (`.github/workflows/verify.yml`) runs the same ratchet on ubuntu where
-      workerd + system Chrome boot normally.
-- [ ] First CI run: add repo secrets `CLOUDFLARE_API_TOKEN` (a token scoped
-      to Workers Scripts read + AI, or reuse an account token) and
-      `CLOUDFLARE_ACCOUNT_ID`. Without them the ratchet still passes; the
-      remote-AI gates count as skipped.
+- [x] Run `npm run verify:release` in a host terminal where the OpenNext
+      preview worker boots. Done 2026-10-05/06: two full green runs (116/116
+      gates, preview-backed gates passing) on the host before the copy and
+      Builds work shipped.
+- [x] ~~First CI run: add repo secrets~~ — moot. The `verify.yml` workflow was
+      retired 2026-10-06 (dead-on-arrival: GitHub Actions billing lockout, and
+      `cf-typegen:check` is un-satisfiable in CI anyway). Release coverage is
+      Workers Builds (real build + deploy per push) plus the local
+      `verify:release` ratchet as the pre-push gate.
 
 ## 2. Stripe go-live (dashboard-side)
 
@@ -50,14 +52,13 @@ migrations 0001–0007 applied, backup at
 
 ## 4. T+10 days (by 2026-10-12) — revert trace head sampling
 
-- [ ] `wrangler.jsonc` line 12 currently reads `"head_sampling_rate": 1.0`
-      (full migration visibility; README documents the steady state as 0.1).
-      Edit back to `0.1`, then ship via the canonical path (push → poll
-      `npx wrangler deployments status` ~3 min → one CLI `npm run deploy`
-      only if no build-system version appeared). Do **not** shortcut this
-      with `PATCH …/environments/production/settings` alone: the value lives
-      in `wrangler.jsonc`, so the next deploy re-applies `1.0` and silently
-      undoes the API change. File edit + deploy is the only durable path.
+- [x] `wrangler.jsonc` reverted `head_sampling_rate` 1.0 → 0.1 on 2026-10-06
+      (owner directive to close the checklist early — the full-trace window
+      ran 4 days instead of 10; migration has been healthy throughout). Shipped
+      via push → Workers Builds (the canonical path), not CLI. The durable-edit
+      rule below still governs: the value lives in `wrangler.jsonc`, so any
+      API-only patch is silently undone by the next deploy.
+      File edit + deploy is the only durable path.
 
 ## 5. T+14 days green (by 2026-10-16) — Phase 8, decommission gmail
 
