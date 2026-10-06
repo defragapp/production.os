@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Nav } from "@/components/nav";
 import { PageTexture } from "@/components/page-texture";
+import { SiteFooter } from "@/components/site-footer";
 import { BLOG_POSTS, getPost, type BlogSection } from "@/content/blog";
 
 export function generateStaticParams() {
@@ -124,6 +125,7 @@ export default async function BlogArticle({
           </div>
         </article>
       </main>
+      <SiteFooter />
     </>
   );
 }

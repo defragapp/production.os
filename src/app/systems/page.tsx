@@ -12,7 +12,9 @@ export const metadata: Metadata = {
 const CARDS = [
   {
     eyebrow: "The whole room",
-    title: "See the dynamic, not just the loudest person in it.",
+    // Was "See the dynamic, not just the loudest person in it." — the same
+    // sentence as the H1 above it, twice on one screen.
+    title: "See how the room actually works.",
     body:
       "Systems lensing shows how roles, timing, and expectations interact so you can see the structure instead of getting lost in the drama.",
   },

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { PageTexture } from "@/components/page-texture";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "Our Philosophy",
@@ -106,6 +107,7 @@ export default function AboutPage() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

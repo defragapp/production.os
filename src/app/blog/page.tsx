@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { PageTexture } from "@/components/page-texture";
+import { SiteFooter } from "@/components/site-footer";
 import { BLOG_POSTS } from "@/content/blog";
 
 export const metadata: Metadata = {
@@ -72,10 +73,20 @@ export default function BlogIndex() {
           ))}
         </ol>
 
+        {/* Reading is the warm end of the funnel — offer the next step here,
+            not only in the header. */}
+        <div className="mt-12 flex flex-col items-center gap-3 text-center">
+          <p className="font-display text-lg text-foreground">Try the questions on your own life.</p>
+          <Link href="/onboard?mode=signup" className="btn-focal px-6 py-3 text-sm font-semibold">
+            Start free
+          </Link>
+        </div>
+
         <p className="mt-12 text-xs text-muted-foreground/70">
           New essays land here first, then get linked from <Link href="/" className="underline underline-offset-4 hover:text-foreground">the landing page</Link> footer.
         </p>
       </main>
+      <SiteFooter />
     </>
   );
 }

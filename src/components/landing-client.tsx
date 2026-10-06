@@ -10,6 +10,7 @@ import { PageTexture } from "@/components/page-texture";
 import { BaselineDrawer } from "@/components/baseline-drawer";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { PricingTable } from "@/components/pricing-table";
+import { SiteFooter } from "@/components/site-footer";
 import { cn } from "@/lib/utils";
 import type { BaselineData } from "@/lib/types";
 
@@ -681,48 +682,7 @@ export function LandingClient() {
         </section>
       </main>
 
-      <footer className="relative bg-background px-6 pb-12 pt-14 text-sm text-muted-foreground">
-        <div className="section-rule absolute inset-x-0 top-0" aria-hidden="true" />
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-          <div>
-            <Logo href="#" />
-            <p className="mt-2.5">Private by design. Grounded in data. Yours to decide.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-6">
-            <Link href="/about" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              Philosophy
-            </Link>
-            <Link href="/self" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              Self
-            </Link>
-            <Link href="/people" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              People
-            </Link>
-            <Link href="/systems" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              Systems
-            </Link>
-            <Link href="/blog" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              Field Notes
-            </Link>
-            <Link href="/faq" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              FAQ
-            </Link>
-            <Link href="/terms" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              Terms
-            </Link>
-            <Link href="/privacy" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              Privacy
-            </Link>
-            <Link href="/support" className="tap-line transition-colors duration-[240ms] hover:text-foreground">
-              Support
-            </Link>
-          </div>
-        </div>
-        <div className="mx-auto mt-10 flex max-w-6xl flex-col gap-1 border-t border-white/[0.06] pt-6 text-xs text-muted-foreground/75">
-          <p>Sovereign OS™ — © 2026 Sovereign OS. All rights reserved.</p>
-          <p>Sovereign OS is a trademark used as a common-law mark. The Service and its AI outputs are protected under the Terms of Service.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "Page not found",
@@ -34,15 +35,18 @@ export default function NotFound() {
             <Link href="/" className="btn-aurora px-8 py-3 text-center text-sm font-medium">
               Back to home
             </Link>
+            {/* A stranger with a dead link can't sign in — the honest next
+                step for them is starting free; the header covers Sign in. */}
             <Link
-              href="/onboard?mode=login"
+              href="/onboard?mode=signup"
               className="btn-glass px-8 py-3 text-center text-sm font-medium"
             >
-              Sign in
+              Start free
             </Link>
           </div>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

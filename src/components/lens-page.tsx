@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageShell } from "@/components/page-shell";
 import { PageHeader } from "@/components/page-header";
+import { SiteFooter } from "@/components/site-footer";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +92,7 @@ export function LensPage({
       ? { label: "Enter your Lens", href: "/chat" }
       : secondaryCta;
   return (
+    <>
     <PageShell center={false} wide="wide" rule className="space-y-10">
       <Reveal className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_25px_80px_-28px_rgba(0,0,0,0.85)]">
@@ -139,6 +141,8 @@ export function LensPage({
         </div>
       </Reveal>
     </PageShell>
+    <SiteFooter />
+    </>
   );
 }
 

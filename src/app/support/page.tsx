@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { PageTexture } from "@/components/page-texture";
+import { SiteFooter } from "@/components/site-footer";
 import { SupportForm } from "./support-form";
 import { getEnv } from "@/lib/env";
 
@@ -89,6 +90,7 @@ export default async function SupportPage() {
           </aside>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

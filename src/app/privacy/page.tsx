@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
+    <>
     <PageShell center={false} wide="prose" rule>
         <PageHeader title="Privacy Policy" description="Last updated: September 29, 2026" center={false} />
         <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
@@ -67,5 +69,7 @@ export default function PrivacyPage() {
           <Link href="/support" className="btn-glass shrink-0 px-4 py-2 text-sm font-medium text-foreground">Ask a question</Link>
         </div>
     </PageShell>
+    <SiteFooter />
+    </>
   );
 }

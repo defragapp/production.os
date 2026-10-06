@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -41,6 +42,7 @@ const FAQS = [
 
 export default function FaqPage() {
   return (
+    <>
     <PageShell center={false} wide="wide">
         <PageHeader
           title="Questions, answered"
@@ -56,9 +58,12 @@ export default function FaqPage() {
         </Link>
 
         <div className="glass-panel px-6 md:px-8">
-          {FAQS.map((item) => (
+          {FAQS.map((item, index) => (
             <details
               key={item.q}
+              // The first answer is the 5-second definition — open on load so
+              // "what is this" is answered above the fold, not behind a click.
+              open={index === 0}
               className="group border-b border-border/70 py-5 last:border-b-0"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between text-[15px] font-medium text-foreground transition-colors duration-200 hover:text-foreground/80 [&::-webkit-details-marker]:hidden md:text-base">
@@ -70,6 +75,14 @@ export default function FaqPage() {
               <p className="max-w-prose pb-1 pt-3 text-sm leading-7 text-muted-foreground">{item.a}</p>
             </details>
           ))}
+        </div>
+
+        {/* Same reason the landing closes with it: the question after a good
+            answer is "okay, where do I start?" */}
+        <div className="mt-10 text-center">
+          <Link href="/onboard?mode=signup" className="btn-focal inline-block px-6 py-2.5 text-sm font-semibold">
+            Start free
+          </Link>
         </div>
 
         {/* Anything the FAQ didn't cover goes to a human — same lit-band
@@ -88,5 +101,7 @@ export default function FaqPage() {
           </div>
         </section>
     </PageShell>
+    <SiteFooter />
+    </>
   );
 }
