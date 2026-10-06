@@ -14,7 +14,7 @@
  *
  * Zero dependencies. Version bump on every edit forces a fresh precache.
  */
-const SHELL_CACHE = "sovereign-offline-shell-v1";
+const SHELL_CACHE = "sovereign-offline-shell-v2";
 const PRECACHE_URLS = ["/offline", "/brand/icon.png", "/brand/emblem-core.png"];
 
 self.addEventListener("install", (event) => {
@@ -45,11 +45,22 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 
-  // The shell itself: serve it straight from the cache so the offline page
-  // renders even when the network (and the Worker) are unreachable.
+  // The shell itself: network-first while online, cache only as the offline
+  // fallback. Cache-first here once served a previous build's /offline HTML
+  // (stale chunk/CSS hashes → unstyled page, dead Retry button) to visitors
+  // who were plainly online. A fresh precache still exists for the moment
+  // the network is actually unreachable.
   if (url.pathname === "/offline") {
     event.respondWith(
-      caches.match(request).then((hit) => hit || fetch(request)),
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request).then((hit) => hit || Response.error())),
     );
     return;
   }

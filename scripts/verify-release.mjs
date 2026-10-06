@@ -469,16 +469,25 @@ async function gateStaticAnalysis() {
   const layoutSrc = fs.readFileSync(path.join(srcDir, "app/layout.tsx"), "utf8");
   const swRegSrc = fs.existsSync(path.join(srcDir, "components/sw-registration.tsx"))
     ? fs.readFileSync(path.join(srcDir, "components/sw-registration.tsx"), "utf8") : "";
+  // Runtime cache WRITES are capped at one, and it must sit inside the
+  // /offline branch (network-first keeps the precached shell's chunk hashes
+  // in step with the browser's immutable HTTP cache). The tripwire pins that
+  // scope: one cache.put total, and it lives in the section of the file that
+  // begins at the /offline branch — nothing before it, and no second writer
+  // after it, can cache anything.
+  const swOfflineBranch = swSrc.slice(swSrc.indexOf('if (url.pathname === "/offline")'));
+  const swPutCount = (swSrc.match(/cache\.put/g) || []).length;
   const swPrivacy =
     swSrc.includes('startsWith("/api/")') &&
-    !swSrc.includes("cache.put") &&
+    swPutCount <= 1 &&
+    (!swSrc.includes("cache.put") || swOfflineBranch.includes("cache.put")) &&
     swSrc.includes('if (request.method !== "GET") return;') &&
     swSrc.includes('PRECACHE_URLS = ["/offline"') &&
     fs.existsSync(path.join(srcDir, "app/offline/page.tsx")) &&
     layoutSrc.includes("ServiceWorkerRegistration") &&
     swRegSrc.includes('register("/sw.js"');
   record("the offline shell precaches only /offline + brand art and never touches /api/*", swPrivacy,
-    swPrivacy ? "" : "sw.js grew a cache.put / lost its API bypass, or the registration was unmounted from the layout");
+    swPrivacy ? "" : "sw.js grew a cache write outside the /offline branch / lost its API bypass, or the registration was unmounted from the layout");
 }
 
 async function gateBuild() {
@@ -3439,7 +3448,8 @@ async function gateEvolution(port, booted) {
     if (res.status !== 200) swWhy = `status ${res.status}`;
     else if (!/javascript/.test(ctype)) swWhy = `served as ${JSON.stringify(ctype)}`;
     else if (!body.includes('startsWith("/api/")')) swWhy = "served copy lost the /api/ bypass";
-    else if (body.includes("cache.put")) swWhy = "served copy contains cache.put";
+    else if ((body.match(/cache\.put/g) || []).length > 1) swWhy = "served copy contains more than one cache.put";
+    else if (body.includes("cache.put") && !body.slice(body.indexOf('if (url.pathname === "/offline")')).includes("cache.put")) swWhy = "served copy caches outside the /offline branch";
     else swOk = true;
   } catch (e) {
     swWhy = String(e).slice(0, 80);
