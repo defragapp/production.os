@@ -42,6 +42,10 @@ export function InstallPrompt() {
     if (localStorage.getItem(DISMISS_KEY)) return;
     // Already installed? Nothing to prompt.
     if (window.matchMedia("(display-mode: standalone)").matches) return;
+    // iOS keeps its own signal for "launched from the Home Screen", and older
+    // Safari versions never match the display-mode query — without this the
+    // hint can nag from inside the installed app itself.
+    if ((navigator as Navigator & { standalone?: boolean }).standalone) return;
     // Don't nag inside the sign-in flow itself.
     if (window.location.pathname.startsWith("/onboard")) return;
 
