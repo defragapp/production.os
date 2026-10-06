@@ -27,7 +27,9 @@
   // https://developers.cloudflare.com/workers/observability/logs/workers-logs/
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 1.0,
+    // Steady state is 0.1 (README). The 1.0 full-trace window was migration
+    // visibility only; reverted after the cutover settled (launch-checklist §4).
+    "head_sampling_rate": 0.1,
     "redact_query_string": true
   },
   // Smart Placement is deliberately NOT enabled. Every hot backend this
