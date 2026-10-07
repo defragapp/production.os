@@ -41,6 +41,8 @@ I deliberately did **not** fix this by pinning the slot to `h-[65px]` + `overflo
 
 Workers Builds is still not connected, so every version below is CLI-authored (`npm run deploy`, which chains `tail:deploy`). `npx wrangler versions list` was checked before each deploy and shows **zero `push_event` sources** — no in-flight build to collide with.
 
+> **Superseded 2026-10-06:** Workers Builds is now connected and verified — a push to `main` fires check-runs for BOTH Workers and rolls out to 100%. Push-to-deploy is the primary path; `npm run deploy` is the fallback (see AGENTS.md). The CLI-authorship above is correct for the snapshot of this run, not the current deploy model.
+
 | Commit | Worker | Version ID |
 |---|---|---|
 | `a7bc167` — `fix(ux): implement zero-cls state-aware CTAs, tune scroll observers, and reserve layout footprints` | `production-os` | `afd1f39d-23fd-4b99-955b-d51bba84c57e` |

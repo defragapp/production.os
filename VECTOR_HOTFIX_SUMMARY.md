@@ -94,6 +94,8 @@ headroom against a future limit change or a longer id component, so it was not c
 Preflight first, per the collision rule: `npx wrangler versions list` showed **zero `push_event`
 sources** (Workers Builds is still not connected), so the CLI was the only deploy path in flight.
 
+> **Superseded 2026-10-06:** Workers Builds is now connected for both Workers; push-to-`main` is the primary deploy path and `npm run deploy` the fallback. This "CLI was the only path" note is accurate to the run it records, not to the current deploy model.
+
 | Worker | Version ID |
 |---|---|
 | `production-os` | `410c3bcd-3305-4de5-943c-bc67c9f21afe` |

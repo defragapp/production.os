@@ -10,10 +10,9 @@
   // invited confusion about which behaviour was active.
   // https://developers.cloudflare.com/workers/configuration/compatibility-flags/
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  // head_sampling_rate 1.0 for the launch window; revert to 0.1 at T+10d.
-  // Full-trace logs during launch week are the whole point of a paid
-  // Workers Logs plan — this is what makes the 1102 / JPL 429 diagnosis
-  // possible the moment traffic appears.
+  // head_sampling_rate is at the 0.1 steady state (reverted from the 1.0 launch window
+  // in e8bdcce). Full-trace logs during the migration week were what made the 1102 /
+  // JPL 429 diagnosis possible; that window has closed.
   //
   // redact_query_string is the load-bearing setting here, and it DEFAULTS TO
   // FALSE. Email-verification tokens, invite tokens and password-reset tokens

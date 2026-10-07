@@ -23,11 +23,12 @@ is not astrology and name the systems inconsistently:
 Owner call: pick ONE canonical framing of the astrological basis and propagate it through
 `about`, `faq`, `terms` §2, and the landing provenance strip.
 
-## 2. `middleware.ts` doc-comment drift (harmless, auth logic — leave unless re-touching)
-The header comment (src/middleware.ts:21, 30–31) lists `/invite` as a public page, but the
-`publicPages` array (line 55) omits it. `/invite` is still publicly reachable because it
-falls through the "not an API and not a PROTECTED_PAGE" branch (line 86). Behaviour is
-correct; only the comment is stale. Not edited here to avoid touching the auth gate.
+## 2. `middleware.ts` doc-comment drift — RESOLVED (comment corrected, auth logic untouched)
+The header comment once listed `/invite` as a public page while the `publicPages` array
+(line 55) omitted it and named `/redeem` instead. Behaviour was always correct — `/invite`
+is publicly reachable because it falls through the "not an API and not a PROTECTED_PAGE"
+branch (line 86) — only the comment was wrong. The comment now names `/redeem` in the
+explicit public set and describes `/invite` as fall-through-public. No gate logic changed.
 
 ## 3. No `/team` (or founder) page (trust signal / structural)
 `src/app/about/page.tsx` carries a code comment noting the operator's background "belongs
@@ -35,10 +36,14 @@ on a real /team page once one is authored." For an AI platform selling a paid ti
 credibility surface (who builds this, why trustworthy) is a conversion/trust lever. New
 route + copy — deferred, not a quick patch.
 
-## 4. Observability sampling still at full cost (operational reminder, out of UX scope)
-`wrangler.jsonc` `head_sampling_rate: 1.0` was a launch-window setting to revert to `0.1`
-around T+10d (~Oct 11–12). Not a UI issue; surfacing so it isn't forgotten during the
-acquisition push. Confirm before changing (it feeds Gate 33 expectations).
+## 4. Observability sampling — main Worker REVERTED; Tail Worker intentionally at full rate
+The main Worker's `head_sampling_rate` was already reverted `1.0 → 0.1` (steady state) in
+`e8bdcce` — `wrangler.jsonc` now reads `0.1`. The `tail-worker/wrangler.jsonc` value stays
+`1.0` on purpose: the Tail Worker only receives a copy of `production-os` events that
+survived the main Worker's own 0.1 sampling, so its log volume is already tiny and full
+retention there is what makes the operator alert path reliable. `verify:release` does NOT
+gate either rate (no gate inspects `head_sampling_rate`); the earlier note claiming it
+"feeds Gate 33 expectations" was wrong — Gate 33 is release-path completeness/hygiene.
 
 ---
 ### Notes on what was NOT changed

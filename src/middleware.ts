@@ -18,8 +18,11 @@ function isNonCanonicalAllowed(host: string): boolean {
 /**
  * Server-side auth gate.
  *
- * - Public pages: /, /onboard, /terms, /privacy, /invite (anything else
- *   renders naturally — e.g. the branded 404 for unknown paths).
+ * - Public pages (explicit set, line ~55): /, /onboard, /terms, /privacy, /redeem.
+ *   Other public surfaces — /invite, /about, /blog, /faq, … — are NOT in that array;
+ *   they render via the fall-through below ("not an API and not a protected page"),
+ *   and unknown paths still reach the branded 404. /invite stays public this way so an
+ *   accept link works before the recipient has an account.
  * - Authed pages: /chat, /baseline, /upgrade, /account, /settings.
  * - API: locked by default — only /api/auth*, /api/invites/info, and the
  *   signature-verified Stripe webhook are public. Everything under /api/*

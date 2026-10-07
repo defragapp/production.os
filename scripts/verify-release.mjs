@@ -2,8 +2,10 @@
 /**
  * verify:release — the permanent pre-commit / pre-deploy ratchet.
  *
- * One command, thirty-two numbered gates (110 individual checks), all must be green
- * before a commit or deploy:
+ * One command, thirty-three numbered gates, all must be green
+ * before a commit or deploy. The individual-check total is printed at the end
+ * of every run (`N/M checks green`) rather than restated here, so this header
+ * cannot silently fall behind a new gate:
  *   1. tsc --noEmit                       — types
  *   2. eslint . (--max-warnings 0)        — lint, warnings fail
  *   3. vitest run                          — unit + pure-reducer tests
@@ -123,8 +125,13 @@
  *                                            calls collapse to one outbound fetch (the coalescing suite),
  *                                            and a shared Intent Sigil renders its page + a real 1200×630
  *                                            OG PNG through Satori while a forged token dead-ends at 404.
+ *  33. release-path completeness & hygiene — the canonical `deploy` chains the Tail Worker and points it
+ *                                            at its own config, the Tail Worker keeps
+ *                                            `redact_query_string: true`, both configs omit the redundant
+ *                                            `compatibility_flags`, and the committed generated types file
+ *                                            stays tracked so a clean clone can typecheck.
  *
- * Gates 1-8 and 10-32 fail closed. The preview-backed passes (9-24, 26-32) boot the
+ * Gates 1-8, 10-32 and 33 fail closed. The preview-backed passes (9-24, 26-32) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a

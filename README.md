@@ -9,8 +9,8 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 |---|---|
 | Frontend | Next.js App Router + React 19 + Tailwind CSS + shadcn/ui |
 | Adapter | `@opennextjs/cloudflare` (OpenNext) |
-| Runtime | Cloudflare Workers (edge, `nodejs_compat`) |
-| Database | Cloudflare D1 (SQLite) — **10 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants` |
+| Runtime | Cloudflare Workers (`nodejs_compat` is implicit at the `compatibility_date`; it is deliberately not declared) |
+| Database | Cloudflare D1 (SQLite) — **11 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants`, `nudge` |
 | Sessions | Cloudflare KV (`SESSION_KV`) — rate-limit + reset/verify + `ops:` counters (JWTs live in the cookie; `users.token_version` revokes them early) |
 | Device-Only memory | Client-side AES-GCM 256 non-extractable `CryptoKey` in IndexedDB `sovereign-memory` (`memory_mode='local'` → zero-retention edge inference, no D1 thread write) |
 | AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`, explicit `max_tokens=1024`, 2,000-char input cap) |
@@ -159,18 +159,18 @@ npm run test       # Vitest unit tests (auth, stripe, sovereign safety/reasoning
 npm run build      # Plain Next.js build (OpenNext runs this internally)
 npx opennextjs-cloudflare build   # OpenNext compiler → .open-next/ (what CI runs)
 npm run preview    # OpenNext build + preview in Workers runtime (workerd)
-npm run deploy     # OpenNext build + deploy to Cloudflare edge
+npm run deploy     # OpenNext build + deploy both Workers (fallback path; see AGENTS.md)
 ```
 
 Run `npm run verify:release` before pushing — it is the whole ratchet. Its own
-header enumerates the gates and is the single source of truth for the count; it
-currently runs **116 checks across 33 numbered gates**: types, lint, the
-34 Vitest suites (396 tests), committed contract wiring, a clean OpenNext build,
+header enumerates the gates and is the single source of truth for the count; the
+run prints its own check total at the end. It covers: types, lint, the Vitest
+suites, committed contract wiring, a clean OpenNext build,
 the browser AES-GCM vault round-trip, the zero-CLS JourneyBar veil, a live
 authenticated walk over every surface in both memory modes, draft/503 recovery,
 whole-surface ergonomics (44px + 0 overflow at 390/768/1440), the PWA manifest,
 and the launch gates — compliance & 18+ age gate, IP & bundle isolation, owner
-console & 30-day gift pass, and the iOS 16px input auto-zoom floor. Preview-backed
+console & the gift-pass funnel, and the iOS 16px input auto-zoom floor. Preview-backed
 gates run against LOCAL D1 only and report SKIPPED (never a false PASS) if the
 environment cannot boot.
 
@@ -195,7 +195,7 @@ environment cannot boot.
 ```
 open-next.config.ts            # OpenNext Cloudflare config (defaults)
 wrangler.jsonc                 # Worker config: D1, KV, AI, AI Gateway, static assets
-schema.sql                     # Canonical D1 baseline — 10 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants); migrations/0001–0004 layer onto existing DBs
+schema.sql                     # Canonical D1 baseline — 11 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge); migrations/0001–0007 layer onto existing DBs
 assets/ace-of-cups.jpg         # Canonical brand artwork (source of truth for the mark)
 scripts/build-brand-assets.mjs # Regenerates public/brand/*.png from the source artwork (node scripts/build-brand-assets.mjs)
 public/brand/                  # Emitted raster mark: emblem-full, emblem-core, emblem-core-bold, icon, apple-icon
@@ -321,7 +321,7 @@ correction, leakage) and §53 regressions are covered in
 
 ## Notes
 
-- Routes run in the Cloudflare Workers runtime via the OpenNext adapter (compatibility flag `nodejs_compat`; no explicit `runtime = "edge"` exports).
+- Routes run in the Cloudflare Workers runtime via the OpenNext adapter. `nodejs_compat` is implicit at the declared `compatibility_date` and is intentionally NOT listed in `compatibility_flags` (Gate 33 fails if it reappears); there are no explicit `runtime = "edge"` exports.
 - Passwords are hashed with PBKDF2-HMAC-SHA256 at **100,000 iterations** (the Cloudflare Workers / workerd WebCrypto ceiling — values above 100k throw at runtime) and then keyed with an HMAC using the `PASSWORD_PEPPER` secret, so a leaked D1 dump is not crackable on its own. Stored hashes are versioned (`pbkdf2$<iter>$pepper$<hmac>`) and older/un-peppered rows are transparently upgraded on successful login. Login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed). See [`docs/auth.md`](docs/auth.md).
 - JWT session tokens are stored in an httpOnly, Secure, SameSite=Lax cookie (7-day expiry) and verified on every API call via middleware + route guards.
 - **Passkeys (WebAuthn) are live** and passkey-first for return logins: `@simplewebauthn/server` v13 (edge-compatible), a `passkeys` D1 table, and `/api/auth/passkey/{register,authenticate}` endpoints (POST options / PUT verify; challenges are single-use in KV). A "Continue with passkey" button tops the login card and an "Add a passkey" control lives on the account page; enrollment requires an existing session and the password stays as the fallback, so nobody is locked out. Raw WebAuthn `DOMException`s are mapped to friendly, actionable messages instead of being surfaced to the user. The browser ceremony must be validated on a real device. See [`docs/auth.md`](docs/auth.md) §9.
