@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getEnv } from "@/lib/env";
+import { requireOwner } from "@/lib/owner";
 import { ModelError, createCloudflareModel } from "@/lib/sovereign-model";
 import type { ChatMessage } from "@/lib/types";
 import { buildAgentLeeMessages } from "@/lib/agent-lee";
@@ -9,7 +9,18 @@ function badRequest(message: string, status = 400) {
 }
 
 export async function POST(request: NextRequest) {
-  const env = await getEnv();
+  // Owner-only. Agent Lee is the operator's launch analyst (its system prompt
+  // carries internal infra detail and it is not wired to any client surface),
+  // so it must never act as a public, un-metered model proxy: this route
+  // predates the /api/chat quota + burst + extraction guards, and every
+  // signed-in user could otherwise script it to bypass the free-tier daily
+  // cap and drain the AI Gateway. `requireOwner` verifies the session against
+  // the live token_version (not merely the middleware, which this
+  // extension-free path always reaches) and answers a non-owner with the
+  // same indistinguishable 404 as every other owner surface.
+  const { session, denial } = await requireOwner(request);
+  if (denial) return denial;
+  const env = session.env;
   let body: { messages?: ChatMessage[] };
 
   try {

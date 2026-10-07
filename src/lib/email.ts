@@ -236,12 +236,15 @@ const EMAIL_TEMPLATES = {
     subject: "New support message",
     render: (vars: Record<string, unknown>): string => {
       const v = vars as { name: string; email: string; topic: string; message: string };
-      const topic = v.topic || "General";
-      const body = v.message.split("\n").map((line) => `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 8px">${line || "&nbsp;"}</p>`).join("");
+      // User-controlled strings from the public /support form get HTML
+      // escaping — they render into the operator's inbox, so an unescaped
+      // value would let a submitter inject markup/links into owner mail.
+      const topic = esc(v.topic || "General");
+      const body = esc(v.message).split("\n").map((line) => `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 8px">${line || "&nbsp;"}</p>`).join("");
       return emailShell(
         `Support: ${topic}`,
         `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="text-align:left">
-<tr><td style="padding:2px 0"><span style="color:#8a857b;font-size:12px;">From</span><br><strong style="color:#f4efe4;font-size:14px;">${v.name || "Anonymous"} &lt;${v.email}&gt;</strong></td></tr>
+<tr><td style="padding:2px 0"><span style="color:#8a857b;font-size:12px;">From</span><br><strong style="color:#f4efe4;font-size:14px;">${esc(v.name) || "Anonymous"} &lt;${esc(v.email)}&gt;</strong></td></tr>
 <tr><td style="padding:8px 0 2px"><span style="color:#8a857b;font-size:12px;">Topic</span><br><strong style="color:#f4efe4;font-size:14px;">${topic}</strong></td></tr>
 <tr><td style="padding:8px 0 2px"><span style="color:#8a857b;font-size:12px;">Message</span><br><div style="margin-top:4px">${body}</div></td></tr>
 </table>`

@@ -15,15 +15,15 @@
  *     `{ userId, threadId, turnIndex, role }` coordinates needed to
  *     hydrate the snippet back out of D1 on demand. Those coordinates ride
  *     in the vector's `metadata`, and the vector id itself is an opaque,
- *     fixed-length digest of them (see `vectorId`). The erasure hooks are
- *     meant to remove the vectors along with the rows
- *     (`deleteThreadEmbeddings` on thread delete, `deleteUserEmbeddings`
- *     on account delete) — note the thread path is currently a no-op
- *     because its turn-count SQL returns NULL, so a deleted thread can
- *     leave its vectors behind until that is fixed; account deletion does
- *     sweep. Either way the only
- *     persistent artifact is a fixed-length float vector that is
- *     not reversible.
+ *     fixed-length digest of them (see `vectorId`). The erasure hooks remove
+ *     the vectors along with the rows (`deleteThreadEmbeddings` on thread
+ *     delete, `deleteUserEmbeddings` on account delete); both enumerate ids
+ *     from the thread's message count read with `json_array_length(
+ *     message_history)` directly (see api/threads DELETE and the account
+ *     sweep) — an earlier `json_extract` wrapper made the thread path return
+ *     NULL and silently orphan every vector of a deleted thread, which is
+ *     fixed. Either way the only persistent artifact is a fixed-length float
+ *     vector that is not reversible.
  *   - memory_mode='local' bypasses this path entirely: no server-side
  *     write, no embedding. The 'Device-Only' contract stays true.
  *

@@ -127,7 +127,14 @@ export const config = {
      * - _next/static, _next/image (static assets)
      * - favicon.ico, robots.txt
      * - .open-next assets
+     * - paths carrying a dot (file-like assets: /sw.js, /manifest.webmanifest,
+     *   /sitemap.xml) — EXCEPT anything under `api/`. The blanket `.*\\..*`
+     *  exemption was an auth hole: a dotted dynamic segment
+     *   (`/api/invites/<id>.x`) skipped middleware entirely, and routes that
+     *   lean on middleware for the token_version revocation check
+     *   (getAuthPayload → verifyJWT) would honour a revoked cookie. Every
+     *   `/api/*` path must reach the verifySession gate below, dots or not.
      */
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|.*\\..*).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|(?!api/).*\\..*).*)",
   ],
 };

@@ -114,7 +114,13 @@ export async function DELETE(request: NextRequest) {
   // Read the message count BEFORE the D1 delete so the Vectorize sweep can
   // enumerate deterministic ids. Synchronous read (~2ms) but the delete
   // itself runs in `waitUntil` so a Vectorize hiccup never blocks the user.
-  const row = await env.DB.prepare("SELECT json_array_length(json_extract(message_history)) AS n FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).first<{ n: number | null }>();
+  // NOTE: `json_array_length(message_history)` direct on the column — the
+  // previous `json_array_length(json_extract(message_history))` returned NULL
+  // for a top-level array (extracted-then-re-extracted is not valid JSON for
+  // the length fn), so turnCount was always 0 and a deleted thread silently
+  // kept every one of its vectors. Matches the account-deletion sweep in
+  // api/auth/account, which already uses the direct form.
+  const row = await env.DB.prepare("SELECT json_array_length(message_history) AS n FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).first<{ n: number | null }>();
   const turnCount = Number(row?.n ?? 0);
   await env.DB.prepare("DELETE FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).run();
   if (turnCount > 0) {
