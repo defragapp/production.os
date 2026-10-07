@@ -1,4 +1,4 @@
-# Open tasks — compiled 2026-10-06 19:35 from threads 4b798035, 3fb1011e, 0e54bb64, 9fa21c6a, a9034055, 628d00dc
+# Open tasks — reconciled 2026-10-07 (this pass) from threads 61b587a3, 4b798035, 3fb1011e, 0e54bb64, 9fa21c6a, a9034055, 628d00dc; first compiled 2026-10-06 19:35
 
 Maintained by `/goal` (`.qoder/skills/goal/SKILL.md`). One row per verifiable thing; the
 `#` of an open row never changes. Re-derive with
@@ -22,6 +22,33 @@ were present during that run but are NOT in the pushed commits (isolated by expl
 pathspec) and so are not deployed; my commits touch only the gate script, docs, and the
 already-committed `onboard-content` fix, none of which alter those pages.
 
+**This pass (2026-10-07) — tree state, verified empirically:** `origin/main` is `311d935`;
+local HEAD is `0aacd4d` with **two committed-but-unpushed** docs/test commits on top
+(`d5a9c14`, `0aacd4d` — the latter's message records a 117/117 0-skip ratchet at 01:58,
+`.audit-tmp/verify-email.log`, on the then-committed tree). The entire email-audit
+implementation batch — `email.ts` shell/receipt redesign, `receiptFields()` in
+`stripe.ts`, webhook-route mapping, `send-test-emails.mjs` rewrite, README/stripe-plan/
+ledger doc drift — is **live only in the working tree (19 modified files), uncommitted,
+and NOT fully verified**: the 09:34 run (`.audit-tmp/verify-emails.log`) ended `PASS WITH
+SKIPS` (preview-gated checks skipped in a sandboxed environment) and the batch's final
+mtimes are 09:40 — *after* that run. Production therefore still serves the pre-audit
+`email.ts` (dead receipt rows, missing shell `bgcolor`/preheader/MSO fallback). The tree
+also still carries the parallel tab's page/design-token edits (mtimes Oct 6 21:27, the
+`duration-[240ms]`/`ease-spring`/CTA-padding set across the 9 public pages +
+`lens-page.tsx`) — same not-mine, isolate-by-pathspec situation as before. No competing
+builds were running at scan time. Environmental: thread `61b587a3` was destroyed mid-run
+by the `/Volumes/EXTREME` dropout (SanDisk Unlocker partition presenting, 270 phantom
+"deletions"); reads are healthy again and both held commits (`d5a9c14`/`0aacd4d`) are
+intact in the object store — nothing phantom-deleted was ever committed.
+
+**Work-through update (same day, this thread):** #30 executed. Full uncontended
+`verify:release` on the exact email-batch tree: **117/117, 0 skips, 535s**, read to its
+final line (`.audit-tmp/verify-30.log`). Committed pathspec-isolated as `e7d101e`
+(`fix(email): …`, 8 files — the parallel tab's 10 page/`lens-page` edits deliberately
+left uncommitted, mtime unchanged). **`git push origin HEAD:main` is the only remaining
+step and awaits explicit owner go-ahead** — four commits would ship: `d5a9c14`,
+`0aacd4d`, `e7d101e`, and this ledger commit.
+
 ## P0 — security, privacy, data integrity, production failure
 
 | # | Task | Owner | Status | Source thread | Evidence |
@@ -30,14 +57,16 @@ already-committed `onboard-content` fix, none of which alter those pages.
 | 2 | Rotate `ASU_MIGRATION_TOKEN` down: drop `Zone > Read` (or revoke if migration is done) | owner | blocked-dashboard | 628d00dc | checklist §6 unchecked |
 | 3 | Rotate/revoke vestigial `R2_*` credentials in `.dev.vars` | owner | blocked-dashboard | 628d00dc | checklist §6; repo side already cleaned — `0320ece`/`0fd7270` touched no live binding |
 | 4 | Confirm no compromised credential is still active in the control plane | owner | blocked-verification | 628d00dc | needs dashboard/`wrangler` after #1–#3 |
+| 28 | **Rotate the live Stripe secret key** `sk_live_51TV1FSBk78yJ8Hww…` pasted into chat on 2026-10-07, then `npx wrangler secret put STRIPE_SECRET_KEY` | owner | blocked-dashboard | this pass | Compromised-on-paste by this project's own rule — a live `sk_live_` key is full-account access (charges, refunds, payouts, customer PII). It was used only for reversible config work (webhook event list, product description) and never written to the repo; the temp copy at `/tmp/sv_sk` is deleted. Until it is rolled, anyone with this transcript can charge or refund real customers. Roll in dashboard → Developers → API keys → *Roll secret*, then update the Worker secret; `STRIPE_WEBHOOK_SECRET` is separate and does NOT need rotating with it. |
 
 ## P1 — launch blocker / serious user-facing defect
 
 | # | Task | Owner | Status | Source thread | Evidence |
 |---|------|-------|--------|---------------|----------|
 | 5 | Register the Stripe webhook endpoint `https://sovereign.defrag.app/api/webhooks/stripe` for the eleven events, then `npx wrangler secret put STRIPE_WEBHOOK_SECRET` for `production-os` | owner | done-verified | 4b798035, 628d00dc, 2026-10-07 | Verified against the live account `acct_1TV1FSBk78yJ8Hww`: endpoint `we_1UJuNpBk78yJ8HwwPUlSiOZd` **enabled**; added the one missing event (`invoice.payment_succeeded`) so all **11** events the route handles are subscribed. `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` already on `production-os`. Unsigned POST to the live route returns **400 `Missing stripe-signature`** (not 500) → deployed, receiving, secret configured. Prices active: $20/mo `price_1Te0g9…`, $99/yr `price_1Tq6nP…`, product `prod_UdHEFXmi3YN78U`. |
-| 6 | One real purchase end-to-end: checkout → tier flip → receipt → cancel → dunning | owner | blocked-external | 628d00dc, 2026-10-07 | Checklist §2. Config side now fully verified: `/api/checkout` stamps `client_reference_id` + `metadata.account_id` + `customer_email` (stripe.ts:118–123) and the webhook maps those to set `subscription_tier='sovereign+'` + dedup receipt + dunning — so a paid session **will** upgrade the right account. The three webhook email templates (receipt/dunning/cancel) are pinned by `src/lib/email.test.ts` (7 tests: subjects, sender, rendered vars, send-failure `false`, log-only mode). A signed live trigger is not possible without the Stripe CLI login (test-mode only) — `testHelpers` returns 404 on the live API. Remaining is a human paying a real card through the app (agent must not spend owner money). |
+| 6 | One real purchase end-to-end: checkout → tier flip → receipt → cancel → dunning | owner | blocked-external | 628d00dc, 2026-10-07 | Checklist §2. Config side now fully verified: `/api/checkout` stamps `client_reference_id` + `metadata.account_id` + `customer_email` (stripe.ts:118–123) and the webhook maps those to set `subscription_tier='sovereign+'` + dedup receipt + dunning — so a paid session **will** upgrade the right account. A real Checkout Session was created and rendered in Chrome at 390 + 1280 (then expired; zero open sessions left on the account), so the hosted payment page itself is verified. The three webhook email templates are pinned by `src/lib/email.test.ts` (now 15 tests) and all ten templates were delivered for real to `defragapp@gmail.com` through the live Resend key (11/11 message ids, no failures). A signed live trigger is still not possible without the Stripe CLI login (test-mode only) — `testHelpers` returns 404 on the live API. Remaining is a human paying a real card through the app (agent must not spend owner money). |
 | 7 | Author the zone Cache Rules (sigil OG immutable, legal-static, SEO-crawler) on `defrag.app`, then re-run `npm run verify:edge` | owner | blocked-dashboard | 4b798035 | last measurement **2/10 cached**; checklist §3 unchecked. Ready-to-paste dashboard-AI prompt in thread `4b798035`; a `Zone > Cache Rules: Edit` token would let `scripts/verify-edge-cache.mjs` drive it |
+| 30 | Ship the email-audit batch: pathspec-isolated commit of the 10 email/stripe/docs files (leave the parallel tab's 9 page edits + `lens-page.tsx` alone), push `HEAD:main` together with the two unpushed commits `d5a9c14`/`0aacd4d`, confirm both Workers check-runs | agent | closed-this-pass (push pending go-ahead) | this pass | see *Closed this pass* — verify + commit done; only the push awaits owner go-ahead. Checkbox hygiene: `docs/launch-checklist.md` §1's webhook-registration box (L28) can be ticked once #5's registration is dashboard-confirmed by the owner |
 
 ## P2 — reliability, comprehension, performance, maintainability
 
@@ -71,6 +100,7 @@ already-committed `onboard-content` fix, none of which alter those pages.
 | 23 | Testimonials: `TESTIMONIALS = []` and the component is unmounted after the landing refactor — populate with real, permitted quotes or leave hidden | owner | blocked-decision | 9fa21c6a | `src/content/testimonials.ts`. Inventing quotes would break the honesty contract |
 | 24 | Astrology-adjacency framing: `/about` meta says "not astrology", `/faq` says "numerology" for an engine that is astrology + Human Design + Gene Keys | owner | blocked-decision | 628d00dc | J.8 open owner decision |
 | 25 | No `/team` / founder trust surface on a product that asks for relationship data | owner | blocked-decision | 628d00dc | J.8 |
+| 29 | Check Stripe's own **"email receipts"** toggle (Settings → Customer emails) so a paying customer does not get two receipts per charge | owner | blocked-dashboard | this pass | `src/lib/email.ts` `payment-received` carries a deliberate belt-and-suspenders comment about this exact toggle. Our send is now a real on-brand receipt (Plan / Billing / Amount / Paid / Next billing), so a second Stripe-branded one alongside it reads as duplication, not reassurance. Not readable through the API — dashboard only. |
 
 ## Calendar-gated
 
@@ -98,6 +128,8 @@ already-committed `onboard-content` fix, none of which alter those pages.
 | #9 cross-account isolation negative control | this pass (agent) | New **Gate 34** in `scripts/verify-release.mjs` seeds a second fully-valid account (own `users` row, live `token_version`) that owns nothing, then drives the live preview routes: the owner reads a sentinel Baseline the stranger's identical GET never surfaces; the owner's thread is 404 by id and absent from the stranger's list; a journey PATCH is refused and leaves the row byte-identical; a thread DELETE that answers `ok` destroys nothing. Positive control + teardown included. Smoke-green on an isolated preview boot, then green inside the full 117/117 run. |
 | F3 sign-in password label (from audit Pass 2) | this pass (agent) | `src/app/onboard/onboard-content.tsx`: the label is now `{isLogin ? "Password" : "Password (at least 8 characters)"}` — the 8-char floor is a signup requirement and should not tell a returning person their own password needs 8 characters. `minLength={8}` left unconditional (harmless — every stored password is ≥8). |
 | #22 Veil-CLS gate load flake | this pass (agent) | Root cause: the live `/chat` CLS gates (`gateAuthenticated` arrival, the 390 veil-reveal, Gate 12 occlusion arrival, Gate 15 dismissal) asserted the raw `window.__cls.total` accumulator, which sums `/chat`'s unavoidable async hydration shifts (nav-fade, journey/thread fetch) and intermittently tipped 0.01 under CPU contention. Fix follows the file's OWN established pattern (Gate 8 fixture + Gate 13 already reset before the interaction): added a `window.__clsReset()`/`__clsRead()` seam to `CLS_OBSERVER_SCRIPT`, scoped the veil-reveal assertion to the deterministic expand transition, excluded `/chat`'s raw load total from the arrival tally (still covered by the static routes + Gate 12), and made Gate 12 assert *settled* quietness and Gate 15 measure the fold transition. No check added (count stays 117). Also corrected a residual header count drift `thirty-three`→`thirty-four` gates. Verified inside the full **117/117, 0 skips** uncontended run — Gates 9/12/13/15 green with preview actually executing, not skipped. |
+| Email template audit — design, necessity, deliverability, receipt fields | this pass (agent) | Inventoried all call sites: 12 templates shipped, **2 had none** (`billing-success` duplicated `payment-received`; `trial-ending` advertised a free trial the product does not have) and `sendTransactionalEmail` was a dead export — all three deleted, with `email.test.ts` now asserting the removed names throw. Rendered every template through the real `email.ts` (Node type-stripping + fetch interception, so the artefacts are byte-identical to production output) and screenshotted at 375 + 700: the shared shell was missing `bgcolor` attributes, `color-scheme`/`supported-color-schemes`, a preheader, and any MSO fallback in **12/12** — all four now live in `emailShell`, plus a `@media (max-width:480px)` card rule and Get help · Privacy footer links. Every send now carries a generated plain-text part (`toPlainText`). The receipt went from prose to a Plan/Billing/Amount/Paid/Next billing summary table — and its `next`/`interval` rows were dead because `webhooks/stripe/route.ts` never passed them and formatted the date with `toDateString()`; that mapping moved to `receiptFields()`/`invoiceDate()` in `src/lib/stripe.ts` (UTC-pinned, 6 new tests). `scripts/send-test-emails.mjs` was a drifted mirror copy of the design (wrong brand colours, still listing `trial-ending`) — rewritten to call the real `sendTemplate`, so it can no longer mislead a release pass. 11/11 renders delivered for real to `defragapp@gmail.com`. |
+| #30 verify + commit the email-audit batch | this pass (agent) | Full uncontended `npm run verify:release` on the exact tree: **117/117 green, 0 SKIPPED lines, exit line read** (535s, `.audit-tmp/verify-30.log`). Pre-commit secret scan of the staged diff: no live key bytes (only the truncated `sk_live_51TV1FSBk78yJ8Hww…` *reference* in #28, which identifies the key to roll). Committed pathspec-isolated `e7d101e` — exactly the 8 email/stripe/docs files; `git status` after commit shows the parallel tab's 10 page/`lens-page` edits still untouched in the worktree. The push (`git push origin HEAD:main`, shipping `d5a9c14`+`0aacd4d`+`e7d101e`+ledger) is held for explicit owner go-ahead per the release contract. |
 | Doc-drift batch (see table below) | this pass (agent) | Every row's claim re-verified against the tree before editing; edits are comments/markdown only. |
 
 ## Doc drift corrected in this pass
@@ -111,3 +143,6 @@ already-committed `onboard-content` fix, none of which alter those pages.
 | Deploy-path claims in historical summaries | `REMEDIATION_SUMMARY.md`, `VECTOR_HOTFIX_SUMMARY.md` | asserted "Workers Builds is still not connected"; connected and verified 2026-10-06 — corrected with a dated supersession note rather than rewriting the snapshots |
 | Route + tail-worker claims | `LAUNCH_TODO.md` | claimed `SELF`/`PEOPLE`/`SYSTEMS` have no route files (they exist and serve 200) and referenced a `pingParent()` no-op that no longer exists |
 | Middleware header | `src/middleware.ts` | comment listed `/invite` among auth-gated public pages while the code leaves it public by fall-through |
+| Email-template inventory in the architecture list | `README.md` | claimed "Five email templates … billing-success, trial-ending" — two of those five had no call site and one advertised a trial that does not exist; now lists the ten that actually ship, and points at `scripts/send-test-emails.mjs` |
+| Tier-limit claims | `docs/stripe-plan.md` | three places sold `sovereign+` as "unlimited" (enforcement table, a suggested "unlock unlimited" in-chat nudge, and "consider a fair-use ceiling") while `src/lib/limits.ts` has capped it at 150/day since the tier shipped — corrected to the real ceiling, with a note never to print "unlimited" |
+| **Live Stripe product description** | `prod_UdHEFXmi3YN78U` (account `acct_1TV1FSBk78yJ8Hww`) | Checkout rendered "Unlimited AI answers … with no daily cap" beside the $20/mo price — a false claim at the moment of payment, and the only place it existed (the site itself says "Up to 150 AI messages a day"). Rewritten through the API to the site's own three bullets and re-verified in Chrome on a fresh session (then expired). Before/after JSON kept in `.audit-tmp/stripe-checkout/` |
