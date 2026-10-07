@@ -8,17 +8,19 @@ Current evidence: this pass's four commits (`93c9545`/`a78bf85`/`3cab4f8`/`7d657
 **pushed to `main` and live** — `HEAD` `7d65707` == `origin/main`, both Workers Builds
 check-runs `completed/success`. Since then the launch-audit Pass 2+3 ran against live
 `sovereign.defrag.app`, yielding one clear code fix (the sign-in password label, F3) and a
-genuine negative control for #9. Both are committed on `migrate-to-asu` (commit-only, not
-pushed). The #22 Veil-CLS fix is now layered on top of them. Last full uncontended
-ratchet on THIS working tree (F3 + Gate 34 + #22 CLS scoping):
-**117/117 checks green, 0 skips, exit 0, 524s** read to its final line
-(`.audit-tmp/verify-22b.log`) — the count stays 117 because #22 scopes existing gate
-measurements, it adds no check. The prior tree's run was 116/116; the +1 is the new
-Gate 34. `9fa21c6a` and `a9034055` each launched a run and never reported its result —
-that is *unknown*, not green. NOTE: this tree also carries 10 uncommitted PageShell
-migrations by a *parallel tab* (`about`/`blog`/`blog[slug]`/`faq`/`invite`/`support`/`upgrade`/`offline`/`s/[id]`/`lens-page`)
-that repeatedly re-launched its own ratchets on `:8788`; those are deliberately NOT
-committed by this pass.
+genuine negative control for #9, plus the #22 Veil-CLS fix layered on top.
+**Shipped:** `git push origin HEAD:main` pushed `7d65707..311d935` (F3 + Gate 34 + #22
+CLS scoping + this ledger) to production. Both Workers Builds check-runs
+(`production-os`, `sovereign-tail`) came back `completed/success`; live
+`sovereign.defrag.app` returns `200` on `/`, `/privacy`, `/terms`, `/faq` and the
+expected `307` on `/upgrade`, with no deploy-collision 503/hang. The ratchet on this
+tree (F3 + Gate 34 + #22): **117/117 checks green, 0 skips, exit 0, 524s**, read to its
+final line (`.audit-tmp/verify-22b.log`) — the count stays 117 because #22 scopes
+existing gate measurements, it adds no check. The prior tree's run was 116/116; the +1
+is Gate 34. NOTE: a *parallel tab*'s 10 uncommitted PageShell edits (`about`/`blog`/`blog[slug]`/`faq`/`invite`/`support`/`upgrade`/`offline`/`s/[id]`/`lens-page`)
+were present during that run but are NOT in the pushed commits (isolated by explicit
+pathspec) and so are not deployed; my commits touch only the gate script, docs, and the
+already-committed `onboard-content` fix, none of which alter those pages.
 
 ## P0 — security, privacy, data integrity, production failure
 
