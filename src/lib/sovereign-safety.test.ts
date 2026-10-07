@@ -54,6 +54,21 @@ describe("validateSovereignText (Layer 1 lexicon)", () => {
     expect(v.violations.some((x) => x.type === "baseline-determinism")).toBe(true);
   });
 
+  // Regression: nothing blocked naming ANOTHER person a Human Design type. That
+  // is simultaneously a framework name-drop and an identity verdict about a
+  // third party — two prohibitions in one phrase.
+  it("blocks naming another person a Human Design type as a verdict", () => {
+    expect(validateSovereignText("She is a Projector, so she is built to wait.").allowed).toBe(false);
+    expect(validateSovereignText("Your partner is a Generator — that's the reason for the friction.").allowed).toBe(false);
+    expect(validateSovereignText("He's a Manifestor; he doesn't need your input.").allowed).toBe(false);
+    expect(validateSovereignText("She's a true Generator — that explains everything.").allowed).toBe(false);
+    expect(validateSovereignText("They're Projectors, so they hold back.").allowed).toBe(false);
+  });
+  it("allows hedged framework references that don't hand down a verdict", () => {
+    expect(validateSovereignText("I can't tell whether she is a Generator — and it wouldn't settle anything about her.").allowed).toBe(true);
+    expect(validateSovereignText("You asked about Human Design: your strategy can point toward waiting to respond, as one lens.").allowed).toBe(true);
+  });
+
   it("flags prescriptive authority", () => {
     expect(validateSovereignText("You should leave him.").allowed).toBe(false);
   });
@@ -136,6 +151,45 @@ describe("detectSafetyMode", () => {
     expect(detectSafetyMode([{ role: "user", content: "My ex-boyfriend beats me up." }])).toBe("grounded");
     expect(detectSafetyMode([{ role: "user", content: "I was strangled by him." }])).toBe("grounded");
     expect(detectSafetyMode([{ role: "user", content: "He says he hurts me but no one believes me." }])).toBe("grounded");
+  });
+
+  // Perceptiveness without weakening safety: a grounded (abuse) disclosure is
+  // acknowledged + redirected on the turn it appears. It must NOT then suppress
+  // every later, unrelated question forever — that blocks help, not harm. So
+  // grounded fires on the CURRENT user turn, while a fresh disclosure anywhere
+  // in the turn still routes grounded immediately.
+  it("resumes analysis once the current turn moves off an earlier abuse disclosure", () => {
+    expect(detectSafetyMode([
+      { role: "user", content: "My partner hits me." },
+      { role: "assistant", content: buildSafetyResponse("grounded") },
+      { role: "user", content: "Thanks. How should I bring up the budget with my roommate?" },
+    ])).toBe("standard");
+  });
+  it("routes grounded when the latest user turn itself discloses abuse", () => {
+    expect(detectSafetyMode([
+      { role: "user", content: "We talked about work earlier this week." },
+      { role: "assistant", content: "And how did that land for you?" },
+      { role: "user", content: "Honestly my partner hits me." },
+    ])).toBe("grounded");
+  });
+
+  // Crisis, by contrast, stays conservative: a self-harm signal from the user
+  // anywhere in the retained thread keeps routing to resources. The assistant's
+  // own helpline text repeats crisis words, so only USER turns are scanned.
+  it("keeps escalate conservative across later turns after a self-harm disclosure", () => {
+    expect(detectSafetyMode([
+      { role: "user", content: "I want to die." },
+      { role: "assistant", content: buildSafetyResponse("escalate") },
+      { role: "user", content: "Yeah. Can you help me think about my week?" },
+    ])).toBe("escalate");
+  });
+  it("never re-triggers off the assistant's own crisis/helpline text", () => {
+    // A thread whose ONLY crisis words are in our own prior safety response,
+    // with a clean current user turn, must not route grounded off assistant text.
+    expect(detectSafetyMode([
+      { role: "assistant", content: buildSafetyResponse("grounded") },
+      { role: "user", content: "What does accountability mean to me at work?" },
+    ])).toBe("standard");
   });
 });
 

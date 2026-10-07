@@ -3,8 +3,10 @@ import {
   classifyQuestion,
   detectMeaningTargets,
   findMeaningTriggers,
+  extractUserDefinitions,
   scanCorrections,
   scanPatternCandidates,
+  scanUnknowns,
   windowHistoryPreservingCorrections,
   buildReasoningContext,
   buildReasoningPrompt,
@@ -76,6 +78,37 @@ describe("meaning triggers", () => {
     const success = targets.find((t) => t.concept === "success");
     expect(success?.definitionKnown).toBe(true);
     expect(success?.userDefinition).toContain("proving I am reliable");
+  });
+
+  // Perceptiveness: a definition offered in ordinary phrasing must be caught,
+  // or Sovereign re-asks "what does X mean to you?" after the user already
+  // answered — the single most "generic chatbot with amnesia" tell.
+  it("captures a definition phrased as 'when I say X, I mean Y'", () => {
+    const targets = detectMeaningTargets(
+      "I keep chasing love and feeling empty.",
+      "When I say love I mean someone telling me the ugly thing first.",
+    );
+    const love = targets.find((t) => t.concept === "love");
+    expect(love?.definitionKnown).toBe(true);
+    expect(love?.userDefinition).toMatch(/telling me the ugly thing first/i);
+  });
+  it("captures 'by X I mean Y'", () => {
+    const defs = extractUserDefinitions("By loyalty I mean not going behind my back.");
+    expect(defs.loyalty).toMatch(/not going behind my back/i);
+  });
+  it("captures 'what I mean by X is Y'", () => {
+    const defs = extractUserDefinitions("What I mean by respect is being listened to all the way through.");
+    expect(defs.respect).toMatch(/being listened to/i);
+  });
+  it("captures 'X is when Y'", () => {
+    const defs = extractUserDefinitions("Safety is when I can put my guard down.");
+    expect(defs.safety).toMatch(/put my guard down/i);
+  });
+  it("does not invent a definition from an ordinary sentence", () => {
+    // No definition shape here — the concept must stay unknown so the engine
+    // asks rather than asserts a meaning the user never gave.
+    const defs = extractUserDefinitions("I saw her at the café and it was fine.");
+    expect(Object.keys(defs)).toHaveLength(0);
   });
 });
 
@@ -317,5 +350,35 @@ describe("semantic recall (priorSignals → RECALLED section)", () => {
   it("emits no RECALLED section when there are no signals", async () => {
     const ctx = await buildReasoningContext({ history, baseline: BASELINE });
     expect(buildReasoningPrompt(ctx, history, BASELINE)[0].content).not.toContain("RECALLED");
+  });
+});
+
+describe("scanUnknowns window", () => {
+  // An inner-world question often trails a short setup, so the cue can land
+  // outside the last two messages. The scan must still flag the motive as
+  // unknown — dropping it is what lets the model answer as if it knew.
+  it("flags another person's motives when the cue trails a couple of turns", () => {
+    const unknowns = scanUnknowns([
+      { role: "user", content: "Did he mean to leave me on read again?" },
+      { role: "assistant", content: "That sounds frustrating." },
+      { role: "user", content: "It is." },
+      { role: "assistant", content: "What landed for you in it?" },
+      { role: "user", content: "I just feel overlooked." },
+    ]);
+    expect(unknowns.some((u) => /inner world|motives/i.test(u.question + u.reason))).toBe(true);
+  });
+  // Bounded, not sticky: a stale motive cue far back must not re-flag unknowns
+  // on a now-unrelated question (mirrors the grounded-routing scoping fix).
+  it("does not re-fire on a motive cue that is well outside the window", () => {
+    const msgs: ChatMessage[] = [
+      { role: "user", content: "Did he actually love me?" },
+      { role: "assistant", content: "I can't determine that." },
+    ];
+    // Six unrelated, cue-free turns push the motive question out of the window.
+    for (let i = 0; i < 3; i++) {
+      msgs.push({ role: "user", content: `Work update number ${i}: the deadline moved.` });
+      msgs.push({ role: "assistant", content: `Noted, update ${i}.` });
+    }
+    expect(scanUnknowns(msgs)).toHaveLength(0);
   });
 });

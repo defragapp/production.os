@@ -151,7 +151,7 @@ const LEXICON: LexiconRule[] = [
   {
     type: "baseline-determinism",
     severity: "high",
-    note: "Presenting Baseline as fixed identity, destiny, or instruction is prohibited.",
+    note: "Presenting the Baseline or Human Design as fixed identity — for the user or another person — is prohibited.",
     patterns: [
       /\byour\s+baseline\s+(?:says|predicts|determines|destines|means)\s+you\b/i,
       /\baccording\s+to\s+your\s+baseline[,]?\s+you(?:'re| are)\s+\w+\b/i,
@@ -160,6 +160,11 @@ const LEXICON: LexiconRule[] = [
       /\byour\s+life\s+path\s+(?:means|determines|predestines|destines)\s+you\b/i,
       /\bhuman\s+design\s+dictates\b/i,
       /\byou\s+are\s+(?:a\s+)?(?:pure\s+)?generator\b.*\bso\s+you\s+should\b/i,
+      // Naming ANOTHER person a Human Design type hands down an identity verdict
+      // about them and name-drops the framework in the same breath. The 40-char
+      // negation look-back still spares honest "I can't tell whether she is a
+      // Generator" framing, so hedged references stay allowed.
+      /\b(?:he|she|they|your\s+(?:partner|wife|husband|spouse|boyfriend|girlfriend|ex|mother|mom|mum|father|dad|sister|brother|friend|boss|coworker|co-worker|colleague|roommate))(?:(?:'s|’s|'re|’re)|\s+(?:is|are))\s+(?:a\s+true\s+|a\s+pure\s+|just\s+|actually\s+|really\s+|basically\s+|simply\s+|clearly\s+|classic\s+|a\s+|an\s+)*(?:generator|projector|reflector|manifesting\s+generator|manifestor)s?\b/i,
     ],
   },
   {
@@ -413,9 +418,21 @@ const GROUNDED_PATTERNS = [
 ];
 
 export function detectSafetyMode(messages: ChatMessage[]): SafetyMode {
-  const text = messages.map((m) => m.content).join("\n");
-  if (ESCALATE_PATTERNS.some((p) => p.test(text))) return "escalate";
-  if (GROUNDED_PATTERNS.some((p) => p.test(text))) return "grounded";
+  // Only the user's turns carry disclosure intent. The assistant's own
+  // safety/helpline text repeats crisis and abuse words, so scanning it would
+  // let our prior reply re-trigger the gate on an unrelated later turn.
+  const userTurns = messages.filter((m) => m.role === "user");
+  const userText = userTurns.map((m) => m.content).join("\n");
+  // Crisis stays conservative and thread-wide: any self-harm signal from the
+  // user in the retained thread keeps routing to resources. Erring toward help
+  // here is intentional and is never loosened for answer quality.
+  if (ESCALATE_PATTERNS.some((p) => p.test(userText))) return "escalate";
+  // Abuse/grounding is scoped to the CURRENT user turn. A disclosure is
+  // acknowledged + redirected on the turn it appears; once the conversation
+  // moves to an unrelated, safe question, inference resumes rather than
+  // freezing forever. A fresh disclosure in the current turn still fires.
+  const currentTurn = userTurns.length > 0 ? userTurns[userTurns.length - 1].content : "";
+  if (GROUNDED_PATTERNS.some((p) => p.test(currentTurn))) return "grounded";
   return "standard";
 }
 

@@ -94,4 +94,23 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("Jupiter expansion:");
     expect(prompt).toContain("Saturn structure:");
   });
+
+  it("directs the model to prefer one meaningful observation over many generic ones", () => {
+    // The brief's north star: perceptiveness, not verbosity. The prompt must
+    // explicitly prize one accurate reading over a list of plausible ones.
+    const prompt = buildSystemPrompt(deriveBaseline({}));
+    expect(prompt).toMatch(/one accurate/i);
+    expect(prompt).toMatch(/five generic/i);
+  });
+
+  it("directs the model to vary its opening instead of repeating one hedge", () => {
+    // Regression: every example answer used the identical "One possibility
+    // worth examining…" opener, so the small model turned it into a verbal tic
+    // — a "feels like a template" tell. The prompt now forbids repeating the
+    // same hedge across consecutive turns and must offer alternatives.
+    const prompt = buildSystemPrompt(deriveBaseline({}));
+    expect(prompt).toMatch(/begin consecutive answers with the same hedge/i);
+    const alternatives = ["It may be that", "This could indicate", "One reading"];
+    expect(alternatives.filter((a) => prompt.includes(a)).length).toBeGreaterThanOrEqual(2);
+  });
 });

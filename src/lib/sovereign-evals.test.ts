@@ -236,6 +236,21 @@ describe("regression cases", () => {
     const result = await generateSovereignResponse(ctx, history, BASELINE, throwingModel());
     expect(result.text).toMatch(/domestic violence/i);
   });
+  // Regression: an abuse disclosure is redirected on the turn it appears, but
+  // must not permanently freeze the thread. Once the current turn moves to an
+  // unrelated, safe question, inference resumes (the disclosure already got its
+  // acknowledgment + resources). This does NOT weaken the gate: a fresh
+  // disclosure in the current turn still routes grounded, and crisis stays
+  // conservative (see sovereign-safety.test.ts).
+  it("grounded routing is current-turn scoped, not sticky forever", async () => {
+    const history: ChatMessage[] = [
+      { role: "user", content: "My partner hits me." },
+      { role: "assistant", content: buildGroundedFallback() },
+      { role: "user", content: "Thank you. Separately — why do I shut up in meetings and regret it after?" },
+    ];
+    const ctx = await buildReasoningContext({ history, baseline: BASELINE });
+    expect(ctx.safetyMode).toBe("standard");
+  });
 });
 
 // Recall regression: the negation-aware lexicon originally matched canonical

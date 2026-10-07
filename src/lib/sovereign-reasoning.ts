@@ -48,6 +48,11 @@ import type {
 
 const MAX_CONTEXT_MESSAGES = 20;
 
+// How far back the unknown scan reads for inner-world / future cues. Bounded on
+// purpose — large enough to catch a question that trails setup, small enough
+// that a stale cue from long ago cannot freeze a later, unrelated turn.
+const UNKNOWN_SCAN_WINDOW = 6;
+
 // ── Meaning triggers (from the reasoning model spec) ──────────────────
 
 export const MEANING_TRIGGERS = [
@@ -74,6 +79,16 @@ const USER_DEFINITION_PATTERNS = [
   /([a-z]+)\s+(?:means|mean)\s+(?:to\s+me|for\s+me)\s+([^.!?]+)/gi,
   /for\s+me[,]?\s+([a-z]+)\s+(?:is|means)\s+([^.!?]+)/gi,
   /([a-z]+)\s+is\s+([^.!?]{4,})\s+to\s+me/gi,
+  // Definitions offered in ordinary conversational phrasing, not just the
+  // canonical "X means to me Y". Without these, a person who has already said
+  // what a loaded concept means to them gets re-asked — which reads as amnesia,
+  // not humility. Each keeps (group 1 = concept, group 2 = definition) so the
+  // downstream lookup keys on the trigger word. Only single-word concepts are
+  // captured; multi-word triggers stay on the ask-when-unknown path.
+  /when\s+I\s+say\s+([a-z]+)[,:]?\s+I(?:'m| am| really)?\s+(?:talking about|mean)\s+([^.!?]+)/gi,
+  /\bby\s+([a-z]+)[,:]?\s+I\s+mean\s+([^.!?]+)/gi,
+  /what\s+I\s+mean\s+by\s+([a-z]+)\s+(?:is|means)\s+([^.!?]+)/gi,
+  /([a-z]+)\s+is\s+when\s+([^.!?]+)/gi,
 ];
 
 export function extractUserDefinitions(conversationText: string): Record<string, string> {
@@ -441,7 +456,12 @@ export function scanPatternCandidates(history: ChatMessage[]): PatternCandidate[
 
 export function scanUnknowns(history: ChatMessage[]): Unknown[] {
   const unknowns: Unknown[] = [];
-  const lastMessages = history.slice(-2).filter((m) => m.role === "user");
+  // Read a bounded recent window, not just the last two messages: an
+  // inner-world / future question often trails a sentence or two of setup, and
+  // dropping its cue is what lets the model answer as if it knew. The window is
+  // deliberately finite so a stale cue far back does not re-flag unknowns on an
+  // unrelated later turn (the same over-persistence the grounded routing avoids).
+  const lastMessages = history.slice(-UNKNOWN_SCAN_WINDOW).filter((m) => m.role === "user");
   const latestText = lastMessages.map((m) => m.content).join(" ");
 
   if (INNER_WORLD_CUES.some((rx) => rx.test(latestText))) {
