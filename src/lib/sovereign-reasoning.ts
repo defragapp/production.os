@@ -844,7 +844,9 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   lines.push(
     consentedNames
       ? `AUTHORIZATION: what the user described PLUS consented baseline derivations for: ${consentedNames}. No birth data, coordinates, or raw chart data is present — only derived summaries and between-design comparisons.`
-      : "AUTHORIZATION: only what the user described. No consented third-party data exists.",
+      : ctx.relationshipScope !== "self"
+        ? "AUTHORIZATION: the user’s own account IS the relational material — their observations, interpretations, and narrative about the other person are available for reflection. This is one perspective, not verified fact about anyone else. No consented third-party data is present."
+        : "AUTHORIZATION: only what the user described. No consented third-party data exists.",
   );
   return lines.join("\n");
 }

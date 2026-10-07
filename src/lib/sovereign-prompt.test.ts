@@ -113,4 +113,18 @@ describe("buildSystemPrompt", () => {
     const alternatives = ["It may be that", "This could indicate", "One reading"];
     expect(alternatives.filter((a) => prompt.includes(a)).length).toBeGreaterThanOrEqual(2);
   });
+
+  it("Level 3 guidance encourages engaging with user-described relational narrative when consented context is absent", () => {
+    // Change F: the model must not retreat to generic advice when the user
+    // discusses a relationship but no consented peer data exists. The system
+    // prompt should explicitly validate the user's own account as sufficient
+    // ground for relational reasoning.
+    const prompt = buildSystemPrompt(deriveBaseline({}));
+    // Must tell the model the user's account IS relational material
+    expect(prompt).toMatch(/the user.{0,10}own account.{0,40}relational material/i);
+    // Must forbid refusing to engage due to absent third-party data
+    expect(prompt).toMatch(/never refuse to engage because third.party data is absent/i);
+    // Must frame observations as user experience, not verified fact about other
+    expect(prompt).toMatch(/user.{0,10}experience.{0,40}not verified fact|one perspective/i);
+  });
 });

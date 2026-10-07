@@ -297,6 +297,37 @@ describe("buildReasoningContext", () => {
   });
 });
 
+describe("non-consented relational context (Change F)", () => {
+  // When scope is dyadic/systemic but no consented peers exist, the rendered
+  // AUTHORIZATION must affirmatively invite the model to reason from the user's
+  // own narrative — not retreat into "I don't know this person."
+  const dyadicHistory: ChatMessage[] = [
+    { role: "user", content: "My partner keeps shutting me out during arguments and I don't know what to do." },
+  ];
+  it("renders affirmative relational authorization when scope is dyadic and no consented peers", async () => {
+    const ctx = await buildReasoningContext({ history: dyadicHistory, baseline: BASELINE });
+    expect(ctx.relationshipScope).not.toBe("self");
+    const prompt = buildReasoningPrompt(ctx, dyadicHistory, BASELINE);
+    const system = prompt[0].content;
+    // Must affirm the user's narrative IS legitimate relational material
+    expect(system).toMatch(/the user.{0,30}own account.{0,60}relational material/i);
+    // Must frame it as one perspective (epistemic honesty)
+    expect(system).toMatch(/one perspective.{0,40}not verified fact/i);
+    // Must still declare no consented third-party data (consent preserved)
+    expect(system).toMatch(/no consented third-party data/i);
+  });
+  it("keeps minimal authorization for self-scope when no consented peers", async () => {
+    const selfHistory: ChatMessage[] = [
+      { role: "user", content: "I feel anxious and I don't know why." },
+    ];
+    const ctx = await buildReasoningContext({ history: selfHistory, baseline: BASELINE });
+    expect(ctx.relationshipScope).toBe("self");
+    const prompt = buildReasoningPrompt(ctx, selfHistory, BASELINE);
+    // Self-scope keeps the concise original AUTHORIZATION line unchanged
+    expect(prompt[0].content).toContain("only what the user described. No consented third-party data exists.");
+  });
+});
+
 describe("first-turn framing (no false shared history)", () => {
   const singleEventHistory: ChatMessage[] = [
     { role: "user", content: "I snapped at a coworker yesterday and it's been bothering me." },
