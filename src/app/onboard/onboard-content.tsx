@@ -433,7 +433,10 @@ export function OnboardContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password (at least 8 characters)</Label>
+                    {/* The 8-char floor is a signup requirement only; a returning
+                        person signing in shouldn't be told their own password
+                        needs 8 characters. */}
+                    <Label htmlFor="password">{isLogin ? "Password" : "Password (at least 8 characters)"}</Label>
                     <Input
                       id="password"
                       type="password"
