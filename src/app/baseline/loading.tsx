@@ -4,10 +4,10 @@ export default function BaselineLoading() {
       <div className="h-10 w-64 animate-pulse rounded-md bg-muted" />
       <div className="h-5 w-96 max-w-full animate-pulse rounded-md bg-muted" />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="h-20 animate-pulse rounded-xl bg-muted" />
-        <div className="h-20 animate-pulse rounded-xl bg-muted" />
-        <div className="h-20 animate-pulse rounded-xl bg-muted" />
-        <div className="h-20 animate-pulse rounded-xl bg-muted" />
+        <div className="h-20 animate-pulse rounded-panel bg-muted" />
+        <div className="h-20 animate-pulse rounded-panel bg-muted" />
+        <div className="h-20 animate-pulse rounded-panel bg-muted" />
+        <div className="h-20 animate-pulse rounded-panel bg-muted" />
       </div>
     </div>
   );

@@ -16,5 +16,5 @@
 1. `npm run verify:release`
 2. `rm -rf .open-next .next && npm run deploy`
 3. `git status --short`
-4. `git push origin migrate-to-asu`
+4. `git push origin main`
 

@@ -34,23 +34,19 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 
 ## Release flow
 
-The proven, reliable path is **verify → deploy → confirm**.
-Workers Builds (the git integration) is **not connected to this repo**. There is
-no Git integration on the Worker in the dashboard, so a push to `main` changes
-the repository and nothing else — no build is triggered, and
-`wrangler versions list` shows only CLI-authored versions with zero `push_event`
-source. The old `11586ad` incident that made it look "flaky" was in fact this:
-nothing was ever wired up to fire.
+The proven, reliable path is **verify → push → confirm**.
+Workers Builds (git integration) is connected and verified as of 2026-10-06.
+A push to `main` is the canonical production path and must build/deploy both
+Workers projects (`production-os` and `sovereign-tail`).
 
-Until the dashboard integration is enabled (repo `defragapp/production.os`,
-production branch `main`, root directory `/`), **the CLI is the only deploy
-path**. Verify, then ship exactly once:
+Before push, run the full ratchet:
 
 ```bash
 npm run verify:release                          # every gate green, or do not ship
-rm -rf .open-next .next && npm run deploy       # ships BOTH Workers
-npx wrangler deployments list                   # confirm the new version
+git push origin main                            # canonical path (Workers Builds)
 ```
+
+Then confirm both check-runs and both Worker rollouts in the dashboard Builds view.
 
 > **This deploys two Workers, not one.** `production-os` and `sovereign-tail`
 > are separate Workers with separate `wrangler.jsonc` files and separate
@@ -67,16 +63,9 @@ npx wrangler deployments list                   # confirm the new version
 > If you deploy the main Worker by any *other* route — including a future
 > Workers Builds wiring — you must run `npm run tail:deploy` yourself.
 
-Once Git integration is enabled, the push path becomes valid again:
-
-```bash
-git push origin main
-npx wrangler deployments list                   # poll ~2 min for the new version
-```
-
-If a build is genuinely triggered, do not also run the CLI deploy while it is in
-flight — two builds of the same commit collide and stall static-asset binding
-propagation (the 503/hang seen on `/`, `/privacy`, `/terms`).
+If a build is in flight, do not also run a CLI deploy — two builds of the same
+commit collide and stall static-asset binding propagation (the 503/hang seen on
+`/`, `/privacy`, `/terms`).
 
 `npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`),
 then `wrangler deploy` for `production-os` (100% of traffic; live at
@@ -96,9 +85,7 @@ cd tail-worker && npx wrangler versions list    # sovereign-tail
 Do **not** run `npm run deploy` while a push-triggered build is still in flight:
 that is a second build of the same commit colliding, and the collision stalls
 static-asset binding propagation (the 503/hang previously seen on `/`, `/privacy`,
-`/terms`). Poll first, deploy from the CLI only once you have confirmed no build
-landed. The dashboard still lists a preview-branches trigger for non-`main`
-branches; treat it as unverified until a build from it shows up in the listing.
+`/terms`). Use CLI deploy only as fallback when a push build fails or does not fire.
 
 ## Setup
 

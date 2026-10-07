@@ -75,6 +75,16 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 
+  // Chunks and brand art the shell precached: served cache-first, because
+  // these are exactly the URLs stored above — hash-named (immutable) or
+  // brand images refreshed at install. Without this branch the requests
+  // pass through to the (absent) network and the offline shell renders
+  // unstyled. Anything not stored goes straight to the network.
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/")) {
+    event.respondWith(caches.match(request).then((hit) => hit || fetch(request)));
+    return;
+  }
+
   // The shell itself: network-first while online, cache only as the offline
   // fallback. Cache-first here once served a previous build's /offline HTML
   // (stale chunk/CSS hashes → unstyled page, dead Retry button) to visitors

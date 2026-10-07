@@ -618,12 +618,12 @@ export default function SettingsPage() {
                                     />
                                     <div
                                       role="menu"
-                                      className="absolute right-0 z-40 mt-2 w-56 rounded-xl border border-white/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
+                                      className="absolute right-0 z-40 mt-2 w-56 rounded-panel border border-foreground/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
                                     >
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
                                         onClick={() => void textShare(inv)}
                                       >
                                         <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Send a text message
@@ -631,7 +631,7 @@ export default function SettingsPage() {
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
                                         onClick={() => void whatsappShare(inv)}
                                       >
                                         <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> Share on WhatsApp
@@ -640,7 +640,7 @@ export default function SettingsPage() {
                                         <button
                                           type="button"
                                           role="menuitem"
-                                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
                                           onClick={() => void deviceShare(inv)}
                                         >
                                           <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> More ways…
@@ -649,7 +649,7 @@ export default function SettingsPage() {
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
                                         onClick={() => void copyShareLink(inv)}
                                       >
                                         <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Copy link

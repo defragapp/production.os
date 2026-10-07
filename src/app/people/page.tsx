@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
+import { PerspectiveSwitch } from "@/components/perspective-switch";
 import { resolveLensState } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,9 @@ export default async function PeoplePage() {
       note="Use this when the question is relational, but you want to stay honest about what you know and what you do not."
       isAuthed={isAuthed}
       hasBaseline={hasBaseline}
-    />
+    >
+      <PerspectiveSwitch />
+    </LensPage>
   );
 }
 

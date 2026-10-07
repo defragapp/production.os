@@ -1273,14 +1273,14 @@ export function ChatClient() {
                     />
                     <div
                       role="menu"
-                      className="absolute right-0 z-40 mt-2 w-64 rounded-xl border border-white/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
+                      className="absolute right-0 z-40 mt-2 w-64 rounded-panel border border-foreground/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
                     >
                       <button
                         type="button"
                         role="menuitemradio"
                         aria-checked={memoryMode === "server"}
                         onClick={() => void switchMemoryMode("server")}
-                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                        className="flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
                       >
                         <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span><span className="block font-medium text-foreground">All devices</span><span className="block mt-0.5 text-xs">Conversations sync across your devices.</span></span>
@@ -1290,7 +1290,7 @@ export function ChatClient() {
                         role="menuitemradio"
                         aria-checked={memoryMode === "local"}
                         onClick={() => void switchMemoryMode("local")}
-                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                        className="flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
                       >
                         <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span><span className="block font-medium text-foreground">On this device only</span><span className="block mt-0.5 text-xs">New chats are never stored on our servers.</span></span>

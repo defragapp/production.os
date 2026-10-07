@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
+import { SystemDynamics } from "@/components/system-dynamics";
 import { resolveLensState } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,9 @@ export default async function SystemsPage() {
       note="Best when the real question is structural: who is carrying what, and how the room keeps arranging itself."
       isAuthed={isAuthed}
       hasBaseline={hasBaseline}
-    />
+    >
+      <SystemDynamics />
+    </LensPage>
   );
 }
 

@@ -150,7 +150,7 @@ export function PricingTable() {
             <td className="px-5 py-4 text-center">
               <Link
                 href="/onboard?mode=signup&next=%2Fupgrade"
-                className="btn-focal inline-flex justify-center px-4 py-2 text-xs font-semibold"
+                className="btn-aurora inline-flex justify-center px-4 py-2 text-xs font-medium"
               >
                 Get Sovereign+
               </Link>

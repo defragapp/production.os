@@ -117,7 +117,7 @@ export function TermsGate() {
       aria-describedby="terms-gate-body"
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center sm:p-6"
     >
-      <div className="glass-panel card-lift w-full max-w-lg rounded-xl border border-foreground/25 p-6 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)] md:p-8">
+      <div className="glass-panel card-lift w-full max-w-lg border border-foreground/25 p-6 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)] md:p-8">
         <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
           We updated the Terms
         </p>

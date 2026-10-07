@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
+import { AnswerAnatomy } from "@/components/answer-anatomy";
 import { resolveLensState } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,9 @@ export default async function SelfPage() {
       note="Best when you want to name the shape of something before you bring anyone else into it."
       isAuthed={isAuthed}
       hasBaseline={hasBaseline}
-    />
+    >
+      <AnswerAnatomy />
+    </LensPage>
   );
 }
 
