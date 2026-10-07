@@ -4,14 +4,16 @@ Maintained by `/goal` (`.qoder/skills/goal/SKILL.md`). One row per verifiable th
 `#` of an open row never changes. Re-derive with
 `node .qoder/skills/goal/scripts/scan-threads.mjs --days 2 --full`.
 
-Current evidence: HEAD `0fd7270` = `origin/main` = local `main`; this pass's doc-drift +
-F-G edits are committed locally as `93c9545`/`a78bf85`/`3cab4f8` on `migrate-to-asu` and
-**NOT pushed** (owner chose commit-only; push form is `git push origin HEAD:main`). Last
-full ratchet:
-**116/116 checks green, 0 skips, 443 unit tests, exit 0** read to its final line on THIS
-working tree (`.audit-tmp/goal-ratchet.log`, this `/goal` pass). Earlier green on the
-pre-edit tree (`628d00dc`); `9fa21c6a` and `a9034055` each launched a run and never
-reported its result — that is *unknown*, not green.
+Current evidence: this pass's four commits (`93c9545`/`a78bf85`/`3cab4f8`/`7d65707`) are
+**pushed to `main` and live** — `HEAD` `7d65707` == `origin/main`, both Workers Builds
+check-runs `completed/success`. Since then the launch-audit Pass 2+3 ran against live
+`sovereign.defrag.app`, yielding one clear code fix (the sign-in password label, F3) and a
+genuine negative control for #9. Both are committed on `migrate-to-asu` (commit-only, not
+pushed). Last full ratchet on THIS working tree (F3 + Gate 34 included):
+**117/117 checks green, 0 skips, exit 0, 526s** read to its final line
+(`.audit-tmp/goal-ratchet-2.log`). The prior tree's run was 116/116; the +1 is the new
+Gate 34. `9fa21c6a` and `a9034055` each launched a run and never reported its result —
+that is *unknown*, not green.
 
 ## P0 — security, privacy, data integrity, production failure
 
@@ -35,7 +37,7 @@ reported its result — that is *unknown*, not green.
 | # | Task | Owner | Status | Source thread | Evidence |
 |---|------|-------|--------|---------------|----------|
 | 8 | F-G: prompt-delimit peer-controlled identity strings (`display_name`, relationship label) before they enter another user's reasoning context | agent | closed-this-pass | 0e54bb64 | see *Closed this pass* — `src/lib/peer-identity.ts` sanitizer applied at the `buildConsentedPeers` entry and the render seam; 4 targeted suites green |
-| 9 | Empirically test cross-account isolation with a real negative control (user A cannot read B's Baseline/thread/journey) | agent | open | 628d00dc | J.5: structurally guaranteed by `payload.sub`-bound reads; the one negative control in `REMEDIATION_SUMMARY` was retracted as never run |
+| 9 | Empirically test cross-account isolation with a real negative control (user A cannot read B's Baseline/thread/journey) | agent | closed-this-pass | 628d00dc | see *Closed this pass* — new Gate 34 drives the live routes with a valid stranger session; J.5's retracted negative control is now run for real |
 | 10 | Long-turn dead air: measured chat turns at 19.4s / 43.0s show no early canvas motion because `{state}` flushes only after generation | agent | open-design | 628d00dc | J.6. Hard constraint: do **not** "add streaming" — the pre-generation state-stream seam does not exist. `chat_timing` dimensions are already logged |
 | 11 | F-F: per-recipient cap on signup/resend email (third-party verify-email bombing; today only Turnstile mitigates) | agent | open | 0e54bb64 | deferred as needing abuse-rate design, not a patch |
 | 12 | Pre-deploy gate gap on the push path: Workers Builds deploys `main` on push with no machinery between push and production (CI retired for billing/secret reasons) | agent | open-design | 628d00dc | J.7; `a2f88f9` removed `verify.yml` |
@@ -46,13 +48,13 @@ reported its result — that is *unknown*, not green.
 
 | # | Task | Owner | Status | Source thread | Evidence |
 |---|------|-------|--------|---------------|----------|
-| 15 | Full pixel pass on live production: 8 pages, 320/390/768/1024/1440, lazy-scroll + accordion interaction, every screenshot read | agent | open | 4b798035 | never executed — the IDE browser bridge died mid-session and the thread ended. Text-level audit of the same version passed |
+| 15 | Full pixel pass on live production: 8 pages, 320/390/768/1024/1440, lazy-scroll + accordion interaction, every screenshot read | agent | partial | 4b798035 | Pass 2+3 ran on live `sovereign.defrag.app` at 1920 (funnel + public routes): no console errors, no overflow, plan rows reach full opacity, focus ring present, dead-ends offer next actions. TRUE 390/1440 pixel captures still blocked (browser bridge can't resize; CSP blocks iframe proxies) — but overflow/44px/16px at those widths are asserted green by Gates 24/30 |
 | 16 | Rendered inspection of authed surfaces (chat, settings, baseline) — the cold-white hairline (`border-white/10`) consolidation decision waits on it | agent | open | a9034055 | visual pass shipped its 6 edits in `0fd7270`; authed pixels never captured |
 | 17 | Landing mobile trust-row separators look loose — adjudicate against the desktop rhythm | agent | open | a9034055 | observed, not filed as a fix |
 | 18 | iOS device-profile audit of coarse-pointer floors, install prompt, offline retry on a real device or simulator | blocked | blocked-device | 4b798035 | code-complete since `1d52daa`; no device profile exercised since the tone sweep |
 | 19 | Funnel review with Fathom numbers (landing CTA → onboard → quota moment → upgrade) | owner | blocked-access | 4b798035 | analytics are owner-visible only |
 | 20 | Anonymous "full comparison" link in the landing plans block points at `/upgrade`, which 307s a stranger to signup | owner | blocked-decision | 9fa21c6a | `landing-client.tsx` L313-318, still present. Both fixes are judgment calls: keep the signup CTA, or send strangers to the FAQ only. Not unilateral |
-| 21 | `/redeem` and `/onboard` were verified by text dump, not pixels | agent | open | 4b798035 | the browser died before those two captures |
+| 21 | `/redeem` and `/onboard` were verified by text dump, not pixels | agent | partial | 4b798035 | Pass 2 walked `/onboard` (login + signup, Turnstile renders, inline errors) on live at 1920 and surfaced the F3 sign-in label fix (see *Closed this pass*); `/redeem` auth-gated pixels + true 390 still not captured (Gate 29 walks the redeemed card at 390 in preview) |
 | 22 | Veil-CLS gate flakes under load — quiet its measurement window | agent | open | 628d00dc | one documented flake in a 116-gate run; `0e54bb64` hit the same class |
 
 ## P4 — speculative (do not turn into architecture)
@@ -86,6 +88,8 @@ reported its result — that is *unknown*, not green.
 | Task | Closed by | How verified |
 |---|---|---|
 | #8 F-G peer-identity prompt-delimiting | this pass (agent) | New `sanitizePeerIdentity` in `src/lib/peer-identity.ts` (dependency-free) strips newline/`#`/quotes/brackets/angle/backtick, collapses whitespace, caps at 40. Applied at the single entry choke point `buildConsentedPeers` (`sovereign-connections.ts`) AND re-applied idempotently at the render seam + the two signal call sites (`sovereign-reasoning.ts`). Tests: `peer-identity.test.ts`, a render-layer `peer-identity prompt-delimiting (F-G)` block, and an entry-layer block in `sovereign-connections.test.ts` — 72/72 across the 4 affected suites. UI `personName()` left untouched. |
+| #9 cross-account isolation negative control | this pass (agent) | New **Gate 34** in `scripts/verify-release.mjs` seeds a second fully-valid account (own `users` row, live `token_version`) that owns nothing, then drives the live preview routes: the owner reads a sentinel Baseline the stranger's identical GET never surfaces; the owner's thread is 404 by id and absent from the stranger's list; a journey PATCH is refused and leaves the row byte-identical; a thread DELETE that answers `ok` destroys nothing. Positive control + teardown included. Smoke-green on an isolated preview boot, then green inside the full 117/117 run. |
+| F3 sign-in password label (from audit Pass 2) | this pass (agent) | `src/app/onboard/onboard-content.tsx`: the label is now `{isLogin ? "Password" : "Password (at least 8 characters)"}` — the 8-char floor is a signup requirement and should not tell a returning person their own password needs 8 characters. `minLength={8}` left unconditional (harmless — every stored password is ≥8). |
 | Doc-drift batch (see table below) | this pass (agent) | Every row's claim re-verified against the tree before editing; edits are comments/markdown only. |
 
 ## Doc drift corrected in this pass
