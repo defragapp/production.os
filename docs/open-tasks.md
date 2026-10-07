@@ -9,11 +9,16 @@ Current evidence: this pass's four commits (`93c9545`/`a78bf85`/`3cab4f8`/`7d657
 check-runs `completed/success`. Since then the launch-audit Pass 2+3 ran against live
 `sovereign.defrag.app`, yielding one clear code fix (the sign-in password label, F3) and a
 genuine negative control for #9. Both are committed on `migrate-to-asu` (commit-only, not
-pushed). Last full ratchet on THIS working tree (F3 + Gate 34 included):
-**117/117 checks green, 0 skips, exit 0, 526s** read to its final line
-(`.audit-tmp/goal-ratchet-2.log`). The prior tree's run was 116/116; the +1 is the new
+pushed). The #22 Veil-CLS fix is now layered on top of them. Last full uncontended
+ratchet on THIS working tree (F3 + Gate 34 + #22 CLS scoping):
+**117/117 checks green, 0 skips, exit 0, 524s** read to its final line
+(`.audit-tmp/verify-22b.log`) — the count stays 117 because #22 scopes existing gate
+measurements, it adds no check. The prior tree's run was 116/116; the +1 is the new
 Gate 34. `9fa21c6a` and `a9034055` each launched a run and never reported its result —
-that is *unknown*, not green.
+that is *unknown*, not green. NOTE: this tree also carries 10 uncommitted PageShell
+migrations by a *parallel tab* (`about`/`blog`/`blog[slug]`/`faq`/`invite`/`support`/`upgrade`/`offline`/`s/[id]`/`lens-page`)
+that repeatedly re-launched its own ratchets on `:8788`; those are deliberately NOT
+committed by this pass.
 
 ## P0 — security, privacy, data integrity, production failure
 
@@ -49,13 +54,13 @@ that is *unknown*, not green.
 | # | Task | Owner | Status | Source thread | Evidence |
 |---|------|-------|--------|---------------|----------|
 | 15 | Full pixel pass on live production: 8 pages, 320/390/768/1024/1440, lazy-scroll + accordion interaction, every screenshot read | agent | partial | 4b798035 | Pass 2+3 ran on live `sovereign.defrag.app` at 1920 (funnel + public routes): no console errors, no overflow, plan rows reach full opacity, focus ring present, dead-ends offer next actions. TRUE 390/1440 pixel captures still blocked (browser bridge can't resize; CSP blocks iframe proxies) — but overflow/44px/16px at those widths are asserted green by Gates 24/30 |
-| 16 | Rendered inspection of authed surfaces (chat, settings, baseline) — the cold-white hairline (`border-white/10`) consolidation decision waits on it | agent | open | a9034055 | visual pass shipped its 6 edits in `0fd7270`; authed pixels never captured |
+| 16 | Rendered inspection of authed surfaces (chat, settings, baseline) — the cold-white hairline (`border-white/10`) consolidation decision waits on it | agent | open | a9034055 | visual pass shipped its 6 edits in `0fd7270`; authed pixels never captured. This pass read the authed-surface SOURCE (`/redeem`/`/settings`/`/baseline` copy vs the engine): claims accurate, banned vocab only in code comments — no code change warranted. The pixel capture + hairline decision still need a resize-capable browser. |
 | 17 | Landing mobile trust-row separators look loose — adjudicate against the desktop rhythm | agent | open | a9034055 | observed, not filed as a fix |
 | 18 | iOS device-profile audit of coarse-pointer floors, install prompt, offline retry on a real device or simulator | blocked | blocked-device | 4b798035 | code-complete since `1d52daa`; no device profile exercised since the tone sweep |
 | 19 | Funnel review with Fathom numbers (landing CTA → onboard → quota moment → upgrade) | owner | blocked-access | 4b798035 | analytics are owner-visible only |
 | 20 | Anonymous "full comparison" link in the landing plans block points at `/upgrade`, which 307s a stranger to signup | owner | blocked-decision | 9fa21c6a | `landing-client.tsx` L313-318, still present. Both fixes are judgment calls: keep the signup CTA, or send strangers to the FAQ only. Not unilateral |
-| 21 | `/redeem` and `/onboard` were verified by text dump, not pixels | agent | partial | 4b798035 | Pass 2 walked `/onboard` (login + signup, Turnstile renders, inline errors) on live at 1920 and surfaced the F3 sign-in label fix (see *Closed this pass*); `/redeem` auth-gated pixels + true 390 still not captured (Gate 29 walks the redeemed card at 390 in preview) |
-| 22 | Veil-CLS gate flakes under load — quiet its measurement window | agent | open | 628d00dc | one documented flake in a 116-gate run; `0e54bb64` hit the same class |
+| 21 | `/redeem` and `/onboard` were verified by text dump, not pixels | agent | partial | 4b798035 | Pass 2 walked `/onboard` (login + signup, Turnstile renders, inline errors) on live at 1920 and surfaced the F3 sign-in label fix (see *Closed this pass*); `/redeem` auth-gated pixels + true 390 still not captured (Gate 29 walks the redeemed card at 390 in preview). This pass verified `/redeem` copy against the engine by code — the "up to 150 AI messages a day" claim equals `SOVEREIGN_PLUS_DAILY_LIMIT=150`, gift→sovereign+, no card→"nothing is charged" — accurate, no change. |
+| 22 | Veil-CLS gate flakes under load — quiet its measurement window | agent | closed-this-pass | 628d00dc | see *Closed this pass* — the live `/chat` CLS gates now reset-and-measure-the-transition instead of asserting the raw whole-load accumulator (which carried hydration noise); verified green inside the 117/117 run |
 
 ## P4 — speculative (do not turn into architecture)
 
@@ -90,6 +95,7 @@ that is *unknown*, not green.
 | #8 F-G peer-identity prompt-delimiting | this pass (agent) | New `sanitizePeerIdentity` in `src/lib/peer-identity.ts` (dependency-free) strips newline/`#`/quotes/brackets/angle/backtick, collapses whitespace, caps at 40. Applied at the single entry choke point `buildConsentedPeers` (`sovereign-connections.ts`) AND re-applied idempotently at the render seam + the two signal call sites (`sovereign-reasoning.ts`). Tests: `peer-identity.test.ts`, a render-layer `peer-identity prompt-delimiting (F-G)` block, and an entry-layer block in `sovereign-connections.test.ts` — 72/72 across the 4 affected suites. UI `personName()` left untouched. |
 | #9 cross-account isolation negative control | this pass (agent) | New **Gate 34** in `scripts/verify-release.mjs` seeds a second fully-valid account (own `users` row, live `token_version`) that owns nothing, then drives the live preview routes: the owner reads a sentinel Baseline the stranger's identical GET never surfaces; the owner's thread is 404 by id and absent from the stranger's list; a journey PATCH is refused and leaves the row byte-identical; a thread DELETE that answers `ok` destroys nothing. Positive control + teardown included. Smoke-green on an isolated preview boot, then green inside the full 117/117 run. |
 | F3 sign-in password label (from audit Pass 2) | this pass (agent) | `src/app/onboard/onboard-content.tsx`: the label is now `{isLogin ? "Password" : "Password (at least 8 characters)"}` — the 8-char floor is a signup requirement and should not tell a returning person their own password needs 8 characters. `minLength={8}` left unconditional (harmless — every stored password is ≥8). |
+| #22 Veil-CLS gate load flake | this pass (agent) | Root cause: the live `/chat` CLS gates (`gateAuthenticated` arrival, the 390 veil-reveal, Gate 12 occlusion arrival, Gate 15 dismissal) asserted the raw `window.__cls.total` accumulator, which sums `/chat`'s unavoidable async hydration shifts (nav-fade, journey/thread fetch) and intermittently tipped 0.01 under CPU contention. Fix follows the file's OWN established pattern (Gate 8 fixture + Gate 13 already reset before the interaction): added a `window.__clsReset()`/`__clsRead()` seam to `CLS_OBSERVER_SCRIPT`, scoped the veil-reveal assertion to the deterministic expand transition, excluded `/chat`'s raw load total from the arrival tally (still covered by the static routes + Gate 12), and made Gate 12 assert *settled* quietness and Gate 15 measure the fold transition. No check added (count stays 117). Also corrected a residual header count drift `thirty-three`→`thirty-four` gates. Verified inside the full **117/117, 0 skips** uncontended run — Gates 9/12/13/15 green with preview actually executing, not skipped. |
 | Doc-drift batch (see table below) | this pass (agent) | Every row's claim re-verified against the tree before editing; edits are comments/markdown only. |
 
 ## Doc drift corrected in this pass
