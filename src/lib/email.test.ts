@@ -114,3 +114,90 @@ describe("sendTemplate — delivery outcomes", () => {
     logSpy.mockRestore();
   });
 });
+
+// Client-robustness invariants. Every template shares one shell, so a shell that
+// relies on CSS alone breaks silently in the clients that ignore it: Outlook
+// drops CSS `background` on <body> (cream text lands on white), and Gmail/Outlook
+// dark mode re-colours an email that never declared its scheme. A plain-text part
+// and a preheader are table stakes for deliverability and inbox legibility.
+describe("emailShell — client robustness invariants", () => {
+  it("declares bgcolor attributes so Outlook/legacy clients keep the dark surface", async () => {
+    mockResendOk();
+    await sendTemplate(env, "welcome", "new@example.com", { origin: "https://sovereign.defrag.app" });
+    const html = resendBody().html as string;
+    expect(html).toMatch(/<body[^>]*bgcolor="#0c0b09"/i);
+    expect(html).toMatch(/<table[^>]*bgcolor="#141110"/i);
+  });
+
+  it("declares the colour scheme so dark-mode clients do not re-invert the palette", async () => {
+    mockResendOk();
+    await sendTemplate(env, "welcome", "new@example.com", { origin: "https://sovereign.defrag.app" });
+    const html = resendBody().html as string;
+    expect(html).toMatch(/name=["']color-scheme["'][^>]*content=["']dark light["']/i);
+    expect(html).toMatch(/supported-color-schemes/i);
+  });
+
+  it("carries a hidden preheader so the inbox preview line is copy, not footer text", async () => {
+    mockResendOk();
+    await sendTemplate(env, "payment-failed", "payer@example.com", { origin: "https://sovereign.defrag.app", attempt: 1 });
+    const html = resendBody().html as string;
+    expect(html).toMatch(/display:none[^>]*>[^<]{10,}/i);
+  });
+});
+
+describe("sendTemplate — plain-text alternative", () => {
+  it("sends a text part derived from the rendered body, so no client sees a blank mail", async () => {
+    mockResendOk();
+    await sendTemplate(env, "payment-received", "payer@example.com", {
+      origin: "https://sovereign.defrag.app", amount: "20.00", date: "October 6, 2026", next: "November 6, 2026",
+    });
+    const body = resendBody();
+    expect(typeof body.text).toBe("string");
+    expect((body.text as string).length).toBeGreaterThan(40);
+    expect(body.text).toContain("$20.00");
+    expect(body.text).toContain("November 6, 2026");
+    // The converter must not leak markup or leave the wordmark glued together.
+    expect(body.text).not.toContain("<");
+    expect(body.text).not.toContain("&nbsp;");
+    expect(body.text).toContain("https://sovereign.defrag.app/account?tab=billing");
+  });
+
+  // The support form is public, so its plain-text mirror of an escaped payload must
+  // not replay live tag syntax. Same words, defused shape (mirrors gate F-D).
+  it("defuses tag-shaped input from the public support form", async () => {
+    mockResendOk();
+    await sendTemplate(env, "support-notification", "ops@example.com", {
+      name: "Eve <script>alert(1)</script>",
+      email: "eve@evil.com",
+      topic: 'Billing <a href="https://evil.example">click here</a>',
+      message: "<img src=x onerror=alert(1)>\n<b>bold</b>",
+    });
+    const { text } = resendBody();
+    expect(text).not.toContain("<script>alert(1)</script>");
+    expect(text).not.toContain("<img src=x onerror=alert(1)>");
+    expect(text).not.toContain('<a href="https://evil.example">click here</a>');
+    expect(text).toContain("[script]alert(1)[/script]");
+    expect(text).toContain("eve@evil.com");
+  });
+});
+
+describe("removed templates — dead and misleading copy is gone, not dormant", () => {
+  // billing-success duplicated payment-received with no call site; trial-ending
+  // advertised a free trial the product does not have (no scheduler, no call site).
+  it.each(["billing-success", "trial-ending"])("%s is no longer a renderable template", async (name) => {
+    mockResendOk();
+    await expect(sendTemplate(env, name as never, "x@example.com", {} as never)).rejects.toThrow(/Unknown email template/);
+  });
+});
+
+describe("sendTemplate — receipt names the plan it is for", () => {
+  it("shows a structured Sovereign+ summary rather than prose alone", async () => {
+    mockResendOk();
+    await sendTemplate(env, "payment-received", "payer@example.com", {
+      origin: "https://sovereign.defrag.app", amount: "20.00", date: "October 6, 2026", next: "November 6, 2026", interval: "monthly",
+    });
+    const html = resendBody().html as string;
+    expect(html).toContain("Sovereign+");
+    expect(html).toContain("Monthly");
+  });
+});

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyStripeSignature, priceToSubscription, tierFromSubscriptionStatus, SUBSCRIPTION_EVENTS, type PlanTier } from "@/lib/stripe";
+import { verifyStripeSignature, priceToSubscription, tierFromSubscriptionStatus, receiptFields, SUBSCRIPTION_EVENTS, type InvoiceLineForReceipt, type PlanTier } from "@/lib/stripe";
 import { sendTemplate } from "@/lib/email";
 import { getEnv, type AppEnv } from "@/lib/env";
 
@@ -12,7 +12,7 @@ interface StripeObject {
   amount_due?: number;
   currency?: string;
   created?: number;
-  lines?: { data: Array<{ price?: { id?: string } }> };
+  lines?: { data: InvoiceLineForReceipt[] };
   metadata?: Record<string, string>;
   client_reference_id?: string;
 }
@@ -42,12 +42,6 @@ async function resolveUser(
 
 function appOrigin(env: AppEnv): string {
   try { return new URL(env.STRIPE_SUCCESS_URL).origin; } catch { return "https://sovereign.defrag.app"; }
-}
-
-function money(amountDue: number | undefined, currency: string | undefined): string | undefined {
-  if (amountDue == null) return undefined;
-  const major = (amountDue / 100).toFixed(2);
-  return currency === "usd" || !currency ? major : `${major} ${currency.toUpperCase()}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -122,8 +116,7 @@ export async function POST(request: NextRequest) {
             try {
               await sendTemplate(env, "payment-received", user.email, {
                 origin,
-                amount: money(obj.amount_due, obj.currency),
-                date: obj.created ? new Date(obj.created * 1000).toDateString() : undefined,
+                ...receiptFields(env, obj),
               });
             } catch (e) { console.error("[webhook] receipt email failed:", e); }
           }

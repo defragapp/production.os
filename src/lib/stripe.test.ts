@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, createCheckoutSession, syncStripeTier, verifyStripeSignature } from "./stripe";
+import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, createCheckoutSession, syncStripeTier, verifyStripeSignature, receiptFields, invoiceDate } from "./stripe";
 import { createHmac } from "node:crypto";
 import type { AppEnv } from "./env";
 
@@ -198,5 +198,54 @@ describe("syncStripeTier", () => {
     const tier = await syncStripeTier({ ...env, STRIPE_SECRET_KEY: "", DB: db } as unknown as AppEnv, "u1", "cus_1");
     expect(tier).toBe("free");
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+// The receipt email is the only billing artefact a customer keeps from us, and the
+// webhook route used to hand it `toDateString()` ("Tue Oct 06 2026") and no renewal
+// date at all — the template's "Next billing" row was dead code. These pin the
+// invoice -> template mapping so a paying customer always gets a readable receipt.
+describe("receiptFields — invoice to payment-received vars", () => {
+  const invoice = {
+    amount_due: 2000,
+    currency: "usd",
+    created: 1791244800, // 2026-10-06T00:00:00Z
+    lines: { data: [{ price: { id: "price_monthly", recurring: { interval: "month" } }, period: { start: 1791244800, end: 1793923200 } }] },
+  };
+
+  it("renders the amount, the paid date and the next billing date in human form", () => {
+    const f = receiptFields(env, invoice);
+    expect(f.amount).toBe("20.00");
+    expect(f.date).toBe("October 6, 2026");
+    expect(f.next).toBe("November 6, 2026");
+    expect(f.interval).toBe("monthly");
+  });
+
+  it("names annual billing from the configured annual price", () => {
+    const f = receiptFields(env, { ...invoice, amount_due: 9900, lines: { data: [{ price: { id: "price_annual" }, period: { start: 1791244800, end: 1820188800 } }] } });
+    expect(f.amount).toBe("99.00");
+    expect(f.interval).toBe("annual");
+    expect(f.next).toBe("September 6, 2027");
+  });
+
+  it("falls back to the price's own recurring interval when the id is unconfigured", () => {
+    const f = receiptFields(env, { ...invoice, lines: { data: [{ price: { id: "price_other", recurring: { interval: "year" } } }] } });
+    expect(f.interval).toBe("annual");
+    expect(f.next).toBeUndefined();
+  });
+
+  it("omits fields the invoice does not carry instead of inventing them", () => {
+    expect(receiptFields(env, {})).toEqual({});
+  });
+
+  it("keeps a non-USD amount unambiguous", () => {
+    expect(receiptFields(env, { ...invoice, currency: "eur" }).amount).toBe("20.00 EUR");
+  });
+
+  it("prints the same date for the same instant regardless of machine timezone", () => {
+    // 2026-11-01T02:00:00Z is October 31 in UTC-7: pinning the receipt to UTC keeps
+    // the printed day identical in the Worker, in CI and on a laptop in another zone.
+    expect(invoiceDate(1793498400)).toBe("November 1, 2026");
+    expect(invoiceDate(undefined)).toBeUndefined();
   });
 });

@@ -1,42 +1,56 @@
-import { readFileSync } from 'fs';
+// Sends every transactional template to one inbox so a human can judge how it
+// actually lands in a real mail client.
+//
+// There is deliberately NO copy of the email design in this file. It calls the
+// real `sendTemplate` from src/lib/email.ts, which is the only thing that can
+// tell you what a customer will see — a mirrored shell here once drifted to
+// different brand colours and shipped a "trial ends soon" email for a product
+// that has no free trial, which is exactly how a stale preview script misleads
+// a release pass.
+//
+//   node scripts/send-test-emails.mjs                     # send to defragapp@gmail.com
+//   node scripts/send-test-emails.mjs someone@x.com       # send elsewhere
+//   node scripts/send-test-emails.mjs --dry               # render + log, send nothing
+//
+// Needs RESEND_API_KEY in .dev.vars (otherwise the Worker logs instead of sending).
+import { readFileSync } from "node:fs";
+import { sendTemplate } from "../src/lib/email.ts";
 
-const API_KEY = readFileSync('.dev.vars', 'utf8')
-  .split('\n').find(l => l.startsWith('RESEND_API_KEY='))
-  ?.split('=').slice(1).join('')?.trim();
+const args = process.argv.slice(2);
+const dry = args.includes("--dry");
+const to = args.find((a) => a.includes("@")) || "defragapp@gmail.com";
 
-if (!API_KEY) { console.error('No RESEND_API_KEY in .dev.vars'); process.exit(1); }
-
-const FROM = 'Sovereign OS <sovereign@defrag.app>';
-const TO = 'defragapp@gmail.com';
-
-// Mirrors src/lib/email.ts emailShell/emailButton/emailLink (dark brand).
-function emailShell(title, bodyHtml) {
-  return `<div style="margin:0;padding:32px 16px;background:#0d0d0d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"><div style="max-width:480px;margin:0 auto;background:#16130f;border-radius:12px;border:1px solid rgba(250,245,236,0.10)"><div style="background:#0d0d0d;padding:22px 28px;text-align:center;border-bottom:1px solid rgba(250,245,236,0.08);border-radius:12px 12px 0 0"><span style="font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;color:#f4efe4;font-size:14px;font-weight:600;letter-spacing:0.22em">SOVEREIGN<span style="color:#8a857b">.OS</span></span></div><div style="padding:28px"><h2 style="color:#f4efe4;font-size:20px;font-weight:600;margin:0 0 16px;text-align:center">${title}</h2><div style="text-align:center;color:#c2bcb0">${bodyHtml}</div></div><div style="padding:18px 28px;text-align:center;border-top:1px solid rgba(250,245,236,0.08)"><p style="color:#8a857b;font-size:12px;margin:0">&copy; Sovereign OS &mdash; Your personal intelligence layer.</p></div></div></div>`;
-}
-
-function button(href, label) { return `<a href="${href}" style="display:inline-block;background:#f4efe4;color:#141210;padding:12px 28px;border-radius:8px;text-decoration:none;margin:16px 0;font-weight:600;font-size:14px">${label}</a>`; }
-function link(href, label) { return `<a href="${href}" style="color:#f4efe4;font-weight:600;text-decoration:underline">${label}</a>`; }
-
-const T = [
-  { name:'welcome', subject:'Welcome to Sovereign OS',
-    html: emailShell('Welcome to Sovereign OS', `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 4px">Your account is ready. Complete your baseline to begin.</p>` + button('https://sovereign.defrag.app/onboard','Set Your Baseline')) },
-  { name:'verify', subject:'Verify your email',
-    html: emailShell('Verify your email', `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 4px">Welcome to Sovereign OS. Confirm your email address to unlock your baseline and personal AI chat.</p>` + button('https://sovereign.defrag.app/api/auth/verify?token=TEST123','Verify Email') + `<p style="color:#8a857b;font-size:13px;margin:16px 0 0">This link expires in 48 hours. If you didn&apos;t create an account, you can safely ignore this email.</p>`) },
-  { name:'password-reset', subject:'Reset your password',
-    html: emailShell('Reset your password', `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 4px">We received a request to reset your password. Click below to set a new one.</p>` + button('https://sovereign.defrag.app/onboard?reset=TEST456','Reset Password') + `<p style="color:#8a857b;font-size:13px;margin:16px 0 0">This link expires in 30 minutes. If you didn&apos;t request this, you can safely ignore this email.</p>`) },
-  { name:'billing', subject:'Payment successful',
-    html: emailShell('Payment successful', `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 4px">Your payment of <strong>$9.00</strong> was processed on September 12, 2026.</p><p style="color:#c2bcb0;line-height:1.6;margin:0 0 4px">Next billing date: October 12, 2026</p>` + link('https://sovereign.defrag.app/account?tab=billing','View billing history')) },
-  { name:'trial-ending', subject:'Your trial ends soon',
-    html: emailShell('Your trial ends soon', `<p style="color:#c2bcb0;line-height:1.6;margin:0 0 4px">Your free trial expires in <strong>3 days</strong>. Upgrade now to keep your data and continue using Sovereign OS.</p>` + button('https://sovereign.defrag.app/upgrade','Upgrade now')) },
+const vars = (extra = {}) => ({ origin: "https://sovereign.defrag.app", ...extra });
+// One entry per template in src/lib/email.ts. `sendTemplate` throws on an unknown
+// name, so a template added or removed there fails loudly here rather than silently
+// previewing the old set.
+const SAMPLES = [
+  ["welcome", vars()],
+  ["verify", vars({ token: "SAMPLE-VERIFY-TOKEN" })],
+  ["password-reset", vars({ token: "SAMPLE-RESET-TOKEN" })],
+  ["payment-received", vars({ amount: "20.00", date: "October 6, 2026", next: "November 6, 2026", interval: "monthly" })],
+  ["payment-failed", vars({ attempt: 2 })],
+  ["subscription-canceled", vars()],
+  ["invite", vars({ inviterName: "Jordan", role: "partner", name: "Riley", token: "SAMPLE-INVITE-TOKEN" })],
+  ["invite-accepted", vars({ inviteeName: "Riley", role: "partner" })],
+  ["support-received", vars()],
+  ["support-notification", vars({ name: "Test Person", email: "test@example.com", topic: "Billing", message: "This is a preview of the operator-facing support email.\nSecond line stays on its own line." })],
 ];
 
+const apiKey = (readFileSync(".dev.vars", "utf8").match(/^RESEND_API_KEY=(.*)$/m)?.[1] ?? "").trim();
+if (!dry && !apiKey) { console.error("No RESEND_API_KEY in .dev.vars — use --dry to render without sending."); process.exit(1); }
+
+const env = dry ? /** @type {*} */ ({}) : /** @type {*} */ ({ RESEND_API_KEY: apiKey, FROM_EMAIL: "sovereign@defrag.app" });
+
 let sent = 0;
-for (const t of T) {
+for (const [name, sample] of SAMPLES) {
   try {
-    const res = await fetch('https://api.resend.com/emails', { method:'POST', headers:{ Authorization:`Bearer ${API_KEY}`,'Content-Type':'application/json' }, body: JSON.stringify({ from:FROM, to:[TO], subject:t.subject, html:t.html }) });
-    const data = await res.json();
-    if (res.ok) { console.log(`OK ${t.name}: ${data.id}`); sent++; } else { console.log(`FAIL ${t.name}: ${data.message||res.status}`); }
-  } catch(e) { console.log(`FAIL ${t.name}: ${e.message}`); }
-  await new Promise(r=>setTimeout(r,120));
+    const ok = await sendTemplate(env, name, to, sample);
+    if (ok) { sent++; console.log(`${dry ? "DRY  " : "SENT "} ${name}`); }
+    else console.log(`FAIL ${name}`);
+  } catch (err) {
+    console.log(`FAIL ${name}: ${err instanceof Error ? err.message : err}`);
+  }
+  if (!dry) await new Promise((r) => setTimeout(r, 1300)); // Resend allows 1 req/s
 }
-console.log(`\n${sent}/${T.length} emails sent.`);
+console.log(`\n${sent}/${SAMPLES.length} ${dry ? "rendered" : `delivered to ${to}`}.`);
