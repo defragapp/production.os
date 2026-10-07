@@ -130,8 +130,18 @@
  *                                            `redact_query_string: true`, both configs omit the redundant
  *                                            `compatibility_flags`, and the committed generated types file
  *                                            stays tracked so a clean clone can typecheck.
+ *  34. cross-account isolation               — a SECOND, fully valid session (its own users row, live
+ *                                            token_version) that owns NOTHING still cannot reach the
+ *                                            fixture owner's data by id: the owner reads a sentinel
+ *                                            Baseline the stranger's identical request never surfaces,
+ *                                            the owner's thread is 404 by id and absent from the
+ *                                            stranger's list, a journey PATCH by id is refused AND
+ *                                            leaves the row byte-identical, and a thread DELETE that
+ *                                            answers ok destroys nothing of the owner's — so every read
+ *                                            is bound to the caller's payload.sub, not just the id.
+ *                                            The probe account and sentinel are torn down after.
  *
- * Gates 1-8, 10-32 and 33 fail closed. The preview-backed passes (9-24, 26-32) boot the
+ * Gates 1-8, 10-34 fail closed. The preview-backed passes (9-24, 26-32, 34) boot the
  * real edge server against LOCAL D1 only; if it cannot come up or the local
  * seed cannot be written in this environment they are reported as SKIPPED
  * (never a false PASS), because a flaky boot is an environment fact, not a
@@ -789,6 +799,12 @@ const FIXTURE_EMAIL = "verify-release@local.test";
 // after itself (revoke + fixture reset) in the same gate.
 const OWNER_FIXTURE_ID = "7v7f1r00-0000-4000-8000-000000000006";
 const OWNER_FIXTURE_EMAIL = "chadowen93@gmail.com";
+// The Gate 34 attacker is a SECOND fully-valid account (its own users row and a
+// matching token_version) that owns nothing. Its session passes the middleware
+// and verifySession exactly like a real person's, so when it is refused the
+// owner's rows, that is proof of the sub-bound predicate — not a broken token.
+const ATTACKER_USER_ID = "7v7f1r00-0000-4000-8000-000000000007";
+const ATTACKER_EMAIL = "cross-account-probe@local.test";
 
 /** Read a bare KEY=value from .dev.vars (local dev secrets, never printed). */
 function readDevVar(file, key) {
@@ -3069,6 +3085,78 @@ async function gateCompliance(port, booted) {
   record("legal pages render the 18+ floor, crisis lines, and storage disclosures — zero overflow", legal.length === 0, legal.slice(0, 3).join(" | "));
 }
 
+/**
+ * Gate 34 · cross-account isolation (ledger #9). The negative control the
+ * REMEDIATION_SUMMARY retracted as never run: does a signed, live session for
+ * one person actually fail to read another person's rows when it asks for them
+ * by id? The guarantee is structural (every read binds `WHERE ... user_id =
+ * payload.sub`), so the test must attack that structure with a session that is
+ * otherwise VALID — otherwise a 401 from a dead token would masquerade as an
+ * isolation win. A stranger therefore gets a real users row and a matching
+ * token_version, then tries to read the fixture owner's Baseline, fetch a
+ * thread by id, list threads, PATCH a journey, and DELETE a thread. Each must
+ * miss, and the tamper attempts must leave the owner's bytes untouched.
+ */
+async function gateCrossAccountIsolation(port, booted) {
+  heading("Gate 34 · cross-account isolation — a valid stranger session cannot reach another account's rows");
+  const NAME = "isolation: a valid second session cannot read or tamper another user's baseline/thread/journey by id";
+  const skip = (why) => record(NAME, true, `SKIPPED — ${why}`);
+  if (!booted) return skip("preview server did not come up in this environment");
+  const jwtSecret = readDevVar(fs.readFileSync(path.join(root, ".dev.vars"), "utf8"), "JWT_SECRET");
+  if (!jwtSecret) return skip("no JWT_SECRET in .dev.vars");
+  const seeded = await seedLocalD1();
+  if (!seeded.ok) return skip(seeded.why);
+
+  // A fully valid second account that owns nothing.
+  await d1Local(`INSERT OR IGNORE INTO users (id, email, password_hash, password_salt, subscription_tier, email_verified, token_version, memory_mode) VALUES ('${ATTACKER_USER_ID}', '${ATTACKER_EMAIL}', 'seed-no-login', 'seed-no-login', 'free', 1, 1, 'server');`);
+  await d1Local(`UPDATE users SET token_version = 1 WHERE id = '${ATTACKER_USER_ID}';`);
+  // Give the owner's Baseline an unmistakable sentinel so "the stranger got
+  // nothing" is a real read-denial rather than a vacuously empty row.
+  await d1Local(`UPDATE baselines SET dob = '1901-02-03', pob = 'SENTINEL-PLACE-XYZ', tob = '03:03' WHERE user_id = '${FIXTURE_USER_ID}';`);
+
+  const ownerToken = mintSessionToken(jwtSecret);
+  const attackerToken = mintSessionToken(jwtSecret, ATTACKER_USER_ID, ATTACKER_EMAIL);
+  const findings = [];
+
+  // ── Positive control: the owner CAN read the sentinel (else the negative
+  //    assertion below could pass on a route that simply returns nothing). ──
+  const ownerBaseline = await apiCall(port, "/api/baseline", { method: "GET", token: ownerToken });
+  if (ownerBaseline.status !== 200 || ownerBaseline.json?.baseline?.pob !== "SENTINEL-PLACE-XYZ") {
+    findings.push(`positive control: owner could not read own sentinel baseline (${ownerBaseline.status} ${JSON.stringify(ownerBaseline.json ?? {}).slice(0, 60)})`);
+  }
+
+  // ── Baseline: the stranger's identical GET must never surface it. ──
+  const attackerBaseline = await apiCall(port, "/api/baseline", { method: "GET", token: attackerToken });
+  if (attackerBaseline.json?.baseline?.pob === "SENTINEL-PLACE-XYZ") findings.push("stranger read the owner's Baseline row");
+  if (attackerBaseline.json?.baseline?.user_id === FIXTURE_USER_ID) findings.push("stranger's Baseline response carried the owner user_id");
+
+  // ── Threads: 404 by id, and absent from the stranger's own list. ──
+  const attackerThread = await apiCall(port, `/api/threads?id=${FIXTURE_THREAD_ID}`, { method: "GET", token: attackerToken });
+  if (attackerThread.status !== 404) findings.push(`GET /api/threads?id=<owner thread> → ${attackerThread.status} (expected 404)`);
+  const attackerList = await apiCall(port, "/api/threads?limit=50", { method: "GET", token: attackerToken });
+  const listed = (attackerList.json?.threads || []).map((t) => t.id);
+  if (listed.includes(FIXTURE_THREAD_ID) || listed.includes(FIXTURE_THREAD2_ID)) findings.push("an owner thread appeared in the stranger's list");
+
+  // ── A tamper attempt (PATCH) is refused AND leaves the row byte-identical. ──
+  const goalBefore = await d1Query(`SELECT goal FROM journeys WHERE id = '${FIXTURE_JOURNEY_ID}'`);
+  const tamper = await apiCall(port, `/api/journeys/${FIXTURE_JOURNEY_ID}`, { method: "PATCH", token: attackerToken, body: { goal: "HIJACKED-BY-GATE-34" } });
+  if (tamper.status !== 404) findings.push(`PATCH /api/journeys/<owner id> → ${tamper.status} (expected 404)`);
+  const goalAfter = await d1Query(`SELECT goal FROM journeys WHERE id = '${FIXTURE_JOURNEY_ID}'`);
+  if (goalBefore && goalAfter && goalAfter[0]?.goal !== goalBefore[0]?.goal) findings.push("the owner's journey goal changed after a cross-account PATCH");
+
+  // ── A DELETE that answers ok must still destroy nothing of the owner's. ──
+  await apiCall(port, `/api/threads?id=${FIXTURE_THREAD_ID}`, { method: "DELETE", token: attackerToken });
+  const threadStillThere = await d1Query(`SELECT id FROM threads WHERE id = '${FIXTURE_THREAD_ID}'`);
+  if (threadStillThere && threadStillThere.length === 0) findings.push("a cross-account thread DELETE destroyed the owner's row");
+
+  // ── Teardown: forget the probe account and strip the sentinel. ──
+  await d1Local(`UPDATE baselines SET dob = NULL, pob = NULL, tob = NULL WHERE user_id = '${FIXTURE_USER_ID}';`);
+  await d1Local(`DELETE FROM users WHERE id = '${ATTACKER_USER_ID}';`);
+
+  record(NAME, findings.length === 0,
+    findings.slice(0, 3).join(" | ") || "baseline read, thread fetch + list, journey PATCH, thread DELETE all scoped to the caller; owner rows intact");
+}
+
 // Sentinels: two sentences that live ONLY in the server-side prompt builder.
 // They must be present in the source (or this scan would pass vacuously) and
 // absent from every client bundle.
@@ -3723,6 +3811,7 @@ async function main() {
     await gateSurfaces(8788, booted);
     await gateCompliance(8788, booted);
     await gateIpIsolation(8788, booted);
+    await gateCrossAccountIsolation(8788, booted);
     await gateOwnerGift(8788, booted);
     await gateInputFloor(8788, booted);
     await gateEvolution(8788, booted);
@@ -3764,4 +3853,4 @@ if (!process.env.SOVEREIGN_VERIFY_IMPORT_ONLY) {
 }
 
 // Exported for isolated gate development in .audit-tmp scratch runners.
-export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, FIXTURE_THREAD2_ID, FIXTURE_JOURNEY2_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, isWidgetNoise, gateErgonomics, gateSurfaces, gateManifest, gateSigil, SURFACE_PROBE };
+export { buildHarnesses, serveHarnessPage, gateCls, launchPreview, seedLocalD1, readDevVar, mintSessionToken, FIXTURE_USER_ID, FIXTURE_THREAD_ID, FIXTURE_THREAD2_ID, FIXTURE_JOURNEY2_ID, CLS_OBSERVER_SCRIPT, VEIL_PROBE, isWidgetNoise, gateErgonomics, gateSurfaces, gateManifest, gateSigil, gateCrossAccountIsolation, SURFACE_PROBE };
