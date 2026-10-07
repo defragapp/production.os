@@ -4,8 +4,10 @@ Maintained by `/goal` (`.qoder/skills/goal/SKILL.md`). One row per verifiable th
 `#` of an open row never changes. Re-derive with
 `node .qoder/skills/goal/scripts/scan-threads.mjs --days 2 --full`.
 
-Current evidence: HEAD `0fd7270` = `origin/main` = local `main`; working tree carries this
-pass's doc-drift + F-G edits (uncommitted, awaiting owner go-ahead). Last full ratchet:
+Current evidence: HEAD `0fd7270` = `origin/main` = local `main`; this pass's doc-drift +
+F-G edits are committed locally as `93c9545`/`a78bf85`/`3cab4f8` on `migrate-to-asu` and
+**NOT pushed** (owner chose commit-only; push form is `git push origin HEAD:main`). Last
+full ratchet:
 **116/116 checks green, 0 skips, 443 unit tests, exit 0** read to its final line on THIS
 working tree (`.audit-tmp/goal-ratchet.log`, this `/goal` pass). Earlier green on the
 pre-edit tree (`628d00dc`); `9fa21c6a` and `a9034055` each launched a run and never
