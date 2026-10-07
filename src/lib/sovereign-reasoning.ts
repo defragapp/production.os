@@ -18,6 +18,7 @@ import {
   validateSovereignText,
 } from "./sovereign-safety";
 import { buildRelationalSignals, buildSystemSignals } from "./sovereign-signals";
+import { sanitizePeerIdentity } from "./peer-identity";
 import { parseD1Date } from "./utils";
 import type { SovereignModel } from "./sovereign-model";
 import type { ChatMessage } from "./types";
@@ -700,7 +701,10 @@ export async function buildReasoningContext(opts: {
       const relSignals = [];
       for (const peer of withHd) {
         relSignals.push(...buildRelationalSignals(
-          "the user", myHd, peer.name, peer._hd!, peer._between!,
+          // F-G: peer.name is peer-authored free text crossing into this user's
+          // prompt; re-delimit at the render seam too (idempotent with the entry
+          // scrub in buildConsentedPeers) so a hand-built context is safe as well.
+          "the user", myHd, sanitizePeerIdentity(peer.name), peer._hd!, peer._between!,
         ));
       }
       context.relationalSignals = relSignals.slice(0, 8);
@@ -709,7 +713,7 @@ export async function buildReasoningContext(opts: {
       if (classification.level === 4 && withHd.length >= 2) {
         context.systemSignals = buildSystemSignals(
           "the user", myHd,
-          withHd.map((p) => ({ name: p.name, hd: p._hd! })),
+          withHd.map((p) => ({ name: sanitizePeerIdentity(p.name), hd: p._hd! })),
         );
       }
     }
@@ -786,14 +790,20 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   if (ctx.consented && ctx.consented.length > 0) {
     lines.push("CONSENTED CONTEXT (both sides authorized this to be present):");
     for (const p of ctx.consented) {
+      // F-G: name + role are peer/owner-authored free text; delimit them here so
+      // they cannot break out of the `- "Name (role) — …"` framing this renderer
+      // applies (a newline could forge a new prompt section, a quote/bracket could
+      // mimic the prompt's own markers). Idempotent with the entry scrub.
+      const name = sanitizePeerIdentity(p.name);
+      const role = sanitizePeerIdentity(p.role, "connection");
       // A history-only peer shares chat recollections but no baseline derivation;
       // their EMPTY_DERIVED placeholder must never render as a blank chart line.
       const hasBaseline = !!(p.derived.sunSign || p.derived.humanDesignType);
       if (hasBaseline) {
         const q = p.derived.qualities.slice(0, 4);
-        lines.push(`- ${p.name} (${p.role}) — derived baseline: ${p.derived.sunSign} Sun / ${p.derived.moonSign} Moon. ${q.length ? `Qualities: ${q.join("; ")}.` : ""} Human Design: ${p.derived.humanDesignType}${p.derived.humanDesignCenters.length ? `, defined centers ${p.derived.humanDesignCenters.join(", ")}` : ""}. Strategy ${p.derived.humanDesignStrategy}, authority ${p.derived.humanDesignAuthority}.`);
+        lines.push(`- ${name} (${role}) — derived baseline: ${p.derived.sunSign} Sun / ${p.derived.moonSign} Moon. ${q.length ? `Qualities: ${q.join("; ")}.` : ""} Human Design: ${p.derived.humanDesignType}${p.derived.humanDesignCenters.length ? `, defined centers ${p.derived.humanDesignCenters.join(", ")}` : ""}. Strategy ${p.derived.humanDesignStrategy}, authority ${p.derived.humanDesignAuthority}.`);
         if (p.betweenDesign.length) {
-          lines.push(`  Between-design notes (${p.name} & the user):`);
+          lines.push(`  Between-design notes (${name} & the user):`);
           for (const note of p.betweenDesign) lines.push(`  - ${note}`);
         }
         if (p.derived.geneKeysLabels.length) {
@@ -804,9 +814,9 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
       // from the peer's namespace under the peer's share_history flag. Same
       // quote-faithfully guardrail as self-recall, framed as context not verdict.
       if (p.recollections?.length) {
-        lines.push(`PEER RECALLED — shared with ${p.name}'s consent. Verbatim statements from ${p.name}'s own history, offered as context about them, not a verdict on them. Quote faithfully or not at all:`);
+        lines.push(`PEER RECALLED — shared with ${name}'s consent. Verbatim statements from ${name}'s own history, offered as context about them, not a verdict on them. Quote faithfully or not at all:`);
         for (const snippet of p.recollections) {
-          lines.push(`  - [${p.name}] "${snippet.slice(0, 240)}"`);
+          lines.push(`  - [${name}] "${snippet.slice(0, 240)}"`);
         }
       }
     }
@@ -826,7 +836,7 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
     }
     lines.push("  These describe group-level energy patterns derived from combining multiple designs. Frame them as one possible structural reading of how this group naturally organizes — not as a fixed hierarchy or inevitable dynamic.");
   }
-  const consentedNames = ctx.consented?.map((p) => p.name).join(", ");
+  const consentedNames = ctx.consented?.map((p) => sanitizePeerIdentity(p.name)).join(", ");
   // Semantic recall: the user's OWN verbatim statements from earlier
   // conversations, offered as pattern-visibility. Only role==='user' snippets
   // enter the prompt — echoing the model's own past answers invites it to

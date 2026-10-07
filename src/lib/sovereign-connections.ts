@@ -13,6 +13,7 @@
 import { deriveBaseline } from "./sovereign-prompt";
 import { computeHumanDesign, compareDesigns } from "./sovereign-humandesign";
 import { loadUser, personName, RelationshipRow } from "./connections";
+import { sanitizePeerIdentity } from "./peer-identity";
 import type { Baseline } from "./types";
 import type { ConsentedPeer, RelationshipScope } from "./sovereign-types";
 import type { AppEnv } from "./env";
@@ -128,8 +129,12 @@ export async function buildConsentedPeers(
 
     const entry: ConsentedPeer = {
       id: peerId,
-      name: personName(peer),
-      role: iAmA ? row.a_label : row.b_label,
+      // F-G: the peer's display name and the relationship label are peer/owner-
+      // authored free text that crosses into ANOTHER user's reasoning prompt.
+      // Delimit them at the single point they enter the context so every
+      // downstream consumer (signal builders + renderer) receives safe strings.
+      name: sanitizePeerIdentity(personName(peer)),
+      role: sanitizePeerIdentity(iAmA ? row.a_label : row.b_label, "connection"),
       derived,
       betweenDesign: between,
       // Carry HD data only when baseline is shared, for the deterministic signal engine.
