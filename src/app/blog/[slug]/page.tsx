@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Nav } from "@/components/nav";
-import { PageTexture } from "@/components/page-texture";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 import { BLOG_POSTS, getPost, type BlogSection } from "@/content/blog";
 
@@ -77,28 +77,21 @@ export default async function BlogArticle({
 
   return (
     <>
-      <PageTexture />
-      <Nav />
-      <main
-        id="main"
-        className="relative mx-auto w-full max-w-2xl px-6 pt-14 pb-24 font-sans text-foreground"
-      >
-        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="section-rule absolute inset-x-0 top-0" aria-hidden="true" />
-
+    <PageShell center={false} wide="prose" rule>
         <Link
           href="/blog"
-          className="tap-line mb-6 inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80 hover:text-foreground"
+          className="tap-line mb-6 inline-flex items-center gap-1 text-muted-foreground/80 hover:text-foreground"
         >
-          ← Field Notes
+          <Eyebrow as="span">← Field Notes</Eyebrow>
         </Link>
 
         <article>
-          <time
-            dateTime={post.published}
-            className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/70"
-          >
-            {formatMonthDay(post.published)} · {post.readingMinutes} min read
+          {/* <time> stays for the machine-readable publish date; the label's
+              look still comes from the single <Eyebrow> recipe. */}
+          <time dateTime={post.published}>
+            <Eyebrow as="span" className="text-muted-foreground/70">
+              {formatMonthDay(post.published)} · {post.readingMinutes} min read
+            </Eyebrow>
           </time>
           <h1 className="mt-3 font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3rem]">
             {post.title}
@@ -124,8 +117,8 @@ export default async function BlogArticle({
             </p>
           </div>
         </article>
-      </main>
-      <SiteFooter />
+    </PageShell>
+    <SiteFooter />
     </>
   );
 }

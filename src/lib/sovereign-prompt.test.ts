@@ -110,8 +110,17 @@ describe("buildSystemPrompt", () => {
     // same hedge across consecutive turns and must offer alternatives.
     const prompt = buildSystemPrompt(deriveBaseline({}));
     expect(prompt).toMatch(/begin consecutive answers with the same hedge/i);
-    const alternatives = ["It may be that", "This could indicate", "One reading"];
+    const alternatives = ["It may be that", "This could indicate", "One way to see this is"];
     expect(alternatives.filter((a) => prompt.includes(a)).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("does not teach banned vocabulary in model-facing instructions", () => {
+    const prompt = buildSystemPrompt(deriveBaseline({})).toLowerCase();
+    // Banned in user-facing copy and AI output: pattern(s) as a noun, friction, reading
+    // (engine identifiers elsewhere may use these words, but the prompt must not teach them).
+    expect(prompt).not.toMatch(/\bpattern(s)?\b/);
+    expect(prompt).not.toContain("friction");
+    expect(prompt).not.toMatch(/\breading(s)?\b/);
   });
 
   it("Level 3 guidance encourages engaging with user-described relational narrative when consented context is absent", () => {

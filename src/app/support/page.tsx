@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nav } from "@/components/nav";
-import { PageTexture } from "@/components/page-texture";
+import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 import { SupportForm } from "./support-form";
 import { getEnv } from "@/lib/env";
@@ -27,12 +26,10 @@ export default async function SupportPage() {
   } catch {}
   return (
     <>
-      <PageTexture />
-      <Nav />
-      <main id="main" className="relative overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
-        <section className="relative overflow-hidden">
+    <PageShell center={false} wide="wide">
+        <div className="relative">
           <div className="hero-light" aria-hidden="true" />
-          <div className="mx-auto max-w-5xl px-6 pb-14 pt-16 md:pt-20">
+          <div>
             <h1 className="font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl">
               We read everything.
             </h1>
@@ -41,11 +38,11 @@ export default async function SupportPage() {
               here. It goes straight to the team, and someone answers personally.
             </p>
           </div>
-        </section>
+        </div>
 
         {/* Two columns on desktop: the form carries the action, the side
             panel carries the reassurance that used to float under it. */}
-        <section className="mx-auto grid max-w-5xl gap-6 px-6 pb-20 md:grid-cols-[1.2fr_0.8fr] md:items-start">
+        <section className="mt-10 grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-start">
           <div className="glass-panel p-6 md:p-8">
             <SupportForm turnstileSiteKey={turnstileSiteKey} />
           </div>
@@ -89,8 +86,8 @@ export default async function SupportPage() {
             </Link>
           </aside>
         </section>
-      </main>
-      <SiteFooter />
+    </PageShell>
+    <SiteFooter />
     </>
   );
 }

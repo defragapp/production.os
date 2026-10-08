@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nav } from "@/components/nav";
-import { PageTexture } from "@/components/page-texture";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 import { BLOG_POSTS } from "@/content/blog";
 
@@ -33,18 +33,8 @@ export default function BlogIndex() {
 
   return (
     <>
-      <PageTexture />
-      <Nav />
-      <main
-        id="main"
-        className="relative mx-auto w-full max-w-2xl px-6 pt-14 pb-24 font-sans text-foreground"
-      >
-        <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
-        <div className="section-rule absolute inset-x-0 top-0" aria-hidden="true" />
-
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
-          Field Notes
-        </p>
+    <PageShell center={false} wide="prose" rule>
+        <Eyebrow className="mb-3">Field Notes</Eyebrow>
         <h1 className="mb-3 font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3rem]">
           Longer thoughts, kept <span className="italic">honest</span>.
         </h1>
@@ -77,7 +67,7 @@ export default function BlogIndex() {
             not only in the header. */}
         <div className="mt-12 flex flex-col items-center gap-3 text-center">
           <p className="font-display text-lg text-foreground">Try the questions on your own life.</p>
-          <Link href="/onboard?mode=signup" className="btn-focal px-6 py-3 text-sm font-semibold">
+          <Link href="/onboard?mode=signup" className="btn-focal px-7 py-3 text-sm font-semibold">
             Start free
           </Link>
         </div>
@@ -85,8 +75,8 @@ export default function BlogIndex() {
         <p className="mt-12 text-xs text-muted-foreground/70">
           New essays land here first, then get linked from <Link href="/" className="underline underline-offset-4 hover:text-foreground">the landing page</Link> footer.
         </p>
-      </main>
-      <SiteFooter />
+    </PageShell>
+    <SiteFooter />
     </>
   );
 }

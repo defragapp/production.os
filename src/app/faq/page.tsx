@@ -66,9 +66,9 @@ export default function FaqPage() {
               open={index === 0}
               className="group border-b border-border/70 py-5 last:border-b-0"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between text-[15px] font-medium text-foreground transition-colors duration-200 hover:text-foreground/80 [&::-webkit-details-marker]:hidden md:text-base">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-[15px] font-medium text-foreground transition-colors duration-[240ms] hover:text-foreground/80 [&::-webkit-details-marker]:hidden md:text-base">
                 {item.q}
-                <span aria-hidden="true" className="ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-sm text-muted-foreground transition-all duration-200 group-open:rotate-45 group-open:border-foreground/30 group-open:text-foreground">
+                <span aria-hidden="true" className="ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-sm text-muted-foreground transition-all duration-[240ms] ease-spring group-open:rotate-45 group-open:border-foreground/30 group-open:text-foreground">
                   +
                 </span>
               </summary>
@@ -80,7 +80,7 @@ export default function FaqPage() {
         {/* Same reason the landing closes with it: the question after a good
             answer is "okay, where do I start?" */}
         <div className="mt-10 text-center">
-          <Link href="/onboard?mode=signup" className="btn-focal inline-block px-6 py-2.5 text-sm font-semibold">
+          <Link href="/onboard?mode=signup" className="btn-focal inline-block px-7 py-3 text-sm font-semibold">
             Start free
           </Link>
         </div>

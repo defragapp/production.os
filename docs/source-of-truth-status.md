@@ -36,3 +36,8 @@ This pass changes documentation only. No runtime behavior, security logic, data 
 - Run `npm run verify:release` before any production ship.
 - Confirm both Workers Builds projects (`production-os`, `sovereign-tail`) are green on each release commit.
 
+## Operational checklist updates (2026-10-07)
+- Prompt guidance (#38): updated `src/lib/sovereign-prompt.ts` to avoid teaching banned vocabulary (no "patterns" as a noun, no "reading" phrasing); added a test pin.
+- Stripe bindings (#28): binding names in code are `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`; rotate the live key in Stripe, update BOTH Workers’ secrets, then run `npm run cf-typegen` and commit the updated `worker-configuration.d.ts`.
+- Production base URL for probes confirmed from config: https://sovereign.defrag.app.
+

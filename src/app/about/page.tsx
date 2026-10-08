@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nav } from "@/components/nav";
-import { PageTexture } from "@/components/page-texture";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
@@ -30,19 +30,13 @@ const PRINCIPLES = [
 export default function AboutPage() {
   return (
     <>
-      <PageTexture />
-      <Nav />
-      <main
-        id="main"
-        className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden bg-background font-sans text-foreground selection:bg-muted"
-      >
-        <section className="relative w-full px-6 py-14 md:py-20">
-          <div className="hero-light" aria-hidden="true" />
-          <div className="relative mx-auto w-full max-w-3xl">
-            <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
-              Our Philosophy
-            </p>
-            <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3.25rem]">
+    <PageShell center={false} wide="wide">
+        {/* Hero wash lives inside the shell now — absolute against the shell's
+            main, fading toward the viewport top edge like the app glow. */}
+        <div className="hero-light" aria-hidden="true" />
+        <div className="relative">
+            <Eyebrow className="mb-4">Our Philosophy</Eyebrow>
+            <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3rem]">
               A tool for <span className="italic">understanding</span>, not a verdict.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
@@ -55,7 +49,7 @@ export default function AboutPage() {
               connected to themselves while understanding the people and systems around them.
             </p>
 
-            <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            <div className="mt-14 grid gap-6 sm:grid-cols-3">
               {PRINCIPLES.map((p) => (
                 <div key={p.title}>
                   <h2 className="mb-1.5 font-display text-base font-normal tracking-tight text-foreground">{p.title}</h2>
@@ -70,9 +64,7 @@ export default function AboutPage() {
                 answers the investor question “why this, why now” without
                 inventing a résumé. */}
             <div className="mt-14 max-w-2xl">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
-                Why now
-              </p>
+              <Eyebrow className="mb-3">Why now</Eyebrow>
               <h2 className="mb-4 font-display text-2xl font-normal leading-tight tracking-tight text-foreground md:text-3xl">
                 Assistant software got <span className="italic">amnesic</span>.
               </h2>
@@ -104,10 +96,9 @@ export default function AboutPage() {
                 Read the FAQ →
               </Link>
             </div>
-          </div>
-        </section>
-      </main>
-      <SiteFooter />
+        </div>
+    </PageShell>
+    <SiteFooter />
     </>
   );
 }

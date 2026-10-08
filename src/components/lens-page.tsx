@@ -106,13 +106,14 @@ export function LensPage({
       <div className="grid gap-4 md:grid-cols-2">
         {gridCards.map((card, index) => (
           <Reveal key={card.title} delay={index * 80} className="h-full">
-            <div className="glass-panel card-lift flex h-full flex-col rounded-panel p-6 md:p-7">
+            {/* glass-panel already sets the panel radius — no rounded-panel here. */}
+            <div className="glass-panel card-lift flex h-full flex-col p-6 md:p-7">
               {card.eyebrow && (
                 <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
                   {card.eyebrow}
                 </p>
               )}
-              <h2 className="font-display text-xl font-normal tracking-tight text-foreground md:text-[1.55rem]">
+              <h2 className="font-display text-xl font-normal leading-tight tracking-tight text-foreground md:text-2xl">
                 {card.title}
               </h2>
               <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-[15px]">{card.body}</p>
@@ -134,7 +135,7 @@ export function LensPage({
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
           {secondary && (
-            <Link href={secondary.href} className="tap-line rounded-full border border-border/70 px-5 py-3 text-sm text-muted-foreground transition-colors hover:bg-white/[0.04] hover:text-foreground">
+            <Link href={secondary.href} className="btn-glass tap-line px-5 py-3 text-sm font-medium text-foreground">
               {secondary.label}
             </Link>
           )}

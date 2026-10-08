@@ -147,7 +147,7 @@ function UpgradeContent() {
                 </Button>
               </CardContent>
             </Card>
-            <Card className="card-backlight card-lift relative border border-foreground/25 shadow-[0_0_35px_-12px_rgba(244,239,228,0.12)]">
+            <Card className="card-backlight card-lift relative border border-foreground/25">
               <CardHeader><CardTitle className="text-base">Sovereign+</CardTitle><CardDescription>150 messages a day — room to go as deep as you want</CardDescription></CardHeader>
               <CardContent className="flex flex-col">
                 <div className="mb-4 flex items-baseline gap-2"><span className="font-display text-3xl font-normal">$99</span><span className="text-sm text-muted-foreground">/year</span></div>

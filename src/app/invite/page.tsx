@@ -146,23 +146,25 @@ function AcceptCard({
               You&apos;ll need an account with that email address to accept it.
             </p>
             <div className="flex flex-col gap-2">
-              <Link
-                href={`/onboard?mode=signup&invite=${encodeURIComponent(token)}`}
-                className="btn-aurora w-full px-4 py-2.5 text-center text-sm font-medium"
-              >
-                Create a free account
-              </Link>
-              <Link
-                href={`/onboard?mode=login&invite=${encodeURIComponent(token)}`}
-                className="btn-glass w-full px-4 py-2.5 text-center text-sm font-medium text-foreground"
-              >
-                Sign in
-              </Link>
+              <Button asChild variant="aurora" className="w-full">
+                <Link
+                  href={`/onboard?mode=signup&invite=${encodeURIComponent(token)}`}
+                >
+                  Create a free account
+                </Link>
+              </Button>
+              <Button asChild variant="glass" className="w-full">
+                <Link
+                  href={`/onboard?mode=login&invite=${encodeURIComponent(token)}`}
+                >
+                  Sign in
+                </Link>
+              </Button>
             </div>
           </>
         ) : (
           <>
-            <div className="glass-panel px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+            <div className="rounded-panel border border-border/60 bg-surface-2/50 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
               You&apos;re signed in. When you accept,{" "}
               <span className="font-medium text-foreground">{inviterName}</span> becomes a connection.
             </div>
@@ -187,12 +189,11 @@ function AcceptCard({
 
             {needsBaseline ? (
               <div className="flex flex-col gap-2">
-                <Link
-                  href={`/baseline?invite=${encodeURIComponent(token)}`}
-                  className="btn-aurora w-full px-4 py-2.5 text-center text-sm font-medium"
-                >
-                  Set up my baseline
-                </Link>
+                <Button asChild variant="aurora" className="w-full">
+                  <Link href={`/baseline?invite=${encodeURIComponent(token)}`}>
+                    Set up my baseline
+                  </Link>
+                </Button>
                 <Button variant="outline" onClick={handleAccept} disabled={accepting}>
                   {accepting ? "Checking…" : "Check again"}
                 </Button>
