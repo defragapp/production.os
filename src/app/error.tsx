@@ -24,7 +24,7 @@ export default function GlobalError({
       <div className="hero-light" aria-hidden="true" />
       <div className="relative mx-auto max-w-xl text-center">
         <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
-          <Logo showWordmark={false} href="#" markClassName="h-8 w-auto" />
+          <Logo showWordmark={false} markClassName="h-8 w-auto" />
         </div>
         <Eyebrow className="mb-3">Something went wrong</Eyebrow>
         <h1 className="mb-4 font-display text-4xl font-normal tracking-tight text-foreground md:text-5xl">

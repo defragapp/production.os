@@ -26,7 +26,7 @@ export function SiteFooter() {
       <div className="section-rule absolute inset-x-0 top-0" aria-hidden="true" />
       <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
         <div>
-          <Logo href="#" />
+          <Logo />
           <p className="mt-2.5">Private by design. Grounded in data. Yours to decide.</p>
         </div>
         <div className="flex flex-wrap items-center gap-6">

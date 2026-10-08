@@ -18,19 +18,18 @@ export function Logo({
   markClassName = "h-12 w-auto",
   showWordmark = true,
 }: {
-  href?: string;
+  /**
+   * `null` renders the medallion as inert art. Decorative placements (a
+   * loading skeleton, the emblem inside a hero mock) must not hand keyboard
+   * users a focusable link that goes nowhere.
+   */
+  href?: string | null;
   className?: string;
   markClassName?: string;
   showWordmark?: boolean;
 }) {
-  return (
-    <Link
-      href={href}
-      aria-label="Sovereign OS home"
-      // `nav-brand` is a hook: flat on desktop, raised to the 44px tap floor on
-      // coarse pointers by globals.css (the bare emblem is only 22px wide).
-      className={`nav-brand group inline-flex items-center gap-2.5 ${className ?? ""}`}
-    >
+  const mark = (
+    <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/brand/emblem-core-bold.png"
@@ -44,6 +43,20 @@ export function Logo({
           Sovereign<span className="text-muted-foreground">.OS</span>
         </span>
       )}
+    </>
+  );
+  const box = `inline-flex items-center gap-2.5 ${className ?? ""}`;
+  if (href === null) return <span className={box}>{mark}</span>;
+  return (
+    <Link
+      href={href}
+      aria-label="Sovereign OS home"
+      // `nav-brand` is a hook: flat on desktop, raised to the 44px tap floor on
+      // coarse pointers by globals.css (the bare emblem is only 22px wide). It
+      // belongs to the link only — inert art is never a tap target.
+      className={`nav-brand group ${box}`}
+    >
+      {mark}
     </Link>
   );
 }

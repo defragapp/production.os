@@ -246,7 +246,7 @@ function ThreadLibrary({
                   onClick={() => onOpen(t.id)}
                   disabled={isStreaming}
                   aria-current={active ? "true" : undefined}
-                  className={`journey-thread-row block w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-[240ms] ${
+                  className={`block w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-[240ms] ${
                     active
                       ? "border-white/10 bg-white/[0.05] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
                       : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-white/[0.02] hover:text-foreground"
@@ -1485,7 +1485,7 @@ export function ChatClient() {
                         which clips the emblem/headline out of reach on short phones. */}
                     <div className="msg-in my-auto w-full text-center">
                       <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
-                        <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
+                        <Logo showWordmark={false} href={null} markClassName="h-10 w-auto" />
                       </div>
                       <p className="font-display text-2xl font-normal tracking-tight text-foreground">
                         Ask anything.

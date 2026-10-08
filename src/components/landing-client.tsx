@@ -295,10 +295,9 @@ export function LandingClient() {
                 <ul className="flex-1 space-y-2.5 text-sm text-muted-foreground">
                   <PlanFeature>Up to 150 AI messages a day</PlanFeature>
                   <PlanFeature>Invite people into your relationships</PlanFeature>
-                  <PlanFeature>Priority reply speeds</PlanFeature>
                 </ul>
                 <Link
-                  href="/onboard?mode=signup"
+                  href="/onboard?mode=signup&next=%2Fupgrade"
                   className="btn-aurora mt-7 px-7 py-3 text-center text-sm font-medium"
                 >
                   Start with Sovereign+
@@ -326,7 +325,7 @@ export function LandingClient() {
           <div className="hero-light" aria-hidden="true" />
           <Reveal className="relative mx-auto max-w-xl">
             <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
-              <Logo showWordmark={false} href="#" markClassName="h-8 w-auto" />
+              <Logo showWordmark={false} href={null} markClassName="h-8 w-auto" />
             </div>
             <Eyebrow accent className="mb-3">Begin</Eyebrow>
             <h2 className="mb-4 font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl">

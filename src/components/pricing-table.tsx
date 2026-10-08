@@ -19,7 +19,9 @@ type Row = {
 const ROWS: Row[] = [
   { feature: "AI messages per day", free: "5/day", plus: "150/day" },
   { feature: "Invite people into your relationships", free: false, plus: true },
-  { feature: "Priority support (a person replies first)", free: false, plus: true },
+  // No reply-order row here: nothing in the engine sorts support mail by tier
+  // (the operator notification carries name/email/topic/message only), so the
+  // claim would be false at the moment of payment.
   { feature: "Your full Baseline — astrology, Human Design, Gene Keys", free: true, plus: true },
   { feature: "Chat history saved across devices", free: true, plus: true },
   { feature: "Semantic recall — search your past conversations", free: true, plus: true },
@@ -91,7 +93,7 @@ export function PricingTable() {
     return () => io.disconnect();
   }, []);
   return (
-    <div className="mt-14 overflow-hidden rounded-lg border border-foreground/15 bg-surface/40">
+    <div className="mt-14 overflow-hidden rounded-lg border border-foreground/15 bg-surface-1/40">
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">Feature comparison between the Free and Sovereign+ plans</caption>
         <thead>

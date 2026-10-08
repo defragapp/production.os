@@ -255,6 +255,10 @@ export async function POST(request: NextRequest) {
       }
     } else if (await recipientMailAllowed(env, email)) {
       await sendTemplate(env, "welcome", email, { origin });
+    } else {
+      // Same visibility as the verify branch: a signup whose welcome mail was
+      // capped must be greppable in the logs, not silently mail-less.
+      console.warn("[auth] recipient mail cap reached — welcome email skipped");
     }
   }
   // Carry the account's live session generation into the new cookie. A token
