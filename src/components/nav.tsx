@@ -72,9 +72,12 @@ export function Nav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
 
-        {/* Desktop nav (see the `authed` note above: revealed, never swapped). */}
+        {/* Desktop nav (see the `authed` note above: revealed, never swapped).
+            Held to `lg` on purpose: the logged-out row carries eight items
+            (six links + Sign in + Start free) and wraps onto two lines anywhere
+            between 768 and ~1024px. Below `lg` we show the drawer instead. */}
         {authed !== null && (
-        <nav className="nav-fade hidden items-center gap-1.5 md:flex">
+        <nav className="nav-fade hidden items-center gap-1.5 lg:flex">
           {authed ? (
             <>
               <Link href="/chat" className={linkClass("/chat")} aria-current={ariaCurrent("/chat")}>Chat</Link>
@@ -117,7 +120,7 @@ export function Nav() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:text-foreground hover:bg-white/[0.04] md:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:text-foreground hover:bg-white/[0.04] lg:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -125,7 +128,7 @@ export function Nav() {
       {/* Mobile menu drawer */}
       {mounted && (
         <nav
-          className={`overflow-hidden bg-surface-1/95 backdrop-blur-2xl transition-all duration-200 ease-out md:hidden border-b border-border/50 ${
+          className={`overflow-hidden bg-surface-1/95 backdrop-blur-2xl transition-all duration-200 ease-out lg:hidden border-b border-border/50 ${
             open
               ? "visible max-h-[32rem] opacity-100 py-3 px-4 shadow-2xl"
               : "invisible max-h-0 pointer-events-none opacity-0 py-0 px-4"
