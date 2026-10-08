@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateResetToken, hashResetToken, generateUUID } from "@/lib/auth";
 import { sendTemplate } from "@/lib/email";
+import { recipientMailAllowed } from "@/lib/email-guard";
 import {
   getAuthPayload, loadUser, normalizedLabel, maskEmail, personName,
   MAX_PENDING_INVITES, INVITE_TTL_MS, isLapsedInvite,
@@ -97,10 +98,17 @@ export async function POST(request: NextRequest) {
   ).bind(id, payload.sub, email, role, inviteeName, tokenHash, expiresAt).run();
 
   const origin = new URL(request.url).origin;
-  try {
-    await sendTemplate(env, "invite", email, { origin, inviterName: personName(user), role, token, name: inviteeName ?? undefined });
-  } catch (e) {
-    console.error("[invites] invite email failed:", e);
+  // F-F: the invite and its share link are created either way — a capped
+  // recipient simply does not get bombable mail, and the inviter can still
+  // share the link directly.
+  if (await recipientMailAllowed(env, email)) {
+    try {
+      await sendTemplate(env, "invite", email, { origin, inviterName: personName(user), role, token, name: inviteeName ?? undefined });
+    } catch (e) {
+      console.error("[invites] invite email failed:", e);
+    }
+  } else {
+    console.warn("[invites] recipient mail cap reached — invite email skipped");
   }
 
   return NextResponse.json({

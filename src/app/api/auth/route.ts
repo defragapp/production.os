@@ -4,6 +4,7 @@ import {
   verifyPassword, passwordNeedsRehash, PBKDF2_ITERATIONS, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, tokenVersionOf,
 } from "@/lib/auth";
 import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
+import { recipientMailAllowed } from "@/lib/email-guard";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import { bumpTokenVersion, verifySession } from "@/lib/session";
@@ -241,11 +242,18 @@ export async function POST(request: NextRequest) {
         const tokenHash = await hashResetToken(token);
         const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
         await env.DB.prepare("UPDATE users SET verification_token = ?, verification_expires = ? WHERE id = ?").bind(tokenHash, expires, userId).run();
-        await sendTemplate(env, "verify", email, { origin, token });
+        // F-F: the token is minted either way, but the inbox of one recipient
+        // is capped — a flooded address can still ask for the email again once
+        // the window clears; mass signups against it stop producing mail.
+        if (await recipientMailAllowed(env, email)) {
+          await sendTemplate(env, "verify", email, { origin, token });
+        } else {
+          console.warn("[auth] recipient mail cap reached — verification email skipped");
+        }
       } catch (e) {
         console.error("[auth] verification email failed:", e);
       }
-    } else {
+    } else if (await recipientMailAllowed(env, email)) {
       await sendTemplate(env, "welcome", email, { origin });
     }
   }
