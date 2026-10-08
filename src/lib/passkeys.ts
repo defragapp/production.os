@@ -6,9 +6,11 @@
  *   path. Registration happens only inside an authenticated session, so we
  *   always know who is enrolling and can never orphan a credential.
  * - Challenges are short-lived and stored in KV (single-use), never in a
- *   cookie or the client. Registration keys by user id; authentication keys by
- *   an opaque request id the client echoes back (there is no identity yet at
- *   login time — this is a discoverable-credential flow).
+ *   cookie or the client. Both ceremonies key by a per-ceremony request id the
+ *   client echoes back — registration additionally binds it to the user id
+ *   (there is no identity yet at login time; this is a discoverable-credential
+ *   flow). A shared per-user slot would let two open tabs trample each other's
+ *   challenge and fail the first ceremony as "expired".
  */
 import {
   generateRegistrationOptions,
@@ -127,18 +129,20 @@ export async function buildRegistrationOptions(
       userVerification: "required",
     },
   });
-  await putChallenge(env, `pkreg:${user.userId}`, options.challenge);
-  return { options, origin, rpID };
+  const requestId = crypto.randomUUID();
+  await putChallenge(env, `pkreg:${user.userId}:${requestId}`, options.challenge);
+  return { options, origin, rpID, requestId };
 }
 
 export async function completeRegistration(
   env: AppEnv,
   request: NextRequest,
   user: SessionUser,
+  requestId: string,
   response: RegistrationResponseJSON,
 ): Promise<{ ok: true; label: string | null } | { ok: false; error: string }> {
   const { rpID, origin } = rpConfig(request);
-  const expectedChallenge = await takeChallenge(env, `pkreg:${user.userId}`);
+  const expectedChallenge = await takeChallenge(env, `pkreg:${user.userId}:${requestId}`);
   if (!expectedChallenge) return { ok: false, error: "Passkey registration expired. Please retry." };
   let verification;
   try {

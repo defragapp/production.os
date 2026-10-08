@@ -145,15 +145,21 @@ export function AddPasskeyButton({ onDone }: { onDone?: () => void }) {
     setBusy(true);
     try {
       const optRes = await fetch("/api/auth/passkey/register", { method: "POST" });
-      const opts = await readJson<PublicKeyCredentialCreationOptionsJSON & { error?: string }>(optRes);
+      const opts = await readJson<PublicKeyCredentialCreationOptionsJSON & { error?: string; requestId?: string }>(optRes);
       if (!opts?.challenge) throw new Error((opts as { error?: string })?.error || "Couldn't start passkey setup — try again in a moment.");
+      // The requestId names this ceremony's server-side challenge slot — keep
+      // it out of the WebAuthn options and echo it back on verification, so a
+      // second registration started in another tab can't consume this one's
+      // challenge.
+      const { requestId, ...optionsJSON } = opts;
+      if (!requestId) throw new Error("Couldn't start passkey setup — try again in a moment.");
 
-      const response = await startRegistration({ optionsJSON: opts, useAutoRegister: true });
+      const response = await startRegistration({ optionsJSON, useAutoRegister: true });
 
       const verRes = await fetch("/api/auth/passkey/register", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(response),
+        body: JSON.stringify({...response, requestId}),
       });
       const data = await readJson<{ ok?: boolean; error?: string }>(verRes);
       if (!verRes.ok || !data?.ok) throw new Error(data?.error || "Passkey setup didn't go through — try again in a moment.");
