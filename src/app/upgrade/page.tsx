@@ -83,7 +83,7 @@ function UpgradeContent() {
   };
 
   if (!authChecked) {
-    return (<><Nav /><LoadingScreen className="min-h-[calc(100vh-3.5rem)]" label="Checking your plan" /></>);
+    return (<><Nav /><LoadingScreen className="min-h-[calc(100dvh-3.5rem)]" label="Checking your plan" /></>);
   }
 
   return (

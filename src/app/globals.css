@@ -645,6 +645,16 @@ a,[role="button"] {
   [contenteditable]:not([contenteditable="false"]) {
     font-size: max(16px, 1rem) !important;
   }
+  /* Sticky header on touch: the default /80 translucent blur reads as a
+     shimmering seam in iOS Safari as content scrolls beneath it. Firm the base
+     fill on coarse pointers so the bar stays legible and still; desktop keeps
+     the lighter glass. Only the background alpha changes. Kept in the single
+     coarse-pointer block (the one-place invariant) and placed last so the
+     verify-release probe — which stops at the first nested brace — still
+     captures the 44px tap floor that leads this block. */
+  .site-header {
+    background-color: hsl(var(--background) / 0.92);
+  }
 }
 
 /* ── Modern UI / Polish Enhancements ───────────────────────────── */
