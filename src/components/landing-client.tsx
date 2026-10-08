@@ -243,7 +243,7 @@ export function LandingClient() {
                 Every answer returns to your Baseline — and leaves the deciding to you.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
-                {["NASA/JPL planetary data", "Ten natal bodies", "Human Design", "Gene Keys"].map((source, i) => (
+                {["NASA/JPL planetary data", "Ten celestial bodies", "Human Design", "Gene Keys"].map((source, i) => (
                   <span key={source} className="flex items-center gap-5">
                     {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
                     {source}
@@ -332,7 +332,7 @@ export function LandingClient() {
               Start with one honest question.
             </h2>
             <p className="mb-7 text-muted-foreground">
-              It is free — you don’t need to have anything figured out.
+              It is free — you don&apos;t need to have anything figured out.
             </p>
             <div className="flex justify-center">
               <Link href="/onboard?mode=signup" className="btn-aurora w-full px-8 py-3.5 text-base font-medium sm:w-auto">

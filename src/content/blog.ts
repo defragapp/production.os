@@ -46,7 +46,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         kind: "p",
-        text: "Sovereign does the rest of the math against NASA/JPL planetary data — the same numbers astronomers use. The Sun's position at the moment of your birth is an observable, not a metaphor. Nothing is foretold; positions are computed and mapped onto plain-language themes we chose because they've held up in clinical and non-clinical writing for a century.",
+        text: "Sovereign does the rest of the math against NASA/JPL planetary data — the same numbers astronomers use. The Sun's position at the moment of your birth is an observable, not a metaphor. Nothing is foretold; positions are computed and mapped onto plain-language themes we chose because they've held up across a century of self-reflection writing — as descriptions to test against your own experience, never as verdicts.",
       },
       { kind: "h2", text: "What comes out" },
       {
@@ -107,11 +107,11 @@ export const BLOG_POSTS: BlogPost[] = [
       { kind: "h2", text: "Why it's still small" },
       {
         kind: "p",
-        text: "Because we refuse to make claims we haven't earned. Sovereign has a waitlist, not a growth chart. It has one human answering support email, not a '24/7 team'. It has three essays on this blog, not a content strategy. The point of shipping it now is to keep it in the shape that made it possible in the first place — small enough to be honest, priced so that the product can be the business.",
+        text: "Because we refuse to make claims we haven't earned. Sovereign is live and free to start, not a waitlist teaser. It has one human answering support email, not a '24/7 team'. It has three essays on this blog, not a content strategy. The point of shipping it now is to keep it in the shape that made it possible in the first place — small enough to be honest, priced so that the product can be the business.",
       },
       {
         kind: "p",
-        text: "If that's the kind of thing you want to use, the free tier is on the landing page. If you want to build a company this way, we'd honestly love the company; write us through the support page and start a conversation.",
+        text: "If that's the kind of thing you want to use, the free tier is on the landing page. If you want to build a company this way, we'd honestly love to hear from you — write us through the support page and start a conversation.",
       },
     ],
   },
