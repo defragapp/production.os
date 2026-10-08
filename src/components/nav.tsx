@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { NavMenu } from "@/components/nav-menu";
 
 // `nav-link` is a hook, not a style: it carries no declaration on desktop, and
 // the coarse-pointer block in globals.css raises it to the 44px tap floor on
@@ -16,6 +17,13 @@ const navLinkActive =
 
 const PLUS_BADGE =
   "ml-1 inline-flex items-center rounded-full bg-foreground/[0.06] px-2.5 py-1 text-[11px] font-medium text-foreground/85";
+
+// A quiet mono label that groups the drawer's rows the same way the desktop
+// row groups its links (lenses first, then the folded help/about tier).
+const DRAWER_LABEL =
+  "px-3.5 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60";
+const PUBLIC_LINK =
+  "tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors";
 
 export function Nav() {
   const router = useRouter();
@@ -68,14 +76,16 @@ export function Nav() {
     pathname === href ? ("page" as const) : undefined;
 
   return (
-    <header className="pt-safe sticky top-0 z-50 bg-background/80 backdrop-blur-xl transition-all border-b border-border/40">
+    <header className="site-header pt-safe sticky top-0 z-50 bg-background/80 backdrop-blur-xl transition-all border-b border-border/40">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Logo />
 
         {/* Desktop nav (see the `authed` note above: revealed, never swapped).
-            Held to `lg` on purpose: the logged-out row carries eight items
-            (six links + Sign in + Start free) and wraps onto two lines anywhere
-            between 768 and ~1024px. Below `lg` we show the drawer instead. */}
+            The logged-out row leads with the three lenses — the actual value
+            prop — and folds the philosophy/help/support tier into a single
+            "More" menu, so it reads as one clean group instead of eight peer
+            links. Still gated to `lg`: below that the drawer carries the same
+            grouping. */}
         {authed !== null && (
         <nav className="nav-fade hidden items-center gap-1.5 lg:flex">
           {authed ? (
@@ -96,16 +106,22 @@ export function Nav() {
             </>
           ) : (
             <>
-              <Link href="/about" className={linkClass("/about")} aria-current={ariaCurrent("/about")}>Philosophy</Link>
               <Link href="/self" className={linkClass("/self")} aria-current={ariaCurrent("/self")}>Self</Link>
               <Link href="/people" className={linkClass("/people")} aria-current={ariaCurrent("/people")}>People</Link>
               <Link href="/systems" className={linkClass("/systems")} aria-current={ariaCurrent("/systems")}>Family & Teams</Link>
-              <Link href="/faq" className={linkClass("/faq")} aria-current={ariaCurrent("/faq")}>FAQ</Link>
-              <Link href="/support" className={linkClass("/support")} aria-current={ariaCurrent("/support")}>Support</Link>
+              <NavMenu
+                label="More"
+                items={[
+                  { href: "/about", label: "Philosophy" },
+                  { href: "/faq", label: "FAQ" },
+                  { href: "/support", label: "Support" },
+                ]}
+              />
+              <span className="mx-1.5 h-5 w-px bg-border/70" aria-hidden="true" />
               <Link href="/onboard?mode=login" className={linkClass("/onboard")}>Sign in</Link>
               <Link
                 href="/onboard?mode=signup"
-                className="btn-focal ml-2 px-4 py-2 text-sm font-medium"
+                className="btn-focal ml-1 px-4 py-2 text-sm font-medium"
               >
                 Start free
               </Link>
@@ -205,60 +221,34 @@ export function Nav() {
             </div>
           ) : (
             <div className="flex flex-col space-y-1">
-              <Link
-                href="/about"
-                onClick={() => setOpen(false)}
-                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-              >
-                Philosophy
-              </Link>
-              <Link
-                href="/self"
-                onClick={() => setOpen(false)}
-                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-              >
+              <p className={DRAWER_LABEL}>Lenses</p>
+              <Link href="/self" onClick={() => setOpen(false)} aria-current={ariaCurrent("/self")} className={PUBLIC_LINK}>
                 Self
               </Link>
-              <Link
-                href="/people"
-                onClick={() => setOpen(false)}
-                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-              >
+              <Link href="/people" onClick={() => setOpen(false)} aria-current={ariaCurrent("/people")} className={PUBLIC_LINK}>
                 People
               </Link>
-              <Link
-                href="/systems"
-                onClick={() => setOpen(false)}
-                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-              >
+              <Link href="/systems" onClick={() => setOpen(false)} aria-current={ariaCurrent("/systems")} className={PUBLIC_LINK}>
                 Family & Teams
               </Link>
-              <Link
-                href="/faq"
-                onClick={() => setOpen(false)}
-                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-              >
+              <p className={DRAWER_LABEL}>More</p>
+              <Link href="/about" onClick={() => setOpen(false)} aria-current={ariaCurrent("/about")} className={PUBLIC_LINK}>
+                Philosophy
+              </Link>
+              <Link href="/faq" onClick={() => setOpen(false)} aria-current={ariaCurrent("/faq")} className={PUBLIC_LINK}>
                 FAQ
               </Link>
-              <Link
-                href="/support"
-                onClick={() => setOpen(false)}
-                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-              >
+              <Link href="/support" onClick={() => setOpen(false)} aria-current={ariaCurrent("/support")} className={PUBLIC_LINK}>
                 Support
               </Link>
-              <Link
-                href="/onboard?mode=login"
-                onClick={() => setOpen(false)}
-                className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-              >
-                Sign in
-              </Link>
-              <div className="pt-2">
+              <div className="mt-3 border-t border-border/50 pt-3">
+                <Link href="/onboard?mode=login" onClick={() => setOpen(false)} className={PUBLIC_LINK}>
+                  Sign in
+                </Link>
                 <Link
                   href="/onboard?mode=signup"
                   onClick={() => setOpen(false)}
-                  className="btn-focal w-full px-4 py-2.5 text-sm font-medium text-center"
+                  className="btn-focal mt-1 w-full px-4 py-2.5 text-sm font-medium text-center"
                 >
                   Start free
                 </Link>
