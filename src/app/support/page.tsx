@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
+import { PageCrown } from "@/components/page-crown";
 import { SiteFooter } from "@/components/site-footer";
 import { SupportForm } from "./support-form";
 import { getEnv } from "@/lib/env";
@@ -30,13 +31,12 @@ export default async function SupportPage() {
         <div className="relative">
           <div className="hero-light" aria-hidden="true" />
           <div>
-            <h1 className="font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl">
-              We read everything.
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
-              Questions about your Baseline, a relationship, billing, or the AI itself — send it
-              here. It goes straight to the team, and someone answers personally.
-            </p>
+            <PageCrown
+              align="left"
+              eyebrow="Support"
+              title="We read everything."
+              deck="Questions about your Baseline, a relationship, billing, or the AI itself — send it here. It goes straight to the team, and someone answers personally."
+            />
           </div>
         </div>
 

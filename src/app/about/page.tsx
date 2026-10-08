@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { PageCrown } from "@/components/page-crown";
 import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 
@@ -35,14 +36,12 @@ export default function AboutPage() {
             main, fading toward the viewport top edge like the app glow. */}
         <div className="hero-light" aria-hidden="true" />
         <div className="relative">
-            <Eyebrow className="mb-4">Our Philosophy</Eyebrow>
-            <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3rem]">
-              A tool for <span className="italic">understanding</span>, not a verdict.
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
-              Most self-understanding is sold as a verdict. Sovereign works like a clear-eyed
-              conversation: a grounded starting point, honest language, and the deciding left to you.
-            </p>
+            <PageCrown
+              align="left"
+              eyebrow="Our Philosophy"
+              title={<>A tool for <span className="italic">understanding</span>, not a verdict.</>}
+              deck="Most self-understanding is sold as a verdict. Sovereign works like a clear-eyed conversation: a grounded starting point, honest language, and the deciding left to you."
+            />
 
             <p className="mt-8 text-balance border-l border-foreground/25 pl-5 font-display text-xl italic leading-relaxed tracking-tight text-foreground/90 md:text-2xl md:leading-[1.5]">
               A sovereign human isn&apos;t someone who needs no one — it&apos;s someone who can stay

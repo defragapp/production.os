@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader } from "@/components/page-header";
+import { PageCrown } from "@/components/page-crown";
 import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 
@@ -44,10 +44,11 @@ export default function FaqPage() {
   return (
     <>
     <PageShell center={false} wide="wide">
-        <PageHeader
+        <PageCrown
+          className="mb-8"
+          eyebrow="FAQ"
           title="Questions, answered"
-          description="What Sovereign is, how it works, and what it means for you."
-          center
+          deck="What Sovereign is, how it works, and what it means for you."
         />
 
         <Link

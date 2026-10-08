@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageShell } from "@/components/page-shell";
-import { PageHeader } from "@/components/page-header";
+import { PageCrown } from "@/components/page-crown";
 import { SiteFooter } from "@/components/site-footer";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
@@ -98,18 +98,20 @@ export function LensPage({
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_25px_80px_-28px_rgba(0,0,0,0.85)]">
           <Logo showWordmark={false} markClassName="h-9 w-auto" />
         </div>
-        <PageHeader eyebrow={eyebrow} title={title} description={description} />
+        <PageCrown eyebrow={eyebrow} title={title} deck={description} />
       </Reveal>
 
       {children && <Reveal className="mx-auto w-full max-w-3xl">{children}</Reveal>}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* These two are prose, not interactive surfaces — so they carry no box.
+          A top hairline + the brand's gold eyebrow give each column structure
+          and rhythm without the "two identical glass cards" look. */}
+      <div className="grid gap-8 md:grid-cols-2 md:gap-10">
         {gridCards.map((card, index) => (
           <Reveal key={card.title} delay={index * 80} className="h-full">
-            {/* glass-panel already sets the panel radius — no rounded-panel here. */}
-            <div className="glass-panel card-lift flex h-full flex-col p-6 md:p-7">
+            <div className="flex h-full flex-col border-t border-border/60 pt-6">
               {card.eyebrow && (
-                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[hsl(38_45%_75%)]">
                   {card.eyebrow}
                 </p>
               )}

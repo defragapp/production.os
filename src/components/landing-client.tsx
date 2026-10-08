@@ -8,6 +8,7 @@ import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { PageTexture } from "@/components/page-texture";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { PageCrown } from "@/components/page-crown";
 import { SiteFooter } from "@/components/site-footer";
 import { ProductDemo } from "@/components/product-demo";
 
@@ -107,20 +108,10 @@ function SectionCrown({
   title: ReactNode;
   deck?: ReactNode;
 }) {
-  return (
-    <div className="mb-10 text-center md:mb-12">
-      <span className="crown-gold mx-auto mb-4" aria-hidden="true" />
-      <Eyebrow accent className="mb-3">{eyebrow}</Eyebrow>
-      <h2 className="font-display text-[1.75rem] font-normal tracking-tight text-foreground md:text-4xl">
-        {title}
-      </h2>
-      {deck && (
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground md:text-base">
-          {deck}
-        </p>
-      )}
-    </div>
-  );
+  // The landing's section crown IS the platform opening ritual — delegate to
+  // PageCrown so a section header and a page header are the same primitive
+  // (h2 scale, centered) rather than two hand-rolled copies drifting apart.
+  return <PageCrown as="h2" align="center" className="mb-10 md:mb-12" eyebrow={eyebrow} title={title} deck={deck} />;
 }
 
 export function LandingClient() {
@@ -185,15 +176,18 @@ export function LandingClient() {
               />
             </Reveal>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            {/* A process, not three objects — reads as a stepped flow (gold
+                number + serif title + muted line) instead of a wall of equal
+                glass boxes. The number carries the brand's single gold accent. */}
+            <div className="grid gap-x-8 gap-y-10 md:grid-cols-3 md:gap-y-0">
               {HOW_IT_WORKS.map((step, i) => (
-                <Reveal key={step.title} delay={i * 80}>
-                  <div className="glass-panel card-lift flex h-full flex-col p-6 md:p-7">
-                    <span className="mb-4 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background/40 font-mono text-xs text-foreground/80">
+                <Reveal key={step.title} delay={i * 80} className="h-full">
+                  <div className="flex h-full flex-col">
+                    <span className="mb-4 font-mono text-sm tracking-[0.2em] text-[hsl(38_45%_75%)]">
                       {step.step}
                     </span>
-                    <h3 className="font-display text-xl font-normal text-foreground">{step.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
+                    <h3 className="font-display text-xl font-normal text-foreground md:text-[1.35rem]">{step.title}</h3>
+                    <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
                   </div>
                 </Reveal>
               ))}
@@ -256,7 +250,7 @@ export function LandingClient() {
 
         {/* ── 4. Plans ──────────────────────────────────────── */}
         <div className="section-rule" aria-hidden="true" />
-        <section id="plans" className="relative overflow-hidden px-6 py-16 md:py-24">
+        <section id="plans" className="relative overflow-hidden scroll-mt-24 px-6 py-16 md:py-24">
           <Reveal className="mx-auto max-w-3xl">
             <SectionCrown
               eyebrow="Plans"
