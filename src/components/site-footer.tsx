@@ -6,7 +6,6 @@ const FOOTER_LINKS = [
   { href: "/self", label: "Self" },
   { href: "/people", label: "People" },
   { href: "/systems", label: "Family & Teams" },
-  { href: "/blog", label: "Field Notes" },
   { href: "/faq", label: "FAQ" },
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },

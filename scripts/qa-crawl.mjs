@@ -12,7 +12,7 @@ const PORT = process.env.QA_PORT || "8799";
 const BASE = `http://localhost:${PORT}`;
 
 const PUBLIC = [
-  "/", "/about", "/baseline", "/blog", "/chat", "/faq", "/offline", "/onboard",
+  "/", "/about", "/baseline", "/chat", "/faq", "/offline", "/onboard",
   "/people", "/privacy", "/redeem", "/reset", "/self", "/settings", "/support",
   "/systems", "/terms", "/upgrade",
 ];

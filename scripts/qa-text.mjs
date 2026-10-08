@@ -7,7 +7,7 @@ import path from "node:path";
 const ROOT = process.cwd();
 const PORT = process.env.QA_PORT || "8799";
 const BASE = `http://localhost:${PORT}`;
-const PUBLIC = ["/", "/about", "/blog", "/faq", "/offline", "/onboard", "/people",
+const PUBLIC = ["/", "/about", "/faq", "/offline", "/onboard", "/people",
   "/privacy", "/redeem", "/self", "/support", "/systems", "/terms", "/upgrade"];
 
 async function main() {
