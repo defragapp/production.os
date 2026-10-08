@@ -128,7 +128,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
       )}
 
       <p className="text-[11px] leading-relaxed text-muted-foreground/70">
-        Your Baseline describes tendencies, not your identity. Computed from the ten natal
+        Your Baseline describes tendencies, not your identity. Computed from the ten celestial
         bodies via the NASA/JPL Horizons API through the Sovereign derivation engine.
       </p>
     </>

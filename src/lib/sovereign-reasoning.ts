@@ -15,6 +15,7 @@ import {
   buildRepairInstruction,
   buildSafetyResponse,
   detectSafetyMode,
+  scrubBrandVocabulary,
   validateSovereignText,
 } from "./sovereign-safety";
 import { buildRelationalSignals, buildSystemSignals } from "./sovereign-signals";
@@ -923,7 +924,7 @@ export async function generateSovereignResponse(
 
   let validation = validateSovereignText(text, { correctionState: ctx.correctionState });
   if (validation.allowed) {
-    return { text, usedFallback: false, repairAttempts: 0, validated: true };
+    return { text: scrubBrandVocabulary(text), usedFallback: false, repairAttempts: 0, validated: true };
   }
 
   // One bounded repair. The repair is a fresh generation constrained by the
@@ -938,7 +939,7 @@ export async function generateSovereignResponse(
 
   validation = validateSovereignText(text, { correctionState: ctx.correctionState });
   if (validation.allowed) {
-    return { text, usedFallback: false, repairAttempts: 1, validated: true };
+    return { text: scrubBrandVocabulary(text), usedFallback: false, repairAttempts: 1, validated: true };
   }
 
   return { text: buildGroundedFallback(), usedFallback: true, repairAttempts: 1, validated: false };

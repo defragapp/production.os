@@ -479,7 +479,7 @@ export function buildExtractionDeflection(): string {
     "",
     "What I can tell you plainly: this is a self-reflection space, your answers are grounded in your own Baseline and what you've shared, and nothing here is a substitute for professional care. If you're curious how Sovereign works at a high level, the FAQ and the Terms say what I can honestly say.",
     "",
-    "If there's something real you want to look at — a pattern, a relationship, a decision — I'm right here for that.",
+    "If there's something real you want to look at — a dynamic, a relationship, a decision — I'm right here for that.",
   ].join("\n");
 }
 
@@ -495,7 +495,7 @@ export function buildSafetyResponse(mode: Exclude<SafetyMode, "standard">): stri
       "- UK: Samaritans — call 116 123",
       "- International: find help near you at findahelpline.com",
       "",
-      "A counselor or care provider is the right person to help with what you're feeling. I'm still here for exploring patterns and meaning when you want to talk something through — gently, and at your pace.",
+      "A counselor or care provider is the right person to help with what you're feeling. I'm still here for exploring what keeps happening and what it means when you want to talk something through — gently, and at your pace.",
     ].join("\n");
   }
   return [
@@ -506,8 +506,40 @@ export function buildSafetyResponse(mode: Exclude<SafetyMode, "standard">): stri
     "- Canada: Crisis Services Canada — 800-363-9010 (crisisservicescanada.ca)",
     "- UK: National Domestic Abuse Helpline — 0808 2000 247 (nationaldahelpline.org.uk)",
     "",
-    "If you are in immediate danger, local emergency services can help. I'm still here for exploring patterns and meaning at other times.",
+    "If you are in immediate danger, local emergency services can help. I'm still here for exploring what keeps happening and what it means at other times.",
   ].join("\n");
+}
+
+/**
+ * Deterministic brand-lexicon scrub for the final model answer. The nouns here
+ * are banned in user-facing copy (see AGENTS.md / BRAND.md). The small model
+ * still reaches for "pattern" even after the system-prompt steering, and unlike
+ * the semantic safety lexicon — where a blind swap could change meaning and must
+ * go through repair/fallback — a pure synonym substitution of these words is
+ * safe to apply directly to validated text: "dynamic"/"tension"/"celestial" are
+ * never themselves prohibited, so this can't introduce a violation. Applied to
+ * the validated answer in the generation pipeline before it is stored/streamed.
+ */
+const BRAND_SYNONYMS: Array<{ re: RegExp; out: string }> = [
+  { re: /\bPatterns\b/g, out: "Dynamics" },
+  { re: /\bPATTERNS\b/g, out: "DYNAMICS" },
+  { re: /\bpatterns\b/g, out: "dynamics" },
+  { re: /\bPattern\b/g, out: "Dynamic" },
+  { re: /\bPATTERN\b/g, out: "DYNAMIC" },
+  { re: /\bpattern\b/g, out: "dynamic" },
+  { re: /\bFriction\b/g, out: "Tension" },
+  { re: /\bfriction\b/g, out: "tension" },
+  { re: /\bNatal\b/g, out: "Celestial" },
+  { re: /\bnatal\b/g, out: "celestial" },
+  { re: /\bEphemeris\b/g, out: "Planetary data" },
+  { re: /\bephemeris\b/g, out: "planetary data" },
+];
+
+export function scrubBrandVocabulary(text: string): string {
+  if (!text) return text;
+  let out = text;
+  for (const { re, out: replacement } of BRAND_SYNONYMS) out = out.replace(re, replacement);
+  return out;
 }
 
 export function buildGroundedFallback(): string {

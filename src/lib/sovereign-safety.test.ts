@@ -6,6 +6,7 @@ import {
   detectSafetyMode,
   detectExtractionAttempt,
   buildExtractionDeflection,
+  scrubBrandVocabulary,
 } from "./sovereign-safety";
 import { extractText, ModelError } from "./sovereign-model";
 
@@ -124,6 +125,40 @@ describe("fallback and safety responses stay safe", () => {
     for (const t of [buildSafetyResponse("escalate"), buildSafetyResponse("grounded")]) {
       expect(validateSovereignText(t).allowed).toBe(true);
     }
+  });
+  // Regression: these strings ship verbatim to users. The brand lexicon bans
+  // "pattern(s)" as a noun, "friction", "natal", and "ephemeris" in user-facing
+  // copy and AI output — the canned responses once leaked "pattern(s)".
+  it("keeps banned brand vocabulary out of every canned response", () => {
+    const banned = /\b(patterns?|friction|natal|ephemeris)\b/i;
+    for (const t of [
+      buildGroundedFallback(),
+      buildSafetyResponse("escalate"),
+      buildSafetyResponse("grounded"),
+      buildExtractionDeflection(),
+    ]) {
+      expect(t).not.toMatch(banned);
+    }
+  });
+});
+
+describe("scrubBrandVocabulary (deterministic output scrub)", () => {
+  it("replaces banned nouns with sanctioned synonyms, preserving case", () => {
+    expect(scrubBrandVocabulary("This is a pattern where helping becomes about worth.")).toBe(
+      "This is a dynamic where helping becomes about worth.",
+    );
+    expect(scrubBrandVocabulary("Patterns that lead to burnout.")).toBe("Dynamics that lead to burnout.");
+    expect(scrubBrandVocabulary("the friction between you")).toBe("the tension between you");
+    expect(scrubBrandVocabulary("your natal chart")).toBe("your celestial chart");
+  });
+  it("leaves already-clean prose untouched", () => {
+    const clean = "One possibility worth examining is the dynamic between you and your partner.";
+    expect(scrubBrandVocabulary(clean)).toBe(clean);
+  });
+  it("never reintroduces a banned word and stays safety-clean", () => {
+    const scrubbed = scrubBrandVocabulary("A pattern of friction shows in your natal ephemeris.");
+    expect(scrubbed).not.toMatch(/\b(patterns?|friction|natal|ephemeris)\b/i);
+    expect(validateSovereignText(scrubbed).allowed).toBe(true);
   });
 });
 
