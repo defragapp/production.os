@@ -134,3 +134,45 @@ describe("the pricing CTA keeps its return path (#42)", () => {
     expect(landing).toContain('href="/onboard?mode=signup"');
   });
 });
+
+describe("user-facing labels carry no engine jargon, and the lens rename kept its route", () => {
+  const pricing = readFileSync("src/components/pricing-table.tsx", "utf8");
+  const nav = readFileSync("src/components/nav.tsx", "utf8");
+  const footer = readFileSync("src/components/site-footer.tsx", "utf8");
+  const landing = readFileSync("src/components/landing-client.tsx", "utf8");
+
+  it("the comparison table's recall row speaks the user's words, not 'Semantic recall'", () => {
+    // "Semantic recall" stays legal in backend identifiers and comments
+    // (AGENTS.md); the row strings are the surface this pins.
+    const start = pricing.indexOf("const ROWS");
+    expect(start).toBeGreaterThan(-1);
+    const rows = pricing.slice(start, pricing.indexOf("];", start));
+    expect(rows).not.toMatch(/Semantic/i);
+    expect(rows).toContain("Find your way back to any past conversation");
+  });
+
+  it("nav, footer and the landing lens card all say Family & Teams", () => {
+    expect(nav).toContain("Family & Teams");
+    expect(footer).toContain("Family & Teams");
+    expect(landing).toContain('name: "Family & Teams"');
+  });
+
+  it("the rename is a label only — every link still points at /systems", () => {
+    expect(nav).toContain('href="/systems"');
+    expect(footer).toContain('href: "/systems"');
+    expect(landing).toContain('href: "/systems"');
+    expect(nav).not.toMatch(/>Systems</);
+  });
+});
+
+describe("the composer's shortcuts survive refactor passes", () => {
+  const chat = readFileSync("src/app/chat/chat-client.tsx", "utf8");
+
+  it("⌘K opens the recall panel through the same toggle the button uses", () => {
+    // One shared callback is the contract: a second inline toggle could drift
+    // from the shortcut's guards without any type error.
+    expect(chat).toMatch(/const toggleSearch = useCallback/);
+    expect(chat).toMatch(/onClick=\{toggleSearch\}/);
+    expect(chat).toMatch(/event\.key\.toLowerCase\(\) !== "k" \|\| !\(event\.metaKey \|\| event\.ctrlKey\)/);
+  });
+});

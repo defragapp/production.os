@@ -94,7 +94,7 @@ export function Nav() {
               <Link href="/about" className={linkClass("/about")} aria-current={ariaCurrent("/about")}>Philosophy</Link>
               <Link href="/self" className={linkClass("/self")} aria-current={ariaCurrent("/self")}>Self</Link>
               <Link href="/people" className={linkClass("/people")} aria-current={ariaCurrent("/people")}>People</Link>
-              <Link href="/systems" className={linkClass("/systems")} aria-current={ariaCurrent("/systems")}>Systems</Link>
+              <Link href="/systems" className={linkClass("/systems")} aria-current={ariaCurrent("/systems")}>Family & Teams</Link>
               <Link href="/faq" className={linkClass("/faq")} aria-current={ariaCurrent("/faq")}>FAQ</Link>
               <Link href="/support" className={linkClass("/support")} aria-current={ariaCurrent("/support")}>Support</Link>
               <Link href="/onboard?mode=login" className={linkClass("/onboard")}>Sign in</Link>
@@ -226,7 +226,7 @@ export function Nav() {
                 onClick={() => setOpen(false)}
                 className="tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
               >
-                Systems
+                Family & Teams
               </Link>
               <Link
                 href="/faq"

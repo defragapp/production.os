@@ -146,7 +146,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
             type="button"
             onClick={onStartFresh}
             title="Start a fresh journey"
-            className="inline-flex min-h-[2.75rem] min-w-[2.75rem] shrink-0 items-center justify-center rounded-sm border border-border/60 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-[240ms] hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="inline-flex min-w-[2.75rem] shrink-0 items-center justify-center rounded-sm border border-border/60 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-[240ms] hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             New
             <span className="sr-only"> journey</span>
@@ -194,7 +194,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
             <button
               type="button"
               onClick={onStartFresh}
-              className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Start a fresh journey
             </button>
@@ -202,7 +202,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
             <button
               type="button"
               onClick={onComplete}
-              className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Mark complete
             </button>
@@ -237,7 +237,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
         <button
           type="button"
           onClick={onShowPast}
-          className="journey-past-trigger mt-2 flex min-h-[2.75rem] w-full items-center justify-between gap-3 rounded-sm border-t border-border/50 pt-2 text-left transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="journey-past-trigger mt-2 flex w-full items-center justify-between gap-3 rounded-sm border-t border-border/50 pt-2 text-left transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <span className="text-xs text-muted-foreground">Past journeys</span>
           <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{pastCount} archived</span>

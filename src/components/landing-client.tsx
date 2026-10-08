@@ -82,7 +82,7 @@ const LENSES = [
     desc: "Step out of repeating cycles and see what each person is really protecting.",
   },
   {
-    name: "Systems",
+    name: "Family & Teams",
     href: "/systems",
     lead: "The dynamics of the whole room.",
     desc: "Unpack inherited roles in families or teams without blame or villains.",

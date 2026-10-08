@@ -496,7 +496,7 @@ export default function SettingsPage() {
 
               <Section
                 title="Invitations"
-                description="Invite someone to connect. The link is valid for 7 days."
+                description="Invite someone to connect. The link is valid for 7 days. They see your name, the role you chose, and how your Baselines meet — your own threads and birth data stay private to you, and either of you can remove the connection at any time."
               >
                 <div className="space-y-4">
                   {tier === "free" && (

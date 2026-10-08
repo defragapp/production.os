@@ -209,7 +209,7 @@ When a user makes a strong claim about another person, separate:
 - What would you need to know to distinguish them?
 - What boundary or decision is yours regardless of their motive?
 
-### Prohibited patterns
+### Prohibited moves
 
 - Do not turn an emotionally compelling interpretation into a new belief system
 - Do not validate a user's interpretation of another person's motive as fact

@@ -132,13 +132,13 @@ export function TermsGate() {
         <div className="mb-5 flex flex-wrap gap-3">
           <Link
             href="/terms"
-            className="tap-line inline-flex min-h-[44px] items-center rounded-md border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
+            className="tap-line inline-flex items-center rounded-md border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
           >
             Read the Terms
           </Link>
           <Link
             href="/privacy"
-            className="tap-line inline-flex min-h-[44px] items-center rounded-md border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
+            className="tap-line inline-flex items-center rounded-md border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
           >
             Read the Privacy Policy
           </Link>
@@ -156,14 +156,14 @@ export function TermsGate() {
             type="button"
             onClick={accept}
             disabled={submitting}
-            className="btn-focal inline-flex min-h-[44px] items-center justify-center px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
+            className="btn-focal inline-flex items-center justify-center px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
           >
             {submitting ? "Saving…" : "I agree — continue"}
           </button>
           <Link
             href="/account"
             onClick={() => setDismissed(terms.current)}
-            className="tap-line inline-flex min-h-[44px] items-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            className="tap-line inline-flex items-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
           >
             Review my account instead
           </Link>

@@ -24,7 +24,7 @@ const ROWS: Row[] = [
   // claim would be false at the moment of payment.
   { feature: "Your full Baseline — astrology, Human Design, Gene Keys", free: true, plus: true },
   { feature: "Chat history saved across devices", free: true, plus: true },
-  { feature: "Semantic recall — search your past conversations", free: true, plus: true },
+  { feature: "Find your way back to any past conversation — ask in plain words", free: true, plus: true },
   { feature: "Journeys & shared reflection cards", free: true, plus: true },
   { feature: "Data export & self-service account deletion", free: true, plus: true },
 ];
@@ -56,7 +56,7 @@ function Cell({ value, tone }: { value: string | boolean; tone: "free" | "plus" 
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground/60">
+    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground/70">
       <Minus aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
       <span className="sr-only">Not included</span>
     </span>

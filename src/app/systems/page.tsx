@@ -6,7 +6,7 @@ import { resolveLensState } from "@/lib/lens-state";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Systems",
+  title: "Family & Teams",
   description: "A lens for the larger room: family, teams, roles, and the hidden rules that shape the whole field.",
 };
 
@@ -17,7 +17,7 @@ const CARDS = [
     // sentence as the H1 above it, twice on one screen.
     title: "See how the room actually works.",
     body:
-      "Systems lensing shows how roles, timing, and expectations interact so you can see the structure instead of getting lost in the drama.",
+      "The Family & Teams lens shows how roles, timing, and expectations interact so you can see the structure instead of getting lost in the drama.",
   },
   {
     eyebrow: "Beyond blame",
@@ -29,15 +29,15 @@ const CARDS = [
     eyebrow: "Good for",
     title: "Family dynamics, team tension, and the rules no one says out loud.",
     body:
-      "Use Systems when the issue is bigger than one person and you need the shape of the whole environment before you act.",
+      "Use the Family & Teams lens when the issue is bigger than one person and you need the shape of the whole environment before you act.",
   },
 ] as const;
 
-export default async function SystemsPage() {
+export default async function FamilyTeamsPage() {
   const { isAuthed, hasBaseline } = await resolveLensState();
   return (
     <LensPage
-      eyebrow="Systems"
+      eyebrow="Family & Teams"
       title="Understand the room as a whole, not just the loudest voice in it."
       description="A lens for families, teams, and any context where roles and expectations shape the conversation before anyone speaks."
       cards={CARDS}

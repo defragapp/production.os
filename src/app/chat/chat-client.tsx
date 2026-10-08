@@ -151,7 +151,7 @@ function StartingPoints({
   return (
     <div className={compact ? "space-y-1.5" : "mt-8 w-full"}>
       {!compact && (
-        <p className="mb-3 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+        <p className="mb-3 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
           Start with what&apos;s real
         </p>
       )}
@@ -169,7 +169,7 @@ function StartingPoints({
                 : `msg-in rounded-panel border border-border/60 bg-white/[0.03] p-4 hover:-translate-y-[1px] hover:border-foreground/30 hover:bg-white/[0.05]`
             }`}
           >
-            <span className={`block font-mono uppercase tracking-[0.16em] text-muted-foreground/60 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
+            <span className={`block font-mono uppercase tracking-[0.16em] text-muted-foreground/70 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
               {p.level}
             </span>
             <span className={`mt-1.5 block font-display leading-snug text-foreground/90 ${compact ? "line-clamp-2 text-[13px]" : "text-[15px]"}`}>
@@ -224,12 +224,12 @@ function ThreadLibrary({
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto px-3 pb-6 pt-4">
-        <p className="px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+        <p className="px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
           Threads
         </p>
         {threads.length === 0 ? (
           <div className="px-1">
-            <p className="px-2 pb-2 text-xs leading-relaxed text-muted-foreground/60">
+            <p className="px-2 pb-2 text-xs leading-relaxed text-muted-foreground/70">
               Start with what&apos;s real — pick a level, and make the question your own.
             </p>
             <StartingPoints compact onPick={onSeed} disabled={isStreaming} />
@@ -256,12 +256,12 @@ function ThreadLibrary({
                     {t.label?.trim() || "Untitled thread"}
                   </p>
                   {badge && (
-                    <p className="journey-thread-badge mt-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
+                    <p className="journey-thread-badge mt-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
                       <Compass className="h-3 w-3 shrink-0" aria-hidden="true" />
                       <span className="truncate">{badge}</span>
                     </p>
                   )}
-                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
                     {relativeThreadDate(t.updated_at)}
                   </p>
                 </button>
@@ -687,6 +687,36 @@ export function ChatClient() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [journeyExpanded, dictating, stopDictation]);
+
+  // One path for opening and closing the recall panel, shared by the header
+  // button and the ⌘K / Ctrl+K shortcut below, so the two can never drift.
+  const toggleSearch = useCallback(() => {
+    setSearchOpen((v) => {
+      const next = !v;
+      if (next) requestAnimationFrame(() => searchInputRef.current?.focus());
+      else { setSearchResults(null); setSearchQuery(""); }
+      return next;
+    });
+  }, []);
+
+  // The keyboard shortcut the desktop composer already implies: ⌘K (Ctrl+K
+  // off Apple keyboards) summons the past-conversation search. It never fires
+  // mid-generation — the panel can't be read while an answer is arriving —
+  // and never from the composer textarea, where the person is writing, not
+  // navigating. From the search field itself it closes the panel, which is
+  // the same contract as the button's toggle.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "k" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      if (isStreaming) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLTextAreaElement) return;
+      toggleSearch();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isStreaming, toggleSearch]);
 
   useEffect(() => {
     // Tapping the transcript means "I'm reading, not looking at steps". Bound
@@ -1305,22 +1335,15 @@ export function ChatClient() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setSearchOpen((v) => {
-                    const next = !v;
-                    if (next) requestAnimationFrame(() => searchInputRef.current?.focus());
-                    else { setSearchResults(null); setSearchQuery(""); }
-                    return next;
-                  });
-                }}
+                onClick={toggleSearch}
                 disabled={isStreaming}
                 aria-expanded={searchOpen}
-                title="Search past conversations"
+                title="Search past conversations (⌘K)"
                 className="shrink-0"
               >
                 <Search className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden lg:inline">Search</span>
-                <span className="sr-only">Search past conversations</span>
+                <span className="sr-only">Search past conversations (⌘K)</span>
               </Button>
               <Button
                 variant="outline"
@@ -1539,7 +1562,7 @@ export function ChatClient() {
                           <div
                             aria-hidden={!msg.recalled}
                             style={{ visibility: msg.recalled ? "visible" : "hidden" }}
-                            className="flex h-4 items-center gap-1.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/55"
+                            className="flex h-4 items-center gap-1.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70"
                           >
                             <span className="h-1 w-1 shrink-0 rounded-full bg-current" aria-hidden="true" />
                             From your history
@@ -1683,7 +1706,7 @@ export function ChatClient() {
                     onFocus={() => {
                       if (window.matchMedia("(max-width: 640px)").matches) setJourneyExpanded(false);
                     }}
-                    className="max-h-44 min-h-11 flex-1 resize-none border-0 bg-transparent px-0 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="max-h-44 min-h-11 flex-1 resize-none border-0 bg-transparent px-0 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {/* Voice dictation, for browsers that have it and nobody else.
                       Same 44px circle as Send, an `aria-pressed` state instead of
@@ -1903,7 +1926,7 @@ function PeoplePanel({
                     <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                       {i.role}
                     </span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
                       {i.acceptedAt ? "accepted" : i.status === "revoked" ? "revoked" : "invited"}
                     </span>
                   </li>
@@ -1921,7 +1944,7 @@ function PeoplePanel({
               </p>
             )}
 
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground/60">
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground/70">
               Someone you invited sees only your name and role — never your birth data. You stay in
               control of sharing in{" "}
               <Link href="/settings" className="font-medium text-foreground/80 underline underline-offset-2">

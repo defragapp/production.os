@@ -255,7 +255,7 @@ export default function AccountPage() {
                   <span className="text-sm text-muted-foreground">Display name</span>
                   <span className="text-sm font-medium">
                     {user.display_name || (
-                      <span className="text-muted-foreground/60">— not set —</span>
+                      <span className="text-muted-foreground/70">— not set —</span>
                     )}
                   </span>
                 </div>

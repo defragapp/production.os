@@ -110,7 +110,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="A few words about what you need help with…"
-          className="flex min-h-[140px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-[140px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
 

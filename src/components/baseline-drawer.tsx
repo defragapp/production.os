@@ -127,7 +127,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
         </div>
       )}
 
-      <p className="text-[11px] leading-relaxed text-muted-foreground/60">
+      <p className="text-[11px] leading-relaxed text-muted-foreground/70">
         Your Baseline describes tendencies, not your identity. Computed from the ten natal
         bodies via the NASA/JPL Horizons API through the Sovereign derivation engine.
       </p>
@@ -146,7 +146,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
           <span className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Your Baseline
           </span>
-          <span className="hidden text-[11px] text-muted-foreground/60 sm:inline">
+          <span className="hidden text-[11px] text-muted-foreground/70 sm:inline">
             from NASA/JPL planetary data
           </span>
         </span>
