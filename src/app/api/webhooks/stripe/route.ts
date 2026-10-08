@@ -56,14 +56,17 @@ export async function POST(request: NextRequest) {
   let event: StripeEvent;
   try { event = JSON.parse(rawBody) as StripeEvent; } catch { return NextResponse.json({ error: "Invalid payload" }, { status: 400 }); }
 
-  // Idempotency: Stripe may re-deliver webhooks. Record the event ID in KV and
-  // skip any already-processed event so subscription updates are never applied twice.
-  const eventKey = `stripe-event:${event.id}`;
-  const alreadyProcessed = await env.SESSION_KV.get(eventKey);
-  if (alreadyProcessed) {
+  // Idempotency: Stripe may re-deliver webhooks. A delivered event's ID is
+  // checked up front and skipped as already handled — but the marker is only
+  // written AFTER the handler below completes, so a mid-handler failure (a D1
+  // blip, say) leaves the event unmarked and Stripe's retry can still apply
+  // the work instead of being swallowed as a duplicate. The handlers are
+  // replay-safe: tier updates are idempotent UPDATEs and the email paths
+  // carry their own invoice/customer dedup keys.
+  const eventKey = event.id ? `stripe-event:${event.id}` : null;
+  if (eventKey && (await env.SESSION_KV.get(eventKey))) {
     return NextResponse.json({ received: true, duplicate: true });
   }
-  await env.SESSION_KV.put(eventKey, "1", { expirationTtl: 60 * 60 * 24 * 7 });
 
   const obj = event.data.object;
   const customerId = obj.customer;
@@ -158,5 +161,7 @@ export async function POST(request: NextRequest) {
     }
     default: break;
   }
+  // Mark processed only now that the handler completed (see idempotency note).
+  if (eventKey) await env.SESSION_KV.put(eventKey, "1", { expirationTtl: 60 * 60 * 24 * 7 });
   return NextResponse.json({ received: true });
 }

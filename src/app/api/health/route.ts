@@ -56,9 +56,13 @@ export async function GET() {
     );
   } catch (err) {
     const latency_ms = Math.round(performance.now() - start);
+    // The failure detail belongs in the logs (wrangler tail and the alerting
+    // tail worker read those), never in a public unauthenticated body: binding
+    // error strings can name databases, namespaces, and permissions.
     const message = err instanceof Error ? err.message : "unknown";
+    console.error("[health] degraded:", message);
     return NextResponse.json(
-      { status: "degraded", latency_ms, error: message },
+      { status: "degraded", latency_ms },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
