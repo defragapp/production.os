@@ -175,4 +175,13 @@ describe("the composer's shortcuts survive refactor passes", () => {
     expect(chat).toMatch(/onClick=\{toggleSearch\}/);
     expect(chat).toMatch(/event\.key\.toLowerCase\(\) !== "k" \|\| !\(event\.metaKey \|\| event\.ctrlKey\)/);
   });
+
+  it("the search panel's rendered hints speak plain words, not 'semantic'", () => {
+    // The two hint lines are the user-facing surface (spec goal #1: no engine
+    // jargon). Code comments may still name the backend "Semantic recall".
+    expect(chat).not.toMatch(/enable semantic recall/i);
+    expect(chat).not.toMatch(/Search is semantic/i);
+    expect(chat).toContain("memory menu to search your past conversations.");
+    expect(chat).toContain("Ask in plain words");
+  });
 });

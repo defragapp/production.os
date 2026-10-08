@@ -1395,10 +1395,10 @@ export function ChatClient() {
                 </div>
                 {memoryMode === "local" ? (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Device-Only memory keeps your history off our servers, so there is nothing to search here. Switch to All devices in the memory menu to enable semantic recall.
+                    Device-Only memory keeps your history off our servers, so there is nothing to search here. Switch to All devices in the memory menu to search your past conversations.
                   </p>
                 ) : searchQuery.trim().length < 2 ? (
-                  <p className="mt-2 text-xs text-muted-foreground">Type at least two characters. Search is semantic — ask “what did we say about sleep?” and it will find the moment.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Type at least two characters. Ask in plain words — “what did we say about sleep?” — and it will find the moment.</p>
                 ) : searchResults && searchResults.length === 0 && !searchLoading ? (
                   <p className="mt-2 text-xs text-muted-foreground">
                     {!searchIndexed
