@@ -10,8 +10,9 @@ import { Logo } from "@/components/ui/logo";
 // the coarse-pointer block in globals.css raises it to the 44px tap floor on
 // touch. Same for `tap-line` on the drawer's rows.
 const navLink =
-  "nav-link rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.04]";
-const navLinkActive = "text-foreground font-medium bg-white/[0.06] shadow-sm";
+  "nav-link rounded-full px-3.5 py-1.5 text-sm font-medium text-foreground/65 transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.06]";
+const navLinkActive =
+  "text-foreground bg-white/[0.09] shadow-[inset_0_0_0_1px_hsla(38,18%,95%,0.12)]";
 
 const PLUS_BADGE =
   "ml-1 inline-flex items-center rounded-full bg-foreground/[0.06] px-2.5 py-1 text-[11px] font-medium text-foreground/85";
@@ -73,7 +74,7 @@ export function Nav() {
 
         {/* Desktop nav (see the `authed` note above: revealed, never swapped). */}
         {authed !== null && (
-        <nav className="nav-fade hidden items-center gap-1 md:flex">
+        <nav className="nav-fade hidden items-center gap-1.5 md:flex">
           {authed ? (
             <>
               <Link href="/chat" className={linkClass("/chat")} aria-current={ariaCurrent("/chat")}>Chat</Link>
@@ -85,6 +86,7 @@ export function Nav() {
               )}
               <Link href="/account" className={linkClass("/account")} aria-current={ariaCurrent("/account")}>Account</Link>
               <Link href="/settings" className={linkClass("/settings")} aria-current={ariaCurrent("/settings")}>Settings</Link>
+              <span className="mx-1.5 h-5 w-px bg-border/70" aria-hidden="true" />
               <button onClick={handleSignOut} className={navLink}>
                 Sign out
               </button>
