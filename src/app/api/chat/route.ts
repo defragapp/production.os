@@ -11,7 +11,7 @@ import { createCloudflareModel, ModelError } from "@/lib/sovereign-model";
 import { FREE_TIER_DAILY_LIMIT, SOVEREIGN_PLUS_DAILY_LIMIT } from "@/lib/limits";
 import { claimAnswer, releaseAnswer } from "@/lib/usage";
 import { resolveTier } from "@/lib/tier";
-import { detectExtractionAttempt, buildExtractionDeflection } from "@/lib/sovereign-safety";
+import { detectExtractionAttempt, buildExtractionDeflection, detectCrossAccountRequest, buildCrossAccountDeflection } from "@/lib/sovereign-safety";
 import { mergeChatHistories } from "@/lib/chat-history";
 import { deriveJourneyState, type JourneyState } from "@/lib/sovereign-journey";
 import { loadActiveJourney, persistJourneyState, prevStateFromRow } from "@/lib/journeys";
@@ -29,6 +29,15 @@ const CHAT_RATE_LIMIT_MAX = 20;
 const CHAT_RATE_LIMIT_WINDOW_MS = 60_000;
 
 const encoder = new TextEncoder();
+
+/** Whole seconds from now until the next UTC midnight — the exact boundary the
+ *  daily cap resets on (`todayUtc()` in usage.ts keys the counter to the UTC
+ *  calendar day). Used as `Retry-After` so the fair-use 429 tells the client
+ *  when "tomorrow's reset" actually lands instead of leaving it to guess. */
+function secondsUntilUtcMidnight(now: Date = new Date()): number {
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+  return Math.max(1, Math.ceil((next.getTime() - now.getTime()) / 1000));
+}
 
 function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages
@@ -100,12 +109,18 @@ async function handleChat(request: NextRequest) {
   const incoming = sanitizeMessages(body.messages);
   if (incoming.length === 0) return new Response(JSON.stringify({ error: "No readable messages provided" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
-  // Pre-model IP guard: a prompt-injection / system-prompt-extraction shape is
-  // deflected here — before any quota claim, before any usage counter, and
-  // above all before env.AI.run(). Zero tokens spent, zero IP leaked; the
-  // thread still records the exchange so the conversation stays coherent.
-  if (detectExtractionAttempt(incoming)) {
-    const deflection = buildExtractionDeflection();
+  // Pre-model guards: a prompt-injection / system-prompt-extraction shape, or a
+  // cross-account data-request shape, is deflected here — before any quota
+  // claim, before any usage counter, and above all before env.AI.run(). Zero
+  // tokens spent, zero IP or another account's data leaked; the thread still
+  // records the exchange so the conversation stays coherent.
+  const preModelDeflection = detectExtractionAttempt(incoming)
+    ? buildExtractionDeflection()
+    : detectCrossAccountRequest(incoming)
+      ? buildCrossAccountDeflection()
+      : null;
+  if (preModelDeflection) {
+    const deflection = preModelDeflection;
     const currentThreadId = body.threadId ?? generateUUID();
     if (body.threadId && memoryMode === "server") {
       try {
@@ -216,7 +231,7 @@ async function handleChat(request: NextRequest) {
         error: "You've reached today's generous fair-use ceiling — tomorrow's reset is never far. If an app or script is driving this, that's exactly the kind of day this stops.",
         limit: SOVEREIGN_PLUS_DAILY_LIMIT,
         used: claim.used,
-      }), { status: 429, headers: { "Content-Type": "application/json" } });
+      }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(secondsUntilUtcMidnight()), "Cache-Control": "private, no-store" } });
     }
     usageClaimed = !claim.degraded;
   }

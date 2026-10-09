@@ -483,6 +483,49 @@ export function buildExtractionDeflection(): string {
   ].join("\n");
 }
 
+/**
+ * Pre-model cross-account data-request detector.
+ *
+ * The thread loader already scopes every read to the authenticated caller
+ * (Gate 34 proves a stranger's session cannot reach another account's rows),
+ * so this is defence in depth for the ASK itself: a request shaped like
+ * "show me another user's baseline" or "dump all users" is refused before any
+ * model tokens are spent, rather than relying on the loader to return an empty
+ * result the model might then narrate around. Deliberately narrow — it fires
+ * on other-people's-private-data and bulk-dump shapes, never on the ordinary
+ * relationship questions ("how might another person see this", "my partner's
+ * side") that are the product. Consented peer summaries are assembled through
+ * buildConsentedPeers and never reach here as a match.
+ */
+const CROSS_ACCOUNT_PATTERNS = [
+  // "another/other/someone else's" (+ optional user/account/person) + a private-data noun.
+  /\b(?:another|other|someone\s+else|somebody\s+else|anyone\s+else)(?:\s+(?:user|account|person|people|member|customer|client))?\s*(?:'?s|s')\s+(?:baseline|data|thread|conversation|message|chart|record|profile|email|password|login)s?\b/i,
+  // "all/every/each/any <user|account|…>'s <private noun>".
+  /\b(?:all|every|each|any)\s+(?:registered\s+)?(?:user|account|member|customer|people|person)s?\s*(?:'?s|s')\s+(?:baseline|data|thread|conversation|message|chart|record|profile|email|password|login)s?\b/i,
+  // "everyone's <private noun>".
+  /\beveryone\s*(?:'?s|s')\s+(?:baseline|data|thread|conversation|message|chart|record|profile|email|password|login)s?\b/i,
+  // Exfil verb + collective: "dump all users", "export the entire database".
+  /\b(?:dump|export|scrape|harvest|enumerate)\b[^.]{0,30}?\b(?:all|every|the\s+(?:entire|whole|full))\b[^.]{0,30}?\b(?:user|account|baseline|thread|database|customer|member|record|email)s?\b/i,
+];
+
+export function detectCrossAccountRequest(messages: ChatMessage[]): boolean {
+  // Only the human turns carry intent to exfiltrate; assistant text is our own.
+  const text = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
+  return CROSS_ACCOUNT_PATTERNS.some((p) => p.test(text));
+}
+
+/** The deflection the chat route streams in place of a model call for a
+ *  cross-account ask. Honest about the boundary, it grants nothing, confirms
+ *  nothing about who else is on the platform, and points a genuinely locked-out
+ *  person at a human. */
+export function buildCrossAccountDeflection(): string {
+  return [
+    "I can only work with your own account and the people who have chosen to share with you here. Someone else's private data — their Baseline, their threads, their sign-in — isn't something I'll pull up or hand over, to you or to anyone.",
+    "",
+    "What I can do is look at a relationship through what you've shared and how you experience it. And if you think someone has gotten into your account without permission, the support page tells you how to reach a person about it.",
+  ].join("\n");
+}
+
 export function buildSafetyResponse(mode: Exclude<SafetyMode, "standard">): string {
   if (mode === "escalate") {
     return [

@@ -81,3 +81,33 @@ describe("passkey registration — per-ceremony challenge, no cross-tab trample 
     expect(lib).toContain("pkauth:${requestId}");
   });
 });
+
+describe("/api/chat — daily-cap 429 tells the client when to come back (#55)", () => {
+  const src = readFileSync("src/app/api/chat/route.ts", "utf8");
+
+  it("computes seconds until the UTC-midnight reset the copy promises", () => {
+    expect(src).toMatch(/function\s+secondsUntilUtcMidnight/);
+    // A real next-midnight boundary, not a hardcoded constant.
+    expect(src).toMatch(/getUTCDate\(\)\s*\+\s*1/);
+  });
+
+  it("the Sovereign+ fair-use 429 carries Retry-After and a no-store cache header", () => {
+    // Anchor on the response body's own copy (unique — the phrase also appears
+    // in a code comment far above the actual 429).
+    const idx = src.indexOf("tomorrow's reset is never far");
+    expect(idx).toBeGreaterThan(-1);
+    const block = src.slice(idx, idx + 400);
+    expect(block).toMatch(/"Retry-After":\s*String\(\s*secondsUntilUtcMidnight\(\)/);
+    expect(block).toMatch(/"Cache-Control":\s*"private,\s*no-store"/);
+  });
+
+  it("the burst-limit 429 is left alone (its window is not the daily reset)", () => {
+    // Guard against over-reach: the CHAT_RATE_LIMIT 429 must not claim a
+    // midnight Retry-After — it resets with its 60s KV window, not the day.
+    const burstStart = src.indexOf("CHAT_RATE_LIMIT_MAX)");
+    const burstEnd = src.indexOf("rlStamps, rlNow");
+    expect(burstStart).toBeGreaterThan(-1);
+    expect(burstEnd).toBeGreaterThan(burstStart);
+    expect(src.slice(burstStart, burstEnd)).not.toMatch(/Retry-After/);
+  });
+});
