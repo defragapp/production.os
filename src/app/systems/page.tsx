@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
 import { SystemDynamics } from "@/components/system-dynamics";
-import { resolveLensState } from "@/lib/lens-state";
+import { resolveLensState, lensChatHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ export default async function FamilyTeamsPage() {
       title="Understand the room as a whole, not just the loudest voice in it."
       description="A lens for families, teams, and any context where roles and expectations shape the conversation before anyone speaks."
       cards={CARDS}
-      cta={{ label: "Open the chat", href: "/chat" }}
+      cta={{ label: "Open the chat", href: lensChatHref(isAuthed) }}
       secondaryCta={{ label: "Read the philosophy", href: "/about" }}
       note="Best when the real question is structural: who is carrying what, and how the room keeps arranging itself."
       isAuthed={isAuthed}

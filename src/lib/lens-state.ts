@@ -34,3 +34,21 @@ export async function resolveLensState(): Promise<LensState> {
     return ANON;
   }
 }
+
+/**
+ * Auth-aware CTA destinations for the lens pages, resolved on the server so the
+ * first HTML paint carries the correct href (no client-side swap, no flicker).
+ * A signed-out visitor is a prospective member, so the chat call-to-action
+ * leads to Create account (not the "Welcome back" sign-in card) and returns
+ * them to /chat after signup — the same intent the middleware paywall applies.
+ * Invitations are created in Settings → Invitations (and gated to Sovereign+
+ * there), so that is where "Invite someone" belongs, never the tokenless
+ * /invite accept page.
+ */
+export function lensChatHref(isAuthed: boolean): string {
+  return isAuthed ? "/chat" : "/onboard?mode=signup&next=%2Fchat";
+}
+
+export function lensInviteHref(isAuthed: boolean): string {
+  return isAuthed ? "/settings#invitations" : "/onboard?mode=signup&next=%2Fsettings";
+}

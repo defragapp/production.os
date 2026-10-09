@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 export const metadata: Metadata = {
   title: "Our Philosophy",
   description:
-    "Sovereign is a private AI mirror for understanding yourself, your people, and the systems you live within — not a diagnosis, not astrology, not a verdict.",
+    "Sovereign is a private AI mirror for understanding yourself, your people, and the systems you live within — grounded in your Baseline, not a diagnosis or a verdict.",
 };
 
 // The three things a first-time visitor actually needs to trust: what it is,

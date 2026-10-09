@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageCrown } from "@/components/page-crown";
 import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
+import { baselineSystemsPhrase } from "@/content/baseline-systems";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -24,7 +25,7 @@ const FAQS = [
   },
   {
     q: "Where does my Baseline come from?",
-    a: "From your birth date, time, and place. We compute the planets' positions from NASA/JPL planetary data and combine them with two long-standing reference systems (numerology and Human Design) into one readable profile that the AI brings into your conversations.",
+    a: `From your birth date, time, and place. We compute the planets' positions from NASA/JPL planetary data and build your Baseline through four long-standing reference systems (${baselineSystemsPhrase()}) into one readable profile that the AI brings into your conversations.`,
   },
   {
     q: "What do you do with my birth data?",

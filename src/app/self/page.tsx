@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
 import { AnswerAnatomy } from "@/components/answer-anatomy";
-import { resolveLensState } from "@/lib/lens-state";
+import { resolveLensState, lensChatHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,7 @@ export default async function SelfPage() {
       title="See yourself clearly, without turning it into a verdict."
       description="A quiet place to ask what keeps happening, what you actually feel, and what the next honest step could be."
       cards={CARDS}
-      cta={{ label: "Open the full chat", href: "/chat" }}
+      cta={{ label: "Open the full chat", href: lensChatHref(isAuthed) }}
       secondaryCta={{ label: "Build your Baseline", href: "/baseline", stateAware: true }}
       note="Best when you want to name the shape of something before you bring anyone else into it."
       isAuthed={isAuthed}

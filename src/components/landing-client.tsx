@@ -11,6 +11,7 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { PageCrown } from "@/components/page-crown";
 import { SiteFooter } from "@/components/site-footer";
 import { ProductDemo } from "@/components/product-demo";
+import { BASELINE_PROVENANCE, BASELINE_SYSTEMS } from "@/content/baseline-systems";
 
 function Reveal({
   children,
@@ -50,6 +51,11 @@ function Reveal({
 }
 
 const TRUST_NOTES = ["Private by design", "Built from your Baseline", "Free to start"];
+
+// The trust-row provenance chips: the data source, then the systems that
+// compose the Baseline — read from the shared @/content constant so the
+// landing can no longer drift from what /api/baseline actually computes.
+const BASELINE_SOURCE_CHIPS: string[] = [BASELINE_PROVENANCE, ...BASELINE_SYSTEMS];
 
 const HOW_IT_WORKS = [
   {
@@ -251,7 +257,7 @@ export function LandingClient() {
                 Every answer returns to your Baseline — and leaves the deciding to you.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
-                {["NASA/JPL planetary data", "Ten celestial bodies", "Human Design", "Gene Keys"].map((source, i) => (
+                {BASELINE_SOURCE_CHIPS.map((source, i) => (
                   <span key={source} className="flex items-center gap-5">
                     {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
                     {source}
@@ -319,7 +325,7 @@ export function LandingClient() {
                 FAQ
               </Link>
               {" "}or view the{" "}
-              <Link href="/upgrade" className="underline hover:text-foreground">
+              <Link href="#plans" className="underline hover:text-foreground">
                 full comparison
               </Link>
               .

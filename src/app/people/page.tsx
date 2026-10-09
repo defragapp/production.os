@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
 import { PerspectiveSwitch } from "@/components/perspective-switch";
-import { resolveLensState } from "@/lib/lens-state";
+import { resolveLensState, lensChatHref, lensInviteHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +39,8 @@ export default async function PeoplePage() {
       title="Understand what happens between you and someone else."
       description="A lens for the moment that keeps repeating, the meaning each person brings to it, and the boundary that stays yours."
       cards={CARDS}
-      cta={{ label: "Open the chat", href: "/chat" }}
-      secondaryCta={{ label: "Invite someone", href: "/invite" }}
+      cta={{ label: "Open the chat", href: lensChatHref(isAuthed) }}
+      secondaryCta={{ label: "Invite someone", href: lensInviteHref(isAuthed) }}
       note="Use this when the question is relational, but you want to stay honest about what you know and what you do not."
       isAuthed={isAuthed}
       hasBaseline={hasBaseline}
