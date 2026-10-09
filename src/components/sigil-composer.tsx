@@ -130,7 +130,8 @@ export function SigilComposer() {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground/70">
-            Choose a state, then create your Sigil to share it.
+            Grounded is picked to start — choose a different state if you like, then create your
+            Sigil to share it.
           </p>
         )}
       </div>

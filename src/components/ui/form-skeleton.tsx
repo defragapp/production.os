@@ -12,9 +12,11 @@ import { Card, CardContent } from "@/components/ui/card";
  * a fade, not a reflow.
  *
  * Purely decorative — empty bars, no data, no motion. Fills use the `surface-2`
- * token and the 12px `rounded-panel` radius so the skeleton matches a real
- * input. The `sr-only` label keeps it announced for assistive tech without
- * painting a spinner.
+ * token and the 8px `rounded-control` radius so the skeleton matches a real
+ * input/button (both render `rounded-lg`, which resolves to the same 8px —
+ * `rounded-panel` is the 12px card radius and read visibly rounder than the
+ * field it stands in for). The `sr-only` label keeps it announced for assistive
+ * tech without painting a spinner.
  */
 export function FormSkeleton({
   fields = 2,
@@ -34,10 +36,10 @@ export function FormSkeleton({
         {Array.from({ length: fields }).map((_, i) => (
           <div key={i} className="space-y-2" aria-hidden="true">
             <div className="h-3 w-20 rounded bg-surface-2" />
-            <div className="h-11 w-full rounded-panel border border-border/60 bg-surface-2" />
+            <div className="h-11 w-full rounded-control border border-border/60 bg-surface-2" />
           </div>
         ))}
-        {action && <div className="h-11 w-full rounded-panel bg-surface-2" aria-hidden="true" />}
+        {action && <div className="h-11 w-full rounded-control bg-surface-2" aria-hidden="true" />}
         <span className="sr-only">{label}</span>
       </CardContent>
     </Card>
