@@ -6,7 +6,7 @@ across every public and authed route. Surface-level copy and link issues were fi
 the same pass (see the commit). The items below are **copy-accuracy / positioning /
 structural** calls that need the owner's decision rather than a blind edit.
 
-## 1. Astrology-adjacency framing is internally inconsistent (content accuracy)
+## 1. Astrology-adjacency framing is internally inconsistent (content accuracy) — RESOLVED
 The product openly presents astrological natal bodies, yet two public surfaces claim it
 is not astrology and name the systems inconsistently:
 
@@ -22,6 +22,11 @@ is not astrology and name the systems inconsistently:
 
 Owner call: pick ONE canonical framing of the astrological basis and propagate it through
 `about`, `faq`, `terms` §2, and the landing provenance strip.
+
+**RESOLVED (2026-10-09):** `src/content/baseline-systems.ts` is now the single source
+(`BASELINE_SYSTEMS` = Astrology, Numerology, Human Design, Gene Keys). `about` metadata
+no longer says "not astrology"; `/faq` and the pricing/provenance surfaces read
+`baselineSystemsPhrase()`. No owner decision remains.
 
 ## 2. `middleware.ts` doc-comment drift — RESOLVED (comment corrected, auth logic untouched)
 The header comment once listed `/invite` as a public page while the `publicPages` array

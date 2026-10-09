@@ -1,6 +1,6 @@
 # Sovereign.OS — Precision UX Remediation & Edge Validation
 
-**Branch:** `migrate-to-asu` (synced to `main`) · **Date:** 2026-10-04 · **Status:** shipped to production, 116/116 release gates green
+**Branch:** `migrate-to-asu` (synced to `main`) · **Date:** 2026-10-04 · **Status:** shipped to production, 116/116 release checks green (counts and gate-vs-check terminology follow `scripts/verify-release.mjs`'s header, the source of truth)
 
 ---
 

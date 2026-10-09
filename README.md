@@ -185,7 +185,7 @@ environment cannot boot.
 > pinning `brace-expansion` to v5 forced an ESM-only package onto
 > `minimatch@3`, which imports the CommonJS default export — so the OpenNext
 > bundle died with `does not provide an export named 'default'`, while
-> `tsc`, ESLint and all 541 Vitest tests reported success. Nothing in the
+> `tsc`, ESLint and all 544 Vitest tests reported success. Nothing in the
 > type system or the unit suite loads `.open-next/worker.js`.
 >
 > Gate 1 (the clean OpenNext build) is the **only** check that catches
@@ -197,7 +197,7 @@ environment cannot boot.
 ```
 open-next.config.ts            # OpenNext Cloudflare config (defaults)
 wrangler.jsonc                 # Worker config: D1, KV, AI, AI Gateway, static assets
-schema.sql                     # Canonical D1 baseline — 12 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge, admin_audit_log); migrations/0001–0007 layer onto existing DBs
+schema.sql                     # Canonical D1 baseline — 12 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge, admin_audit_log); migrations/0001–0008 layer onto existing DBs
 assets/ace-of-cups.jpg         # Canonical brand artwork (source of truth for the mark)
 scripts/build-brand-assets.mjs # Regenerates public/brand/*.png from the source artwork (node scripts/build-brand-assets.mjs)
 public/brand/                  # Emitted raster mark: emblem-full, emblem-core, emblem-core-bold, icon, apple-icon
@@ -288,7 +288,7 @@ src/
 │   ├── brand-emblem-data.ts           # inlined brand emblem data
 │   ├── types.ts                       # Shared TypeScript types (incl. MemoryMode)
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 44 files / 541 tests)
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 46 files / 544 tests)
 ├── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
 └── custom-worker.ts                   # Worker entry: re-exports OpenNext `fetch` + adds the `scheduled` cron handler
 ```
@@ -343,7 +343,7 @@ correction, leakage) and §53 regressions are covered in
 - **Anti-extraction IP guard + fair-use ceilings.** `/api/chat` deflects prompt-injection/system-prompt-extraction *before* any model call (zero token cost), caps per-message input at 2,000 chars, windows context to 20 messages (`max_tokens=1024`), and enforces atomic D1 daily ceilings (5 free / 150 `sovereign+`, owner exempt).
 - **iOS input floor.** On coarse pointers every `input`/`textarea`/`select`/`contenteditable` computes `font-size ≥ 16px` (`globals.css` `!important` floor) so Safari never auto-zooms on tap.
 - The baseline is computed server-side against the NASA/JPL Horizons API; raw data and derived astrology/numerology/Human Design fields are stored in D1.
-- The AI's system prompt is a "Pattern Interruption" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry. Baseline is context, never a fixed identity or verdict.
+- The AI's system prompt is an "Evidence-Separation" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry. Baseline is context, never a fixed identity or verdict.
 - Transactional emails are sent from `sovereign@defrag.app` via Resend (verified domain with DKIM/SPF, click and open tracking enabled). Fallback to console-log when `RESEND_API_KEY` is unset.
 - Ten transactional email templates ship in `src/lib/email.ts` (welcome, verify, password-reset, payment-received, payment-failed, subscription-canceled, invite, invite-accepted, support-received, support-notification), all rendered through the branded `emailShell`/`emailButton` design system — which carries the `bgcolor` attributes and `color-scheme` declarations Outlook and dark-mode clients need, a hidden preheader for the inbox preview line, and a generated plain-text alternative. `node scripts/send-test-emails.mjs --dry` previews the set through the real code path; drop `--dry` to deliver them to one inbox. `src/lib/email.test.ts` pins the billing set and the shell invariants.
 - Observability is enabled in `wrangler.jsonc` with head sampling at rate 0.1 (10% of traces).
