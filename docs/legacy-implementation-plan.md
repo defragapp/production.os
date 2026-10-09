@@ -79,7 +79,7 @@ duplicated).
 | `rubric.ts` | Six axes as **` (text: string, ctx) => number`** functions over the answer string. No axis may read a model-supplied score |
 | `recorded/*.json` | Captured answers: `{ fixtureId, model, tier, capturedAt, promptSha, text, usage }` |
 | `runner.ts` | Replays each fixture through the real `generateSovereignResponse` using a `SovereignModel` stub that returns the recorded text |
-| `record.mjs` | One-off capture against `preview`, owner-authorised, writes `recorded/` |
+| `capture.mjs` | One-off capture against the real model (owner-authorised, #59), writes `recorded/`. Named `capture.mjs` — not `record.mjs` — so vitest's extension resolution (`.mjs` wins over `.ts`) can't shadow the pure `record.ts` module |
 | `src/lib/answer-eval.test.ts` | Co-located test entry, so gate 3 picks it up with no script edit |
 
 Seam, already proven: `sovereign-model.ts:25` defines `SovereignModel { generate(...) }`

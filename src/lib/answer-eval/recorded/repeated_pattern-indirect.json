@@ -1,0 +1,26 @@
+{
+  "fixtureId": "repeated_pattern-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:00:28.711Z",
+  "promptSha": "05c87bc438e5559a0e30b2f03d0f3f4f423cf26a54ef89d111218bd2bf272e3a",
+  "text": "One possibility worth examining is that you might be unintentionally creating distance when you try to hold on to relationships tightly. Your tendency to protect what matters (Sun core expression) and your reflex to guard what you love (Moon inner response) could be causing you to pull back when people get too close. This might make others feel like they're being suffocated or controlled, leading them to pull away.\n\nIt may be helpful to look at how your need for protection and care (expressed through Venus relating) intersects with your initiative (Mars initiative). When you feel uncertain or unsure, do you tend to become less proactive or more hesitant in your relationships? This could be contributing to the dynamic where people try to stay close but ultimately feel like they're being kept at arm's length.\n\nAnother angle to consider is how your emotional memory and the words carried underneath your feelings (Mercury processing) might be influencing your relationships. Are there any dynamics or triggers that make you feel the need to retreat or become more guarded? Exploring these dynamics might help you understand why people are staying close but not feeling truly connected.",
+  "usage": {
+    "prompt_tokens": 3008,
+    "completion_tokens": 224,
+    "total_tokens": 3232,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 47.298112750053406
+  },
+  "observed": {
+    "clarity": 0.5499999999999999,
+    "groundedness": 0.9,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 1,
+    "safety": 1
+  },
+  "observedTotal": 5.1
+}

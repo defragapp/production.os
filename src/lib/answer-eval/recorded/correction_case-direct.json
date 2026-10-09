@@ -1,0 +1,26 @@
+{
+  "fixtureId": "correction_case-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:01:20.934Z",
+  "promptSha": "135a43ae9fc163bbf25ec0f782dbcdb61e56d5c57e44c9fb45b2c6db574422ae",
+  "text": "It may be that the worry about others' problems is connected to a deeper tendency of yours. Your Baseline suggests that you have a Sun core expression related to holding and protecting what matters, and a Moon inner response that reflexively guards what it loves. This could indicate a dynamic where you're more invested in others' well-being than you initially let on.",
+  "usage": {
+    "prompt_tokens": 3128,
+    "completion_tokens": 73,
+    "total_tokens": 3201,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 45.0061969216913
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.6363636363636364,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 4.286363636363636
+}

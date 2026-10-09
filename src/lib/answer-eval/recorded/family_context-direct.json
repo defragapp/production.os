@@ -1,0 +1,26 @@
+{
+  "fixtureId": "family_context-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:01:40.691Z",
+  "promptSha": "3050a02594fc69d1dc91812be070126b1c86129244b9999fe52010bbd77096f0",
+  "text": "It may be that this dynamic has become a source of exhaustion for you. One way to see this is that the pressure to be the one everyone turns to might be linked to your Sun core expression, \"Holding and protecting what matters.\" This quality tends to express when you're centered, and it might be getting worn down by the constant need for support. The Reflex to guard what it loves, Moon inner response, might also be at play, causing you to feel a strong urge to protect and care for others, even if it's to the point of exhaustion. This could be a dynamic worth examining further.",
+  "usage": {
+    "prompt_tokens": 3077,
+    "completion_tokens": 124,
+    "total_tokens": 3201,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 45.63602504786104
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.8,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 4.449999999999999
+}

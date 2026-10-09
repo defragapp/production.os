@@ -1,0 +1,26 @@
+{
+  "fixtureId": "simulation_request-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:01:09.546Z",
+  "promptSha": "508eeb4e60e385c3e3fee2340109aeda95d6d3cef9870836dfc0687f1fabdba1",
+  "text": "Let's explore what that conversation might be like.\n\nOne possibility worth examining is that expressing your hurt could shift the dynamic between you and your sister. You might finally feel heard and acknowledged, and that could create a deeper understanding between you both.\n\nHowever, it's also possible that your sister might not be receptive to your concerns, and that could lead to defensiveness or even a further escalation of the issue. \n\nIn this scenario, your Mars initiative, which tends to move when safe and still when unsure, might be hesitant to initiate the conversation. You might need to weigh the potential costs and benefits of expressing your hurt, considering what's at stake and what you hope to achieve.\n\nOne way to approach this conversation is to focus on your own feelings and experiences, rather than making assumptions about your sister's intentions or reactions. You could say something like, \"Hey, I wanted to talk to you about something that's been bothering me. I feel hurt when [specifically describe the situation]. Can we discuss this further?\" This can help to create a safe space for both of you to explore the issue and work towards a resolution.\n\nIt's also worth considering what you hope to achieve from this conversation. Are you looking for a specific outcome, such as an apology or a change in behavior? Or are you simply seeking to express your feelings and be heard? Clarifying your goals can help you navigate the conversation more effectively.\n\nRemember, this is a hypothetical scenario, and the actual conversation may unfold differently. But by considering these possibilities, you can begin to prepare yourself for what might happen and make a more informed decision about how to proceed.",
+  "usage": {
+    "prompt_tokens": 3058,
+    "completion_tokens": 329,
+    "total_tokens": 3387,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 50.730470675975084
+  },
+  "observed": {
+    "clarity": 0.85,
+    "groundedness": 0.5,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 1,
+    "safety": 1
+  },
+  "observedTotal": 5
+}

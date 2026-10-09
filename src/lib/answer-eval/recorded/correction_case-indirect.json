@@ -1,0 +1,26 @@
+{
+  "fixtureId": "correction_case-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:01:33.307Z",
+  "promptSha": "c2b5b80b8ab8563488fe63983a6e83b066d36e84d731fe1c29c0f883a46acda0",
+  "text": "Let's examine this situation further. One possibility worth examining is that your tendency to worry about others might be a way to maintain a sense of connection or importance, rather than a genuine need for others to need you. It may be that you're more concerned with ensuring that others are taken care of, which could be a way to alleviate your own worry and anxiety. This might be a dynamic that's worth looking into.\n\nIt's also possible that the people around you are perceiving your actions as a way to feel needed, but you're experiencing it as worry. This could be a misinterpretation on their part, or it could be a reflection of how you're not clearly communicating your own needs and boundaries. \n\nIn this situation, what do you think keeps happening when you worry about others?",
+  "usage": {
+    "prompt_tokens": 3020,
+    "completion_tokens": 161,
+    "total_tokens": 3181,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 45.817391054704785
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.2,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 3.85
+}

@@ -1,0 +1,26 @@
+{
+  "fixtureId": "simulation_request-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:01:16.962Z",
+  "promptSha": "e7571908abbfc19ad43a5e8d3a45b5f87606dff4bb7bd1d703cc89a7393ea46a",
+  "text": "One possibility worth examining is that you're considering the timing of your expression because you tend to protect what matters, and right now, you're not sure how the other person will respond. This reflex to guard what it loves (Moon inner response) might be influencing your decision. \n\nIt may be that your hesitation has nothing to do with the message itself, but rather with the potential reaction of the other person. This could be an opportunity to explore what you're trying to protect and what you're hoping for in this situation. \n\nWhat does saying something now mean to you, and what does it mean to wait for a better moment?",
+  "usage": {
+    "prompt_tokens": 2996,
+    "completion_tokens": 128,
+    "total_tokens": 3124,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 44.624486055225134
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.7,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 4.35
+}

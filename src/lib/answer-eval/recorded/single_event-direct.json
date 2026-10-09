@@ -1,0 +1,26 @@
+{
+  "fixtureId": "single_event-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T19:59:46.872Z",
+  "promptSha": "03f2666b9dd00b0865ad3046d535f90a938f8d9c8c584adf588a7971f1d6435e",
+  "text": "You said everything went fine with the move, but you've been feeling heavy and quiet since then. One possibility worth examining is that helping your friend was connected to your desire to feel needed or valuable. This dynamic might be showing up in how you're feeling after the move, as if your value is still tied to the act of helping. \n\nWhen you help someone, does it sometimes make you feel like you're doing something important or that you matter to the other person?",
+  "usage": {
+    "prompt_tokens": 3099,
+    "completion_tokens": 96,
+    "total_tokens": 3195,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 45.207566619850695
+  },
+  "observed": {
+    "clarity": 0.7,
+    "groundedness": 0.3,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 3.65
+}

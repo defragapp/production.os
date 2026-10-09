@@ -1,0 +1,26 @@
+{
+  "fixtureId": "single_event-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:00:06.862Z",
+  "promptSha": "c6b8128b6f2c193e2c4a743defa21e02d2a7a7c24276d91872756b4d5842767f",
+  "text": "One possibility worth examining is that the quiet after helping someone could be an experience of disconnection from your own needs and desires. Your Sun core expression is about holding and protecting what matters, which might mean you're deeply invested in the well-being of others. When you spend a lot of energy helping, it's possible that you might feel a sense of responsibility to keep supporting the other person, even in the quiet moments after. This could lead to a reflex to guard what you love – in this case, the relationship or the sense of purpose you got from helping – and create a sense of tension or unease when you're not actively engaged in that activity.\n\nIt may be worth looking at whether the value you derive from helping is connected to your sense of worth or identity. If that's the case, the quiet after helping might feel loaded because it's a reminder that your value isn't solely defined by your actions for others. This could be an opportunity to explore what you need to feel valued and connected to yourself, rather than relying on external validation.\n\nThis is just one possible interpretation, and it's not a definitive answer. The quiet after helping can be a complex experience, and there could be other factors at play. But examining this dynamic might help you better understand what's going on and how you can care for yourself in these moments.",
+  "usage": {
+    "prompt_tokens": 3051,
+    "completion_tokens": 270,
+    "total_tokens": 3321,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 49.092471172101796
+  },
+  "observed": {
+    "clarity": 0.85,
+    "groundedness": 0.7,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 1,
+    "safety": 1
+  },
+  "observedTotal": 5.199999999999999
+}

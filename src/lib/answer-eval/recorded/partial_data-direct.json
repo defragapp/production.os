@@ -1,0 +1,26 @@
+{
+  "fixtureId": "partial_data-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:00:39.615Z",
+  "promptSha": "0e622016599c2c6aa6d9810ef3402126affbc8f647f3ef72a8f52b231da3ea9a",
+  "text": "When you describe the fight, you say you only know your side, and your version feels loud and one-sided. This could indicate that you're holding onto your perspective tightly, perhaps as a way to protect what matters to you. \n\nIt's possible that the fight has awakened a reflex to guard what you love, which is a tendency you have when feeling protective. This could make it harder to hear the other person's perspective or to consider that there might be more to the situation than what you're aware of.\n\nWhat does the fight mean to you? What does it represent, and how does it make you feel?",
+  "usage": {
+    "prompt_tokens": 3070,
+    "completion_tokens": 125,
+    "total_tokens": 3195,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 45.56570418179035
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.6,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 1,
+    "safety": 1
+  },
+  "observedTotal": 5.25
+}

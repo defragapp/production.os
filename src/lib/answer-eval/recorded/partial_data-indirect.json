@@ -1,0 +1,26 @@
+{
+  "fixtureId": "partial_data-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:00:52.309Z",
+  "promptSha": "09668b7ca35750bbce06bd43ee7a54dde687fd6bbb2889e8c1731a7d0b35dd70",
+  "text": "One possibility worth examining is that you tend to hold and protect what matters to you, especially when it comes to your inner world. This might lead you to fill in the missing part of the conflict with what feels most protective, rather than what is actually present. It may be worth looking into whether your reflex to guard what you love influences how you navigate conflicts, making you more likely to assume the worst-case scenario or to try to control the narrative to prevent harm.\n\nIt may be that this tendency is not inherently bad, but rather a way to safeguard your emotional well-being. However, it's also possible that this dynamic could be limiting your ability to see the whole picture and respond to the situation in a more open and curious way.\n\nA question to consider: What would happen if you were to approach the conflict with a sense of curiosity, rather than a need to protect your inner world? What might you learn or discover about the other person's perspective, and how might that change your understanding of the situation?",
+  "usage": {
+    "prompt_tokens": 3012,
+    "completion_tokens": 203,
+    "total_tokens": 3215,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 46.804538851603866
+  },
+  "observed": {
+    "clarity": 0.7,
+    "groundedness": 0.7,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 1,
+    "safety": 1
+  },
+  "observedTotal": 5.05
+}

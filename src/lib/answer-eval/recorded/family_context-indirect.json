@@ -1,0 +1,26 @@
+{
+  "fixtureId": "family_context-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-09T20:02:00.154Z",
+  "promptSha": "c99f41480d743803ab61f40f601a3d62d8d0f187414b995c4c7f5f8694bfb2a6",
+  "text": "One possibility worth examining is that each member of the family may be experiencing a dynamic in which they are looking to the central person for emotional regulation, a sense of security, or a way to manage their own stress. This could be due to their own baseline tendencies or the way they've learned to respond to the central person's behavior. \n\nThe central person, in this case, may be shouldering the responsibility of holding everything together, which could be a reflection of their own core expression of holding and protecting what matters. However, this could also be a dynamic that reinforces a sense of control or a way to avoid their own feelings of uncertainty or inadequacy. \n\nThe family members might be unconsciously reinforcing this dynamic by relying on the central person to manage their emotions or needs, which could be a result of their reflex to guard what they love (Moon inner response). This could be causing a dynamic of over-reliance and potentially leading to feelings of resentment or burnout for the central person. \n\nIt's also possible that the family members have developed a sense of belonging or security through their connection with the central person, which is a part of their Venus relating quality. However, this could also be a source of tension if the central person feels overwhelmed or unable to sustain this role.",
+  "usage": {
+    "prompt_tokens": 3077,
+    "completion_tokens": 260,
+    "total_tokens": 3337,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 49.1894299602136
+  },
+  "observed": {
+    "clarity": 0.7,
+    "groundedness": 0.9,
+    "relational": 0,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 3.5
+}
