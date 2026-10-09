@@ -10,17 +10,19 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 | Frontend | Next.js App Router + React 19 + Tailwind CSS + shadcn/ui |
 | Adapter | `@opennextjs/cloudflare` (OpenNext) |
 | Runtime | Cloudflare Workers (`nodejs_compat` is implicit at the `compatibility_date`; it is deliberately not declared) |
-| Database | Cloudflare D1 (SQLite) — **11 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants`, `nudge` |
+| Database | Cloudflare D1 (SQLite) — **12 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants`, `nudge`, `admin_audit_log` |
 | Sessions | Cloudflare KV (`SESSION_KV`) — rate-limit + reset/verify + `ops:` counters (JWTs live in the cookie; `users.token_version` revokes them early) |
 | Device-Only memory | Client-side AES-GCM 256 non-extractable `CryptoKey` in IndexedDB `sovereign-memory` (`memory_mode='local'` → zero-retention edge inference, no D1 thread write) |
 | AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`, explicit `max_tokens=1024`, 2,000-char input cap) |
 | AI Routing | AI Gateway (ID: `sovereign-ai-gateway`) + direct Workers AI fallback |
+| Semantic recall | Cloudflare Vectorize (index `chat-embeddings`, binding `VECTORIZE`) — per-user-namespaced turn embeddings for chat search |
 | Entitlements | `tier.ts resolveTier()` — Free vs `sovereign+` (Stripe) vs owner (`chadowen93@gmail.com`) vs SHA-256-hashed 30-day gift passes (`promo.ts`) |
 | Baseline Engine | NASA/JPL Horizons API (planetary positions) |
 | Auth | Passkeys (WebAuthn, passkey-first) + Email/Password fallback (PBKDF2-100k + HMAC pepper) + JWT (HS256) |
 | Bot Protection | Cloudflare Turnstile (best-effort, env-gated) |
 | Email | Resend (`sovereign@defrag.app`, verified domain, click/open tracking) |
 | Payments | Stripe (Free vs Sovereign+ monthly/annual) |
+| Scheduled jobs | Cloudflare Cron Triggers (`0 3 * * *` UTC) via `src/custom-worker.ts` — token/invite/`chat_usage` cleanup + the daily transit-nudge scan |
 
 > The full authentication model — session handling, password hashing/pepper,
 > the Cloudflare Workers PBKDF2 ceiling, best-effort Turnstile, and the
@@ -183,7 +185,7 @@ environment cannot boot.
 > pinning `brace-expansion` to v5 forced an ESM-only package onto
 > `minimatch@3`, which imports the CommonJS default export — so the OpenNext
 > bundle died with `does not provide an export named 'default'`, while
-> `tsc`, ESLint and all 396 Vitest tests reported success. Nothing in the
+> `tsc`, ESLint and all 541 Vitest tests reported success. Nothing in the
 > type system or the unit suite loads `.open-next/worker.js`.
 >
 > Gate 1 (the clean OpenNext build) is the **only** check that catches
@@ -195,7 +197,7 @@ environment cannot boot.
 ```
 open-next.config.ts            # OpenNext Cloudflare config (defaults)
 wrangler.jsonc                 # Worker config: D1, KV, AI, AI Gateway, static assets
-schema.sql                     # Canonical D1 baseline — 11 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge); migrations/0001–0007 layer onto existing DBs
+schema.sql                     # Canonical D1 baseline — 12 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge, admin_audit_log); migrations/0001–0007 layer onto existing DBs
 assets/ace-of-cups.jpg         # Canonical brand artwork (source of truth for the mark)
 scripts/build-brand-assets.mjs # Regenerates public/brand/*.png from the source artwork (node scripts/build-brand-assets.mjs)
 public/brand/                  # Emitted raster mark: emblem-full, emblem-core, emblem-core-bold, icon, apple-icon
@@ -225,11 +227,14 @@ src/
 │   │   └── webhooks/stripe/route.ts   # Stripe webhook → subscription_tier
 │   ├── account/page.tsx               # Account management
 │   ├── baseline/page.tsx              # Baselines list
+│   ├── self/page.tsx                  # "Self" lens — your own Baseline in plain language (auth-aware CTA)
+│   ├── people/page.tsx                # "People" lens — your connections and shared dynamics
+│   ├── systems/page.tsx               # "Systems" lens — the rooms/families you move through
+│   ├── s/[id]/page.tsx                # Public shared Sigil page (+ branded OG image)
 │   ├── chat/chat-client.tsx           # Chat client (SSE streaming, thread switcher)
 │   ├── chat/page.tsx                  # Chat page (server wrapper around ChatClient)
 │   ├── onboard/page.tsx               # Server wrapper (force-dynamic) — redirects authed users with a baseline to /chat
-│   ├── onboard/onboard-server.tsx     # Onboard server gate (legacy re-export; superseded by page.tsx)
-│   ├── onboard/onboard-content.tsx    # Client two-phase flow: account → baseline → plan (Turnstile-gated)
+│   ├── onboard/onboard-content.tsx    # Client two-step flow: account → baseline (Turnstile-gated)
 │   ├── upgrade/checkout-client.tsx    # Upgrade client → POST /api/checkout
 │   ├── upgrade/page.tsx               # Paywall → Stripe Checkout
 │   ├── terms/page.tsx                 # Terms of service
@@ -257,6 +262,7 @@ src/
 │   ├── sovereign-safety.ts            # Layer-1 deterministic validation, negation-aware, leakage guard, high-risk routing
 │   ├── sovereign-model.ts             # Non-streaming model adapter (gateway-first + direct fallback; explicit max_tokens)
 │   ├── chat-history.ts                # Idempotent merge of stored + client-sent transcript (prevents duplicate-turn writes)
+│   ├── chat-embeddings.ts             # Vectorize semantic recall — embed turns into `chat-embeddings`, retrieve relevant past context
 │   ├── markdown-lite.ts               # Dependency-free markdown subset → tokens for assistant answers
 │   ├── limits.ts                      # FREE_TIER_DAILY_LIMIT (5 msgs/day) + related ceilings
 │   ├── stripe.ts                      # Stripe pricing tiers + webhook verification
@@ -282,8 +288,9 @@ src/
 │   ├── brand-emblem-data.ts           # inlined brand emblem data
 │   ├── types.ts                       # Shared TypeScript types (incl. MemoryMode)
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 28 files / 296 tests)
-└── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 44 files / 541 tests)
+├── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
+└── custom-worker.ts                   # Worker entry: re-exports OpenNext `fetch` + adds the `scheduled` cron handler
 ```
 
 ## Sovereign Reasoning Engine
@@ -322,7 +329,7 @@ correction, leakage) and §53 regressions are covered in
 ## Notes
 
 - Routes run in the Cloudflare Workers runtime via the OpenNext adapter. `nodejs_compat` is implicit at the declared `compatibility_date` and is intentionally NOT listed in `compatibility_flags` (Gate 33 fails if it reappears); there are no explicit `runtime = "edge"` exports.
-- Passwords are hashed with PBKDF2-HMAC-SHA256 at **100,000 iterations** (the Cloudflare Workers / workerd WebCrypto ceiling — values above 100k throw at runtime) and then keyed with an HMAC using the `PASSWORD_PEPPER` secret, so a leaked D1 dump is not crackable on its own. Stored hashes are versioned (`pbkdf2$<iter>$pepper$<hmac>`) and older/un-peppered rows are transparently upgraded on successful login. Login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed). See [`docs/auth.md`](docs/auth.md).
+- Passwords are hashed with PBKDF2-HMAC-SHA256 at **100,000 iterations** (the Cloudflare Workers / workerd WebCrypto ceiling — values above 100k throw at runtime) and then keyed with an HMAC using the `PASSWORD_PEPPER` secret, so a leaked D1 dump is not crackable on its own. Stored hashes are versioned (`pbkdf2$<iter>$pepper$<hmac>`) and older/un-peppered rows are transparently upgraded on successful login. Login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, tracked in the D1 `chat_usage` table). See [`docs/auth.md`](docs/auth.md).
 - JWT session tokens are stored in an httpOnly, Secure, SameSite=Lax cookie (7-day expiry) and verified on every API call via middleware + route guards.
 - **Passkeys (WebAuthn) are live** and passkey-first for return logins: `@simplewebauthn/server` v13 (edge-compatible), a `passkeys` D1 table, and `/api/auth/passkey/{register,authenticate}` endpoints (POST options / PUT verify; challenges are single-use in KV). A "Continue with passkey" button tops the login card and an "Add a passkey" control lives on the account page; enrollment requires an existing session and the password stays as the fallback, so nobody is locked out. Raw WebAuthn `DOMException`s are mapped to friendly, actionable messages instead of being surfaced to the user. The browser ceremony must be validated on a real device. See [`docs/auth.md`](docs/auth.md) §9.
 - The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Generation is non-streaming (one complete, validated answer); it is delivered to the client as a single SSE `content` event and persisted to D1 threads.

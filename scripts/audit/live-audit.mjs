@@ -7,7 +7,7 @@ const BASE = "https://sovereign.defrag.app";
 const OUT = ".audit-tmp/live-audit";
 fs.mkdirSync(OUT, { recursive: true });
 
-const PUBLIC = ["/", "/about", "/self", "/people", "/systems", "/blog", "/blog/what-is-a-baseline", "/faq", "/support", "/terms", "/privacy", "/onboard", "/offline", "/redeem", "/reset"];
+const PUBLIC = ["/", "/about", "/self", "/people", "/systems", "/faq", "/support", "/terms", "/privacy", "/onboard", "/offline", "/redeem", "/reset"];
 const AUTHED = ["/chat", "/settings", "/account", "/baseline", "/upgrade"];
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });

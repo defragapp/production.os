@@ -6,7 +6,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const BASE = process.env.QA_BASE || "https://sovereign.defrag.app";
-const PUBLIC = ["/", "/about", "/blog", "/faq", "/offline", "/onboard", "/people",
+const PUBLIC = ["/", "/about", "/faq", "/offline", "/onboard", "/people",
   "/privacy", "/redeem", "/self", "/support", "/systems", "/terms", "/upgrade",
   "/account", "/settings", "/chat", "/baseline", "/invite", "/reset"];
 

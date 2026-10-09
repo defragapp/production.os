@@ -19,7 +19,7 @@ function isNonCanonicalAllowed(host: string): boolean {
  * Server-side auth gate.
  *
  * - Public pages (explicit set, line ~55): /, /onboard, /terms, /privacy, /redeem.
- *   Other public surfaces — /invite, /about, /blog, /faq, … — are NOT in that array;
+ *   Other public surfaces — /invite, /about, /faq, … — are NOT in that array;
  *   they render via the fall-through below ("not an API and not a protected page"),
  *   and unknown paths still reach the branded 404. /invite stays public this way so an
  *   accept link works before the recipient has an account.

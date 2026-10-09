@@ -16,16 +16,18 @@ personal "Baseline" computed from birth data.
 - Validate before every deploy with `npm run verify:release` — the full ratchet in
   `scripts/verify-release.mjs` (typecheck, lint, and tests are its first three
   gates; the rest measure the built app in a browser).
-- Releasing is ordered (the canonical path is `//release` in `package.json`):
-  every gate green → `git push origin main` → **poll** `npx wrangler deployments
-  list` for ~2 minutes. Workers Builds on the git integration is *supposed* to
-  fire on a push to `main`, but it is not dependable — on release `11586ad` no
-  build-system version had landed ~6 minutes after the push, so the release had
-  to be shipped by hand. Treat the push as a candidate deploy and confirm it:
-  if no new version appears within ~2 minutes, run `rm -rf .open-next .next &&
-  npm run deploy` exactly once. Never run the CLI deploy while a push-triggered
-  build is still in flight — two builds of the same commit collide and stall
-  static-asset binding propagation.
+- Releasing is ordered. **Push-to-deploy is live and verified (2026-10-06):**
+  every gate green → `git push origin main` → Workers Builds (the git
+  integration) fires on the push and rolls out BOTH Workers (`production-os`
+  and `sovereign-tail`) itself. Confirm the deploy from the GitHub
+  check-runs (`Workers Builds: <worker>`) or the dashboard Builds tab — NOT
+  `wrangler versions list` (Builds deploys surface there as
+  `Source: Unknown (version_upload)`). Do NOT run a CLI deploy straight after
+  a push: two builds of the same commit collide and stall static-asset binding
+  propagation (the 503/hang on `/`, `/privacy`, `/terms`). `npm run deploy`
+  (which chains `npm run tail:deploy`) is the fallback only when a push build
+  fails or never fires — and only after confirming no build is in flight. See
+  `AGENTS.md` for the full release protocol.
 
 ## 2. STRICT VOCABULARY GUARDRAILS (public UI, marketing, and AI responses)
 

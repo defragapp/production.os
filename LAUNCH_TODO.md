@@ -13,10 +13,15 @@
 - Review landing-page composer copy for any remaining placeholder feel around the demo input and send affordance.
 
 ## 🟢 LAUNCH PROTOCOL
-1. `npm run verify:release`
-2. `rm -rf .open-next .next && npm run deploy`
-3. `git status --short`
-4. `git push origin main`
+Push-to-deploy is live (Workers Builds ships both Workers on a push to `main`).
+1. `npm run verify:release` — every gate green, or do not ship
+2. `git commit` (pathspec-isolated) then `git push origin main`
+3. Confirm the two `Workers Builds` check-runs went green and both rollouts landed
+
+Do **not** run `npm run deploy` as a routine step after a push — that is a second
+build of the same commit colliding. Use the CLI deploy (`npm run deploy`, which
+chains `npm run tail:deploy`) only as a fallback when a push build fails or never
+fires, and only after confirming no build is in flight.
 
 ## 🔐 Secret hygiene — Stripe live key rotation checklist (#28)
 1. In Stripe Dashboard (Live mode), create a new Live secret key.
