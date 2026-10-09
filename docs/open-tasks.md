@@ -18,7 +18,13 @@ push to `main` updates source of truth only and does NOT deploy. Rows in *Curren
 evidence* / historical entries mentioning "Workers Builds check-runs `success`" are
 left as written (per the deploy-path precedent, corrected with a dated supersession
 note rather than rewriting the snapshots); future shipping notes cite CLI deploys +
-live smoke checks instead.
+live smoke checks instead. **Current account state (verified again 2026-10-09):** the
+two orphaned build tokens `f40e7197…`/`f96c21f9…` (wrap user tokens `645da541…`/
+`376fa03e…`, zero triggers reference them) are left **in place** by owner decision —
+natural cleanup point is the dashboard Connect flow, after new build tokens are wired
+and first push-triggered builds go green. `DELETE /builds/tokens/{uuid}` exists for
+that cleanup. Production is otherwise clean: no triggers, no builds, no build configs
+on either Worker.
 
 Current evidence: this pass's four commits (`93c9545`/`a78bf85`/`3cab4f8`/`7d65707`) are
 **pushed to `main` and live** — `HEAD` `7d65707` == `origin/main`, both Workers Builds
