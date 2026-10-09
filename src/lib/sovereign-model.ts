@@ -30,6 +30,16 @@ export const DEFAULT_MAX_TOKENS = 1024;
  */
 export const MODEL_CALL_TIMEOUT_MS = 60_000;
 
+/**
+ * Per-attempt ceiling for the gateway tier only. The 60s budget above is
+ * measured across every tier, so without this a stalled gateway could consume
+ * the whole budget and the direct/secondary fallbacks would never get to run.
+ * 50s sits above the observed 19–43s worst case, so a healthy-but-slow gateway
+ * is never cut off early, while a genuinely hung one still leaves ~10s for the
+ * fallbacks before the overall ceiling.
+ */
+const GATEWAY_CALL_TIMEOUT_MS = 50_000;
+
 export class ModelError extends Error {}
 
 /**
@@ -102,7 +112,11 @@ export function createCloudflareModel(
           // invalid `{ gateway: { id: "" } }` call the binding would reject.
           if (gatewayId) {
             try {
-              const result = await ai.run(model, params, { gateway: { id: gatewayId } });
+              const result = await raceTimeout(
+                () => ai.run(model, params, { gateway: { id: gatewayId } }),
+                GATEWAY_CALL_TIMEOUT_MS,
+                "AI Gateway tier timed out — falling back to the direct binding.",
+              );
               return { text: extractText(result), usedGateway: true };
             } catch (gatewayErr) {
               // Self-heal: a stale/misconfigured gateway (the common cause of a

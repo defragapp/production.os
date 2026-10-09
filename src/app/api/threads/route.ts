@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
+import { JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
 import { getEnv, waitUntil } from "@/lib/env";
+import { verifySession } from "@/lib/session";
 import type { Thread, ChatMessage } from "@/lib/types";
 import { mergeThreadHistory } from "@/lib/threads";
 import { deleteThreadEmbeddings } from "@/lib/chat-embeddings";
@@ -33,11 +34,11 @@ async function getAuthPayload(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return { env, error: NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 }) } as const;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  const payload = await verifyJWT(token, secret);
-  if (!payload) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  return { env, payload } as const;
+  // verifySession (not bare verifyJWT) so a revoked cookie is rejected here,
+  // not only by the middleware matcher.
+  const session = await verifySession(env, request);
+  if (!session) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
+  return { env, payload: session.payload } as const;
 }
 
 export async function GET(request: NextRequest) {
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (merged.length > MAX_THREAD_MESSAGES || JSON.stringify(merged).length > MAX_THREAD_CHARS) {
       return threadTooLong(merged.length);
     }
-    await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ?").bind(JSON.stringify(merged), body.threadId).run();
+    await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?").bind(JSON.stringify(merged), body.threadId, payload.sub).run();
     return NextResponse.json({ threadId: body.threadId, messageCount: merged.length });
   }
   const newThreadId = generateUUID();

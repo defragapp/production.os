@@ -133,10 +133,11 @@ export const config = {
      * - paths carrying a dot (file-like assets: /sw.js, /manifest.webmanifest,
      *   /sitemap.xml) — EXCEPT anything under `api/`. The blanket `.*\\..*`
      *  exemption was an auth hole: a dotted dynamic segment
-     *   (`/api/invites/<id>.x`) skipped middleware entirely, and routes that
-     *   lean on middleware for the token_version revocation check
-     *   (getAuthPayload → verifyJWT) would honour a revoked cookie. Every
-     *   `/api/*` path must reach the verifySession gate below, dots or not.
+     *   (`/api/invites/<id>.x`) skipped middleware entirely, and any route
+     *   relying on the matcher for the token_version revocation check would
+     *   honour a revoked cookie. Every `/api/*` path must reach the
+     *   verifySession gate below, dots or not (route-level `getAuthPayload`
+     *   calls `verifySession` too, but the matcher stays the primary gate).
      */
     "/((?!_next/static|_next/image|favicon.ico|robots.txt|(?!api/).*\\..*).*)",
   ],

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendTemplate } from "@/lib/email";
-import { getEnv, type AppEnv } from "@/lib/env";
+import { getEnv } from "@/lib/env";
 import { hashClientIp } from "@/lib/ip-hash";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -34,22 +35,6 @@ function clientIp(request: NextRequest): string {
   return "unknown";
 }
 
-async function verifyTurnstile(env: AppEnv, token: string): Promise<boolean> {
-  if (!env.TURNSTILE_SECRET_KEY) return true;
-  try {
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: token }),
-    });
-    const data = (await res.json()) as { success?: boolean };
-    return data.success === true;
-  } catch (err) {
-    console.error("[support] turnstile verify failed:", err);
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
   const env = await getEnv();
 
@@ -70,7 +55,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A few words about what's happening helps us help you." }, { status: 400 });
   }
 
-  if (body.turnstileToken && !(await verifyTurnstile(env, body.turnstileToken))) {
+  if (!(await verifyTurnstileToken(env, body.turnstileToken))) {
     return NextResponse.json({ error: "That security check didn't go through — try again in a moment." }, { status: 400 });
   }
 

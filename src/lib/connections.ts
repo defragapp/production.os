@@ -4,8 +4,9 @@
  * name + role + consent flags only.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "./auth";
+import { JWT_SECRET_ENV_KEY } from "./auth";
 import { getEnv } from "./env";
+import { verifySession } from "./session";
 import type { RelationshipView, User } from "./types";
 
 export const MAX_PENDING_INVITES = 5;
@@ -22,16 +23,22 @@ export const ROLE_SUGGESTIONS = [
   "in-law", "neighbor", "other",
 ] as const;
 
-/** Confirm the authenticated user for a request, sharing the threads pattern. */
+/**
+ * Confirm the authenticated user for a request.
+ *
+ * Uses `verifySession` — signature **and** live `users.token_version` — not a
+ * bare `verifyJWT`, so a revoked cookie is rejected at the route as well as at
+ * the middleware gate. Middleware already covers every `/api/*` path; this
+ * stops the routes depending on the matcher for revocation. The extra
+ * `token_version` read is the cost of that guarantee.
+ */
 export async function getAuthPayload(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return { env, error: NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 }) } as const;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  const payload = await verifyJWT(token, secret);
-  if (!payload) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  return { env, error: undefined, payload } as const;
+  const session = await verifySession(env, request);
+  if (!session) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
+  return { env, error: undefined, payload: session.payload } as const;
 }
 
 /**
