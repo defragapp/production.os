@@ -178,14 +178,28 @@ export function LandingClient() {
 
             {/* A process, not three objects — reads as a stepped flow (gold
                 number + serif title + muted line) instead of a wall of equal
-                glass boxes. The number carries the brand's single gold accent. */}
+                glass boxes. The number carries the brand's single gold accent.
+                On md+ a hairline runs from each number across the column gap to
+                the next, so 01 → 02 → 03 reads as one sequence rather than three
+                peers. The line is a 1px flex child (owns no vertical space, so
+                the row height is unchanged → zero CLS), static (nothing to guard
+                under prefers-reduced-motion), and hidden below md where the
+                steps stack. It uses the same faint cream hairline as .section-rule. */}
             <div className="grid gap-x-8 gap-y-10 md:grid-cols-3 md:gap-y-0">
               {HOW_IT_WORKS.map((step, i) => (
                 <Reveal key={step.title} delay={i * 80} className="h-full">
                   <div className="flex h-full flex-col">
-                    <span className="mb-4 font-mono text-sm tracking-[0.2em] text-[hsl(38_45%_75%)]">
-                      {step.step}
-                    </span>
+                    <div className="mb-4 flex items-center gap-3">
+                      <span className="font-mono text-sm tracking-[0.2em] text-[hsl(38_45%_75%)]">
+                        {step.step}
+                      </span>
+                      {i < HOW_IT_WORKS.length - 1 && (
+                        <span
+                          aria-hidden="true"
+                          className="-mr-8 hidden h-px flex-1 bg-[hsla(38,18%,95%,0.14)] md:block"
+                        />
+                      )}
+                    </div>
                     <h3 className="font-display text-xl font-normal text-foreground md:text-[1.35rem]">{step.title}</h3>
                     <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{step.desc}</p>
                   </div>
