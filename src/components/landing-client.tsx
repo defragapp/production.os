@@ -258,9 +258,14 @@ export function LandingClient() {
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
                 {BASELINE_SOURCE_CHIPS.map((source, i) => (
-                  <span key={source} className="flex items-center gap-5">
-                    {i > 0 && <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />}
+                  <span key={source} className="flex items-center gap-x-5">
                     {source}
+                    {/* Trailing separator, omitted on the last chip: because the
+                        dot is glued to its own chip it wraps WITH the word, so a
+                        new line can never begin with an orphaned "•". */}
+                    {i < BASELINE_SOURCE_CHIPS.length - 1 && (
+                      <span className="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true" />
+                    )}
                   </span>
                 ))}
               </div>

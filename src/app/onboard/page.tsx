@@ -1,11 +1,19 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
+import { FormSkeleton } from "@/components/ui/form-skeleton";
 import { OnboardContent } from "./onboard-content";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Get started",
+  description:
+    "Create your free Sovereign OS account or sign in — a private space to understand yourself and your relationships.",
+};
 
 /**
  * Server-side redirect for authenticated users who already have a baseline.
@@ -27,7 +35,29 @@ export default async function OnboardPage() {
   }
 
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+    <Suspense
+      fallback={
+        // The query string and session are unreadable during SSR, so the real
+        // form can't paint server-side — but a bare "Loading…" used to swap for
+        // a whole card, moving the first paint. This reserves the finished
+        // signup shape (title, deck, field skeleton) so the arrival is a fade.
+        <main
+          id="main"
+          className="relative flex min-h-[calc(100dvh-3.5rem)] items-center justify-center overflow-hidden p-6"
+        >
+          <div className="app-glow absolute inset-0 -z-10" aria-hidden="true" />
+          <div className="w-full max-w-md">
+            <div className="mb-5 mt-2 text-center">
+              <h1 className="font-display text-3xl font-normal tracking-tight">Create your account</h1>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                Start free. You can build your Baseline right after.
+              </p>
+            </div>
+            <FormSkeleton fields={2} label="Loading your account form…" />
+          </div>
+        </main>
+      }
+    >
       <OnboardContent />
     </Suspense>
   );

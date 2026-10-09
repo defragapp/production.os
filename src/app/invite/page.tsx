@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { Stepper } from "@/components/stepper";
+import { FormSkeleton } from "@/components/ui/form-skeleton";
 import { LoadingScreen } from "@/components/ui/loading";
 
 // Accepting an invite is three moves, and the middle one (the Baseline) is
@@ -259,7 +260,12 @@ export default function InvitePage() {
   return (
     <PageShell className="max-w-md">
           {token === undefined ? (
-            <PageHeader title="Invitation" description="Checking your invitation…" />
+            <>
+              <PageHeader title="Invitation" description="Checking your invitation…" />
+              {/* Reserve the card on the first paint: a bare heading that a
+                  card later drops beneath is a layout shift, not a fade. */}
+              <FormSkeleton fields={1} label="Checking your invitation…" />
+            </>
           ) : token === null ? (
             <>
               <PageHeader title="Invitation" description="This invitation link doesn't look right." />
@@ -286,7 +292,10 @@ export default function InvitePage() {
               </Card>
             </>
           ) : info === null ? (
-            <PageHeader title="Invitation" description="Checking your invitation…" />
+            <>
+              <PageHeader title="Invitation" description="Checking your invitation…" />
+              <FormSkeleton fields={1} label="Checking your invitation…" />
+            </>
           ) : info.status === "invalid" ? (
             <>
               <PageHeader title="Invitation" description="This invitation doesn't look right." />

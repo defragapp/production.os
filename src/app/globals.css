@@ -253,10 +253,14 @@
 /* Warm backlight behind the product mock on the landing hero. The mock itself
    is deliberately STATIC now (the old hover-in-air float read as restless and
    "techie"); this soft glow from behind is what makes the glass plate feel lit
-   and premium rather than moving. No animation, so no reduced-motion branch. */
+   and premium rather than moving. No animation, so no reduced-motion branch.
+   The horizontal inset is intentionally tighter than the vertical: the mock sits
+   flush to the hero's right column, so a wide sideways bleed pushed the glow
+   into the section's overflow-hidden edge and read as an abrupt cut-off. Keeping
+   the sides in lets the blur fade out inside the viewport. */
 .demo-backlight {
   position: absolute;
-  inset: -18% -14%;
+  inset: -16% -7%;
   z-index: -10;
   pointer-events: none;
   background:

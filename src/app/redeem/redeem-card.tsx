@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
-import { LoadingScreen } from "@/components/ui/loading";
+import { FormSkeleton } from "@/components/ui/form-skeleton";
 import { formatD1Date } from "@/lib/utils";
 
 /**
@@ -88,14 +88,10 @@ export function RedeemCard() {
     return (
       <PageShell className="max-w-md">
         <PageHeader title="Your invitation" description="Checking your pass…" />
-        <Card>
-          <CardContent className="pt-6">
-            {/* LoadingScreen defaults to a full-viewport min-height; inside the
-                reserved card that would defeat the point, so the override
-                pins it to the content box the resolved card will occupy. */}
-            <LoadingScreen className="min-h-[9rem] py-8" label="Checking your account" />
-          </CardContent>
-        </Card>
+        {/* Static field skeleton instead of a spinner: the resolved screen is a
+            card of this footprint, so the first paint reads as finished and the
+            arrival is a fade rather than a swap. */}
+        <FormSkeleton fields={1} label="Checking your account" />
       </PageShell>
     );
   }

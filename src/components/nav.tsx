@@ -11,7 +11,7 @@ import { NavMenu } from "@/components/nav-menu";
 // the coarse-pointer block in globals.css raises it to the 44px tap floor on
 // touch. Same for `tap-line` on the drawer's rows.
 const navLink =
-  "nav-link rounded-full px-3.5 py-1.5 text-sm font-medium text-foreground/65 transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.06]";
+  "nav-link rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.06]";
 const navLinkActive =
   "text-foreground bg-white/[0.09] shadow-[inset_0_0_0_1px_hsla(38,18%,95%,0.12)]";
 
