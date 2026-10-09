@@ -101,3 +101,33 @@ describe("chat route recall wiring", () => {
     expect(src).toMatch(/if \(usedRecall\) controller\.enqueue\([^)]*recall: true/);
   });
 });
+
+describe("chat route journey-persist ordering (P1 reliability)", () => {
+  const src = readFileSync(join(__dirname, "../app/api/chat/route.ts"), "utf8");
+
+  it("derives journey state before generation but writes it only after", () => {
+    // The canvas must still converge first, so the deterministic derive runs
+    // ahead of the model call. The D1 write, however, is deferred past it: a
+    // turn whose generation throws (500/503) has to leave the journey exactly
+    // where it was, never advance it on an answer that never arrived.
+    const deriveIdx = src.indexOf("deriveJourneyState(context");
+    const genIdx = src.indexOf("await generateSovereignResponse(");
+    const persistIdx = src.indexOf("await persistJourneyState(");
+    expect(deriveIdx).toBeGreaterThan(-1);
+    expect(genIdx).toBeGreaterThan(-1);
+    expect(persistIdx).toBeGreaterThan(-1);
+    expect(deriveIdx).toBeLessThan(genIdx);
+    expect(genIdx).toBeLessThan(persistIdx);
+  });
+
+  it("persists only on a successful, server-memory turn with derived state", () => {
+    // The write sits behind the memory-mode + journeyState guard, after the
+    // generation try/catch — never inside the pre-generation derive block.
+    expect(src).toMatch(/if \(memoryMode === "server" && journeyState\) \{[\s\S]*?await persistJourneyState\(/);
+    const deriveBlock = src.slice(
+      src.indexOf("priorActiveJourney = await loadActiveJourney("),
+      src.indexOf("Generation runs fully"),
+    );
+    expect(deriveBlock).not.toContain("persistJourneyState(");
+  });
+});

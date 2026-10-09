@@ -20,7 +20,40 @@ export const DEFAULT_GATEWAY_ID = "sovereign-ai-gateway";
  */
 export const DEFAULT_MAX_TOKENS = 1024;
 
+/**
+ * Hard ceiling on a single generation call, measured across every tier (gateway
+ * → direct → secondary). Cloudflare inference can hang on a stalled gateway or
+ * a saturated region; without a bound both the request and the user's wait go
+ * indefinite. 60s is generous against the observed 19–43s worst case, and on
+ * expiry we throw `ModelError` so the chat route refunds the claimed usage and
+ * shows the friendly retry path — the exact UX of the existing failure branch.
+ */
+export const MODEL_CALL_TIMEOUT_MS = 60_000;
+
 export class ModelError extends Error {}
+
+/**
+ * Race `work` against a fixed deadline. If the deadline wins, reject with a
+ * `ModelError` carrying `message`; the in-flight `work` promise is abandoned
+ * (its eventual settle is ignored). The timer is always cleared so a fast
+ * success never leaves a dangling timeout — important under both Workers and the
+ * Vitest suite.
+ */
+function raceTimeout<T>(work: () => Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new ModelError(message)), ms);
+    work().then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
 
 export interface SovereignModel {
   generate(input: ModelInput): Promise<ModelOutput>;
@@ -59,42 +92,51 @@ export function createCloudflareModel(
       if (messages.length === 0) throw new ModelError("No messages to send to the model.");
       const params = { messages, max_tokens: input.maxTokens ?? DEFAULT_MAX_TOKENS };
 
-      // Tier 1 — AI Gateway (caching, rate limits, analytics). Skipped cleanly
-      // when no gateway id is configured, so a blank id never becomes an
-      // invalid `{ gateway: { id: "" } }` call the binding would reject.
-      if (gatewayId) {
-        try {
-          const result = await ai.run(model, params, { gateway: { id: gatewayId } });
-          return { text: extractText(result), usedGateway: true };
-        } catch (gatewayErr) {
-          // Self-heal: a stale/misconfigured gateway (the common cause of a
-          // 1050 on the gateway call while the underlying binding is healthy)
-          // falls through to a direct binding call instead of failing the turn.
-          console.error(`[sovereign-model] gateway run failed (${describeModelError(gatewayErr)}) — retrying via direct binding`);
-        }
-      }
-
-      // Tier 2 — direct binding, no gateway indirection. If it also fails,
-      // one last automatic tier runs before we degrade: the secondary model
-      // (a regional -fp8 capacity outage shouldn't take the whole product
-      // down). The caller refunds usage and shows a friendly retry message
-      // only once every tier has been exhausted.
-      try {
-        const result = await ai.run(model, params);
-        return { text: extractText(result), usedGateway: false };
-      } catch (directErr) {
-        console.error(`[sovereign-model] direct run failed (${describeModelError(directErr)})`);
-        if (model !== SOVEREIGN_SECONDARY_MODEL) {
-          try {
-            const result = await ai.run(SOVEREIGN_SECONDARY_MODEL, params);
-            console.error(`[sovereign-model] recovered on secondary model ${SOVEREIGN_SECONDARY_MODEL}`);
-            return { text: extractText(result), usedGateway: false };
-          } catch (secondaryErr) {
-            console.error(`[sovereign-model] secondary run failed (${describeModelError(secondaryErr)})`);
+      // The whole tier sequence below runs under one hard 60s budget. Exceeding
+      // it rejects with ModelError, which the chat route turns into a usage
+      // refund + 503, exactly like a tier-exhaustion failure.
+      return raceTimeout(
+        async () => {
+          // Tier 1 — AI Gateway (caching, rate limits, analytics). Skipped cleanly
+          // when no gateway id is configured, so a blank id never becomes an
+          // invalid `{ gateway: { id: "" } }` call the binding would reject.
+          if (gatewayId) {
+            try {
+              const result = await ai.run(model, params, { gateway: { id: gatewayId } });
+              return { text: extractText(result), usedGateway: true };
+            } catch (gatewayErr) {
+              // Self-heal: a stale/misconfigured gateway (the common cause of a
+              // 1050 on the gateway call while the underlying binding is healthy)
+              // falls through to a direct binding call instead of failing the turn.
+              console.error(`[sovereign-model] gateway run failed (${describeModelError(gatewayErr)}) — retrying via direct binding`);
+            }
           }
-        }
-        throw new ModelError("Sovereign couldn't reach the AI just now — try again in a moment.");
-      }
+
+          // Tier 2 — direct binding, no gateway indirection. If it also fails,
+          // one last automatic tier runs before we degrade: the secondary model
+          // (a regional -fp8 capacity outage shouldn't take the whole product
+          // down). The caller refunds usage and shows a friendly retry message
+          // only once every tier has been exhausted.
+          try {
+            const result = await ai.run(model, params);
+            return { text: extractText(result), usedGateway: false };
+          } catch (directErr) {
+            console.error(`[sovereign-model] direct run failed (${describeModelError(directErr)})`);
+            if (model !== SOVEREIGN_SECONDARY_MODEL) {
+              try {
+                const result = await ai.run(SOVEREIGN_SECONDARY_MODEL, params);
+                console.error(`[sovereign-model] recovered on secondary model ${SOVEREIGN_SECONDARY_MODEL}`);
+                return { text: extractText(result), usedGateway: false };
+              } catch (secondaryErr) {
+                console.error(`[sovereign-model] secondary run failed (${describeModelError(secondaryErr)})`);
+              }
+            }
+            throw new ModelError("Sovereign couldn't reach the AI just now — try again in a moment.");
+          }
+        },
+        MODEL_CALL_TIMEOUT_MS,
+        "Sovereign took too long to answer — try again in a moment.",
+      );
     },
   };
 }

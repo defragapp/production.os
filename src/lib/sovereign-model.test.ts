@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createCloudflareModel, describeModelError, ModelError, DEFAULT_MAX_TOKENS, SOVEREIGN_MODEL, SOVEREIGN_SECONDARY_MODEL } from "./sovereign-model";
+import { createCloudflareModel, describeModelError, ModelError, DEFAULT_MAX_TOKENS, MODEL_CALL_TIMEOUT_MS, SOVEREIGN_MODEL, SOVEREIGN_SECONDARY_MODEL } from "./sovereign-model";
 import type { ModelInput } from "./sovereign-types";
 
 function fakeEnv(run: (model: string, input: unknown, settings?: unknown) => Promise<unknown>) {
@@ -176,6 +176,33 @@ describe("createCloudflareModel", () => {
     await expect(model.generate(INPUT)).rejects.toThrow(ModelError);
     expect(seen).toEqual([SOVEREIGN_SECONDARY_MODEL]); // one call, no duplicate retry
     spy.mockRestore();
+  });
+
+  it("throws ModelError when a hung generation exceeds the hard 60s budget", async () => {
+    // The long-wait reliability pin: inference that never returns must fail
+    // closed at the ceiling with a ModelError (so the route refunds usage and
+    // shows the retry path) rather than hanging the request indefinitely.
+    vi.useFakeTimers();
+    try {
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const model = createCloudflareModel(
+        fakeEnv(() => new Promise(() => {
+          /* never settles — a stalled gateway/region */
+        })),
+      );
+      const pending = model.generate(INPUT);
+      let caught: unknown;
+      pending.catch((e) => {
+        caught = e;
+      });
+      await vi.advanceTimersByTimeAsync(MODEL_CALL_TIMEOUT_MS + 1);
+      await expect(pending).rejects.toThrow(ModelError);
+      expect(caught).toBeInstanceOf(ModelError);
+      expect((caught as Error).message).toMatch(/too long/i);
+      spy.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

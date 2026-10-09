@@ -716,6 +716,23 @@ a,[role="button"] {
   animation: msg-in 0.24s cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
+/* Chat thread switcher on phones: its own horizontally scrollable strip under
+   the header actions, so the memory/search/people icon buttons can never sit on
+   top of the chips. Both ends fade to transparent so the row reads as a
+   continuation you can scroll rather than a hard cut, and the native scrollbar
+   is hidden to keep it to one tidy line. Individual chips carry `tap-line`, so
+   the 44px touch floor is enforced by the shared hook, not hand-written here. */
+.thread-strip {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
+}
+.thread-strip::-webkit-scrollbar {
+  display: none;
+}
+
 /* Semantic-search jump-to-turn flash. Applied imperatively from the
    chat client after `data-turn="N"` scrolls into view, removed after
    the animation window. Uses an outline (not a border) so the flash

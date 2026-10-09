@@ -337,6 +337,26 @@ export function ChatClient() {
   // offer a one-tap "Try again" that re-sends the same message without
   // duplicating it in the transcript — the user's words are never lost.
   const [failedTurn, setFailedTurn] = useState<{ text: string; kind: "unreachable" | "incomplete" } | null>(null);
+  // Time-based reassurance while a turn is in flight. Replies can legitimately
+  // take 19–43s, and three bouncing dots alone read as a stall, so named stages
+  // appear on a timer: after ~6s "Thinking it through…", after ~20s a longer-wait
+  // note. Reset on every stream start/end. Plain text, no animation — so it
+  // honours prefers-reduced-motion by construction; the renderer reserves a
+  // fixed-height line so a stage swap can never reflow the bubble (CLS 0).
+  const [waitHint, setWaitHint] = useState<"none" | "thinking" | "long">("none");
+  useEffect(() => {
+    if (!isStreaming) {
+      setWaitHint("none");
+      return;
+    }
+    setWaitHint("none");
+    const tThinking = window.setTimeout(() => setWaitHint("thinking"), 6000);
+    const tLong = window.setTimeout(() => setWaitHint("long"), 20000);
+    return () => {
+      window.clearTimeout(tThinking);
+      window.clearTimeout(tLong);
+    };
+  }, [isStreaming]);
   const [offline, setOffline] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -944,7 +964,7 @@ export function ChatClient() {
           setUsageBannerDismissed(false);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: err.error || "You've used today's answers — Sovereign+ picks up where this leaves off." };
+            u[u.length - 1] = { role: "assistant", content: err.error || "You've used today's answers — Sovereign+ picks up where this leaves off.", notice: true };
             return u;
           });
           return;
@@ -953,7 +973,7 @@ export function ChatClient() {
           setShowVerify(true);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: "Verify your email to keep chatting with the AI — the link is in your inbox." };
+            u[u.length - 1] = { role: "assistant", content: "Verify your email to keep chatting with the AI — the link is in your inbox.", notice: true };
             return u;
           });
           return;
@@ -970,7 +990,7 @@ export function ChatClient() {
           // Session expired or invalid — send the user to sign-in.
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: "Your session has expired. Redirecting you to sign in…" };
+            u[u.length - 1] = { role: "assistant", content: "Your session has expired. Redirecting you to sign in…", notice: true };
             return u;
           });
           setTimeout(() => router.push("/onboard?mode=login"), 1200);
@@ -978,11 +998,15 @@ export function ChatClient() {
         }
         // Any other non-OK (503 inference failure, 429 burst limit, 500, an
         // unexpected proxy error): the turn is recoverable. Keep the words and
-        // offer a one-tap retry instead of silently dropping them.
+        // offer a one-tap retry instead of silently dropping them. The retry
+        // banner below the thread already says "your message is safe — Try
+        // again", so the empty assistant placeholder is dropped rather than
+        // filled with a redundant error bubble (which used to also earn a Share
+        // button on a turn that produced no answer).
         setFailedTurn({ text: sentText, kind: "unreachable" });
         setMessages((prev) => {
           const u = [...prev];
-          u[u.length - 1] = { role: "assistant", content: err.error || "Couldn't finish that answer — your message is safe, tap Try again." };
+          if (u[u.length - 1]?.role === "assistant" && !u[u.length - 1].content.trim()) u.pop();
           return u;
         });
         return;
@@ -1062,8 +1086,20 @@ export function ChatClient() {
         setMessages((prev) => {
           const u = [...prev];
           const last = u[u.length - 1];
-          if (last && last.role === "assistant" && last.content.trim()) return prev;
-          u[u.length - 1] = { role: "assistant", content: "Sovereign's answer stopped before it arrived — your message is safe, tap Try again." };
+          // Partial words that did paint stay on screen — they are their context
+          // now — but a truncated turn is not a finished answer, so it is marked
+          // a notice and never offers Share. Nothing painted: keep a readable
+          // placeholder bubble (also a notice) so the dead turn still reads as
+          // an answer attempt instead of vanishing — the retry banner sits below.
+          if (last && last.role === "assistant") {
+            if (last.content.trim()) u[u.length - 1] = { ...last, notice: true };
+            else
+              u[u.length - 1] = {
+                role: "assistant",
+                content: "Sovereign's answer stopped before it arrived — your message is safe, tap Try again.",
+                notice: true,
+              };
+          }
           return u;
         });
         return;
@@ -1083,10 +1119,22 @@ export function ChatClient() {
       }
       console.error("Chat error:", err);
       // A dropped mobile connection is the prime "lost words" case — recover it.
+      // As with the non-OK path, the retry banner carries the message; a partial
+      // answer that did land is kept and marked a notice (never Share), and a
+      // still-empty placeholder becomes a readable dead-turn bubble, also a notice.
       setFailedTurn({ text: sentText, kind: "unreachable" });
       setMessages((prev) => {
         const u = [...prev];
-        u[u.length - 1] = { role: "assistant", content: "Couldn't reach Sovereign — your message is safe, tap Try again." };
+        const last = u[u.length - 1];
+        if (last && last.role === "assistant") {
+          if (last.content.trim()) u[u.length - 1] = { ...last, notice: true };
+          else
+            u[u.length - 1] = {
+              role: "assistant",
+              content: "Couldn't reach Sovereign — your message is safe, tap Try again.",
+              notice: true,
+            };
+        }
         return u;
       });
     } finally {
@@ -1249,32 +1297,9 @@ export function ChatClient() {
                 <Plus className="h-4 w-4" />
                 New thread
               </Button>
-              {threads.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto lg:hidden">
-                  {threads.map((t) => {
-                    const active = t.id === threadId;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => openThread(t.id)}
-                        disabled={isStreaming}
-                        title={t.label || undefined}
-                        className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
-                          active
-                            ? "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
-                            : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                        }`}
-                      >
-                        {t.journey_goal && (
-                          <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/45 align-middle" />
-                        )}
-                        {chipLabel(t)}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              {/* Thread switcher lives in its own scrollable strip below the
+                  actions (see `thread-strip`), so the memory/search/people icon
+                  buttons can never overlap the chips on a phone. */}
               {/* Device-Only vs. Server memory, one click away right where
                   the choice is felt. The icon is the whole story at a glance:
                   a globe for cross-device, a lock for this-device-only. */}
@@ -1357,6 +1382,32 @@ export function ChatClient() {
                 People
               </Button>
             </div>
+            {threads.length > 0 && (
+              <div className="thread-strip mx-auto mt-2.5 flex max-w-3xl items-center gap-1.5 lg:hidden">
+                {threads.map((t) => {
+                  const active = t.id === threadId;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => openThread(t.id)}
+                      disabled={isStreaming}
+                      title={t.label || undefined}
+                      className={`tap-line shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
+                        active
+                          ? "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
+                          : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {t.journey_goal && (
+                        <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/45" />
+                      )}
+                      {chipLabel(t)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
@@ -1575,7 +1626,29 @@ export function ChatClient() {
                                   <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
                                   <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
                                 </span>
-                                <span className="sr-only">Sovereign is thinking…</span>
+                                {/* Stage note under the dots, revealed on the
+                                    wait timer above. The box is always present
+                                    at a fixed two-line height (h-10) so the text
+                                    appearing, changing, or wrapping to a second
+                                    line never grows or shrinks the bubble — the
+                                    composer below holds still. */}
+                                <span
+                                  aria-hidden="true"
+                                  className="mt-1 flex h-10 items-start text-xs leading-5 text-muted-foreground/80"
+                                >
+                                  {waitHint === "thinking"
+                                    ? "Thinking it through…"
+                                    : waitHint === "long"
+                                      ? "Still with you — longer questions take a moment."
+                                      : ""}
+                                </span>
+                                <span className="sr-only" role="status" aria-live="polite">
+                                  {waitHint === "thinking"
+                                    ? "Sovereign is thinking it through."
+                                    : waitHint === "long"
+                                      ? "Still with you — longer questions take a moment."
+                                      : "Sovereign is thinking…"}
+                                </span>
                               </>
                             ) : stoppedEmpty ? (
                               <p className="text-sm text-muted-foreground">Response stopped.</p>
@@ -1584,8 +1657,11 @@ export function ChatClient() {
                             )}
                           </AssistantTurn>
                           {/* Every finished answer is worth keeping — the share card
-                              turns a passage into an artifact the person owns. */}
-                          {!isStreaming && !streamingEmpty && !stoppedEmpty && msg.content.trim() && (
+                              turns a passage into an artifact the person owns. A
+                              notice bubble (usage cap, email/session gate) or a
+                              truncated turn is not an answer, so it never earns
+                              Share. */}
+                          {!isStreaming && !streamingEmpty && !stoppedEmpty && !msg.notice && msg.content.trim() && (
                             <div>
                               <ShareCardButton text={msg.content} />
                             </div>

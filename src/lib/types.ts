@@ -85,6 +85,14 @@ export interface ChatMessage {
    * "from your history" label and to feed the future Living Orb 'clarity' cue.
    */
   recalled?: boolean;
+  /**
+   * Client-session marker: this assistant bubble is a system notice (a usage
+   * cap, an email/session gate) rather than a real answer. Transient by design
+   * — like `recalled` it is never sent to the server (performTurn strips to
+   * role/content) and never persisted. It exists so the renderer can hide the
+   * Share affordance on anything that is not a genuine answer.
+   */
+  notice?: boolean;
 }
 
 export interface Thread {

@@ -14,7 +14,7 @@ import { resolveTier } from "@/lib/tier";
 import { detectExtractionAttempt, buildExtractionDeflection, detectCrossAccountRequest, buildCrossAccountDeflection } from "@/lib/sovereign-safety";
 import { mergeChatHistories } from "@/lib/chat-history";
 import { deriveJourneyState, type JourneyState } from "@/lib/sovereign-journey";
-import { loadActiveJourney, persistJourneyState, prevStateFromRow } from "@/lib/journeys";
+import { loadActiveJourney, persistJourneyState, prevStateFromRow, type JourneyRow } from "@/lib/journeys";
 import { embedLatestTurn } from "@/lib/chat-embeddings";
 import { recallPriorSignals, type PriorSignal } from "@/lib/chat-recall";
 import type { Baseline, ChatMessage, Thread, User } from "@/lib/types";
@@ -256,25 +256,30 @@ async function handleChat(request: NextRequest) {
     if (usageClaimed) await releaseAnswer(env, payload.sub);
     return new Response(JSON.stringify({ error: "Sovereign couldn't finish that answer — try again." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
+  // Journey state is DERIVED here (deterministic, non-mutating, <50ms) so the
+  // `{ state }` frame can ride the post-generation flush — but it is NOT
+  // persisted yet. A turn whose generation fails (500/503) must leave the
+  // journey exactly where it was, so the D1 write is deferred until after
+  // generateSovereignResponse succeeds (below). The whole SSE stream already
+  // opens after generation completes, so deferring the write changes nothing
+  // about when the canvas converges. In Device-Only mode nothing is read or
+  // written at all: the client derives the same state and seals it locally.
   let journeyState: JourneyState | null = null;
-  let activeJourneyId: string | null = null;
+  let priorActiveJourney: JourneyRow | null = null;
   try {
     // loadActiveJourney only ever returns an 'active' row (or null). A paused
     // journey is deliberately invisible here: the canvas still animates for
     // this turn from derived state, but nothing is persisted over the paused
     // row — resuming it is an explicit PATCH, never a side effect of chatting.
-    // In Device-Only mode nothing is read or written at all: the client
-    // derives the same state from this frame and seals it into its local vault.
     if (memoryMode === "server") {
-      const activeJourney = await loadActiveJourney(env, payload.sub);
-      journeyState = deriveJourneyState(context, conversation, prevStateFromRow(activeJourney));
-      activeJourneyId = await persistJourneyState(env, payload.sub, journeyState, activeJourney);
+      priorActiveJourney = await loadActiveJourney(env, payload.sub);
+      journeyState = deriveJourneyState(context, conversation, prevStateFromRow(priorActiveJourney));
     } else {
       journeyState = deriveJourneyState(context, conversation, null);
     }
   } catch (journeyErr) {
-    // Journey persistence must never fail a chat turn: log and continue.
-    console.error("[chat] journey derive/persist failed:", journeyErr instanceof Error ? `${journeyErr.name}: ${journeyErr.message}` : journeyErr);
+    // Journey derivation must never fail a chat turn: log and continue.
+    console.error("[chat] journey derive failed:", journeyErr instanceof Error ? `${journeyErr.name}: ${journeyErr.message}` : journeyErr);
     journeyState = null;
   }
   // Generation runs fully (model call + validateSovereignText + repair) and the
@@ -325,6 +330,19 @@ async function handleChat(request: NextRequest) {
     repair_attempts: result.repairAttempts,
     validated: result.validated,
   });
+  // Generation succeeded — only now is it safe to advance the journey. This is
+  // the reliability fix: persisting here (rather than before the model call)
+  // means a failed turn never moves the canvas. Persistence must still never
+  // fail an otherwise-good answer, so a throw is logged and the turn continues
+  // without a journey link rather than 500ing on a bookkeeping hiccup.
+  let activeJourneyId: string | null = null;
+  if (memoryMode === "server" && journeyState) {
+    try {
+      activeJourneyId = await persistJourneyState(env, payload.sub, journeyState, priorActiveJourney);
+    } catch (journeyErr) {
+      console.error("[chat] journey persist failed:", journeyErr instanceof Error ? `${journeyErr.name}: ${journeyErr.message}` : journeyErr);
+    }
+  }
   const currentThreadId = threadId ?? generateUUID();
   const userId = payload.sub;
   const messagesToStore: ChatMessage[] = [...conversation, { role: "assistant", content: result.text }];

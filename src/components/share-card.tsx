@@ -219,7 +219,7 @@ export function ShareCardButton({ text }: { text: string }) {
         onClick={() => void start()}
         aria-label="Create a share card from this insight"
         title="What Sovereign saw"
-        className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-2.5 py-1 text-xs text-muted-foreground/70 transition-colors hover:border-border/60 hover:bg-white/5 hover:text-foreground"
+        className="tap-line inline-flex items-center gap-1.5 rounded-full border border-transparent px-2.5 py-1 text-xs text-muted-foreground/70 transition-colors hover:border-border/60 hover:bg-white/5 hover:text-foreground"
       >
         <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
         Share
