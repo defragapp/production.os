@@ -6,10 +6,20 @@ import { SiteFooter } from "@/components/site-footer";
 import { SupportForm } from "./support-form";
 import { getEnv } from "@/lib/env";
 
+const description =
+  "Get in touch with the Sovereign team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.";
+
 export const metadata: Metadata = {
   title: "Support",
-  description:
-    "Get in touch with the Sovereign team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.",
+  description,
+  alternates: { canonical: "/support" },
+  openGraph: {
+    title: "Support · Sovereign OS",
+    description,
+    url: "/support",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 // Force dynamic: the page reads the Turnstile site key from the Cloudflare

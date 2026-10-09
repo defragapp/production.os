@@ -5,9 +5,19 @@ import { resolveLensState, lensChatHref, lensInviteHref } from "@/lib/lens-state
 
 export const dynamic = "force-dynamic";
 
+const description = "A lens for understanding what happens between people, with consented context and clear boundaries.";
+
 export const metadata: Metadata = {
   title: "People",
-  description: "A lens for understanding what happens between people, with consented context and clear boundaries.",
+  description,
+  alternates: { canonical: "/people" },
+  openGraph: {
+    title: "People · Sovereign OS",
+    description,
+    url: "/people",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 const CARDS = [

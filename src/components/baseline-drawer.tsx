@@ -11,14 +11,16 @@ function str(v: unknown): string | undefined {
 /**
  * The collapsible "Your Baseline" panel (composer-level, not per-message).
  * Simplified titles, every framework, no raw JSON. Collapsed by default so the
- * AI holds the detail and the panel only adds context on request.
+ * AI holds the detail and the panel only adds context on request — except where
+ * the Baseline IS the page (`/baseline`), which passes `defaultOpen` so the
+ * computed picture is visible on first paint and can still be folded away.
  *
  * When `overlay` is true, the open panel folds upward from the toggle button as
  * a floating, scrollable popover instead of pushing the page layout down —
  * used by the landing demo so opening it never grows the page.
  */
-export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay?: boolean }) {
-  const [open, setOpen] = useState(false);
+export function BaselineDrawer({ data, overlay, defaultOpen }: { data?: BaselineData; overlay?: boolean; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
 
   const d = data ?? {};
   const astro = d.astrology as Record<string, unknown> | undefined;
@@ -40,9 +42,15 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
         c.gates ? `${c.gates.join("–")} ${c.name ?? ""}`.trim() : (c.name ?? ""),
       ).filter(Boolean)
     : [];
-  const geneKeys = Array.isArray((d.geneKeys as { keys?: unknown } | undefined)?.keys)
+  const geneKeysRaw = Array.isArray((d.geneKeys as { keys?: unknown } | undefined)?.keys)
     ? ((d.geneKeys as { keys: unknown }).keys as Array<{ gate?: number; line?: number; frequency?: string; theme?: string }>)
     : [];
+  // The engine can emit the same Gate+line twice (a planet and an axis landing
+  // on the same line), and showing "Gate 43 line 3" two rows apart reads as a
+  // bug. Collapse duplicates on gate+line before the slice, keeping the first.
+  const geneKeys = geneKeysRaw.filter(
+    (k, i) => geneKeysRaw.findIndex((o) => o.gate === k.gate && o.line === k.line) === i,
+  );
   const lifePath = num?.lifePath !== undefined && num?.lifePath !== null ? String(num.lifePath) : undefined;
 
   const chips: { label: string; value: string }[] = [];
@@ -95,7 +103,8 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
           <p className="text-xs leading-relaxed text-foreground">
             {hdType || "—"}
             {hdProfile && hdProfile !== "0/0" ? ` · profile ${hdProfile}` : ""}
-            {hdStrategy || hdAuthority ? ` (${[hdStrategy, hdAuthority].filter(Boolean).join(" · ")})` : ""}
+            {hdStrategy ? ` · Strategy: ${hdStrategy}` : ""}
+            {hdAuthority ? ` · Authority: ${hdAuthority}` : ""}
           </p>
           {centers.length > 0 && (
             <p className="mt-1.5 text-xs text-muted-foreground">

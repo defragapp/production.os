@@ -5,9 +5,19 @@ import { resolveLensState, lensChatHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
 
+const description = "A lens for the larger room: family, teams, roles, and the hidden rules that shape the whole field.";
+
 export const metadata: Metadata = {
   title: "Family & Teams",
-  description: "A lens for the larger room: family, teams, roles, and the hidden rules that shape the whole field.",
+  description,
+  alternates: { canonical: "/systems" },
+  openGraph: {
+    title: "Family & Teams · Sovereign OS",
+    description,
+    url: "/systems",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 const CARDS = [

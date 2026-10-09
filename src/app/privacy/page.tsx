@@ -4,9 +4,19 @@ import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 
+const description = "How Sovereign OS collects, uses, and protects your data.";
+
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "How Sovereign OS collects, uses, and protects your data.",
+  description,
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: "Privacy Policy · Sovereign OS",
+    description,
+    url: "/privacy",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 export default function PrivacyPage() {

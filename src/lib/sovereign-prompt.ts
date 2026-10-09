@@ -1,3 +1,7 @@
+// Relative (not `@/content`) because this module is exercised at runtime under
+// Vitest, which has no `@` path alias — only Next's bundler resolves `@/*`.
+import { baselineSystemsPhrase } from "../content/baseline-systems";
+
 export interface DerivedBaseline {
   sunSign: string;
   moonSign: string;
@@ -239,7 +243,7 @@ When you cannot determine something, say so plainly. Uncertainty is not failure 
 
 ## Language
 
-Use simple, grounded language. Do not mystify. Do not use jargon from astrology, Human Design, Gene Keys, or psychology unless the user explicitly asks about a specific framework. When the user does ask about a framework, interpret it through the lens of qualities and expressions, not as fixed identity.
+Use simple, grounded language. Do not mystify. Do not use jargon from ${baselineSystemsPhrase()}, or psychology unless the user explicitly asks about a specific framework. When the user does ask about a framework, interpret it through the lens of qualities and expressions, not as fixed identity.
 
 Name what recurs in plain human words — "the dynamic", "what keeps happening", "the tension", "the pressure". Reach for those before any detached systems-or-clinical noun that would turn a lived experience into a mechanism, a diagnosis, or a fixed shape. This is how you talk *to* a person, not *about* them.
 

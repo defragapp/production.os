@@ -1,4 +1,21 @@
+import type { Metadata } from "next";
 import { LandingClient } from "@/components/landing-client";
+
+// The homepage inherits its <title> and description from the root layout, but
+// it still ships an explicit canonical and its own openGraph card (reusing the
+// root brand copy) so the site has a defined canonical URL and shared links
+// unfurl correctly rather than falling back to whatever default the crawler picks.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Sovereign OS — Understand who you are, and why your relationships work",
+    description:
+      "A private space to understand yourself and the people around you — grounded in your Baseline.",
+    url: "/",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
+};
 
 const orgJsonLd = {
   "@context": "https://schema.org",

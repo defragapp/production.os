@@ -225,7 +225,10 @@ function BaselineContent() {
 
               {parsed && (
                 <div className="mt-4">
-                  <BaselineDrawer data={parsed} />
+                  {/* On the page that IS the Baseline, the computed picture is
+                      open on first paint (still collapsible) so it never reads
+                      as an empty page behind a folded toggle. */}
+                  <BaselineDrawer data={parsed} defaultOpen />
                 </div>
               )}
 

@@ -5,9 +5,19 @@ import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 import { baselineSystemsPhrase } from "@/content/baseline-systems";
 
+const description = "Answers about Sovereign OS — how the AI works, what we do with your data, and how the free and paid plans compare.";
+
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Answers about Sovereign OS — how the AI works, what we do with your data, and how the free and paid plans compare.",
+  description,
+  alternates: { canonical: "/faq" },
+  openGraph: {
+    title: "FAQ · Sovereign OS",
+    description,
+    url: "/faq",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 const FAQS = [

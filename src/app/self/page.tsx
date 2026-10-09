@@ -5,9 +5,22 @@ import { resolveLensState, lensChatHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
 
+const description = "A private lens for understanding yourself, grounded in your Baseline — what happened, what it came to mean, and the next honest step.";
+
 export const metadata: Metadata = {
   title: "Self",
-  description: "A private lens for understanding yourself, grounded in your Baseline — what happened, what it came to mean, and the next honest step.",
+  description,
+  // Every public page carries its own canonical + openGraph so a shared link
+  // unfurls to the page the person actually sent, not the generic root card.
+  // `metadataBase` (root layout) resolves these relative paths to absolute URLs.
+  alternates: { canonical: "/self" },
+  openGraph: {
+    title: "Self · Sovereign OS",
+    description,
+    url: "/self",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 const CARDS = [

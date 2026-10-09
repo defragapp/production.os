@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Check, Minus } from "lucide-react";
+import { baselineSystemsPhrase } from "@/content/baseline-systems";
 
 type Row = {
   feature: string;
@@ -22,7 +23,7 @@ const ROWS: Row[] = [
   // No reply-order row here: nothing in the engine sorts support mail by tier
   // (the operator notification carries name/email/topic/message only), so the
   // claim would be false at the moment of payment.
-  { feature: "Your full Baseline — astrology, Human Design, Gene Keys", free: true, plus: true },
+  { feature: `Your full Baseline — ${baselineSystemsPhrase()}`, free: true, plus: true },
   { feature: "Chat history saved across devices", free: true, plus: true },
   { feature: "Find your way back to any past conversation — ask in plain words", free: true, plus: true },
   { feature: "Journeys & shared reflection cards", free: true, plus: true },
@@ -64,33 +65,23 @@ function Cell({ value, tone }: { value: string | boolean; tone: "free" | "plus" 
 }
 
 export function PricingTable() {
-  // Progressive-disclosure entry for the comparison rows: reuse the landing's
-  // hand-rolled `.reveal` system (240ms easeOut, opacity-only on a table-row,
-  // reduced-motion safe). A single observer on <tbody> flips every row to `.in`
-  // when the table scrolls into view; per-row `transitionDelay` staggers them.
+  // Rows are VISIBLE by default. This is the plan-comparison a person decides
+  // from, so it must never read as a blank panel until they scroll it into
+  // view. On mount we add the progressive-enhancement pre-state (`.js-ok`,
+  // which is the only thing that hides a `.reveal`) and flip every row to its
+  // settled state on the next frame, so the staggered fade still plays as a
+  // gentle entrance while depending on nothing but mount. With JS off the
+  // table is simply fully visible — the correct, content-first fallback.
   const bodyRef = useRef<HTMLTableSectionElement>(null);
   useEffect(() => {
     const el = bodyRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
+    if (!el) return;
     const rows = Array.from(el.querySelectorAll("tr"));
     rows.forEach((r) => r.classList.add("js-ok", "reveal-from-up"));
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            rows.forEach((r) => r.classList.add("in"));
-            io.disconnect();
-          }
-        }
-      },
-      // A tall tbody never reaches 15% visible while entering, so the old
-      // threshold kept the whole panel blank mid-scroll. A negative bottom
-      // rootMargin fires the stagger as soon as the rows cross the lower
-      // 85% of the viewport — early enough to read as motion, not as a void.
-      { threshold: 0, rootMargin: "0px 0px -15% 0px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => rows.forEach((r) => r.classList.add("in")));
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
   return (
     <div className="mt-14 overflow-hidden rounded-lg border border-foreground/15 bg-surface-1/40">
