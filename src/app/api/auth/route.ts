@@ -7,6 +7,7 @@ import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
 import { recipientMailAllowed } from "@/lib/email-guard";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
+import { hashClientIp } from "@/lib/ip-hash";
 import { bumpTokenVersion, verifySession } from "@/lib/session";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { syncStripeTier } from "@/lib/stripe";
@@ -153,15 +154,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  // #62: the abuse-brake buckets are keyed by a one-way, secret-keyed token of
+  // the client IP — never the address itself — so a raw IP no longer sits in an
+  // ephemeral KV key. See lib/ip-hash.ts. The email half of the login key stays
+  // verbatim: it is already the person's own input, not a network identifier.
+  const ipToken = await hashClientIp(request.headers.get("cf-connecting-ip") || "unknown", secret);
   const emailForRl = body.email?.trim().toLowerCase() || "unknown";
-  const rlKey = `login-rl:${ip}:${emailForRl}`;
+  const rlKey = `login-rl:${ipToken}:${emailForRl}`;
   const rlCount = parseInt((await env.SESSION_KV.get(rlKey)) || "0", 10);
   if (rlCount >= LOGIN_RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many attempts — try again in a few minutes." }, { status: 429 });
   await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: LOGIN_RATE_LIMIT_TTL });
 
   if (intent !== "login") {
-    const signupKey = `signup-ip-rl:${ip}`;
+    const signupKey = `signup-ip-rl:${ipToken}`;
     const signupCount = parseInt((await env.SESSION_KV.get(signupKey)) || "0", 10);
     if (signupCount >= SIGNUP_IP_RATE_LIMIT_MAX) {
       return NextResponse.json(
