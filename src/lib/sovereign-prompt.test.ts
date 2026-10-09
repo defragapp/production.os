@@ -114,6 +114,15 @@ describe("buildSystemPrompt", () => {
     expect(alternatives.filter((a) => prompt.includes(a)).length).toBeGreaterThanOrEqual(2);
   });
 
+  it("directs the model to name the single useful distinction", () => {
+    // The answer-quality north star from the ported strategy: separate the two
+    // experiences the person is treating as one instead of listing every
+    // plausible interpretation of the moment.
+    const prompt = buildSystemPrompt(deriveBaseline({}));
+    expect(prompt).toMatch(/useful distinction/i);
+    expect(prompt).toMatch(/care versus responsibility/i);
+  });
+
   it("does not teach banned vocabulary in model-facing instructions", () => {
     const prompt = buildSystemPrompt(deriveBaseline({})).toLowerCase();
     // Banned in user-facing copy and AI output: pattern(s) as a noun, friction, reading
