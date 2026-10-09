@@ -34,6 +34,22 @@ const FAQS = [
     a: "Every answer keeps three things apart: what you said happened, what your Baseline suggests (a tendency, not a verdict about you), and what's only a possibility worth examining. It never claims to know what's going on inside someone else, and it never predicts the future. It usually ends by asking you a question — because understanding is something you do, not something you receive.",
   },
   {
+    q: "What can it help me understand about myself?",
+    a: "Enduring tendencies — how you tend to communicate, decide, learn, connect, lead, hold boundaries, carry responsibility, and react under pressure or change. These are possibilities drawn from your Baseline and tied to the source data behind them, not measured facts about you.",
+  },
+  {
+    q: "What does it need me to describe?",
+    a: "Anything only you can see: what actually happened, how you felt, the real tradeoff in a decision, or who is involved and in what role. Sovereign keeps what comes from your Baseline apart from what your situation tells it — and asks when the difference matters.",
+  },
+  {
+    q: "Can it tell me what another person is feeling?",
+    a: "No. With permission, it can show how two Baselines may meet and why the same moment can land differently for each of you. It never claims to know another person's feelings, motives, or what they will do next.",
+  },
+  {
+    q: "Can it tell me whether to speak now or wait?",
+    a: "It can look at timing, how differently you each process pressure, and what information is still missing. It may suggest a lower-pressure sequence — saying a little now and agreeing when to return — but it will not predict how the conversation goes.",
+  },
+  {
     q: "Where does my Baseline come from?",
     a: `From your birth date, time, and place. We compute the planets' positions from NASA/JPL planetary data and build your Baseline through four long-standing reference systems (${baselineSystemsPhrase()}) into one readable profile that the AI brings into your conversations.`,
   },
