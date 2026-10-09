@@ -26,6 +26,8 @@
     "db:migrate:0006:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0006_relationship_history.sql",
     "db:migrate:0007": "wrangler d1 execute production-os-db --local --file=./migrations/0007_nudge.sql",
     "db:migrate:0007:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0007_nudge.sql",
+    "db:migrate:0008": "wrangler d1 execute production-os-db --local --file=./migrations/0008_admin_audit_log.sql",
+    "db:migrate:0008:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0008_admin_audit_log.sql",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",

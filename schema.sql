@@ -199,4 +199,23 @@ CREATE TABLE IF NOT EXISTS nudge (
 );
 CREATE INDEX IF NOT EXISTS idx_nudge_user_dismissed ON nudge(user_id, dismissed_at);
 
+-- Owner audit log (#49, migration 0008): an append-only record of owner
+-- entitlement actions so mint/revoke of a gift pass is provable after the fact.
+-- actor_email_hash is a SHA-256 digest (never the raw address), and actor_id
+-- carries no FK deliberately: `account/route.ts` hard-deletes users ON DELETE
+-- CASCADE, and a cascading audit table would self-erase the history worth
+-- keeping. Byte-identical to migrations/0008_admin_audit_log.sql.
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id                TEXT PRIMARY KEY,
+  actor_id          TEXT NOT NULL,
+  actor_email_hash  TEXT NOT NULL,
+  action            TEXT NOT NULL,
+  target_type       TEXT,
+  target_id         TEXT,
+  metadata          TEXT,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_audit_actor ON admin_audit_log(actor_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON admin_audit_log(action, created_at);
+
 
