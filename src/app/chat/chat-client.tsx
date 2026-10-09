@@ -133,6 +133,14 @@ const STARTING_POINTS = [
     level: "The whole system",
     prompt: "Help me understand the dynamic in my family — the part everyone feels but no one says out loud.",
   },
+  {
+    level: "A decision",
+    prompt: "I have a choice in front of me. Help me see what supports it, what pulls against it, and what I still need to know.",
+  },
+  {
+    level: "What's active now",
+    prompt: "Something I usually handle well has felt louder this week. Help me see what's different about this moment.",
+  },
 ];
 
 /**

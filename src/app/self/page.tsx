@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
 import { AnswerAnatomy } from "@/components/answer-anatomy";
+import { TryAsking } from "@/components/try-asking";
 import { resolveLensState, lensChatHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,10 @@ export default async function SelfPage() {
       isAuthed={isAuthed}
       hasBaseline={hasBaseline}
     >
-      <AnswerAnatomy />
+      <div className="space-y-10">
+        <AnswerAnatomy />
+        <TryAsking question="Why do I take responsibility so quickly that I don't notice it happening?" />
+      </div>
     </LensPage>
   );
 }

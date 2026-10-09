@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
 import { PerspectiveSwitch } from "@/components/perspective-switch";
+import { TryAsking } from "@/components/try-asking";
 import { resolveLensState, lensChatHref, lensInviteHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +56,10 @@ export default async function PeoplePage() {
       isAuthed={isAuthed}
       hasBaseline={hasBaseline}
     >
-      <PerspectiveSwitch />
+      <div className="space-y-10">
+        <PerspectiveSwitch />
+        <TryAsking question="Why do we keep having the same fight — and what is each of us trying to protect?" />
+      </div>
     </LensPage>
   );
 }

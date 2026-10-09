@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LensPage } from "@/components/lens-page";
 import { SystemDynamics } from "@/components/system-dynamics";
+import { TryAsking } from "@/components/try-asking";
 import { resolveLensState, lensChatHref } from "@/lib/lens-state";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,10 @@ export default async function FamilyTeamsPage() {
       isAuthed={isAuthed}
       hasBaseline={hasBaseline}
     >
-      <SystemDynamics />
+      <div className="space-y-10">
+        <SystemDynamics />
+        <TryAsking question="Why does everything fall to me when something goes wrong?" />
+      </div>
     </LensPage>
   );
 }
