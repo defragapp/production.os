@@ -213,7 +213,13 @@ export type SafetyViolationType =
   | "destiny"
   | "overvalidation"
   | "prescriptive-authority"
-  | "unsupported-claim";
+  | "unsupported-claim"
+  | "therapy-claim"
+  | "fixed-family-role"
+  | "spiritual-causation"
+  | "projection-as-fact"
+  | "institutional-tone"
+  | "excessive-disclaimer";
 
 export interface SafetyViolation {
   type: SafetyViolationType;

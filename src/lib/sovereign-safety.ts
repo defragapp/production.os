@@ -14,6 +14,7 @@ import type {
   SafetyViolation,
   SafetyViolationType,
 } from "./sovereign-types";
+import { selectCrisisResources } from "./crisis-resources";
 
 const NEGATIVES = new Set([
   "not", "no", "never", "don't", "dont", "doesn't", "doesnt", "isn't", "isnt",
@@ -34,6 +35,14 @@ interface LexiconRule {
    * knowledge about her inner world).
    */
   insideNegativeSkips?: boolean;
+  /**
+   * When true, a negation token in the 40-char window BEFORE the match must
+   * NOT cancel the rule. Used by rules whose own wording contains negation
+   * ("I cannot … I cannot …") — there the repeated fence is the violation
+   * itself, and the look-back window is guaranteed to contain the first
+   * "cannot".
+   */
+  skipNegationLookback?: boolean;
 }
 
 const LEXICON: LexiconRule[] = [
@@ -240,6 +249,68 @@ const LEXICON: LexiconRule[] = [
       /\bevidence\s+proves?\b/i,
     ],
   },
+  {
+    type: "projection-as-fact",
+    severity: "medium",
+    note: "Naming someone as 'projecting' as a certain fact is prohibited — it can only be offered as one possible interpretation.",
+    patterns: [
+      /\b(?:is|are)\s+(?:definitely\s+|clearly\s+|just\s+|simply\s+|obviously\s+)?project(?:ing|ion)\b/i,
+      /\b(?:they|he|she)(?:'re|’re|\s+are|\s+is)\s+projecting\b[^.!?]{0,24}?\b(?:onto|on\s+to)\b/i,
+      // Bare verb form: "He projects his guilt onto you" — the same verdict
+      // without a "is/are" helper.
+      /\b(?:they|he|she)\s+projects?\b[^.!?]{0,24}?\b(?:onto|on\s+to)\b/i,
+    ],
+  },
+  {
+    type: "fixed-family-role",
+    severity: "high",
+    note: "Installing a family role as fixed identity is prohibited — the role can be named as experienced, never as what someone is.",
+    patterns: [
+      /\b(?:you\s+(?:are|were|'re|’re)|they\s+made\s+you)\s+(?:the\s+)?(?:scapegoat|golden\s+child|family\s+fixer|identified\s+patient|peacekeeper)\b/i,
+      /\bcast\s+you\s+as\s+the\s+(?:scapegoat|golden\s+child|family\s+fixer|identified\s+patient|peacekeeper)\b/i,
+    ],
+  },
+  {
+    type: "spiritual-causation",
+    severity: "high",
+    note: "Claiming a spiritual, ancestral, or curse-based cause as certain is prohibited.",
+    patterns: [
+      /\b(?:literal|real|ancestral|generational)\s+curse\b/i,
+      /\b(?:God|the\s+universe|your\s+bloodline|your\s+ancestors?)\s+(?:caused|is\s+causing|is\s+forcing|wants|made)\b/i,
+      /\blow\s+frequency\b/i,
+    ],
+  },
+  {
+    type: "therapy-claim",
+    severity: "high",
+    note: "Presenting this tool as therapy or treatment — or promising that therapy or anything will cure — is prohibited.",
+    patterns: [
+      /\b(?:as\s+your\s+therapist|acting\s+as\s+your\s+(?:therapist|counselor|counsellor))\b/i,
+      /\b(?:therap(?:y|ist)|counsel(?:ing|ling)|treatment)\s+will\s+(?:fix|heal|cure|solve|resolve|change)\b/i,
+      /\bthis\s+will\s+heal\s+your\s+trauma\b/i,
+      /\bI\s+can\s+(?:treat|cure|diagnose)\b/i,
+    ],
+  },
+  {
+    type: "institutional-tone",
+    severity: "low",
+    note: "Canned institutional phrasing is prohibited — write in the product's own plain voice.",
+    patterns: [
+      /\bas\s+an\s+ai\b/i,
+      /\binsufficient\s+data\b/i,
+      /\bthe\s+subject\s+presents\b/i,
+      /\bit\s+is\s+recommended\s+that\b/i,
+    ],
+  },
+  {
+    type: "excessive-disclaimer",
+    severity: "low",
+    skipNegationLookback: true,
+    note: "Repeated disclaimers in a row read as defensive and cold; one honest limit statement is enough.",
+    patterns: [
+      /\bi\s+(?:cannot|can'?t)\b[^.!?]{0,160}[.!?]\s*\bi\s+(?:cannot|can'?t)\b/i,
+    ],
+  },
 ];
 
 function containsNegative(text: string): boolean {
@@ -271,8 +342,10 @@ function flagged(
       const before = body.slice(Math.max(0, match.index - 40), match.index);
       const inside = body.slice(match.index, match.index + Math.min(match.length, 60));
       // Negation DIRECTLY before the claim cancels it (e.g. "I can't
-      // determine whether he is trying to hurt you").
-      if (containsNegative(before)) continue;
+      // determine whether he is trying to hurt you"). Rules whose own wording
+      // contains negation opt out — for them the look-back window is part of
+      // the violation itself, not a hedge around it.
+      if (!rule.skipNegationLookback && containsNegative(before)) continue;
       // Negation INSIDE the claim only cancels identity-style wording
       // ("you are NOT the problem"). For inner-world claims the negative is
       // itself the assertion ("she doesn't care about you").
@@ -389,6 +462,24 @@ const ESCALATE_PATTERNS = [
   /\btake\s+my\s+(?:own\s+)?life\b/i,
   /\bbed\s+myself\s+up\b/i,
   /\bending\s+(?:my\s+)?life\b/i,
+  // Spanish crisis disclosures (kept to unmistakable phrasings; accented and
+  // unaccented forms both match, since typing without accents is common).
+  /\b(?:quiero|voy\s+a|pienso)\s+(?:morir|suicidarme|matarme)\b/i,
+  /\bno\s+quiero\s+(?:vivir|seguir\s+(?:viviendo|adelante)|seguir)\b/i,
+  /\bme\s+quiero\s+(?:matar|suicidar)\b/i,
+  /\bacabar\s+con\s+mi\s+vida\b/i,
+  /\bquitarme\s+la\s+vida\b/i,
+  /\bno\s+tengo\s+(?:razones|motivos|ganas)\s+(?:de|para)\s+vivir\b/i,
+  /\b(?:me\s+hago\s+(?:daño|dano)|hacerme\s+(?:daño|dano)|autolesion(?:arme|es)?)\b/i,
+  /\bsuicidio\b|\bpensamientos\s+suicidas\b/i,
+  // French crisis disclosures (both straight and typographic apostrophes).
+  /\bje\s+(?:veux|vais)\s+(?:me\s+tuer|me\s+suicider)\b/i,
+  /\bje\s+veux\s+mourir\b/i,
+  /\bje\s+ne\s+veux\s+plus\s+(?:vivre|continuer)\b/i,
+  /\b(?:mettre\s+fin\s+à\s+mes\s+jours|mettre\s+un\s+terme\s+à\s+ma\s+vie|en\s+finir\s+avec\s+la\s+vie)\b/i,
+  /\b(?:automutilation|plus\s+de\s+raison\s+de\s+vivre)\b/i,
+  /\b(?:je\s+ne\s+vois\s+plus\s+d['’]avenir|je\s+suis\s+fatigu[ée]e?\s+de\s+vivre)\b/i,
+  /\bpens[ée]es\s+suicidaires\b/i,
 ];
 
 const GROUNDED_PATTERNS = [
@@ -415,6 +506,29 @@ const GROUNDED_PATTERNS = [
   /\bwas\s+(?:sexually\s+)?abused\b/i,
   /\b(?:childhood|growing\s+up)(?:\s+\w+)?\s+(?:abuse|trauma)\b/i,
   /\bmy\s+ex\s+(?:hit|beat|abused|stalked)\s+me\b/i,
+  // Spanish abuse/violence disclosures (physical or unambiguous; accented and
+  // unaccented forms both match). Note: JS \b treats accented finals like ó as
+  // non-word, so accented past-tense verbs use (?!\S) instead of a trailing \b.
+  /\bme\s+(?:pega|golpea|empuja|ahorca|estrangula)\b/i,
+  /\bme\s+(?:peg[oó]|golpe[oó]|empuj[oó]|ahorc[oó])(?!\S)/i,
+  /\b(?:fui\s+golpead[oa]|me\s+han\s+golpeado|fui\s+agredid[oa])\b/i,
+  /\bme\s+oblig(?:a|ó|o)\s+(?:a\s+acostarme|a\s+tener\s+sexo|a\s+hacer\s+algo\s+sexual)\b/i,
+  /\bme\s+toc(?:a|ó|o)\s+sin\s+(?:mi\s+)?(?:consentimiento|permiso)\b/i,
+  /\bno\s+me\s+deja\s+salir\b/i,
+  /\b(?:violencia\s+dom[eé]stica|maltrat(?:o|a))\b/i,
+  /\b(?:abus(?:o\s+sexual|ad[oa])|fui\s+violad[oa])\b/i,
+  /\bme\s+viol(?:a|ó|o)(?!\S)/i,
+  /\b(?:acoso|me\s+acosa)\b/i,
+  // French abuse/violence disclosures (both apostrophe forms).
+  /\bil\s+me\s+(?:bat|tape|frappe|frappait|pousse|étrangle)\b/i,
+  /\bil\s+m['’]a\s+(?:frapp[ée]e?|battue?|pouss[ée]e?|viol[ée]e?)\b/i,
+  /\bje\s+suis\s+(?:battue?|frapp[ée]e?|viol[ée]e?)\b/i,
+  /\b(?:violence\s+domestique|maltraitance)\b/i,
+  /\bil\s+me\s+force\s+(?:à\s+(?:avoir\s+des\s+rapports\s+sexuels|faire\s+quelque\s+chose\s+de\s+sexuel))\b/i,
+  /\b(?:ne\s+me\s+laisse\s+pas\s+partir|m['’]oblige\s+à\s+avoir\s+des\s+rapports)\b/i,
+  /\bil\s+me\s+touche\s+sans\s+(?:mon\s+)?consentement\b/i,
+  /\b(?:me\s+harc[èe]le|harc[ée]l(?:ement|é|ée))(?!\S)/i,
+  /\babus\s+sexuel\b/i,
 ];
 
 export function detectSafetyMode(messages: ChatMessage[]): SafetyMode {
@@ -527,16 +641,16 @@ export function buildCrossAccountDeflection(): string {
 }
 
 export function buildSafetyResponse(mode: Exclude<SafetyMode, "standard">): string {
+  const { resources, selectionNotice } = selectCrisisResources(mode);
+  const lines = resources.map((r) => r.line);
   if (mode === "escalate") {
     return [
       "Thank you for trusting me with this. I'm not equipped to analyze what you're going through — and right now, what matters most is that you're not alone in it.",
       "",
       "If you are thinking about ending your life, please reach out now — you don't carry this alone:",
-      "- US: National Suicide Prevention Lifeline — call or text 988 (988lifeline.org)",
-      "- US: Crisis Text Line — text HOME to 741741",
-      "- Canada: call or text 988",
-      "- UK: Samaritans — call 116 123",
-      "- International: find help near you at findahelpline.com",
+      ...lines,
+      "",
+      selectionNotice,
       "",
       "A counselor or care provider is the right person to help with what you're feeling. I'm still here for exploring what keeps happening and what it means when you want to talk something through — gently, and at your pace.",
     ].join("\n");
@@ -545,9 +659,9 @@ export function buildSafetyResponse(mode: Exclude<SafetyMode, "standard">): stri
     "Thank you for telling me what you've experienced. I'm a non-clinical reflection tool, and I am not able to analyze a situation involving abuse or violence — that deserves trained, professional support, and it is not yours to carry in isolation.",
     "",
     "Please reach out to a professional or helpline you trust:",
-    "- US: National Domestic Violence Hotline — call 800-799-7233 or text START to 88788 (thehotline.org)",
-    "- Canada: Crisis Services Canada — 800-363-9010 (crisisservicescanada.ca)",
-    "- UK: National Domestic Abuse Helpline — 0808 2000 247 (nationaldahelpline.org.uk)",
+    ...lines,
+    "",
+    selectionNotice,
     "",
     "If you are in immediate danger, local emergency services can help. I'm still here for exploring what keeps happening and what it means at other times.",
   ].join("\n");

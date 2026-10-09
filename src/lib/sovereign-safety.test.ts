@@ -10,6 +10,11 @@ import {
   buildCrossAccountDeflection,
   scrubBrandVocabulary,
 } from "./sovereign-safety";
+import {
+  selectCrisisResources,
+  CRISIS_RESOURCES,
+  SELECTION_ORDER,
+} from "./crisis-resources";
 import { extractText, ModelError } from "./sovereign-model";
 
 describe("validateSovereignText (Layer 1 lexicon)", () => {
@@ -114,6 +119,84 @@ describe("validateSovereignText (Layer 1 lexicon)", () => {
 
   it("does not over-flag ordinary language about reasoning", () => {
     const v = validateSovereignText("Let's reason through what happened together, one step at a time.");
+    expect(v.allowed).toBe(true);
+  });
+
+  // The six output-safety categories ported from the legacy review set (#52):
+  // therapy-claim, fixed-family-role, spiritual-causation, projection-as-fact,
+  // institutional-tone, excessive-disclaimer. Data-only port — no paragraph
+  // swap, no framework-label toggle.
+  it("flags therapy claims and treatment promises", () => {
+    for (const t of [
+      "I can treat your trauma directly.",
+      "As your therapist, I recommend journaling.",
+      "Therapy will fix your marriage.",
+    ]) {
+      const v = validateSovereignText(t);
+      expect(v.allowed).toBe(false);
+      expect(v.violations.some((x) => x.type === "therapy-claim")).toBe(true);
+    }
+  });
+  it("flags family roles handed down as fixed identity", () => {
+    for (const t of [
+      "You are the scapegoat of your family.",
+      "They made you the peacekeeper, and that's who you are.",
+      "You were the golden child.",
+    ]) {
+      const v = validateSovereignText(t);
+      expect(v.allowed).toBe(false);
+      expect(v.violations.some((x) => x.type === "fixed-family-role")).toBe(true);
+    }
+  });
+  it("flags spiritual or ancestral causation as fact", () => {
+    for (const t of [
+      "Your family carries a generational curse.",
+      "God is causing your struggles.",
+      "Your bloodline is forcing this on you.",
+    ]) {
+      const v = validateSovereignText(t);
+      expect(v.allowed).toBe(false);
+      expect(v.violations.some((x) => x.type === "spiritual-causation")).toBe(true);
+    }
+  });
+  it("flags 'projecting' as an established fact", () => {
+    for (const t of [
+      "They are clearly projecting onto you.",
+      "This is projection, plain and simple.",
+      "He projects his guilt onto you.",
+    ]) {
+      const v = validateSovereignText(t);
+      expect(v.allowed).toBe(false);
+      expect(v.violations.some((x) => x.type === "projection-as-fact")).toBe(true);
+    }
+  });
+  it("is still negation-aware around projection", () => {
+    const v = validateSovereignText("I can't tell whether she is projecting; only she could say.");
+    expect(v.allowed).toBe(true);
+  });
+  it("flags canned institutional phrasing", () => {
+    for (const t of [
+      "As an AI, I cannot determine that.",
+      "Insufficient data to respond.",
+      "The subject presents with avoidance.",
+      "It is recommended that you journal daily.",
+    ]) {
+      const v = validateSovereignText(t);
+      expect(v.allowed).toBe(false);
+      expect(v.violations.some((x) => x.type === "institutional-tone")).toBe(true);
+    }
+  });
+  it("flags stacked disclaimers even though each contains 'cannot'", () => {
+    const v = validateSovereignText(
+      "I cannot know what she feels. I cannot tell you what to do, either.",
+    );
+    expect(v.allowed).toBe(false);
+    expect(v.violations.some((x) => x.type === "excessive-disclaimer")).toBe(true);
+  });
+  it("lets one honest limit statement through", () => {
+    const v = validateSovereignText(
+      "I can't know her inner world from what you've shared — only you experience that.",
+    );
     expect(v.allowed).toBe(true);
   });
 });
@@ -228,6 +311,131 @@ describe("detectSafetyMode", () => {
       { role: "assistant", content: buildSafetyResponse("grounded") },
       { role: "user", content: "What does accountability mean to me at work?" },
     ])).toBe("standard");
+  });
+
+  // #57 — multilingual crisis detection. A person in crisis writing their
+  // first language must route to resources just like an English disclosure;
+  // today they get standard. Spanish and French phrasings are kept to
+  // unmistakable forms so benign sentences stay standard.
+  it("routes Spanish crisis disclosures to escalate", () => {
+    for (const t of [
+      "quiero morir",
+      "no quiero vivir",
+      "voy a matarme",
+      "me quiero suicidar",
+      "quiero acabar con mi vida",
+      "no tengo razones para vivir",
+      "me hago daño",
+      "tengo pensamientos suicidas",
+    ]) {
+      expect(detectSafetyMode([{ role: "user", content: t }])).toBe("escalate");
+    }
+  });
+  it("routes French crisis disclosures to escalate", () => {
+    for (const t of [
+      "je veux mourir",
+      "je vais me tuer",
+      "je vais me suicider",
+      "je ne veux plus vivre",
+      "je veux mettre fin à mes jours",
+      "plus de raison de vivre",
+      "je suis fatiguée de vivre",
+      "j'ai des pensées suicidaires",
+    ]) {
+      expect(detectSafetyMode([{ role: "user", content: t }])).toBe("escalate");
+    }
+  });
+  it("routes Spanish abuse disclosures to grounded", () => {
+    for (const t of [
+      "mi pareja me pega",
+      "me pegó anoche",
+      "me obliga a tener sexo",
+      "me toca sin mi consentimiento",
+      "no me deja salir",
+      "sufrí violencia doméstica",
+      "fui violada",
+      "mi ex me acosa",
+    ]) {
+      expect(detectSafetyMode([{ role: "user", content: t }])).toBe("grounded");
+    }
+  });
+  it("routes French abuse disclosures to grounded", () => {
+    for (const t of [
+      "il me frappe",
+      "il m'a frappée",
+      "violence domestique",
+      "il me force à avoir des rapports sexuels",
+      "il me touche sans mon consentement",
+      "ne me laisse pas partir",
+      "je suis harcelée par mon ex",
+      "abus sexuel",
+    ]) {
+      expect(detectSafetyMode([{ role: "user", content: t }])).toBe("grounded");
+    }
+  });
+  it("stays standard on benign Spanish and French", () => {
+    for (const t of [
+      "quiero comer algo rico",
+      "quiero vivir mejor con mi pareja",
+      "je veux apprendre le français",
+      "je ne veux plus tarder",
+    ]) {
+      expect(detectSafetyMode([{ role: "user", content: t }])).toBe("standard");
+    }
+  });
+});
+
+describe("crisis-resources registry (#50)", () => {
+  // The invariant from the legacy safety-resources: a contact is never
+  // model-generated. Every entry must carry provenance, and the gate tests
+  // completeness only — review recency stays out (the gate must not go red
+  // on its own calendar).
+  it("carries provenance on every entry", () => {
+    for (const mode of ["escalate", "grounded"] as const) {
+      const selection = selectCrisisResources(mode);
+      expect(selection.version).toBe("sovereign-crisis-resources.v1");
+      expect(selection.selectionSource).toBe("static_registry");
+      for (const r of selection.resources) {
+        expect(r.officialSource).toMatch(/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}/i);
+        expect(r.reviewedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(["official_government", "official_service", "curated"]).toContain(r.provenance);
+        expect(r.line.startsWith("- ")).toBe(true);
+      }
+    }
+  });
+  it("escalate keeps the crisis lines and the unknown-jurisdiction path", () => {
+    const selection = selectCrisisResources("escalate");
+    expect(selection.resources.map((r) => r.line)).toEqual([
+      "- US: National Suicide Prevention Lifeline — call or text 988 (988lifeline.org)",
+      "- US: Crisis Text Line — text HOME to 741741",
+      "- Canada: call or text 988",
+      "- UK: Samaritans — call 116 123",
+      "- International: find help near you at findahelpline.com",
+    ]);
+    expect(selection.resources.some((r) => r.purpose === "fallback")).toBe(true);
+  });
+  it("grounded covers the abuse lines plus the unknown-jurisdiction path", () => {
+    const selection = selectCrisisResources("grounded");
+    expect(selection.resources.map((r) => r.line)).toEqual([
+      "- US: National Domestic Violence Hotline — call 800-799-7233 or text START to 88788 (thehotline.org)",
+      "- Canada: Crisis Services Canada — 800-363-9010 (crisisservicescanada.ca)",
+      "- UK: National Domestic Abuse Helpline — 0808 2000 247 (nationaldahelpline.org.uk)",
+      "- International: find help near you at findahelpline.com",
+    ]);
+  });
+  it("keeps the registry free of orphans and unreachable entries", () => {
+    const reachable = new Set([...SELECTION_ORDER.escalate, ...SELECTION_ORDER.grounded]);
+    const registered = new Set(CRISIS_RESOURCES.map((r) => r.id));
+    expect(reachable.size).toBe(registered.size);
+    for (const id of reachable) expect(registered.has(id)).toBe(true);
+    for (const id of registered) expect(reachable.has(id)).toBe(true);
+  });
+  it("renders the provenance notice into both safety responses", () => {
+    for (const t of [buildSafetyResponse("escalate"), buildSafetyResponse("grounded")]) {
+      expect(t).toContain("fixed, human-reviewed");
+      expect(t).toContain("never invents a contact");
+      expect(t).toContain("local emergency services can help");
+    }
   });
 });
 
