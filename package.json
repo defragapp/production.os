@@ -2,7 +2,7 @@
   "name": "production-os",
   "version": "0.1.0",
   "private": true,
-  "//release": "CANONICAL RELEASE PATH, in this order: (1) `npm run verify:release` — every gate in scripts/verify-release.mjs green (the script header is source-of-truth for gate count), (2) `git push origin main` — Workers Builds is the canonical production path and must deploy BOTH Workers (`production-os` + `sovereign-tail`), (3) confirm both Worker check-runs/rollouts in Workers Builds. CLI deploy is fallback only: `npm run deploy` ships BOTH Workers by chaining `tail:deploy`. Do NOT run CLI deploy while a push-triggered build is in flight — colliding builds can stall static-asset binding propagation.",
+  "//release": "CANONICAL RELEASE PATH: (1) `npm run verify:release` — every gate in scripts/verify-release.mjs green (the script header is source-of-truth for gate count), (2) `npm run deploy` — the CLI path that builds and deploys BOTH Workers (`production-os` + `sovereign-tail`) by chaining `opennextjs-cloudflare deploy` + `tail:deploy`. Verified 2026-10-09 with the account's own API: Workers Builds is NOT provisioned (no triggers/builds/config on either Worker; every deployment ever is `source: \"wrangler\"`), so `git push origin main` updates source of truth only and does NOT deploy. Do not claim push-to-deploy works unless triggers/builds are verified via the Builds API. Collision rule (applies if Builds is ever wired): do NOT run CLI deploy while a push-triggered build is in flight — colliding builds can stall static-asset binding propagation.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
