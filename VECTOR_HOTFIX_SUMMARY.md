@@ -86,7 +86,7 @@ headroom against a future limit change or a longer id component, so it was not c
 |---|---|
 | `npm run typecheck` | clean |
 | `npm run lint` | clean, 0 warnings |
-| `npm run verify:release` | **116/116 checks green in 526s** — `RESULT: PASS`, zero `✗` lines (`.audit-tmp/verify-vector-fix.log`) |
+| `npm run verify:release` | **116/116 checks green in 526s** — `RESULT: PASS`, zero `✗` lines (captured to a transient gitignored `.audit-tmp/` log, not committed; re-run `npm run verify:release` to reproduce) |
 | `git diff` review | only `vectorId()` + `fnv1a32()` + three comment blocks changed; no call-site, route, schema, or copy edits |
 
 ## 4. Deployment & production proof
@@ -101,7 +101,7 @@ sources** (Workers Builds is still not connected), so the CLI was the only deplo
 | `production-os` | `410c3bcd-3305-4de5-943c-bc67c9f21afe` |
 | `sovereign-tail` | `34a93d75-2c0e-42d7-84f6-b8694611bdcd` |
 
-`npm run deploy` exited 0 (`DEPLOY_EXIT=0`, `.audit-tmp/deploy-vector-fix.log`). Worker URL
+`npm run deploy` exited 0 (output captured to a transient gitignored `.audit-tmp/` log, not committed). Worker URL
 `https://production-os.cjowen2.workers.dev` → canonical `https://sovereign.defrag.app`.
 
 Later commits in this set change comments and markdown only — `git diff 2a9dbb3 -- src/lib/chat-embeddings.ts`

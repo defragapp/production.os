@@ -69,7 +69,9 @@ Historical outliers from the previous session, for reference: `f383faf7` 19.4 s 
 
 Pre-flight backup (scoped export of the table being purged, kept for restore):
 `npx wrangler d1 export production-os-db --remote --output .audit-tmp/cleanup/threads-pre-cleanup.sql --table threads`
-→ 8 INSERT rows captured.
+→ 8 INSERT rows captured. (The export landed in the gitignored `.audit-tmp/` scratch dir and is a
+transient operator artifact — it is not committed, so a fresh clone will not find it at that path;
+re-export with the command above if needed.)
 
 **3.1 Isolation asserts (read-only, run before any write)**
 
@@ -252,8 +254,10 @@ untracked (the earlier cleanup removed the directory only partially). Deleted. W
 - Production data: test account's thread library restored to its 3 pre-probe rows; today's synthetic
   `chat_usage` rows removed; no other account's data touched.
 - Repo: `4571f5f`, clean. No code edit, no commit, no deploy. This report is the only new file, as asked.
-- Recovery artifact: `.audit-tmp/cleanup/threads-pre-cleanup.sql` (pre-delete export of `threads`,
-  gitignored) and `.audit-tmp/cleanup/tail3.raw` (the raw tail capture behind §2).
+- Recovery artifact: `.audit-tmp/cleanup/threads-pre-cleanup.sql` (pre-delete export of `threads`)
+  and `.audit-tmp/cleanup/tail3.raw` (the raw tail capture behind §2) — both transient operator
+  captures under the gitignored `.audit-tmp/` dir, not committed; re-export the first with the §3
+  command.
 - Standing KV/edge residue: per-user rate-limit keys (`rl:chat:<sub>`) from the probe turns expire on
   their own TTL; no action taken.
 - Workers Logs still holds the 02:45–02:48 UTC `chat_timing` rows for the 43.0s / 19.4s turns until ~7 days

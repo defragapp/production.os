@@ -5,8 +5,10 @@ truth for rule values, ids, and history). Every item below is either gated on
 an external surface (Stripe dashboard, zone tokens, the source account) or on
 calendar time — nothing here is blocked on code. Cutover completed
 2026-10-01/02; production runs on the ASU account, D1 migrations 0001–0007
-applied, backup at
-`.audit-tmp/asu-prod-backup-20261002T172232Z.sql`. Workers Builds is connected
+applied, with a pre-cutover D1 snapshot (`asu-prod-backup-20261002T172232Z.sql`)
+kept as an off-box operator backup — it lives in the gitignored `.audit-tmp/`
+scratch dir, is not committed, and re-exports via
+`npx wrangler d1 export production-os-db --remote`. Workers Builds is connected
 and verified 2026-10-06: a push to `main` builds and deploys BOTH Workers
 (check-runs `Workers Builds: production-os` / `sovereign-tail`); the CLI
 `npm run deploy` is the fallback only.

@@ -79,7 +79,7 @@ step in this document requires editing TypeScript, it's wrong.
 | Web Analytics beacon | token `8b2341038462480c95e05d8e11f07213` — account-scoped, recreate in Phase 7 |
 | Zone `defrag.app` NS | `rudy.ns.cloudflare.com` / `vida.ns.cloudflare.com` (Cloudflare authoritative) |
 | Registrar for `defrag.app` | **TBD by owner** — determines Phase 6 branch |
-| Prod D1 backup | `.audit-tmp/prod-d1-backup.sql` (132 lines, includes `PRAGMA defer_foreign_keys=TRUE`) |
+| Prod D1 backup | `.audit-tmp/prod-d1-backup.sql` (local gitignored scratch, not committed; kept off-box per the Phase 8 rollback note — 132 lines, includes `PRAGMA defer_foreign_keys=TRUE`) |
 | Row counts at backup | users=6, baselines=4, journeys=2, chat_usage=2; relationships/passkeys/promo_grants/invites/journey_events = 0 |
 
 ## Migration execution log — 2026-09-30 session
