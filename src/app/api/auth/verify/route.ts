@@ -24,6 +24,10 @@ export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token") || "";
   if (!token) return NextResponse.redirect(new URL("/account?verify=missing", request.url));
 
+  // Bare JWT is deliberate here: the real gate is the single-use, SHA-hashed
+  // token matched against this account (below), and holding that token is the
+  // proof. A revoked session cookie cannot verify an account it has no token
+  // for, so `verifySession` adds nothing on this pre-verification path.
   const cookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!cookie) return NextResponse.redirect(new URL("/onboard?mode=login&verify=required", request.url));
   const payload = await verifyJWT(cookie, secret);

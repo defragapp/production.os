@@ -19,6 +19,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Email verification is not configured" }, { status: 400 });
   }
 
+  // Bare JWT is enough here (unlike DELETE /api/auth/account): this only
+  // re-sends the verification email to the account's OWN address, and it is
+  // capped per user and per recipient. Re-verification is independent of
+  // session revocation, so a `verifySession` read buys nothing and costs a D1
+  // round-trip.
   const cookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!cookie) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const payload = await verifyJWT(cookie, secret);

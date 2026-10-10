@@ -18,6 +18,10 @@
  *            revoked by sign-out or a password reset could still delete the
  *            account and cancel Stripe billing. Now it runs verifySession, like
  *            the sibling `/api/auth/accept-terms` and `/api/auth/export`.
+ *  F-I (P2): Next served the protected page shells with `Cache-Control: public`
+ *            and no `Vary: Cookie`, so a shared cache was free to store an
+ *            authenticated response. The middleware now sets `private,
+ *            no-store` on `/api/*` and on every protected page.
  *
  * The source-scan style follows invites.test.ts / auth-intent.test.ts: these
  * are the repo's convention for invariants that live in route/middleware
@@ -150,5 +154,19 @@ describe("F-H: account deletion honours the session revocation generation", () =
     expect(accountSrc).toContain('from "@/lib/session"');
     expect(accountSrc).toMatch(/verifySession\(env, request\)/);
     expect(accountSrc).not.toContain("verifyJWT");
+  });
+});
+
+describe("F-I: session-scoped responses can never be stored by a shared cache", () => {
+  it("sets private, no-store on /api/* AND on the protected pages", () => {
+    // Next serves the protected page shells with `Cache-Control: public,
+    // max-age=0, must-revalidate` and no `Vary: Cookie`, so a shared cache is
+    // free to store an authenticated response. The middleware is the one place
+    // every response passes through, so the override belongs there.
+    expect(middlewareSrc).toContain('"private, no-store"');
+    expect(middlewareSrc).toMatch(
+      /pathname\.startsWith\("\/api\/"\)\s*\|\|\s*isProtectedPagePath\(pathname\)/,
+    );
+    expect(middlewareSrc).toContain("const PROTECTED_PAGES = [");
   });
 });

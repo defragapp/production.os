@@ -16,6 +16,16 @@ function isNonCanonicalAllowed(host: string): boolean {
 }
 
 /**
+ * Pages that require a session. Kept at module scope so `noStore` — which runs
+ * for every response — can see the same list the auth gate below uses.
+ */
+const PROTECTED_PAGES = ["/chat", "/baseline", "/upgrade", "/account", "/settings"];
+
+function isProtectedPagePath(pathname: string): boolean {
+  return PROTECTED_PAGES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+/**
  * Server-side auth gate.
  *
  * - Public pages (explicit set, line ~55): /, /onboard, /terms, /privacy, /redeem.
@@ -37,9 +47,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const noStore = (res: NextResponse) => {
-    // User data must never be cached by the edge/CDN.
-    if (pathname.startsWith("/api/")) {
-      res.headers.set("Cache-Control", "no-store");
+    // Session-scoped responses must never be cached by the edge/CDN. That is
+    // every `/api/*` response (user data as JSON) AND every protected page:
+    // Next serves those shells with `Cache-Control: public, max-age=0,
+    // must-revalidate` and no `Vary: Cookie`, so a shared cache is free to
+    // store them. `private, no-store` keeps them per-browser.
+    if (pathname.startsWith("/api/") || isProtectedPagePath(pathname)) {
+      res.headers.set("Cache-Control", "private, no-store");
     }
     return res;
   };
@@ -82,10 +96,7 @@ export async function middleware(request: NextRequest) {
   // Pages: only the app pages require auth — unknown paths fall through
   // so Next.js can render the branded 404.
   const isApi = pathname.startsWith("/api/");
-  const PROTECTED_PAGES = ["/chat", "/baseline", "/upgrade", "/account", "/settings"];
-  const isProtectedPage = PROTECTED_PAGES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/"),
-  );
+  const isProtectedPage = isProtectedPagePath(pathname);
   if (!isApi && !isProtectedPage) {
     return NextResponse.next();
   }
@@ -97,7 +108,7 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Server configuration error" }, { status: 500 }));
     }
-    return NextResponse.redirect(new URL("/onboard", request.url));
+    return noStore(NextResponse.redirect(new URL("/onboard", request.url)));
   }
 
   // Carry the original destination through the sign-in wall so a person sent
@@ -117,7 +128,7 @@ export async function middleware(request: NextRequest) {
     // one — send them to Create account, not the "Welcome back" Sign in card.
     const isPaywall = pathname === "/upgrade" || pathname.startsWith("/upgrade/");
     const mode = isPaywall ? "signup" : "login";
-    return NextResponse.redirect(new URL(`/onboard?mode=${mode}${nextIntent}`, request.url));
+    return noStore(NextResponse.redirect(new URL(`/onboard?mode=${mode}${nextIntent}`, request.url)));
   }
 
   return noStore(NextResponse.next());

@@ -449,3 +449,57 @@ most-used auth helper (every `/api/*` request); it is exercised in production on
 sign-out, and now also unit-pinned here. A live behavioural probe (mint a stale `tv` cookie
 against prod) was not run — no test account, and it is not needed to prove the route now
 calls the correct helper.
+
+---
+
+## Privacy hardening — `private, no-store` on session-scoped responses — 2026-10-10 (this thread; append-only)
+
+**P2 (privacy / cache-hygiene).** Not previously filed.
+
+**Before.** The middleware's `noStore()` set `Cache-Control` only for `pathname.startsWith("/api/")`.
+The protected page routes were therefore left with whatever Next/OpenNext emits, and a real
+session cookie against the local OpenNext build showed `/chat`, `/account`, `/settings`,
+`/baseline` all returning **`Cache-Control: public, max-age=0, must-revalidate`** with
+**no `Vary: Cookie`** — while `/api/*` was correctly `no-store`. `public` without `Vary:
+Cookie` tells a shared cache it may store a response that varies by session. Today the bodies
+are user-independent shells (`<ChatClient />` takes no props; the `/account`/`/settings`/
+`/baseline` pages are client shells), so a spot-check for the account email and id in 27–30 KB
+of each page's HTML returned **0 hits** — no live leak. But it is exactly the "cache
+authenticated HTML" hazard the operating rules forbid, and open-task **#7 plans to add Zone
+Cache Rules** that would turn a latent header into a real one.
+
+**Opportunity.** Put the cache directive at the one chokepoint every response passes through,
+so no future cache rule can store a session-scoped response.
+
+**Change.** `src/middleware.ts`: `PROTECTED_PAGES` moved to module scope (with a
+`isProtectedPagePath()` helper) so `noStore()` can see it; `noStore()` now applies
+`Cache-Control: private, no-store` to **`/api/*` OR any protected page**, and the two
+session-dependent `/onboard` redirects are wrapped in it too. No user-visible behaviour change:
+`/faq`, `/about`, `/` and the other public surfaces still carry Next's public cache header.
+
+**Risk.** `/api/*` moves from `no-store` to `private, no-store` (strictly more restrictive).
+No test asserted the old exact value (only the chat 429 pins `private, no-store`), and no
+route reads its own response's cache header. Public pages are untouched.
+
+**Verification.** Rendered check on the local OpenNext preview (authed cookie) after the
+change: every protected page now carries `private, no-store` — and the unauthenticated
+`/chat` redirect does too — while `/faq` and the other public surfaces are unchanged. Note
+the final header is `private, no-store, public, max-age=0, must-revalidate`: OpenNext still
+appends Next's own page directive, so the two coexist. That is not cosmetic-clean, but it is
+functionally correct — RFC 9111 makes `no-store` authoritative ("a cache MUST NOT store"),
+so the `public` stop is inert, and Cloudflare honours `no-store`. New source-scan ratchet
+**F-I** in `src/lib/security-review.test.ts` pins the middleware predicate
+(`startsWith("/api/") || isProtectedPagePath(pathname)`) and the `private, no-store` literal.
+`npx vitest run src/lib/security-review.test.ts` 20/20; `tsc`/`eslint` clean;
+`npm run verify:release` green.
+
+**Deferred, not done — #63 (move the audit scripts to `scripts/audit/`).** Investigated this
+pass: `.audit-tmp/` holds **36** `.mjs` scripts (the row says 20), 26 of which hardcode
+`.audit-tmp/...` paths relative to cwd (a move preserves cwd, so those survive), but **2 use
+script-relative imports that a move breaks** — `authed-capture.mjs` (`../src/lib/auth.ts`) and
+`rerun-veil.mjs` (`../scripts/verify-release.mjs`). Secret scan across all 36 is clean (no
+`github_pat_`, `sk_live_`, `Bearer`, `AKIA`). Left as its own pass: it is 36 files of scratch
+tooling with a "which are durable?" curation call, zero product value, so it does not belong
+bundled with a privacy fix. Plan recorded here so it is mechanical next time: `git mv`-equivalent
+(the dir is gitignored, so plain `mv` + `git add`), fix the two import paths to `../../…`,
+re-run the secret scan, and dry-run each surviving script from the repo root.
