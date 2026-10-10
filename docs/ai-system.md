@@ -76,6 +76,15 @@ Interpretive / Unknown** states.
   bounded) so replies arrive complete without unbounded per-message compute.
 - Generation is **non-streaming**: one complete, validated answer is produced, then shipped
   to the client as a single SSE `content` event. The model call itself is not token-streamed.
+  The SSE stream **opens before generation** (open-tasks #10, the long-turn dead-air fix):
+  `{ threadId }` and the deterministic `{ state }` frame are enqueued first, so the journey
+  canvas animates during the measured 19–43 s worst-case inference wait instead of sitting on
+  typing dots until the answer lands. Only `{ content }` stays gated behind
+  `validateSovereignText` + repair — no unvalidated token is ever painted. A turn whose
+  generation throws closes the stream with **no** `{ content }`/`[DONE]`, which the client
+  reads as an incomplete, re-runnable turn (`!sawDone || !sawContent`) and answers with its
+  one-tap retry; the persisted journey write is still deferred until generation succeeds, so
+  a failed turn never advances the durable canvas. Pinned by `chat-stream-contract.test.ts`.
 - Answer integrity: if the model returns an empty/incomplete turn, the pipeline retries
   once; on repeat failure it returns an honest "couldn't finish" message — it never emits a
   fabricated placeholder.
@@ -101,8 +110,9 @@ Gates applied in order:
    IP-isolation release gate prove a deflection never reached the model.
 
 The thread merges server-side (`mergeChatHistories`) and is sanitized (`sanitizeMessages`)
-before the safety layers run. The validated answer is delivered as a single SSE `content`
-event and rendered on the client by `markdown-lite.ts` → `components/rich-text.tsx`, which
+before the safety layers run. The SSE stream flushes `{ threadId }` + `{ state }` immediately,
+then the validated answer as a single `content` event once generation and its repair pass
+complete; the client renders that text through `markdown-lite.ts` → `components/rich-text.tsx`, which
 turns a lightweight markdown subset (headings, lists, bold, inline code) into safe React
 elements — no raw HTML, no third-party markdown dependency.
 
