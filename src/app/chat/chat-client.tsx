@@ -1652,7 +1652,7 @@ export function ChatClient() {
                             className="flex h-4 items-center gap-1.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70"
                           >
                             <span className="h-1 w-1 shrink-0 rounded-full bg-current" aria-hidden="true" />
-                            From your history
+                            From what you&apos;ve shared before
                           </div>
                           <AssistantTurn>
                             {streamingEmpty ? (
@@ -1692,6 +1692,23 @@ export function ChatClient() {
                               <RichText text={msg.content} />
                             )}
                           </AssistantTurn>
+                          {/* The answer's provenance, surfaced in-app. Every genuine
+                              answer is grounded in the person's computed Baseline, so
+                              the line the landing demo shows ("a tendency, not a
+                              verdict") carries into the real answer instead of living
+                              only on the marketing page — the sharpest "demonstrated
+                              on the landing, invisible in the product" gap. It is
+                              deterministic UI, never model output (the prompt still
+                              forbids printing baseline tags), so it cannot drift. It
+                              renders under the exact predicate the Share affordance
+                              uses: a notice (usage cap, email/session gate) or a
+                              truncated turn is not an answer and never claims
+                              grounding. */}
+                          {!isStreaming && !streamingEmpty && !stoppedEmpty && !msg.notice && msg.content.trim() && (
+                            <p className="px-1 text-[12.5px] leading-relaxed text-muted-foreground/80">
+                              <span className="text-foreground/75">Grounded in your Baseline</span> — a tendency, not a verdict.
+                            </p>
+                          )}
                           {/* Every finished answer is worth keeping — the share card
                               turns a passage into an artifact the person owns. A
                               notice bubble (usage cap, email/session gate) or a
