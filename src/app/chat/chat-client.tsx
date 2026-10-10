@@ -3,7 +3,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUp, Compass, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Search, Shield, Square, Users, X } from "lucide-react";
+import { ArrowUp, Compass, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Search, Shield, Square, ThumbsDown, ThumbsUp, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
@@ -287,6 +287,11 @@ export function ChatClient() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  // The live-quality signal for the answer just received: which way the person
+  // marked it, or null if they have not (or have moved to a new turn/thread).
+  // It is a single value on purpose — the control is offered only on the newest
+  // finished answer, so there is only ever one open question at a time.
+  const [answerFeedback, setAnswerFeedback] = useState<"landed" | "missed" | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
@@ -463,6 +468,8 @@ export function ChatClient() {
     setVeilHasMore(false);
     setFreshOffer(false);
     setPastOpen(false);
+    // The question belonged to the previous conversation's last answer.
+    setAnswerFeedback(null);
     stopDictation();
     scrollerRef.current?.scrollTo({ top: 0 });
   }, [stopDictation]);
@@ -952,6 +959,8 @@ export function ChatClient() {
     const controller = new AbortController();
     abortRef.current = controller;
     setIsStreaming(true);
+    // A new answer retires the previous question.
+    setAnswerFeedback(null);
     setMessages([...requestMessages, { role: "assistant", content: "" }]);
     try {
       const response = await fetch("/api/chat", {
@@ -1151,6 +1160,25 @@ export function ChatClient() {
       setIsStreaming(false);
     }
   }, [threadId, refreshThreads, refreshUsage, router, applyStateFrame]);
+
+  // The "Did this land?" write. Optimistic: the mark fills immediately and the
+  // request rides behind it; a dropped signal is not worth an error banner (the
+  // choice stays visible for this session either way). Server-memory only — a
+  // Device-Only account never sees the control, and the route refuses it too.
+  const sendFeedback = useCallback(async (turnIndex: number, value: "landed" | "missed") => {
+    if (!threadId || memoryMode !== "server") return;
+    setAnswerFeedback(value);
+    try {
+      await fetch("/api/chat/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId, turnIndex, value }),
+      });
+    } catch {
+      // Best-effort signal: an offline or failed write changes nothing the
+      // person sees. The offline banner already covers the connection story.
+    }
+  }, [threadId, memoryMode]);
 
   const sendMessage = useCallback(async () => {
     if (isStreaming) return;
@@ -1672,6 +1700,42 @@ export function ChatClient() {
                           {!isStreaming && !streamingEmpty && !stoppedEmpty && !msg.notice && msg.content.trim() && (
                             <div>
                               <ShareCardButton text={msg.content} />
+                            </div>
+                          )}
+                          {/* The live-quality signal (WS3): the offline rubric is
+                              the regression gate, this is the only read on whether an
+                              answer actually landed. Offered once, on the newest
+                              finished answer, and only to a server-memory account —
+                              the offline rubric never sees this, and a Device-Only
+                              account has a zero-retention contract the route also
+                              enforces. `tap-line` carries the touch floor (never a
+                              hand-written size), and the row wraps so it can never
+                              widen the bubble past the viewport. */}
+                          {isLast && !isStreaming && !streamingEmpty && !stoppedEmpty && !msg.notice && msg.content.trim() && memoryMode === "server" && threadId && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+                              <span className="text-[11px] text-muted-foreground/70">Did this land?</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => void sendFeedback(idx, "landed")}
+                                  aria-pressed={answerFeedback === "landed"}
+                                  aria-label="This answer landed"
+                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "landed" ? "border-border/70 bg-white/5 text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-white/5 hover:text-foreground"}`}
+                                >
+                                  <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Landed
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void sendFeedback(idx, "missed")}
+                                  aria-pressed={answerFeedback === "missed"}
+                                  aria-label="This answer missed the mark"
+                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "missed" ? "border-border/70 bg-white/5 text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-white/5 hover:text-foreground"}`}
+                                >
+                                  <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Missed
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>

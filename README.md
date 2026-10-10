@@ -10,7 +10,7 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 | Frontend | Next.js App Router + React 19 + Tailwind CSS + shadcn/ui |
 | Adapter | `@opennextjs/cloudflare` (OpenNext) |
 | Runtime | Cloudflare Workers (`nodejs_compat` is implicit at the `compatibility_date`; it is deliberately not declared) |
-| Database | Cloudflare D1 (SQLite) — **12 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants`, `nudge`, `admin_audit_log` |
+| Database | Cloudflare D1 (SQLite) — **13 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants`, `nudge`, `admin_audit_log`, `answer_feedback` |
 | Sessions | Cloudflare KV (`SESSION_KV`) — rate-limit + reset/verify + `ops:` counters (JWTs live in the cookie; `users.token_version` revokes them early) |
 | Device-Only memory | Client-side AES-GCM 256 non-extractable `CryptoKey` in IndexedDB `sovereign-memory` (`memory_mode='local'` → zero-retention edge inference, no D1 thread write) |
 | AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`, explicit `max_tokens=1024`, 2,000-char input cap) |
@@ -197,7 +197,7 @@ environment cannot boot.
 ```
 open-next.config.ts            # OpenNext Cloudflare config (defaults)
 wrangler.jsonc                 # Worker config: D1, KV, AI, AI Gateway, static assets
-schema.sql                     # Canonical D1 baseline — 12 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge, admin_audit_log); migrations/0001–0008 layer onto existing DBs
+schema.sql                     # Canonical D1 baseline — 13 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge, admin_audit_log, answer_feedback); migrations/0001–0009 layer onto existing DBs
 assets/ace-of-cups.jpg         # Canonical brand artwork (source of truth for the mark)
 scripts/build-brand-assets.mjs # Regenerates public/brand/*.png from the source artwork (node scripts/build-brand-assets.mjs)
 public/brand/                  # Emitted raster mark: emblem-full, emblem-core, emblem-core-bold, icon, apple-icon

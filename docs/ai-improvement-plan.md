@@ -1,6 +1,6 @@
 # Public AI improvement plan
 
-Status: **WS1 shipped in code (pending `verify:release` + push).** WS2–WS9 are planned.
+Status: **WS1 and WS3 shipped in code (pending `verify:release` + push).** WS2, WS4–WS9 are planned.
 Owner-facing planning doc for iterating on the customer-facing AI (the signed-in `/chat`
 surface). Backend identifiers keep their engine names; this doc describes product intent,
 not renamed engine symbols.
@@ -62,17 +62,28 @@ or an AI-Gateway-scoped token. Turns repeat/near-identical prompts from ~17 s in
 and cuts neurons. `scaling-plan.md` §4.3 / §C has the exact settings call. Verify with the
 report's method (identical stored answers at `gen_ms < 200 ms` = cache hit) + gateway analytics.
 
-### WS3 — User feedback loop · planned
+### WS3 — User feedback loop · **implemented**
 
-There is no product feedback signal today (grep for feedback/thumbs/rating is empty). Add a
-lightweight "did this land?" control on assistant bubbles → a new authed route → a new D1 table
-(next free migration; coordinate the number with #54's planned `0009_ai_spend_daily.sql`). The
-offline rubric stays the regression gate; feedback becomes the live quality signal.
+The live-quality signal: a content-free "Did this land?" control under the newest finished answer
+`→ POST /api/chat/feedback` (authed, 30 writes/min/user) `→ answer_feedback` (migration `0009`).
+The offline rubric (`answer-eval/`) stays the regression gate; this is the only read on whether an
+answer actually landed for a real person. One row per `(user_id, thread_id, turn_index)` — the
+upsert (`ON CONFLICT … DO UPDATE`) means changing your mind replaces the row instead of stacking a
+duplicate, so that triple is the unit of signal.
 
-- **Privacy:** in `memory_mode='local'` (zero-retention) store only the enum, or skip
-  persistence entirely — never persist free-text that could echo chat content.
-- **Risks:** the release ratchet measures every visible control (≥44px coarse tap floor,
-  console-clean). The control must carry the existing hook class, not a hand-written size.
+- **Privacy:** server-memory only. A `memory_mode='local'` (zero-retention) account is never shown
+  the control, and the route independently refuses to persist for one (`stored:false`) — two guards
+  on one promise. No answer text, snippet, or free-text is ever stored; the table records only the
+  enum and which turn.
+- **Threads and the table:** `thread_id` carries no FK on purpose — a purged thread's signal stays
+  useful in aggregate, and a cascading FK would erase the history the table exists to keep (same
+  reasoning as `admin_audit_log`, migration `0008`). The route still verifies thread ownership so
+  junk ids cannot be written.
+- **Constraint honored:** the control carries the `tap-line` hook (the size floor lives in the one
+  `(pointer: coarse)` block), never a hand-written `min-h`, and is kept off `role=radio/switch`.
+- **Pinned by:** `src/lib/answer-feedback-contract.test.ts` (table content-free + schema/migration
+  byte-identical; route user-scoped, upsert, local-refusal; control server-only + newest-answer-only
+  + hook class).
 
 ### WS4 — Multilingual answering · planned
 
@@ -112,8 +123,8 @@ buckets. Never fail a request over telemetry.
 
 ## 4. Sequencing
 
-1. **WS1** (shipped) → 2. **WS2** (owner, parallel) → 3. **WS3** → 4. **WS6 → WS4** →
-5. **WS5** → 6. WS7–WS9 cleanup.
+1. **WS1 + WS3** (shipped) → 2. **WS2** (owner, parallel) → 3. **WS6 → WS4** →
+4. **WS5** → 5. WS7–WS9 cleanup.
 
 ## 5. Verification & ship contract (any change)
 

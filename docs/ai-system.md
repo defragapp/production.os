@@ -158,6 +158,12 @@ scaffolding:
   invitation; each side is rendered through its own Baseline.
 - Accounts and their data delete atomically (one click from Account).
 - There is no training on user conversations — generation is per-request.
+- Answer feedback (`answer_feedback`, migration `0009`; the "Did this land?" control →
+  `POST /api/chat/feedback`) is **content-free**: it stores one enum per
+  `(user_id, thread_id, turn_index)`, never answer text. It is **server-memory only** — a
+  `memory_mode='local'` (zero-retention) account is never shown the control and the route
+  independently refuses to persist for one, so the Device-Only contract is enforced on both
+  sides. See `docs/ai-improvement-plan.md` WS3.
 
 ## 9. Dual memory & the Journey Engine
 

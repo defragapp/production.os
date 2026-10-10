@@ -218,4 +218,21 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_actor ON admin_audit_log(actor_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON admin_audit_log(action, created_at);
 
+-- Answer feedback (WS3, migration 0009): the content-free live-quality signal
+-- behind the "Did this land?" control — one enum per (person, thread, turn),
+-- no answer text. Server-memory only (a zero-retention 'local' account writes
+-- nothing; the route refuses it). No FK on thread_id: a purged thread's signal
+-- stays useful in aggregate (same reasoning as admin_audit_log above).
+-- Byte-identical to migrations/0009_answer_feedback.sql.
+CREATE TABLE IF NOT EXISTS answer_feedback (
+  user_id     TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  thread_id   TEXT    NOT NULL,
+  turn_index  INTEGER NOT NULL,
+  value       TEXT    NOT NULL,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, thread_id, turn_index)
+);
+CREATE INDEX IF NOT EXISTS idx_answer_feedback_user  ON answer_feedback(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_answer_feedback_value ON answer_feedback(value, created_at);
+
 
