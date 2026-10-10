@@ -212,16 +212,20 @@ function ThreadLibrary({
   threads,
   activeId,
   isStreaming,
+  error,
   onOpen,
   onNew,
   onSeed,
+  onRetry,
 }: {
   threads: ThreadSummary[];
   activeId: string | null;
   isStreaming: boolean;
+  error: boolean;
   onOpen: (id: string) => void;
   onNew: () => void;
   onSeed: (prompt: string) => void;
+  onRetry: () => void;
 }) {
   return (
     <aside className="sticky top-[3.5rem] hidden h-[calc(100vh-3.5rem)] w-[264px] shrink-0 flex-col border-r border-border/70 bg-background/60 backdrop-blur-sm lg:flex">
@@ -236,12 +240,23 @@ function ThreadLibrary({
           Threads
         </p>
         {threads.length === 0 ? (
-          <div className="px-1">
-            <p className="px-2 pb-2 text-xs leading-relaxed text-muted-foreground/70">
-              Start with what&apos;s real — pick a level, and make the question your own.
-            </p>
-            <StartingPoints compact onPick={onSeed} disabled={isStreaming} />
-          </div>
+          error ? (
+            <div className="px-1">
+              <p className="px-2 pb-3 text-xs leading-relaxed text-muted-foreground/80">
+                Couldn&apos;t load your conversations just now. Your history is safe.
+              </p>
+              <Button variant="outline" size="sm" onClick={onRetry} disabled={isStreaming} className="w-full">
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <div className="px-1">
+              <p className="px-2 pb-2 text-xs leading-relaxed text-muted-foreground/70">
+                Start with what&apos;s real — pick a level, and make the question your own.
+              </p>
+              <StartingPoints compact onPick={onSeed} disabled={isStreaming} />
+            </div>
+          )
         ) : (
           <nav aria-label="Thread library" className="space-y-1">
             {threads.map((t) => {
@@ -295,6 +310,10 @@ export function ChatClient() {
   const [authChecked, setAuthChecked] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  // Distinguishes "no conversations yet" from "the list couldn't be fetched".
+  // Without it a transient failure shows a returning member the first-run
+  // empty state as if their history had vanished.
+  const [threadsError, setThreadsError] = useState(false);
   const [baselineData, setBaselineData] = useState<BaselineData | undefined>();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [usageBannerDismissed, setUsageBannerDismissed] = useState(false);
@@ -440,7 +459,10 @@ export function ChatClient() {
   const refreshThreads = useCallback(async (): Promise<ThreadSummary[]> => {
     try {
       const res = await fetch("/api/threads");
-      if (!res.ok) return [];
+      if (!res.ok) {
+        setThreadsError(true);
+        return [];
+      }
       const data = await res.json() as { threads?: { id: string; updated_at: string; title?: string; journey_goal?: string | null; journey_status?: string | null; journey_step?: string | null }[] };
       const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at, title: t.title, journey_goal: t.journey_goal ?? null, journey_status: t.journey_status ?? null, journey_step: t.journey_step ?? null }));
       setThreads((prev) => items.map((item) => ({
@@ -450,8 +472,10 @@ export function ChatClient() {
         // list refresh lands.
         label: clipWords(item.title?.trim() || "", 48) || prev.find((p) => p.id === item.id)?.label,
       })));
+      setThreadsError(false);
       return items;
     } catch {
+      setThreadsError(true);
       return [];
     }
   }, []);
@@ -1316,9 +1340,11 @@ export function ChatClient() {
           threads={threads}
           activeId={threadId}
           isStreaming={isStreaming}
+          error={threadsError}
           onOpen={openThread}
           onNew={startNewThread}
           onSeed={seedComposer}
+          onRetry={refreshThreads}
         />
         <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="border-b border-border bg-background px-4 py-3">
@@ -1418,7 +1444,7 @@ export function ChatClient() {
                 People
               </Button>
             </div>
-            {threads.length > 0 && (
+            {threads.length > 0 ? (
               <div className="thread-strip mx-auto mt-2.5 flex max-w-3xl items-center gap-1.5 lg:hidden">
                 {threads.map((t) => {
                   const active = t.id === threadId;
@@ -1443,7 +1469,20 @@ export function ChatClient() {
                   );
                 })}
               </div>
-            )}
+            ) : threadsError && !isStreaming ? (
+              <div className="mx-auto mt-2.5 flex max-w-3xl items-center gap-2 lg:hidden">
+                <p className="text-xs leading-relaxed text-muted-foreground/80">
+                  Couldn&apos;t load your conversations.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refreshThreads()}
+                  className="tap-line shrink-0 text-xs font-medium text-foreground underline underline-offset-2"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
