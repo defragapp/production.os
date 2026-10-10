@@ -173,8 +173,8 @@ function StartingPoints({
             style={compact ? undefined : { animationDelay: `${120 + i * 70}ms` }}
             className={`group block w-full text-left transition-all duration-[240ms] ${
               compact
-                ? "rounded-lg border border-transparent px-3 py-2 hover:border-border/60 hover:bg-white/[0.03]"
-                : `msg-in rounded-panel border border-border/60 bg-white/[0.03] p-4 hover:-translate-y-[1px] hover:border-foreground/30 hover:bg-white/[0.05]`
+                ? "rounded-control border border-transparent px-3 py-2 hover:border-border/60 hover:bg-surface-hover"
+                : `msg-in rounded-panel border border-border/60 bg-surface-2 p-4 hover:-translate-y-[1px] hover:border-foreground/30 hover:bg-surface-hover`
             }`}
           >
             <span className={`block font-mono uppercase tracking-[0.16em] text-muted-foreground/70 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
@@ -254,10 +254,10 @@ function ThreadLibrary({
                   onClick={() => onOpen(t.id)}
                   disabled={isStreaming}
                   aria-current={active ? "true" : undefined}
-                  className={`block w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-[240ms] ${
+                  className={`block w-full rounded-control border px-3 py-2.5 text-left transition-all duration-[240ms] ${
                     active
-                      ? "border-white/10 bg-white/[0.05] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
-                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-white/[0.02] hover:text-foreground"
+                      ? "border-white/10 bg-surface-selected text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
+                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-surface-hover hover:text-foreground"
                   }`}
                 >
                   <p className="line-clamp-2 text-[13px] leading-snug">
@@ -1371,7 +1371,7 @@ export function ChatClient() {
                         role="menuitemradio"
                         aria-checked={memoryMode === "server"}
                         onClick={() => void switchMemoryMode("server")}
-                        className="flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                        className="flex w-full items-start gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                       >
                         <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span><span className="block font-medium text-foreground">All devices</span><span className="block mt-0.5 text-xs">Conversations sync across your devices.</span></span>
@@ -1381,12 +1381,12 @@ export function ChatClient() {
                         role="menuitemradio"
                         aria-checked={memoryMode === "local"}
                         onClick={() => void switchMemoryMode("local")}
-                        className="flex w-full items-start gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                        className="flex w-full items-start gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                       >
                         <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span><span className="block font-medium text-foreground">On this device only</span><span className="block mt-0.5 text-xs">New chats are never stored on our servers.</span></span>
                       </button>
-                      <Link href="/settings" className="block rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground" onClick={() => setMemoryMenuOpen(false)}>
+                      <Link href="/settings" className="block rounded-control px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground" onClick={() => setMemoryMenuOpen(false)}>
                         Details in <Shield className="inline h-3 w-3 -mt-0.5" aria-hidden="true" /> Settings
                       </Link>
                     </div>
@@ -1431,7 +1431,7 @@ export function ChatClient() {
                       title={t.label || undefined}
                       className={`tap-line shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
                         active
-                          ? "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
+                          ? "border-foreground/30 bg-surface-selected text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
                           : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
                       }`}
                     >
@@ -1499,7 +1499,7 @@ export function ChatClient() {
                         <button
                           type="button"
                           onClick={() => void jumpToTurn(r.threadId, r.turnIndex)}
-                          className="w-full rounded-lg border border-border/50 bg-surface-2/40 px-3 py-2 text-left transition-colors hover:border-border hover:bg-surface-2"
+                          className="w-full rounded-control border border-border/50 bg-surface-2/40 px-3 py-2 text-left transition-colors hover:border-border hover:bg-surface-2"
                         >
                           <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
                             {r.role === "assistant" ? "Sovereign" : "You"}
@@ -1617,7 +1617,7 @@ export function ChatClient() {
                           <button
                             type="button"
                             onClick={() => { void beginFreshJourney(); }}
-                            className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-chip border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                           >
                             Start a fresh journey
                           </button>
@@ -1720,7 +1720,7 @@ export function ChatClient() {
                                   onClick={() => void sendFeedback(idx, "landed")}
                                   aria-pressed={answerFeedback === "landed"}
                                   aria-label="This answer landed"
-                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "landed" ? "border-border/70 bg-white/5 text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-white/5 hover:text-foreground"}`}
+                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "landed" ? "border-border/70 bg-surface-selected text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-surface-hover hover:text-foreground"}`}
                                 >
                                   <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
                                   Landed
@@ -1730,7 +1730,7 @@ export function ChatClient() {
                                   onClick={() => void sendFeedback(idx, "missed")}
                                   aria-pressed={answerFeedback === "missed"}
                                   aria-label="This answer missed the mark"
-                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "missed" ? "border-border/70 bg-white/5 text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-white/5 hover:text-foreground"}`}
+                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "missed" ? "border-border/70 bg-surface-selected text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-surface-hover hover:text-foreground"}`}
                                 >
                                   <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
                                   Missed
@@ -1793,7 +1793,7 @@ export function ChatClient() {
                   <div
                     role="status"
                     aria-live="polite"
-                    className="mb-2 flex items-center gap-2 rounded-lg border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
+                    className="mb-2 flex items-center gap-2 rounded-control border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
                   >
                     <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" />
                     You&apos;re offline — keep typing, we&apos;ll hold your words until the connection returns.
@@ -1822,7 +1822,7 @@ export function ChatClient() {
                   <div
                     role="status"
                     aria-live="polite"
-                    className="mb-2 flex items-center gap-2 rounded-lg border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
+                    className="mb-2 flex items-center gap-2 rounded-control border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
                   >
                     <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" />
                     {dictationNotice}
@@ -1874,7 +1874,7 @@ export function ChatClient() {
                       title={dictating ? (dictationPreview ? "Listening — tap to stop" : "Stop dictation") : "Dictate"}
                       className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                         dictating
-                          ? "border-foreground/35 bg-white/[0.10] text-foreground"
+                          ? "border-foreground/35 bg-surface-selected text-foreground"
                           : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
                       }`}
                     >
@@ -2045,7 +2045,7 @@ function PeoplePanel({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate font-medium text-foreground">{c.personName}</span>
-                        <span className="shrink-0 rounded-full border border-border bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        <span className="shrink-0 rounded-full border border-border bg-surface-2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                           {c.myLabel}
                         </span>
                       </div>

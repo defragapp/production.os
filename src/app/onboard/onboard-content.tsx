@@ -378,7 +378,7 @@ export function OnboardContent() {
                       className={cn(
                         "tap-line rounded-full px-4 py-1.5 text-sm transition-colors",
                         on
-                          ? "bg-white/[0.08] font-medium text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
+                          ? "bg-surface-selected font-medium text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >

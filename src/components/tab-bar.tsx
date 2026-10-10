@@ -61,9 +61,9 @@ export function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-all duration-[200ms] rounded-lg my-1 ${
+                className={`flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-all duration-[200ms] rounded-control my-1 ${
                   active
-                    ? "text-foreground bg-white/[0.06] shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
+                    ? "text-foreground bg-surface-selected shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >

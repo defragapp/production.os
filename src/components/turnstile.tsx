@@ -92,7 +92,7 @@ export function TurnstileWidget({ siteKey, onToken, onError }: TurnstileWidgetPr
   return (
     <div
       ref={containerRef}
-      className="mx-auto flex min-h-[65px] w-[300px] max-w-full items-center justify-center overflow-hidden rounded-md bg-surface-1"
+      className="mx-auto flex min-h-[65px] w-[300px] max-w-full items-center justify-center overflow-hidden rounded-chip bg-surface-1"
     />
   );
 }

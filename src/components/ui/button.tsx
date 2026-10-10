@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
  * applied to it (see the coarse-pointer block in globals.css).
  */
 const buttonVariants = cva(
-  "btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-[240ms] ease-spring hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:hover:-translate-y-0 active:translate-y-0",
+  "btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-medium transition-all duration-[240ms] ease-spring hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:hover:-translate-y-0 active:translate-y-0",
   {
     variants: {
       variant: {
@@ -30,8 +30,8 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-lg px-3",
-        lg: "h-11 rounded-lg px-8",
+        sm: "h-9 rounded-control px-3",
+        lg: "h-11 rounded-control px-8",
         icon: "btn-size-icon h-10 w-10",
       },
     },

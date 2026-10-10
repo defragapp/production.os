@@ -71,8 +71,8 @@ export function NavMenu({
         className={cn(
           "nav-link inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-all duration-[200ms]",
           childActive || open
-            ? "bg-white/[0.06] text-foreground"
-            : "text-foreground/65 hover:bg-white/[0.06] hover:text-foreground",
+            ? "bg-surface-selected text-foreground"
+            : "text-foreground/65 hover:bg-surface-hover hover:text-foreground",
         )}
       >
         {label}
@@ -85,7 +85,7 @@ export function NavMenu({
       {open && (
         <div
           id={panelId}
-          className="absolute left-0 top-full z-50 mt-2 w-max min-w-[11rem] rounded-xl border border-border/60 bg-surface-1/95 p-1.5 shadow-2xl backdrop-blur-2xl"
+          className="absolute left-0 top-full z-50 mt-2 w-max min-w-[11rem] rounded-panel border border-border/60 bg-surface-1/95 p-1.5 shadow-2xl backdrop-blur-2xl"
         >
           {items.map((item) => {
             const active = pathname === item.href;
@@ -95,10 +95,10 @@ export function NavMenu({
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "tap-line w-full justify-start rounded-lg px-3.5 text-sm font-medium transition-colors",
+                  "tap-line w-full justify-start rounded-control px-3.5 text-sm font-medium transition-colors",
                   active
-                    ? "bg-white/[0.08] text-foreground"
-                    : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+                    ? "bg-surface-selected text-foreground"
+                    : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
                 )}
               >
                 {item.label}

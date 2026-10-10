@@ -23,7 +23,7 @@ export function Alert({
     <div
       role={tone === "error" ? "alert" : "status"}
       className={cn(
-        "flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm leading-relaxed",
+        "flex items-start gap-2.5 rounded-control border px-3.5 py-2.5 text-sm leading-relaxed",
         tone === "error"
           ? "border-destructive/40 bg-destructive/[0.07] text-foreground"
           : "border-border bg-muted/40 text-foreground",

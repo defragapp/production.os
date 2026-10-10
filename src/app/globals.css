@@ -42,6 +42,11 @@
     --surface-2: 30 7% 8.5%;
     --surface-3: 30 6% 11%;
 
+    /* One warm overlay pair for interactive hover + selected states, replacing
+       the scattered bg-white/[0.0x] fills (cool neutral → warm cream). */
+    --surface-hover: 38 18% 95% / 0.05;
+    --surface-selected: 38 18% 95% / 0.09;
+
     /* Radius scale — controls 8px, panels 12px, chips 6px; fully-round is
        reserved for genuinely circular elements. */
     --radius-sm: 6px;
@@ -70,6 +75,11 @@
     --surface-1: 30 7% 6.5%;
     --surface-2: 30 7% 8.5%;
     --surface-3: 30 6% 11%;
+
+    /* One warm overlay pair for interactive hover + selected states, replacing
+       the scattered bg-white/[0.0x] fills (cool neutral → warm cream). */
+    --surface-hover: 38 18% 95% / 0.05;
+    --surface-selected: 38 18% 95% / 0.09;
   }
 }
 
@@ -235,7 +245,7 @@
    cream edge, crisp top highlight, blur. Backed by the surface-1 elevation
    token so every panel steps through the same layering model. 12px radius —
    the single card/panel step in the scale (controls 8px, chips 6px), same as
-   <Card rounded-xl>. */
+   <Card rounded-panel>. */
 .glass-panel {
   position: relative;
   border-radius: var(--radius-lg);

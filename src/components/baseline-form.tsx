@@ -227,7 +227,7 @@ export function BaselineForm({
                   key={b.key}
                   type="button"
                   onClick={() => setBucket(b.key)}
-                  className={`tap-line rounded-md border px-3.5 py-2 text-sm transition-colors ${
+                  className={`tap-line rounded-chip border px-3.5 py-2 text-sm transition-colors ${
                     bucket === b.key
                       ? "border-foreground/60 bg-foreground/[0.08] text-foreground"
                       : "border-border text-muted-foreground hover:text-foreground"

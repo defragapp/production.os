@@ -219,7 +219,7 @@ export function ShareCardButton({ text }: { text: string }) {
         onClick={() => void start()}
         aria-label="Create a share card from this insight"
         title="What Sovereign saw"
-        className="tap-line inline-flex items-center gap-1.5 rounded-full border border-transparent px-2.5 py-1 text-xs text-muted-foreground/70 transition-colors hover:border-border/60 hover:bg-white/5 hover:text-foreground"
+        className="tap-line inline-flex items-center gap-1.5 rounded-full border border-transparent px-2.5 py-1 text-xs text-muted-foreground/70 transition-colors hover:border-border/60 hover:bg-surface-hover hover:text-foreground"
       >
         <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
         Share
@@ -239,7 +239,7 @@ export function ShareCardButton({ text }: { text: string }) {
           >
             <div className="flex w-full items-center justify-between">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">What Sovereign saw</p>
-              <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label="Close" className="rounded-md p-1.5 text-muted-foreground hover:bg-white/5 hover:text-foreground">
+              <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label="Close" className="rounded-chip p-1.5 text-muted-foreground hover:bg-surface-hover hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -251,7 +251,7 @@ export function ShareCardButton({ text }: { text: string }) {
                 </div>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={dataUrl} alt="Shareable card of this insight" className="aspect-square w-full max-w-[320px] rounded-lg" />
+                <img src={dataUrl} alt="Shareable card of this insight" className="aspect-square w-full max-w-[320px] rounded-control" />
               )}
             </div>
 

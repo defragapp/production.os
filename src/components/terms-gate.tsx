@@ -132,13 +132,13 @@ export function TermsGate() {
         <div className="mb-5 flex flex-wrap gap-3">
           <Link
             href="/terms"
-            className="tap-line inline-flex items-center rounded-md border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
+            className="tap-line inline-flex items-center rounded-chip border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
           >
             Read the Terms
           </Link>
           <Link
             href="/privacy"
-            className="tap-line inline-flex items-center rounded-md border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
+            className="tap-line inline-flex items-center rounded-chip border border-foreground/25 px-4 py-2 text-sm text-foreground hover:border-foreground/60"
           >
             Read the Privacy Policy
           </Link>

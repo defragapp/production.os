@@ -427,7 +427,7 @@ export default function SettingsPage() {
                                 type="button"
                                 onClick={() => { setEditingLabel(c.relationId); setLabelDraft(c.myLabel); }}
                                 aria-label="Edit label"
-                                className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                className="rounded-chip p-2 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
@@ -446,7 +446,7 @@ export default function SettingsPage() {
                                   type="button"
                                   onClick={() => setConfirmAction(`conn:${c.relationId}`)}
                                   aria-label="Remove connection"
-                                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-destructive"
+                                  className="rounded-chip p-2 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-destructive"
                                 >
                                   <X className="h-4 w-4" />
                                 </button>
@@ -624,7 +624,7 @@ export default function SettingsPage() {
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                         onClick={() => void textShare(inv)}
                                       >
                                         <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Send a text message
@@ -632,7 +632,7 @@ export default function SettingsPage() {
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                         onClick={() => void whatsappShare(inv)}
                                       >
                                         <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> Share on WhatsApp
@@ -641,7 +641,7 @@ export default function SettingsPage() {
                                         <button
                                           type="button"
                                           role="menuitem"
-                                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                          className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                           onClick={() => void deviceShare(inv)}
                                         >
                                           <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> More ways…
@@ -650,7 +650,7 @@ export default function SettingsPage() {
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                         onClick={() => void copyShareLink(inv)}
                                       >
                                         <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Copy link
@@ -717,8 +717,8 @@ export default function SettingsPage() {
                           onClick={() => void switchMemoryMode(value)}
                           className={`rounded-panel border p-3 text-left transition-colors ${
                             active
-                              ? "border-foreground/40 bg-white/[0.06]"
-                              : "border-border/60 hover:border-border hover:bg-white/[0.03]"
+                              ? "border-foreground/40 bg-surface-selected"
+                              : "border-border/60 hover:border-border hover:bg-surface-hover"
                           }`}
                         >
                           <span className="flex items-center gap-2">

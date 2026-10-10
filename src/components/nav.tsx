@@ -11,9 +11,9 @@ import { NavMenu } from "@/components/nav-menu";
 // the coarse-pointer block in globals.css raises it to the 44px tap floor on
 // touch. Same for `tap-line` on the drawer's rows.
 const navLink =
-  "nav-link rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-all duration-[200ms] hover:text-foreground hover:bg-white/[0.06]";
+  "nav-link rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-all duration-[200ms] hover:text-foreground hover:bg-surface-hover";
 const navLinkActive =
-  "text-foreground bg-white/[0.09] shadow-[inset_0_0_0_1px_hsla(38,18%,95%,0.12)]";
+  "text-foreground bg-surface-selected shadow-[inset_0_0_0_1px_hsla(38,18%,95%,0.12)]";
 
 const PLUS_BADGE =
   "ml-1 inline-flex items-center rounded-full bg-foreground/[0.06] px-2.5 py-1 text-[11px] font-medium text-foreground/85";
@@ -23,7 +23,7 @@ const PLUS_BADGE =
 const DRAWER_LABEL =
   "px-3.5 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60";
 const PUBLIC_LINK =
-  "tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors";
+  "tap-line rounded-control px-3.5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors";
 
 export function Nav() {
   const router = useRouter();
@@ -136,7 +136,7 @@ export function Nav() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:text-foreground hover:bg-white/[0.04] lg:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-control border border-border/50 text-muted-foreground transition-colors hover:text-foreground hover:bg-surface-hover lg:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -157,8 +157,8 @@ export function Nav() {
                 href="/chat"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/chat")}
-                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                  pathname === "/chat" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+                className={`tap-line rounded-control px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/chat" ? "bg-surface-selected text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
                 }`}
               >
                 Chat
@@ -167,8 +167,8 @@ export function Nav() {
                 href="/baseline"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/baseline")}
-                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                  pathname === "/baseline" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+                className={`tap-line rounded-control px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/baseline" ? "bg-surface-selected text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
                 }`}
               >
                 Baseline
@@ -183,8 +183,8 @@ export function Nav() {
                   href="/upgrade"
                   onClick={() => setOpen(false)}
                   aria-current={ariaCurrent("/upgrade")}
-                  className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                    pathname === "/upgrade" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+                  className={`tap-line rounded-control px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/upgrade" ? "bg-surface-selected text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
                   }`}
                 >
                   Upgrade
@@ -194,8 +194,8 @@ export function Nav() {
                 href="/account"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/account")}
-                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                  pathname === "/account" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+                className={`tap-line rounded-control px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/account" ? "bg-surface-selected text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
                 }`}
               >
                 Account
@@ -204,8 +204,8 @@ export function Nav() {
                 href="/settings"
                 onClick={() => setOpen(false)}
                 aria-current={ariaCurrent("/settings")}
-                className={`tap-line rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
-                  pathname === "/settings" ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+                className={`tap-line rounded-control px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  pathname === "/settings" ? "bg-surface-selected text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface-hover"
                 }`}
               >
                 Settings
@@ -213,7 +213,7 @@ export function Nav() {
               <div className="pt-2 mt-2 border-t border-border/50">
                 <button
                   onClick={handleSignOut}
-                  className="tap-line w-full rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  className="tap-line w-full rounded-control px-3.5 py-2.5 text-left text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 >
                   Sign out
                 </button>

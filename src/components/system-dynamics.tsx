@@ -21,7 +21,7 @@ export function SystemDynamics() {
       <Eyebrow scale="sm" className="mb-3 text-center">Inherited roles & unwritten rules</Eyebrow>
       <div className="grid gap-3 sm:grid-cols-2">
         {SYSTEM_NODES.map((node) => (
-          <div key={node.role} className="rounded-md border border-border/60 bg-background/40 p-4">
+          <div key={node.role} className="rounded-chip border border-border/60 bg-background/40 p-4">
             <p className="font-display text-base font-normal text-foreground">{node.role}</p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{node.dynamic}</p>
             <p className="mt-2 border-t border-border/40 pt-2 text-xs italic text-foreground/80">{node.shift}</p>

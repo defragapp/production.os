@@ -84,7 +84,7 @@ export function PricingTable() {
     return () => cancelAnimationFrame(raf);
   }, []);
   return (
-    <div className="mt-14 overflow-hidden rounded-lg border border-foreground/15 bg-surface-1/40">
+    <div className="mt-14 overflow-hidden rounded-control border border-foreground/15 bg-surface-1/40">
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">Feature comparison between the Free and Sovereign+ plans</caption>
         <thead>

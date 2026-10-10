@@ -90,7 +90,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
           required
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          className="select-custom flex h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          className="select-custom flex h-11 w-full rounded-chip border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">Select a topic…</option>
           {TOPICS.map((t) => (
@@ -110,7 +110,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="A few words about what you need help with…"
-          className="flex min-h-[140px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-[140px] w-full rounded-chip border border-border bg-background px-3 py-2 text-sm text-foreground outline-none ring-offset-background placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
 
@@ -127,7 +127,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
       <button
         type="submit"
         disabled={busy}
-        className="btn-aurora inline-flex w-full items-center justify-center rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-50"
+        className="btn-aurora inline-flex w-full items-center justify-center rounded-control px-5 py-2.5 text-sm font-medium disabled:opacity-50"
       >
         {busy ? "Sending…" : "Send message"}
       </button>

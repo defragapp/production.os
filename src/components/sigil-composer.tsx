@@ -99,7 +99,7 @@ export function SigilComposer() {
               aria-pressed={active}
               className={`flex min-h-[44px] items-center justify-center rounded-panel border px-3 text-sm transition-colors duration-200 ${
                 active
-                  ? "border-foreground/30 bg-white/[0.06] text-foreground"
+                  ? "border-foreground/30 bg-surface-selected text-foreground"
                   : "border-border bg-transparent text-muted-foreground hover:text-foreground"
               }`}
             >

@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
  *
  * Purely decorative — empty bars, no data, no motion. Fills use the `surface-2`
  * token and the 8px `rounded-control` radius so the skeleton matches a real
- * input/button (both render `rounded-lg`, which resolves to the same 8px —
+ * input/button (both render `rounded-control`, which resolves to the same 8px —
  * `rounded-panel` is the 12px card radius and read visibly rounder than the
  * field it stands in for). The `sr-only` label keeps it announced for assistive
  * tech without painting a spinner.

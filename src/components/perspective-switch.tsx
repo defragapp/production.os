@@ -31,7 +31,7 @@ export function PerspectiveSwitch() {
             aria-pressed={side === key}
             className={`tap-line rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${
               side === key
-                ? "border-foreground/30 bg-white/[0.08] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
+                ? "border-foreground/30 bg-surface-selected text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
                 : "border-border/50 bg-surface-1/50 text-muted-foreground hover:text-foreground"
             }`}
           >

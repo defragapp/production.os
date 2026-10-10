@@ -132,7 +132,7 @@ export function ProductDemo() {
                   aria-pressed={on}
                   className={`tap-line rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
                     on
-                      ? "border-foreground/30 bg-white/[0.08] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
+                      ? "border-foreground/30 bg-surface-selected text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
                       : "border-border/50 bg-surface-1/50 text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -144,11 +144,11 @@ export function ProductDemo() {
 
           {/* Active Thread Chip */}
           <div className="mb-4 flex items-center gap-1.5">
-            <span className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-chip border border-border bg-background/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
               <Plus className="h-3 w-3" strokeWidth={1.8} aria-hidden="true" />
               New thread
             </span>
-            <span className="shrink-0 truncate rounded-full border border-foreground/30 bg-white/[0.07] px-3 py-1 text-[11px] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]">
+            <span className="shrink-0 truncate rounded-full border border-foreground/30 bg-surface-3 px-3 py-1 text-[11px] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]">
               {active.chip}
             </span>
           </div>

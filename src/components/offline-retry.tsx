@@ -68,7 +68,7 @@ export function OfflineRetry() {
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="btn-focal min-h-[48px] min-w-[200px] rounded-md px-8 py-3 text-sm font-semibold"
+        className="btn-focal min-h-[48px] min-w-[200px] rounded-chip px-8 py-3 text-sm font-semibold"
       >
         Retry connection
       </button>

@@ -181,7 +181,7 @@ export default function AccountPage() {
       <PageShell>
           <PageHeader title="Account" description="Your plan, profile, and account preferences." />
           {unverifiedNotice && (
-            <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-border bg-muted/30 text-foreground" : "border-border/80 bg-muted/40 text-foreground"}`}>
+            <div className={`mb-4 rounded-chip border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-border bg-muted/30 text-foreground" : "border-border/80 bg-muted/40 text-foreground"}`}>
               {unverifiedNotice}
             </div>
           )}
@@ -358,7 +358,7 @@ export default function AccountPage() {
               </div>
             </div>
 
-            <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/[0.04] p-4">
+            <div className="mt-2 rounded-control border border-destructive/30 bg-destructive/[0.04] p-4">
               <p className="text-sm font-medium text-foreground">Sign out or delete</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 Signing out ends this session on this device. Deleting erases your Baseline, chat

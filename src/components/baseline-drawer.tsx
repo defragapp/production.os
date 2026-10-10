@@ -70,7 +70,7 @@ export function BaselineDrawer({ data, overlay, defaultOpen }: { data?: Baseline
           {chips.map((c) => (
             <span
               key={c.label}
-              className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1"
+              className="inline-flex items-baseline gap-1.5 rounded-chip border border-border bg-background/60 px-2.5 py-1"
             >
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{c.label}</span>
               <span className="text-xs font-medium text-foreground">{c.value}</span>
@@ -144,7 +144,7 @@ export function BaselineDrawer({ data, overlay, defaultOpen }: { data?: Baseline
   );
 
   return (
-    <div className="relative rounded-lg border border-border/60 bg-background/40">
+    <div className="relative rounded-control border border-border/60 bg-background/40">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -167,7 +167,7 @@ export function BaselineDrawer({ data, overlay, defaultOpen }: { data?: Baseline
 
       {open && (
         overlay ? (
-          <div className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain rounded-lg border border-border/60 bg-card p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+          <div className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain rounded-control border border-border/60 bg-card p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl">
             {content}
           </div>
         ) : (

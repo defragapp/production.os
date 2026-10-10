@@ -95,7 +95,7 @@ export function LensPage({
     <>
     <PageShell center={false} wide="wide" rule className="space-y-10">
       <Reveal className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_25px_80px_-28px_rgba(0,0,0,0.85)]">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-surface-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_25px_80px_-28px_rgba(0,0,0,0.85)]">
           <Logo showWordmark={false} markClassName="h-9 w-auto" />
         </div>
         <PageCrown eyebrow={eyebrow} title={title} deck={description} />
