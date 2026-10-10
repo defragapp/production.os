@@ -293,7 +293,7 @@
    Three tiers, one scale:
    • .btn-focal  — the single focal navigation/conversion signal (nav CTA,
                    hero CTA): a translucent glass plate with one slow,
-                   iridescent light orbiting its exterior edge.
+                   warm ember orbiting its exterior edge.
    • .btn-aurora — solid cream for in-app primary actions (forms, chat send).
    • .btn-glass  — translucent secondary actions.
    Everything stays inside the cream/graphite scale and bends to
@@ -382,8 +382,10 @@
 
   /* Focal CTA — premium motion glass. The border is a conic gradient painted
      on border-box under a transparent 1px border: a constant faint hairline
-     with one wide, soft iridescent comet sweeping the perimeter (angle
-     animated via @property --edge). No masked pseudo-element, so it cannot
+     with one wide, soft warm comet sweeping the perimeter (angle
+     animated via @property --edge). Every stop stays inside the warm scale
+     (hue in the low-30s) — the comet reads as a cream→amber→terracotta
+     ember, never a cool cast. No masked pseudo-element, so it cannot
      seam or flicker on small screens; browsers without @property simply get
      the static edge highlight. The plate itself must be an OPAQUE deep-graphite
      gradient: a translucent fill lets the conic light bleed through the whole
@@ -407,7 +409,7 @@
           hsla(40, 30%, 86%, 0.22) 264deg,
           hsla(38, 85%, 78%, 0.85) 296deg,
           hsla(18, 70%, 72%, 0.5) 320deg,
-          hsla(150, 45%, 66%, 0.4) 340deg,
+          hsla(26, 55%, 70%, 0.32) 340deg,
           hsla(40, 30%, 86%, 0.22) 360deg
         ) border-box;
     box-shadow:

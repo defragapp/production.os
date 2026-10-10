@@ -82,7 +82,7 @@ All inside the cream/graphite scale; all honor `prefers-reduced-motion`.
 
 | Class | Look | Use |
 |---|---|---|
-| `.btn-focal` | Opaque dark-glass plate with one slow iridescent comet orbiting its edge (7s `@property --edge` animation) | **The single focal conversion signal** — nav CTA, hero CTA. One per screen. |
+| `.btn-focal` | Opaque dark-glass plate with one slow warm comet orbiting its edge — a cream→amber→terracotta ember, warm-only (7s `@property --edge` animation) | **The single focal conversion signal** — nav CTA, hero CTA. One per screen. |
 | `.btn-aurora` | Solid cream (`#fbf7ef → #ece2cf`), deep soft shadow | In-app primary actions (forms, chat send) |
 | `.btn-glass` | Translucent glass, hairline border, no orbit | Secondary actions |
 
