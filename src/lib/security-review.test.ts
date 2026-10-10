@@ -1,7 +1,7 @@
 /**
  * Regression tests for the 2026-10 adversarial security/privacy review.
  *
- * Locks the four remediations in place:
+ * Locks these remediations in place:
  *  F-A (P1): /api/agent-lee was a public, un-metered model proxy — now
  *            owner-only (requireOwner runs before anything is read).
  *  F-B (P2): the middleware matcher's blanket `.*\..*` exemption let a
@@ -12,6 +12,12 @@
  *  F-E (P2): the threads DELETE read the turn count with
  *            `json_array_length(json_extract(...))`, which returns NULL for a
  *            top-level array — every thread-delete Vectorize sweep was a no-op.
+ *  F-H (P1): DELETE /api/auth/account is exempt from the middleware gate (all
+ *            of `/api/auth/*` is), so its own check is the only one. It used a
+ *            bare verifyJWT — which ignores `users.token_version` — so a cookie
+ *            revoked by sign-out or a password reset could still delete the
+ *            account and cancel Stripe billing. Now it runs verifySession, like
+ *            the sibling `/api/auth/accept-terms` and `/api/auth/export`.
  *
  * The source-scan style follows invites.test.ts / auth-intent.test.ts: these
  * are the repo's convention for invariants that live in route/middleware
@@ -39,6 +45,7 @@ const { getMiddlewareRouteMatcher } = nodeRequire("next/dist/shared/lib/router/u
 const middlewareSrc = readFileSync(join(__dirname, "../middleware.ts"), "utf8");
 const agentLeeSrc = readFileSync(join(__dirname, "../app/api/agent-lee/route.ts"), "utf8");
 const threadsSrc = readFileSync(join(__dirname, "../app/api/threads/route.ts"), "utf8");
+const accountSrc = readFileSync(join(__dirname, "../app/api/auth/account/route.ts"), "utf8");
 
 /** Build Next's real per-request route-matcher predicate from the shipped
  *  `config.matcher` literal in middleware.ts, decoding the string escapes
@@ -130,5 +137,18 @@ describe("F-E: thread-delete Vectorize sweep reads a real turn count", () => {
     expect(threadsSrc).not.toContain(
       'prepare("SELECT json_array_length(json_extract(message_history))',
     );
+  });
+});
+
+describe("F-H: account deletion honours the session revocation generation", () => {
+  it("runs the full session check (verifySession), not a bare JWT", () => {
+    // The whole of `/api/auth/*` is exempt from the middleware gate so sign-in
+    // can be public — which makes this route's own check the only one. A bare
+    // verifyJWT only proves the signature and expiry; it never reads
+    // `users.token_version`, so a cookie revoked by sign-out or a password
+    // reset would still authorise a destructive delete + billing cancellation.
+    expect(accountSrc).toContain('from "@/lib/session"');
+    expect(accountSrc).toMatch(/verifySession\(env, request\)/);
+    expect(accountSrc).not.toContain("verifyJWT");
   });
 });

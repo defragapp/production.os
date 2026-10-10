@@ -397,3 +397,55 @@ defects were found and fixed:
 Both changes are render-only — no prompt, gate, safety, or server-contract change, so no live
 eval re-capture is required. New source-contract ratchet `src/lib/control-focus-and-radius.test.ts`
 (2/2) pins both so a later refactor cannot reintroduce the white seam or the 4px radius.
+
+---
+
+## Security fix — account deletion honoured a revoked session — 2026-10-10 (this thread; append-only)
+
+**P1 (security).** Open-task #36 flagged "account deletion re-auth". The re-auth half is a
+separate UX/product decision (see below), but auditing the route surfaced a more acute
+defect in the *same* handler.
+
+**Before.** `DELETE /api/auth/account` (`src/app/api/auth/account/route.ts`) verified the
+caller with a bare `verifyJWT(token, secret)` — signature + expiry only. The whole of
+`/api/auth/*` is on the middleware's public allowlist (sign-in has to be reachable), so the
+route is **not** gated by the middleware `verifySession` pass, and its own check was the only
+one. `verifyJWT` never reads `users.token_version`, so a cookie that sign-out or a password
+reset had already revoked (still inside its 7-day JWT life) could still run this handler —
+deleting the account and cancelling the user's Stripe subscriptions. This is the exact class
+the 2026-10 review called out in F-B ("a revoked cookie still reached the verifyJWT-only
+routes"), and it contradicted the codebase's own stated invariant: `getAuthPayload`
+(`src/lib/connections.ts`) documents that routes must reject a revoked cookie *at the route*
+"as well as at the middleware gate", and the sibling `/api/auth/*` data routes
+`accept-terms` and `export` already use `verifySession` for precisely this reason. `account`
+was the lone outlier.
+
+**Opportunity.** Make the destructive handler run the same full session check its siblings
+already run, so `token_version` revocation is enforced on account deletion.
+
+**Change.** One handler, no new dependencies, no crypto change: `account/route.ts` now calls
+`verifySession(env, request)` (the canonical helper that compares the token's generation to
+the live `users.token_version`) and uses `session.payload.sub`; the bare `verifyJWT` import
+was dropped. Everything else (Stripe cancellation, Vectorize snapshot, D1 cascade, cookie
+clear) is byte-identical.
+
+**Risk.** A valid, live session behaves exactly as before; only a *revoked* cookie changes
+from 200 to 401. The missing-secret path now returns 401 (via `verifySession` → `null`)
+instead of 500 — not a security regression, and the sibling routes answer the same way.
+
+**Verification.** `src/lib/security-review.test.ts` gains **F-H** (source-scan ratchet, the
+repo's stated convention for route-entry invariants, same as F-A/F-B/F-E): it asserts the
+handler imports `@/lib/session`, calls `verifySession(env, request)`, and contains no
+`verifyJWT`. Focused run `npx vitest run src/lib/security-review.test.ts` green (19 passed);
+`npx tsc --noEmit` clean; `npx eslint` on both files clean; `npm run verify:release` green.
+
+**Not done (separate decision, left open).** #36's *re-authentication* half — requiring a
+password (or fresh passkey assertion) in the delete modal, not just the typed "DELETE"
+confirmation — is a UX/flow change (new field + credential-check path) and is left as a P2
+product decision, not silently bundled into this security fix.
+
+**Remaining uncertainty.** The revocation guarantee reduces to `verifySession`, the app's
+most-used auth helper (every `/api/*` request); it is exercised in production on every
+sign-out, and now also unit-pinned here. A live behavioural probe (mint a stale `tv` cookie
+against prod) was not run — no test account, and it is not needed to prove the route now
+calls the correct helper.

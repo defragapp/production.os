@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "@/lib/auth";
+import { SESSION_COOKIE_NAME } from "@/lib/auth";
+import { verifySession } from "@/lib/session";
 import { getEnv, waitUntil } from "@/lib/env";
 import { cancelActiveSubscriptions } from "@/lib/stripe";
 import { deleteUserEmbeddings } from "@/lib/chat-embeddings";
@@ -22,15 +23,18 @@ import type { User } from "@/lib/types";
  */
 export async function DELETE(request: NextRequest) {
   const env = await getEnv();
-  const secret = env[JWT_SECRET_ENV_KEY];
-  if (!secret) return NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 });
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const payload = await verifyJWT(token, secret);
-  if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // `/api/auth/*` is exempt from the middleware gate (sign-in has to be public),
+  // so this route's own check is the only one. It must run the FULL session
+  // check — `verifySession` compares the token's generation against the live
+  // `users.token_version`, so signing out or resetting a password revokes every
+  // cookie already issued. A bare JWT check would honour a revoked cookie and
+  // let it delete the account and cancel billing.
+  const session = await verifySession(env, request);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = session.payload.sub;
 
   const user = await env.DB.prepare("SELECT id, stripe_customer_id FROM users WHERE id = ?")
-    .bind(payload.sub)
+    .bind(userId)
     .first<User>();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -45,7 +49,7 @@ export async function DELETE(request: NextRequest) {
     const rows = await env.DB.prepare(
       "SELECT id, json_array_length(message_history) AS n FROM threads WHERE user_id = ?",
     )
-      .bind(payload.sub)
+      .bind(userId)
       .all<{ id: string; n: number | null }>();
     threadSnapshot = (rows.results ?? []).map((r) => ({
       threadId: r.id,
@@ -56,13 +60,13 @@ export async function DELETE(request: NextRequest) {
   }
 
   // Deleting the user cascades to baselines and threads (ON DELETE CASCADE).
-  await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(payload.sub).run();
+  await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
 
   // Fire the Vectorize sweep after the response; the D1 cascade above has
   // already removed the authoritative rows, so a failure here leaves only
   // orphaned coordinates (no plaintext) which are safe by construction.
   if (threadSnapshot.length > 0) {
-    waitUntil(deleteUserEmbeddings(env, payload.sub, threadSnapshot));
+    waitUntil(deleteUserEmbeddings(env, userId, threadSnapshot));
   }
 
   const response = NextResponse.json({ ok: true });
