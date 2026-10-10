@@ -1,0 +1,26 @@
+{
+  "fixtureId": "correction_case-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-10T20:53:43.002Z",
+  "promptSha": "23014fe027a29a3685c48d1ec747e120670fd1c2e3adc99498c3483e11bb8b8b",
+  "text": "When you say \"it's not about being needed,\" it's unclear what being needed means to you. What does it mean to feel needed in your experience?",
+  "usage": {
+    "prompt_tokens": 3123,
+    "completion_tokens": 33,
+    "total_tokens": 3156,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 43.892185798846185
+  },
+  "observed": {
+    "clarity": 0.7,
+    "groundedness": 0.14285714285714285,
+    "relational": 0.75,
+    "uncertainty": 0,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 2.5928571428571425
+}

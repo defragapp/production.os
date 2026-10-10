@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "Page not found",
@@ -21,7 +22,7 @@ export default function NotFound() {
           {/* Lit emblem medallion — the same brand bookend used on the landing's
               closing beat, so even a 404 feels like Sovereign OS. */}
           <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
-            <Logo showWordmark={false} href="#" markClassName="h-8 w-auto" />
+            <Logo showWordmark={false} markClassName="h-8 w-auto" />
           </div>
           <Eyebrow className="mb-3">404 — Page not found</Eyebrow>
           <h1 className="mb-4 font-display text-4xl font-normal tracking-tight text-foreground md:text-5xl">
@@ -34,15 +35,18 @@ export default function NotFound() {
             <Link href="/" className="btn-aurora px-8 py-3 text-center text-sm font-medium">
               Back to home
             </Link>
+            {/* A stranger with a dead link can't sign in — the honest next
+                step for them is starting free; the header covers Sign in. */}
             <Link
-              href="/onboard?mode=login"
+              href="/onboard?mode=signup"
               className="btn-glass px-8 py-3 text-center text-sm font-medium"
             >
-              Sign in
+              Start free
             </Link>
           </div>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

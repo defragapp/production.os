@@ -9,15 +9,18 @@
 
 import type { DerivedBaseline } from "./sovereign-prompt";
 import { buildSystemPrompt } from "./sovereign-prompt";
-import { buildBaselineSignals, buildBaselineLimitations } from "./sovereign-baseline";
+import { buildBaselineSignals, buildBaselineLimitations, selectBaselineSignals } from "./sovereign-baseline";
 import {
   buildGroundedFallback,
   buildRepairInstruction,
   buildSafetyResponse,
   detectSafetyMode,
+  scrubBrandVocabulary,
   validateSovereignText,
 } from "./sovereign-safety";
 import { buildRelationalSignals, buildSystemSignals } from "./sovereign-signals";
+import { sanitizePeerIdentity } from "./peer-identity";
+import { parseD1Date } from "./utils";
 import type { SovereignModel } from "./sovereign-model";
 import type { ChatMessage } from "./types";
 import type { HumanDesignComputation } from "./sovereign-humandesign";
@@ -36,6 +39,7 @@ import type {
   ModelInput,
   Observation,
   PatternCandidate,
+  PriorSignal,
   ReasoningClassification,
   ReasoningContext,
   RelationshipScope,
@@ -45,6 +49,11 @@ import type {
 } from "./sovereign-types";
 
 const MAX_CONTEXT_MESSAGES = 20;
+
+// How far back the unknown scan reads for inner-world / future cues. Bounded on
+// purpose — large enough to catch a question that trails setup, small enough
+// that a stale cue from long ago cannot freeze a later, unrelated turn.
+const UNKNOWN_SCAN_WINDOW = 6;
 
 // ── Meaning triggers (from the reasoning model spec) ──────────────────
 
@@ -72,6 +81,16 @@ const USER_DEFINITION_PATTERNS = [
   /([a-z]+)\s+(?:means|mean)\s+(?:to\s+me|for\s+me)\s+([^.!?]+)/gi,
   /for\s+me[,]?\s+([a-z]+)\s+(?:is|means)\s+([^.!?]+)/gi,
   /([a-z]+)\s+is\s+([^.!?]{4,})\s+to\s+me/gi,
+  // Definitions offered in ordinary conversational phrasing, not just the
+  // canonical "X means to me Y". Without these, a person who has already said
+  // what a loaded concept means to them gets re-asked — which reads as amnesia,
+  // not humility. Each keeps (group 1 = concept, group 2 = definition) so the
+  // downstream lookup keys on the trigger word. Only single-word concepts are
+  // captured; multi-word triggers stay on the ask-when-unknown path.
+  /when\s+I\s+say\s+([a-z]+)[,:]?\s+I(?:'m| am| really)?\s+(?:talking about|mean)\s+([^.!?]+)/gi,
+  /\bby\s+([a-z]+)[,:]?\s+I\s+mean\s+([^.!?]+)/gi,
+  /what\s+I\s+mean\s+by\s+([a-z]+)\s+(?:is|means)\s+([^.!?]+)/gi,
+  /([a-z]+)\s+is\s+when\s+([^.!?]+)/gi,
 ];
 
 export function extractUserDefinitions(conversationText: string): Record<string, string> {
@@ -176,18 +195,38 @@ const INNER_WORLD_CUES = [
   /\bthey\s+mean\b/i,
   /\b(?:does|did)\s+he\s+actually\b/i,
   /\bwhat\s+(?:does|did)\s+it\s+say\s+about\s+their\b/i,
+  // Role nouns, not only pronouns — the commonest phrasing of a motive question.
+  /\b(?:why|how)\s+(?:do|does|did|is|are|was|were)\s+(?:my|the)\s+(?:partner|husband|wife|spouse|fianc(?:é|e)|boyfriend|girlfriend|ex|boss|coworker|co-worker|colleague|friend|roommate|mom|mum|mother|dad|father|sister|brother|son|daughter|child)\b/i,
+  // A certainty claim about another person's intent toward the user.
+  /\b(?:definitely|clearly|obviously|surely|plainly)\s+(?:trying|intending|planning|wanting)\s+to\b/i,
+  /\b(?:is|are|was|were)\s+(?:trying|intending|planning)\s+to\s+(?:sabotage|hurt|manipulate|undermine|control|use|betray|deceive|trick|get\s+rid\s+of)\s+me\b/i,
 ];
 
 const FUTURE_CUES = [
   /\bwill\s+I\b/i,
   /\bam\s+I\s+going\s+to\b/i,
   /\bis\s+this\s+going\s+to\b/i,
-  /\bwill\s+(?:this|it|they)\b/i,
+  /\bwill\s+(?:my|the|he|she|they|we|it|this)\b/i,
+  /\b(?:is|are)\s+(?:he|she|they|my\s+\w+|the\s+\w+)\s+going\s+to\b/i,
   /\bis\s+it\s+destin(?:ed|y)\b/i,
   /\bwill\s+it\s+always\b/i,
   /\bare\s+we\s+going\s+to\b/i,
   /\bam\s+I\s+ever\b/i,
 ];
+
+// Loss and bereavement are self-reflection, not a relationship inquiry. A bare
+// family noun ("my father died") otherwise routes grief to Level 3 / dyadic,
+// where the prompt frames the deceased as "the other person" and would weave in
+// pairwise signals. Genuine relational conflict ("my father criticizes me")
+// still carries no loss cue and classifies normally.
+export const LOSS_CUES = [
+  /\b(?:died|dead|passed\s+away|passed\s+on|funeral|memorial|grief|grieving|bereav\w*|widow(?:ed|er)?|my\s+late)\b/i,
+  /\blost\s+(?:my|her|his|our|their)\s+(?:mother|father|mom|dad|mum|sister|brother|son|daughter|partner|wife|husband|child|baby|grandmother|grandfather|grandma|grandpa|friend)\b/i,
+];
+
+export function isLossContext(text: string): boolean {
+  return LOSS_CUES.some((rx) => rx.test(text));
+}
 
 export function classifyQuestion(latestUserContent: string): ReasoningClassification {
   const domains = new Set<Domain>([]);
@@ -195,7 +234,9 @@ export function classifyQuestion(latestUserContent: string): ReasoningClassifica
 
   const selfHit = SELF_CUES.some((rx) => rx.test(latestUserContent));
   const meaningHits = findMeaningTriggers(latestUserContent);
-  const betweenHit = BETWEEN_PERSON_CUES.some((rx) => rx.test(latestUserContent));
+  // A loss suppresses the relational cue: grief is self-reflection, not a
+  // question about "the other person".
+  const betweenHit = !isLossContext(latestUserContent) && BETWEEN_PERSON_CUES.some((rx) => rx.test(latestUserContent));
   const systemHit = SYSTEM_CUES.some((rx) => rx.test(latestUserContent));
   const choiceHit = CHOICE_CUES.some((rx) => rx.test(latestUserContent));
 
@@ -293,7 +334,7 @@ function peerNameIn(text: string): string | undefined {
 function scopeOfMessage(text: string): { scope: CorrectionScope; peerName?: string } {
   const peer = peerNameIn(text);
   if (SYSTEM_CUES.some((rx) => rx.test(text))) return peer ? { scope: "system", peerName: peer } : { scope: "system" };
-  if (BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return peer ? { scope: "relational", peerName: peer } : { scope: "relational" };
+  if (!isLossContext(text) && BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return peer ? { scope: "relational", peerName: peer } : { scope: "relational" };
   return { scope: "self" };
 }
 
@@ -439,7 +480,12 @@ export function scanPatternCandidates(history: ChatMessage[]): PatternCandidate[
 
 export function scanUnknowns(history: ChatMessage[]): Unknown[] {
   const unknowns: Unknown[] = [];
-  const lastMessages = history.slice(-2).filter((m) => m.role === "user");
+  // Read a bounded recent window, not just the last two messages: an
+  // inner-world / future question often trails a sentence or two of setup, and
+  // dropping its cue is what lets the model answer as if it knew. The window is
+  // deliberately finite so a stale cue far back does not re-flag unknowns on an
+  // unrelated later turn (the same over-persistence the grounded routing avoids).
+  const lastMessages = history.slice(-UNKNOWN_SCAN_WINDOW).filter((m) => m.role === "user");
   const latestText = lastMessages.map((m) => m.content).join(" ");
 
   if (INNER_WORLD_CUES.some((rx) => rx.test(latestText))) {
@@ -571,21 +617,25 @@ function detectPersons(history: ChatMessage[]): AuthorizationContext["people"] {
   return labels;
 }
 
-function determineScope(history: ChatMessage[]): RelationshipScope {
+export function determineScope(history: ChatMessage[]): RelationshipScope {
   const text = history.slice(-2).map((m) => m.content).join(" ");
   if (SYSTEM_CUES.some((rx) => rx.test(text))) return "system";
-  if (BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return "dyadic";
+  if (!isLossContext(text) && BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return "dyadic";
   return "self";
 }
 
-export function buildReasoningContext(opts: {
+export async function buildReasoningContext(opts: {
   history: ChatMessage[];
   baseline: DerivedBaseline;
   consented?: ConsentedPeer[];
   /** Self's HD computation — enables deterministic relational/system signals. */
   myHd?: HumanDesignComputation;
-}): ReasoningContext {
-  const { history, baseline, consented = [], myHd } = opts;
+  /** Semantic recall from the user's own earlier conversations. The caller
+   *  resolves these asynchronously (see chat-recall.recallPriorSignals) and
+   *  passes them in; this function does no I/O itself. Defaults to empty. */
+  priorSignals?: PriorSignal[];
+}): Promise<ReasoningContext> {
+  const { history, baseline, consented = [], myHd, priorSignals = [] } = opts;
   const latestUser = [...history].reverse().find((m) => m.role === "user");
   const latestText = latestUser?.content ?? "";
   const classification = classifyQuestion(latestText);
@@ -644,6 +694,7 @@ export function buildReasoningContext(opts: {
     correctionState: correlation,
     hypotheses,
     consented,
+    priorSignals,
   };
 
   if (consented.length > 0) {
@@ -673,7 +724,10 @@ export function buildReasoningContext(opts: {
       const relSignals = [];
       for (const peer of withHd) {
         relSignals.push(...buildRelationalSignals(
-          "the user", myHd, peer.name, peer._hd!, peer._between!,
+          // F-G: peer.name is peer-authored free text crossing into this user's
+          // prompt; re-delimit at the render seam too (idempotent with the entry
+          // scrub in buildConsentedPeers) so a hand-built context is safe as well.
+          "the user", myHd, sanitizePeerIdentity(peer.name), peer._hd!, peer._between!,
         ));
       }
       context.relationalSignals = relSignals.slice(0, 8);
@@ -682,7 +736,7 @@ export function buildReasoningContext(opts: {
       if (classification.level === 4 && withHd.length >= 2) {
         context.systemSignals = buildSystemSignals(
           "the user", myHd,
-          withHd.map((p) => ({ name: p.name, hd: p._hd! })),
+          withHd.map((p) => ({ name: sanitizePeerIdentity(p.name), hd: p._hd! })),
         );
       }
     }
@@ -706,7 +760,11 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   }
   if (ctx.baselineSignals.length) {
     lines.push("BASELINE CONTEXT (derived signals — context, not verdict):");
-    for (const s of ctx.baselineSignals.slice(0, 8)) {
+    // Bounded relevance selection (F1): hand the model the two anchor qualities
+    // plus anything the turn's own words point at, not the whole Baseline every
+    // turn — reciting the full pool is what makes the answer read as generic.
+    const latest = ctx.observations[ctx.observations.length - 1]?.content ?? "";
+    for (const s of selectBaselineSignals(ctx.baselineSignals, latest, 3)) {
       lines.push(`- ${s.source}: ${s.value}${s.interpretation ? ` (${s.interpretation})` : ""}`);
     }
   }
@@ -747,6 +805,7 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   if (activeRejected.length) {
     lines.push("REJECTED HYPOTHESES (do NOT re-assert, do NOT defend):");
     for (const r of activeRejected) lines.push(`- ${r}`);
+    lines.push("  The person rejected the above. Do not rebuild the same conclusion from a different angle or from another Baseline quality — start from the new detail they just gave you.");
   }
   if (activeConfirmed.length) {
     lines.push("CONFIRMED INTERPRETATIONS (user accepted these):");
@@ -759,14 +818,34 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   if (ctx.consented && ctx.consented.length > 0) {
     lines.push("CONSENTED CONTEXT (both sides authorized this to be present):");
     for (const p of ctx.consented) {
-      const q = p.derived.qualities.slice(0, 4);
-      lines.push(`- ${p.name} (${p.role}) — derived baseline: ${p.derived.sunSign} Sun / ${p.derived.moonSign} Moon. ${q.length ? `Qualities: ${q.join("; ")}.` : ""} Human Design: ${p.derived.humanDesignType}${p.derived.humanDesignCenters.length ? `, defined centers ${p.derived.humanDesignCenters.join(", ")}` : ""}. Strategy ${p.derived.humanDesignStrategy}, authority ${p.derived.humanDesignAuthority}.`);
-      if (p.betweenDesign.length) {
-        lines.push(`  Between-design notes (${p.name} & the user):`);
-        for (const note of p.betweenDesign) lines.push(`  - ${note}`);
+      // F-G: name + role are peer/owner-authored free text; delimit them here so
+      // they cannot break out of the `- "Name (role) — …"` framing this renderer
+      // applies (a newline could forge a new prompt section, a quote/bracket could
+      // mimic the prompt's own markers). Idempotent with the entry scrub.
+      const name = sanitizePeerIdentity(p.name);
+      const role = sanitizePeerIdentity(p.role, "connection");
+      // A history-only peer shares chat recollections but no baseline derivation;
+      // their EMPTY_DERIVED placeholder must never render as a blank chart line.
+      const hasBaseline = !!(p.derived.sunSign || p.derived.humanDesignType);
+      if (hasBaseline) {
+        const q = p.derived.qualities.slice(0, 4);
+        lines.push(`- ${name} (${role}) — derived baseline: ${p.derived.sunSign} Sun / ${p.derived.moonSign} Moon. ${q.length ? `Qualities: ${q.join("; ")}.` : ""} Human Design: ${p.derived.humanDesignType}${p.derived.humanDesignCenters.length ? `, defined centers ${p.derived.humanDesignCenters.join(", ")}` : ""}. Strategy ${p.derived.humanDesignStrategy}, authority ${p.derived.humanDesignAuthority}.`);
+        if (p.betweenDesign.length) {
+          lines.push(`  Between-design notes (${name} & the user):`);
+          for (const note of p.betweenDesign) lines.push(`  - ${note}`);
+        }
+        if (p.derived.geneKeysLabels.length) {
+          lines.push(`  Their active Gene Keys: ${p.derived.geneKeysLabels.slice(0, 4).join("; ")}.`);
+        }
       }
-      if (p.derived.geneKeysLabels.length) {
-        lines.push(`  Their active Gene Keys: ${p.derived.geneKeysLabels.slice(0, 4).join("; ")}.`);
+      // Consented peer history: the peer's OWN verbatim past statements, read
+      // from the peer's namespace under the peer's share_history flag. Same
+      // quote-faithfully guardrail as self-recall, framed as context not verdict.
+      if (p.recollections?.length) {
+        lines.push(`PEER RECALLED — shared with ${name}'s consent. Verbatim statements from ${name}'s own history, offered as context about them, not a verdict on them. Quote faithfully or not at all:`);
+        for (const snippet of p.recollections) {
+          lines.push(`  - [${name}] "${snippet.slice(0, 240)}"`);
+        }
       }
     }
     lines.push("  Use consented context to explore what happens BETWEEN people — never to claim certainty about the other person's inner world, and never as a verdict on them.");
@@ -785,11 +864,27 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
     }
     lines.push("  These describe group-level energy patterns derived from combining multiple designs. Frame them as one possible structural reading of how this group naturally organizes — not as a fixed hierarchy or inevitable dynamic.");
   }
-  const consentedNames = ctx.consented?.map((p) => p.name).join(", ");
+  const consentedNames = ctx.consented?.map((p) => sanitizePeerIdentity(p.name)).join(", ");
+  // Semantic recall: the user's OWN verbatim statements from earlier
+  // conversations, offered as pattern-visibility. Only role==='user' snippets
+  // enter the prompt — echoing the model's own past answers invites it to
+  // recycle its phrasing rather than meet the person afresh. Placed before the
+  // AUTHORIZATION line so that guardrail stays the closing framing statement.
+  const recalled = (ctx.priorSignals ?? []).filter((s) => s.role === "user" && s.snippet);
+  if (recalled.length) {
+    lines.push('RECALLED — verbatim user statements from earlier conversations, offered as pattern-visibility, not correction. Quote faithfully or not at all:');
+    for (const s of recalled) {
+      const d = parseD1Date(s.occurredAt);
+      const dateTag = d ? `, ${d.toISOString().slice(0, 10)}` : "";
+      lines.push(`- [user${dateTag}] "${s.snippet}"`);
+    }
+  }
   lines.push(
     consentedNames
       ? `AUTHORIZATION: what the user described PLUS consented baseline derivations for: ${consentedNames}. No birth data, coordinates, or raw chart data is present — only derived summaries and between-design comparisons.`
-      : "AUTHORIZATION: only what the user described. No consented third-party data exists.",
+      : ctx.relationshipScope !== "self"
+        ? "AUTHORIZATION: the user’s own account IS the relational material — their observations, interpretations, and narrative about the other person are available for reflection. This is one perspective, not verified fact about anyone else. No consented third-party data is present."
+        : "AUTHORIZATION: only what the user described. No consented third-party data exists.",
   );
   return lines.join("\n");
 }
@@ -798,16 +893,35 @@ export function windowHistoryPreservingCorrections(
   history: ChatMessage[],
   max: number = MAX_CONTEXT_MESSAGES,
 ): ChatMessage[] {
+  if (history.length === 0) return [];
+
   const lastIndex = history.length - 1;
-  const preserved = new Set<number>([]);
+  // Indices the window must keep: every rejection-cued user turn (so the model
+  // is never re-offered an interpretation the person already rejected) and the
+  // newest message.
+  const preserved = new Set<number>();
   history.forEach((m, i) => {
     if (m.role === "user" && REJECTION_CUES.some((rx) => rx.test(m.content))) preserved.add(i);
   });
   preserved.add(lastIndex);
 
-  const nonPreserved = history.map((_, i) => i).filter((i) => !preserved.has(i));
-  const keep = [...preserved, ...nonPreserved.slice(-(Math.max(0, max - preserved.size)))].sort((a, b) => a - b);
-  return keep.map((i) => history[i]);
+  // Bound the total at `max`. When the corrections alone overflow the budget,
+  // keep the newest ones — the freshest rejection is the reading the model is
+  // most likely to repeat — never the whole thread.
+  //
+  // The old code wrote `nonPreserved.slice(-(Math.max(0, max - preserved.size)))`.
+  // When the budget reached 0 that became `slice(-0)`, which is `slice(0)` — the
+  // ENTIRE non-preserved array. So a thread with ≥ max rejection cues defeated
+  // the window entirely (unbounded prompt/token cost). The `budget > 0` guard is
+  // the fix; `slice(-0) === slice(0)` is the trap it closes.
+  const preservedSorted = [...preserved].sort((a, b) => a - b);
+  const kept = preservedSorted.length > max ? preservedSorted.slice(-max) : preservedSorted;
+  const keptSet = new Set(kept);
+  const nonPreserved = history.map((_, i) => i).filter((i) => !keptSet.has(i));
+  const budget = Math.max(0, max - kept.length);
+  const tail = budget > 0 ? nonPreserved.slice(-budget) : [];
+
+  return [...kept, ...tail].sort((a, b) => a - b).map((i) => history[i]);
 }
 
 export function buildReasoningPrompt(
@@ -856,7 +970,7 @@ export async function generateSovereignResponse(
 
   let validation = validateSovereignText(text, { correctionState: ctx.correctionState });
   if (validation.allowed) {
-    return { text, usedFallback: false, repairAttempts: 0, validated: true };
+    return { text: scrubBrandVocabulary(text), usedFallback: false, repairAttempts: 0, validated: true };
   }
 
   // One bounded repair. The repair is a fresh generation constrained by the
@@ -871,7 +985,7 @@ export async function generateSovereignResponse(
 
   validation = validateSovereignText(text, { correctionState: ctx.correctionState });
   if (validation.allowed) {
-    return { text, usedFallback: false, repairAttempts: 1, validated: true };
+    return { text: scrubBrandVocabulary(text), usedFallback: false, repairAttempts: 1, validated: true };
   }
 
   return { text: buildGroundedFallback(), usedFallback: true, repairAttempts: 1, validated: false };

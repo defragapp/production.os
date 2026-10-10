@@ -4,8 +4,9 @@
  * name + role + consent flags only.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY } from "./auth";
+import { JWT_SECRET_ENV_KEY } from "./auth";
 import { getEnv } from "./env";
+import { verifySession } from "./session";
 import type { RelationshipView, User } from "./types";
 
 export const MAX_PENDING_INVITES = 5;
@@ -22,21 +23,53 @@ export const ROLE_SUGGESTIONS = [
   "in-law", "neighbor", "other",
 ] as const;
 
-/** Confirm the authenticated user for a request, sharing the threads pattern. */
+/**
+ * Confirm the authenticated user for a request.
+ *
+ * Uses `verifySession` — signature **and** live `users.token_version` — not a
+ * bare `verifyJWT`, so a revoked cookie is rejected at the route as well as at
+ * the middleware gate. Middleware already covers every `/api/*` path; this
+ * stops the routes depending on the matcher for revocation. The extra
+ * `token_version` read is the cost of that guarantee.
+ */
 export async function getAuthPayload(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return { env, error: NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 }) } as const;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  const payload = await verifyJWT(token, secret);
-  if (!payload) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  return { env, error: undefined, payload } as const;
+  const session = await verifySession(env, request);
+  if (!session) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
+  return { env, error: undefined, payload: session.payload } as const;
+}
+
+/**
+ * Read a single `token` string from a JSON POST body, defensively. Returns the
+ * trimmed token, or `null` on a malformed body, absent key, non-string value,
+ * or empty string.
+ *
+ * Why POST: one-time tokens that arrive via a *client-issued* call (the /invite
+ * page's status lookup) should not ride the request line / query string, where
+ * they would surface in Workers Logs and any intermediary URL logs. Emailed
+ * click-throughs (`/api/auth/verify`, password reset) stay GET — a browser can
+ * only open a clicked link with GET — and are instead protected at rest (the
+ * token is SHA-hashed, single-use, and expiring) plus `redact_query_string` in
+ * the Worker config. See docs/auth.md.
+ */
+export async function tokenFromPost(request: NextRequest): Promise<string | null> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return null;
+  }
+  const raw = (body as { token?: unknown } | null)?.token;
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed || null;
 }
 
 export async function loadUser(env: { DB: D1Database }, userId: string): Promise<User | null> {
   try {
-    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at FROM users WHERE id = ?").bind(userId).first<User>();
+    return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, gift_expires_at, terms_version FROM users WHERE id = ?").bind(userId).first<User>();
   } catch {
     return await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified FROM users WHERE id = ?").bind(userId).first<User>();
   }
@@ -85,6 +118,8 @@ export interface RelationshipRow {
   b_label: string;
   a_share_baseline: number;
   b_share_baseline: number;
+  a_share_history: number;
+  b_share_history: number;
   created_at: string;
 }
 
@@ -99,7 +134,7 @@ export async function relationshipViews(
   me: User,
 ): Promise<RelationshipView[]> {
   const rows = await env.DB.prepare(
-    "SELECT id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline, created_at FROM relationships WHERE user_a = ? OR user_b = ? ORDER BY created_at DESC",
+    "SELECT id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline, a_share_history, b_share_history, created_at FROM relationships WHERE user_a = ? OR user_b = ? ORDER BY created_at DESC",
   ).bind(me.id, me.id).all<RelationshipRow>();
 
   const views: RelationshipView[] = [];
@@ -122,6 +157,8 @@ export async function relationshipViews(
       peerHasBaseline: peerBaseline,
       peerSharesBaseline: iAmA ? Number(row.b_share_baseline) === 1 : Number(row.a_share_baseline) === 1,
       shareBaseline: iAmA ? Number(row.a_share_baseline) === 1 : Number(row.b_share_baseline) === 1,
+      peerSharesHistory: iAmA ? Number(row.b_share_history) === 1 : Number(row.a_share_history) === 1,
+      shareHistory: iAmA ? Number(row.a_share_history) === 1 : Number(row.b_share_history) === 1,
       createdAt: row.created_at,
     });
   }

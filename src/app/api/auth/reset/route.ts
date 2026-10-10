@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const email = body.email.trim().toLowerCase();
     const rlKey = `reset-rl:${email}`;
     const rlCount = parseInt((await env.SESSION_KV.get(rlKey)) || "0", 10);
-    if (rlCount >= RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many reset requests. Please try again later." }, { status: 429 });
+    if (rlCount >= RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many reset requests — try again in a few minutes." }, { status: 429 });
     await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: RATE_LIMIT_TTL });
     const user = await env.DB.prepare("SELECT id, email FROM users WHERE email = ?").bind(email).first<User>();
     if (user) {

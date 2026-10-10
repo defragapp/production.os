@@ -16,10 +16,23 @@ function isNonCanonicalAllowed(host: string): boolean {
 }
 
 /**
+ * Pages that require a session. Kept at module scope so `noStore` — which runs
+ * for every response — can see the same list the auth gate below uses.
+ */
+const PROTECTED_PAGES = ["/chat", "/baseline", "/upgrade", "/account", "/settings"];
+
+function isProtectedPagePath(pathname: string): boolean {
+  return PROTECTED_PAGES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+/**
  * Server-side auth gate.
  *
- * - Public pages: /, /onboard, /terms, /privacy, /invite (anything else
- *   renders naturally — e.g. the branded 404 for unknown paths).
+ * - Public pages (explicit set, line ~55): /, /onboard, /terms, /privacy, /redeem.
+ *   Other public surfaces — /invite, /about, /faq, … — are NOT in that array;
+ *   they render via the fall-through below ("not an API and not a protected page"),
+ *   and unknown paths still reach the branded 404. /invite stays public this way so an
+ *   accept link works before the recipient has an account.
  * - Authed pages: /chat, /baseline, /upgrade, /account, /settings.
  * - API: locked by default — only /api/auth*, /api/invites/info, and the
  *   signature-verified Stripe webhook are public. Everything under /api/*
@@ -34,9 +47,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const noStore = (res: NextResponse) => {
-    // User data must never be cached by the edge/CDN.
-    if (pathname.startsWith("/api/")) {
-      res.headers.set("Cache-Control", "no-store");
+    // Session-scoped responses must never be cached by the edge/CDN. That is
+    // every `/api/*` response (user data as JSON) AND every protected page:
+    // Next serves those shells with `Cache-Control: public, max-age=0,
+    // must-revalidate` and no `Vary: Cookie`, so a shared cache is free to
+    // store them. `private, no-store` keeps them per-browser.
+    if (pathname.startsWith("/api/") || isProtectedPagePath(pathname)) {
+      res.headers.set("Cache-Control", "private, no-store");
     }
     return res;
   };
@@ -66,6 +83,7 @@ export async function middleware(request: NextRequest) {
   if (
     pathname === "/api/auth" ||
     pathname.startsWith("/api/auth/") ||
+    pathname === "/api/health" ||
     pathname === "/api/invites/info" ||
     pathname === "/api/support" ||
     pathname === "/api/webhooks/stripe"
@@ -78,10 +96,7 @@ export async function middleware(request: NextRequest) {
   // Pages: only the app pages require auth — unknown paths fall through
   // so Next.js can render the branded 404.
   const isApi = pathname.startsWith("/api/");
-  const PROTECTED_PAGES = ["/chat", "/baseline", "/upgrade", "/account", "/settings"];
-  const isProtectedPage = PROTECTED_PAGES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/"),
-  );
+  const isProtectedPage = isProtectedPagePath(pathname);
   if (!isApi && !isProtectedPage) {
     return NextResponse.next();
   }
@@ -93,7 +108,7 @@ export async function middleware(request: NextRequest) {
     if (isApi) {
       return noStore(NextResponse.json({ error: "Server configuration error" }, { status: 500 }));
     }
-    return NextResponse.redirect(new URL("/onboard", request.url));
+    return noStore(NextResponse.redirect(new URL("/onboard", request.url)));
   }
 
   // Carry the original destination through the sign-in wall so a person sent
@@ -113,7 +128,7 @@ export async function middleware(request: NextRequest) {
     // one — send them to Create account, not the "Welcome back" Sign in card.
     const isPaywall = pathname === "/upgrade" || pathname.startsWith("/upgrade/");
     const mode = isPaywall ? "signup" : "login";
-    return NextResponse.redirect(new URL(`/onboard?mode=${mode}${nextIntent}`, request.url));
+    return noStore(NextResponse.redirect(new URL(`/onboard?mode=${mode}${nextIntent}`, request.url)));
   }
 
   return noStore(NextResponse.next());
@@ -126,7 +141,15 @@ export const config = {
      * - _next/static, _next/image (static assets)
      * - favicon.ico, robots.txt
      * - .open-next assets
+     * - paths carrying a dot (file-like assets: /sw.js, /manifest.webmanifest,
+     *   /sitemap.xml) — EXCEPT anything under `api/`. The blanket `.*\\..*`
+     *  exemption was an auth hole: a dotted dynamic segment
+     *   (`/api/invites/<id>.x`) skipped middleware entirely, and any route
+     *   relying on the matcher for the token_version revocation check would
+     *   honour a revoked cookie. Every `/api/*` path must reach the
+     *   verifySession gate below, dots or not (route-level `getAuthPayload`
+     *   calls `verifySession` too, but the matcher stays the primary gate).
      */
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|.*\\..*).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|(?!api/).*\\..*).*)",
   ],
 };

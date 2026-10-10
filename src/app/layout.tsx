@@ -4,6 +4,8 @@ import { WebAnalytics } from "@/components/web-analytics";
 import { TabBar } from "@/components/tab-bar";
 import { InstallPrompt } from "@/components/install-prompt";
 import { ServiceWorkerRegistration } from "@/components/sw-registration";
+import { TermsGate } from "@/components/terms-gate";
+import { RouteFade } from "@/components/route-fade";
 import "./globals.css";
 
 const sans = Manrope({
@@ -55,7 +57,7 @@ export const metadata: Metadata = {
     template: "%s · Sovereign OS",
   },
   description:
-    "Sovereign is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
+    "Sovereign OS is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
   applicationName: "Sovereign OS",
   manifest: "/manifest.webmanifest",
   authors: [{ name: "Sovereign OS" }],
@@ -85,8 +87,19 @@ export const metadata: Metadata = {
     images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
   },
   icons: {
-    icon: { url: "/brand/icon.png?v=2", type: "image/png" },
-    shortcut: { url: "/brand/icon.png?v=2" },
+    // SVG first — Safari 16+, Chrome, Edge render it crisply at any DPR; the
+    // PNG stays as the fallback path for older browsers and the iOS "shortcut"
+    // tile. Both point to the same Ace-of-Cups mark; see public/brand/icon.svg
+    // header for why the favicon is a hand-reduced silhouette instead of a
+    // downscaled engraving.
+    icon: [
+      { url: "/brand/icon.svg", type: "image/svg+xml" },
+      { url: "/brand/icon.png?v=2", type: "image/png", sizes: "64x64" },
+    ],
+    shortcut: [
+      { url: "/brand/icon.svg", type: "image/svg+xml" },
+      { url: "/brand/icon.png?v=2" },
+    ],
     apple: { url: "/brand/apple-icon.png?v=2", sizes: "180x180", type: "image/png" },
   },
   twitter: {
@@ -99,6 +112,12 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
+  },
+  other: {
+    // Prevent iOS Safari from auto-detecting numeric sequences as phone numbers
+    // and inserting blue tel: links. Critical for the Baseline form (dates,
+    // coordinates) and the dark premium aesthetic.
+    "format-detection": "telephone=no",
   },
 };
 
@@ -124,11 +143,12 @@ export default function RootLayout({
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        {children}
+        <RouteFade>{children}</RouteFade>
         <TabBar />
         <InstallPrompt />
         <ServiceWorkerRegistration />
         <WebAnalytics />
+        <TermsGate />
       </body>
     </html>
   );

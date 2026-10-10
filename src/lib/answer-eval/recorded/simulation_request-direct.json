@@ -1,0 +1,26 @@
+{
+  "fixtureId": "simulation_request-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-10T20:53:22.916Z",
+  "promptSha": "d7e6f870bd284585f89e3ca086f4d037727bbf3a5c41d43bf81173aaaa46f8cf",
+  "text": "Let's explore this. One possibility worth examining is that the conversation would be an opportunity to clarify how your holding and protecting what matters (a quality that tends to show when you're at your best) interacts with your reflex to guard what it loves in your inner, more private response. When you hold back what hurts, you may be trying to protect yourself from the potential consequences of expressing it. \n\nThis could indicate that you're uncertain about how your sister would react to your hurt, or that you're worried about losing the connection you have with her. Your initiative that moves when safe and still when unsure might be weighing the risks and benefits of speaking up. \n\nIf you were to express your hurt, it's possible that your sister might surprise you with empathy and understanding. Alternatively, she might not respond in a way that validates your feelings, which could lead to a deeper understanding of her perspective and how it affects you.\n\nWhat would you need to know to feel safe expressing your hurt to your sister?",
+  "usage": {
+    "prompt_tokens": 3039,
+    "completion_tokens": 202,
+    "total_tokens": 3241,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 47.150427841581404
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.8333333333333334,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 4.4833333333333325
+}

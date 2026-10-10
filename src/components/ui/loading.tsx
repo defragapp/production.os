@@ -34,7 +34,7 @@ export function LoadingScreen({
       role="status"
       aria-label="Loading"
     >
-      <Logo showWordmark={false} href="#" />
+      <Logo showWordmark={false} href={null} />
       <Spinner className="h-5 w-5" />
       {label && <p className="text-xs text-muted-foreground">{label}</p>}
     </div>

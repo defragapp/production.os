@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendTemplate } from "@/lib/email";
-import { getEnv, type AppEnv } from "@/lib/env";
+import { getEnv } from "@/lib/env";
+import { hashClientIp } from "@/lib/ip-hash";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -33,22 +35,6 @@ function clientIp(request: NextRequest): string {
   return "unknown";
 }
 
-async function verifyTurnstile(env: AppEnv, token: string): Promise<boolean> {
-  if (!env.TURNSTILE_SECRET_KEY) return true;
-  try {
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: token }),
-    });
-    const data = (await res.json()) as { success?: boolean };
-    return data.success === true;
-  } catch (err) {
-    console.error("[support] turnstile verify failed:", err);
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
   const env = await getEnv();
 
@@ -69,15 +55,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A few words about what's happening helps us help you." }, { status: 400 });
   }
 
-  if (body.turnstileToken && !(await verifyTurnstile(env, body.turnstileToken))) {
-    return NextResponse.json({ error: "Security check failed. Please try again." }, { status: 400 });
+  if (!(await verifyTurnstileToken(env, body.turnstileToken))) {
+    return NextResponse.json({ error: "That security check didn't go through — try again in a moment." }, { status: 400 });
   }
 
-  const ip = clientIp(request);
+  // The IP throttle keys on a one-way, secret-keyed token of the client
+  // address, never the address itself (#62). The email throttle keeps the plain
+  // reply address — that is the sender's own input, not a network identifier.
+  const ipToken = await hashClientIp(clientIp(request), env.JWT_SECRET);
   const now = Date.now();
   const limits: Array<[string, number, number]> = [
     [`rl:support-email:${email}`, EMAIL_RATE_MAX, EMAIL_RATE_WINDOW_MS],
-    [`rl:support-ip:${ip}`, IP_RATE_MAX, IP_RATE_WINDOW_MS],
+    [`rl:support-ip:${ipToken}`, IP_RATE_MAX, IP_RATE_WINDOW_MS],
   ];
   for (const [key, max, window] of limits) {
     let stamps: number[] = [];
@@ -86,7 +75,7 @@ export async function POST(request: NextRequest) {
     stamps = stamps.filter((t) => now - t < window);
     if (stamps.length >= max) {
       return NextResponse.json(
-        { error: "Too many messages. Please wait a bit before sending another." },
+        { error: "Too many messages — give it a minute and send another." },
         { status: 429 },
       );
     }

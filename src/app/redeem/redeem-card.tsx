@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
-import { LoadingScreen } from "@/components/ui/loading";
+import { FormSkeleton } from "@/components/ui/form-skeleton";
 import { formatD1Date } from "@/lib/utils";
 
 /**
@@ -67,20 +67,31 @@ export function RedeemCard() {
         setRedeemedAt(data.giftExpiresAt ?? new Date().toISOString());
         return;
       }
-      setError(data.error || "We couldn't apply that pass. Please check the link and try again.");
+      setError(data.error || "We couldn't apply that pass — check the link and try again.");
     } catch {
-      setError("We couldn't reach Sovereign just now — please try again in a moment.");
+      setError("We couldn't reach Sovereign just now — try again in a moment.");
     } finally {
       setSubmitting(false);
     }
   };
 
   // ── Still resolving the link + session ──────────────────────────────
+  // The Card shell is rendered here for the SAME reason /invite keeps its card
+  // while it resolves: the loading state used to return a bare LoadingScreen
+  // (min-h of the whole viewport) and was then swapped for a short card, so
+  // every resolved branch moved the layout by ~0.21 CLS the moment the session
+  // check answered. Holding the shell and reserving the content box means the
+  // arrival is a fade, not a jump. The PageHeader wording still changes, but
+  // both are a single-line title over a one-line description, so its own box
+  // height does not move.
   if (code === undefined || authed === null) {
     return (
       <PageShell className="max-w-md">
         <PageHeader title="Your invitation" description="Checking your pass…" />
-        <LoadingScreen className="py-8" label="Checking your account" />
+        {/* Static field skeleton instead of a spinner: the resolved screen is a
+            card of this footprint, so the first paint reads as finished and the
+            arrival is a fade rather than a swap. */}
+        <FormSkeleton fields={1} label="Checking your account" />
       </PageShell>
     );
   }
@@ -97,7 +108,7 @@ export function RedeemCard() {
               cut off when it was shared. Ask the sender to forward the whole link again.
             </p>
             <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
-              Back to Sovereign
+              Back to Sovereign OS
             </Button>
           </CardContent>
         </Card>
@@ -117,7 +128,7 @@ export function RedeemCard() {
               Your pass runs through {formatD1Date(redeemedAt)}.
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Unlimited reflections, your relationships, and the full journey canvas are open
+              Up to 150 AI messages a day, your relationships, and the full journey canvas are open
               to you. When the pass ends you drop back to the free tier — nothing is charged.
             </p>
             <div className="flex flex-col gap-2">
@@ -141,8 +152,8 @@ export function RedeemCard() {
           <CardHeader className="text-center">
             <CardTitle className="text-lg">Claim your pass</CardTitle>
             <CardDescription>
-              Thirty days of Sovereign+ — unlimited reflections and connections. No card needed,
-              and it ends on its own.
+              Thirty days of Sovereign+ — 150 messages a day and invitations for your people.
+              No card needed, and it ends on its own.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

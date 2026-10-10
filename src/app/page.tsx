@@ -1,4 +1,21 @@
+import type { Metadata } from "next";
 import { LandingClient } from "@/components/landing-client";
+
+// The homepage inherits its <title> and description from the root layout, but
+// it still ships an explicit canonical and its own openGraph card (reusing the
+// root brand copy) so the site has a defined canonical URL and shared links
+// unfurl correctly rather than falling back to whatever default the crawler picks.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Sovereign OS — Understand who you are, and why your relationships work",
+    description:
+      "A private space to understand yourself and the people around you — grounded in your Baseline.",
+    url: "/",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
+};
 
 const orgJsonLd = {
   "@context": "https://schema.org",
@@ -35,7 +52,7 @@ const jsonLd = {
   operatingSystem: "Web",
   url: "https://sovereign.defrag.app",
   description:
-    "Sovereign is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
+    "Sovereign OS is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
     { "@type": "Offer", name: "Sovereign+ Monthly", price: "20", priceCurrency: "USD" },
@@ -61,7 +78,7 @@ const faqJsonLd = {
       name: "What do you do with my birth data?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Your date, time, and place of birth are used for one thing only: computing your Baseline from NASA/JPL planetary data. It is never sold or shared, and you can delete your entire account — data included — in one click from your Account page.",
+        text: "Your date, time, and place of birth are used for one thing only: computing your Baseline from NASA/JPL planetary data. It is never sold or shared, and you can delete your entire account — data included — yourself from the Account page.",
       },
     },
     {
@@ -69,7 +86,7 @@ const faqJsonLd = {
       name: "What's the difference between Free and Sovereign+?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Free includes your full Baseline and 5 AI messages per day. Sovereign+ removes the daily cap and lets you invite people into your relationships — $99/year, or $20/month. You can cancel anytime.",
+        text: "Free includes your full Baseline and 5 AI messages per day. Sovereign+ lifts that to 150 a day — room for any real conversation, with a fair-use ceiling that keeps scripted loops out — and lets you invite people into your relationships: $99/year, or $20/month. You can cancel anytime.",
       },
     },
     {
@@ -77,7 +94,7 @@ const faqJsonLd = {
       name: "Can I cancel anytime?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Subscriptions are managed through Stripe — cancel in two clicks from your Account page, and your access continues through the end of the paid period.",
+        text: "Yes. Subscriptions are managed through Stripe — open your billing portal from the Account page and cancel there. Your access continues through the end of the paid period.",
       },
     },
   ],

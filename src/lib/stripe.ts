@@ -47,6 +47,69 @@ export function priceToSubscription(
   return { plan: "free" };
 }
 
+/** The invoice fields a receipt needs — matches the webhook route's event shape. */
+export interface InvoiceLineForReceipt {
+  price?: { id?: string; recurring?: { interval?: string } | null } | null;
+  period?: { start?: number; end?: number } | null;
+}
+export interface InvoiceForReceipt {
+  amount_due?: number;
+  currency?: string;
+  created?: number;
+  lines?: { data: InvoiceLineForReceipt[] };
+}
+
+export interface ReceiptFields {
+  amount?: string;
+  date?: string;
+  next?: string;
+  interval?: "monthly" | "annual";
+}
+
+/**
+ * A Stripe unix timestamp as "October 6, 2026".
+ * Pinned to UTC on purpose: the day printed on a receipt must not depend on the
+ * zone of whatever runtime sent it, and the previous `toDateString()` output
+ * ("Tue Oct 06 2026") read like a log line rather than a billing document.
+ */
+export function invoiceDate(unixSeconds: number | undefined): string | undefined {
+  if (!unixSeconds) return undefined;
+  return new Date(unixSeconds * 1000).toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
+  });
+}
+
+/** Major-unit amount; the currency code is shown only when it is not USD. */
+function invoiceAmount(amountDue: number | undefined, currency: string | undefined): string | undefined {
+  if (amountDue == null) return undefined;
+  const major = (amountDue / 100).toFixed(2);
+  return currency === "usd" || !currency ? major : `${major} ${currency.toUpperCase()}`;
+}
+
+/**
+ * Turn an invoice event object into the `payment-received` template variables, so
+ * the webhook route stays a dispatcher and this mapping is unit-testable. `next` is
+ * the line item's period end — the date the plan bills again — which is what a
+ * customer actually looks for on a receipt.
+ */
+export function receiptFields(env: AppEnv, invoice: InvoiceForReceipt): ReceiptFields {
+  const line = invoice.lines?.data?.[0];
+  const fields: ReceiptFields = {};
+  const amount = invoiceAmount(invoice.amount_due, invoice.currency);
+  if (amount) fields.amount = amount;
+  const date = invoiceDate(invoice.created);
+  if (date) fields.date = date;
+  const next = invoiceDate(line?.period?.end);
+  if (next) fields.next = next;
+  // Prefer our own configured-price mapping; fall back to what Stripe says the
+  // price recurs at, so a dashboard price rename still prints the right cadence.
+  const recurring = line?.price?.recurring?.interval;
+  const interval = priceToSubscription(env, line?.price?.id).interval
+    ?? (recurring === "year" ? "annual" : recurring === "month" ? "monthly" : undefined);
+  if (interval) fields.interval = interval;
+  return fields;
+}
+
 /** Verify a Stripe webhook signature using WebCrypto HMAC-SHA256. */
 export async function verifyStripeSignature(
   payload: string,

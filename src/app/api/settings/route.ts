@@ -36,7 +36,7 @@ export async function PATCH(request: NextRequest) {
     try {
       await env.DB.prepare("UPDATE users SET display_name = ?, updated_at = datetime('now') WHERE id = ?").bind(cleaned || null, payload.sub).run();
     } catch {
-      return NextResponse.json({ error: "Display name isn't available yet on this server. Please try again shortly." }, { status: 500 });
+      return NextResponse.json({ error: "Couldn't save that name — try again in a moment." }, { status: 500 });
     }
   }
 
@@ -49,7 +49,7 @@ export async function PATCH(request: NextRequest) {
     } catch {
       // Pre-migration databases have no column to write — say so plainly
       // rather than pretending the preference landed.
-      return NextResponse.json({ error: "Memory mode isn't available yet on this server. Please try again shortly." }, { status: 500 });
+      return NextResponse.json({ error: "Couldn't change memory mode — try again in a moment." }, { status: 500 });
     }
   }
 

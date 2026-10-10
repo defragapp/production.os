@@ -24,7 +24,7 @@ operations runbook in `docs/scaling-plan.md`).
 | Entitlement write | webhook → `users.subscription_tier` | ✅ set on `checkout.session.completed` + `customer.subscription.*`; cleared to `free` on `deleted` |
 | Self-serve billing / cancel | `src/app/api/billing-portal/route.ts` → Stripe Portal | ✅ "cancel in two clicks," no code to maintain |
 | Cancel-on-delete | `cancelActiveSubscriptions()` | ✅ stops billing when a user erases their account |
-| **Free-limit enforcement** | `src/app/api/chat/route.ts` | ✅ server-side: free tier = 5/day (KV), `sovereign+` = unlimited; the cap is checked in the API, **not** trusted to the client |
+| **Free-limit enforcement** | `src/app/api/chat/route.ts` | ✅ server-side: free tier = 5/day (KV), `sovereign+` = 150/day fair-use ceiling (`SOVEREIGN_PLUS_DAILY_LIMIT` in `src/lib/limits.ts`); the cap is checked in the API, **not** trusted to the client |
 | Funnel entry | `/upgrade` + after-baseline redirect (`/upgrade?from=baseline`) | ✅ new users land on the paywall right after building a Baseline |
 
 **Bottom line on "can a user surpass free limits?"** — No, as built today. The
@@ -97,7 +97,9 @@ The engineering already routes the right way (build Baseline → land on
   meter fills.
 - **Show the meter, honestly.** The account page already renders
   `used / 5 today`. Surface the same in-chat with a soft "3 of 5 left today →
-  unlock unlimited" nudge at the cap (the API already returns `limit`/`used`).
+  150 a day with Sovereign+" nudge at the cap (the API already returns
+  `limit`/`used`). Never "unlimited": the tier has a real ceiling, and the Stripe
+  product description carried that word until 2026-10-07.
 - **Anchor annual.** Present annual with a clear "save ~2 months" framing; keep a
   monthly option. Both prices already exist as env vars.
 - **Consider a 7-day Sovereign+ trial** (Stripe Checkout supports `trial_period_days`)
@@ -124,7 +126,7 @@ come from demonstrating value, not from locking the user out or hiding the exit.
   demand signal — a metered add-on, not a launch need.
 - **Usage-based AI** guardrails tie back to the AI Gateway rate limit in
   `docs/cloudflare-readiness.md §3.1` so a Sovereign+ subscriber can't run the
-  model into a loss; consider a fair-use ceiling even on "unlimited."
+  model into a loss; the fair-use ceiling is now in place (`150/day`).
 - **Tax & invoicing:** enable **Stripe Tax** if you have non-US buyers; it slots
   into the same Checkout/Portal already wired.
 - **Migration to a business account** (Stripe entity, contracts) is a paperwork

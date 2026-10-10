@@ -3,7 +3,7 @@ import type React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUp, Compass, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Shield, Square, Users, X } from "lucide-react";
+import { ArrowUp, Compass, Globe, Lock, Mic, MicOff, Plus, RefreshCw, Search, Shield, Square, ThumbsDown, ThumbsUp, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
@@ -119,7 +119,7 @@ function journeyBadge(t: ThreadSummary): string | null {
 const STARTING_POINTS = [
   {
     level: "About me",
-    prompt: "Help me see a pattern in how I show up that I might not be naming.",
+    prompt: "Help me see what keeps happening in how I show up that I might not be naming.",
   },
   {
     level: "What this means",
@@ -132,6 +132,14 @@ const STARTING_POINTS = [
   {
     level: "The whole system",
     prompt: "Help me understand the dynamic in my family — the part everyone feels but no one says out loud.",
+  },
+  {
+    level: "A decision",
+    prompt: "I have a choice in front of me. Help me see what supports it, what pulls against it, and what I still need to know.",
+  },
+  {
+    level: "What's active now",
+    prompt: "Something I usually handle well has felt louder this week. Help me see what's different about this moment.",
   },
 ];
 
@@ -151,7 +159,7 @@ function StartingPoints({
   return (
     <div className={compact ? "space-y-1.5" : "mt-8 w-full"}>
       {!compact && (
-        <p className="mb-3 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+        <p className="mb-3 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
           Start with what&apos;s real
         </p>
       )}
@@ -165,11 +173,11 @@ function StartingPoints({
             style={compact ? undefined : { animationDelay: `${120 + i * 70}ms` }}
             className={`group block w-full text-left transition-all duration-[240ms] ${
               compact
-                ? "rounded-lg border border-transparent px-3 py-2 hover:border-border/60 hover:bg-white/[0.03]"
-                : `msg-in rounded-panel border border-border/60 bg-white/[0.03] p-4 hover:-translate-y-[1px] hover:border-foreground/30 hover:bg-white/[0.05]`
+                ? "rounded-control border border-transparent px-3 py-2 hover:border-border/60 hover:bg-surface-hover"
+                : `msg-in rounded-panel border border-border/60 bg-surface-2 p-4 hover:-translate-y-[1px] hover:border-foreground/30 hover:bg-surface-hover`
             }`}
           >
-            <span className={`block font-mono uppercase tracking-[0.16em] text-muted-foreground/60 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
+            <span className={`block font-mono uppercase tracking-[0.16em] text-muted-foreground/70 group-hover:text-foreground/70 ${compact ? "text-[9px]" : "text-[10px]"}`}>
               {p.level}
             </span>
             <span className={`mt-1.5 block font-display leading-snug text-foreground/90 ${compact ? "line-clamp-2 text-[13px]" : "text-[15px]"}`}>
@@ -204,16 +212,20 @@ function ThreadLibrary({
   threads,
   activeId,
   isStreaming,
+  error,
   onOpen,
   onNew,
   onSeed,
+  onRetry,
 }: {
   threads: ThreadSummary[];
   activeId: string | null;
   isStreaming: boolean;
+  error: boolean;
   onOpen: (id: string) => void;
   onNew: () => void;
   onSeed: (prompt: string) => void;
+  onRetry: () => void;
 }) {
   return (
     <aside className="sticky top-[3.5rem] hidden h-[calc(100vh-3.5rem)] w-[264px] shrink-0 flex-col border-r border-border/70 bg-background/60 backdrop-blur-sm lg:flex">
@@ -224,16 +236,27 @@ function ThreadLibrary({
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto px-3 pb-6 pt-4">
-        <p className="px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+        <p className="px-2 pb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
           Threads
         </p>
         {threads.length === 0 ? (
-          <div className="px-1">
-            <p className="px-2 pb-2 text-xs leading-relaxed text-muted-foreground/60">
-              Start with what&apos;s real — pick a level, and make the question your own.
-            </p>
-            <StartingPoints compact onPick={onSeed} disabled={isStreaming} />
-          </div>
+          error ? (
+            <div className="px-1">
+              <p className="px-2 pb-3 text-xs leading-relaxed text-muted-foreground/80">
+                Couldn&apos;t load your conversations just now. Your history is safe.
+              </p>
+              <Button variant="outline" size="sm" onClick={onRetry} disabled={isStreaming} className="w-full">
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <div className="px-1">
+              <p className="px-2 pb-2 text-xs leading-relaxed text-muted-foreground/70">
+                Start with what&apos;s real — pick a level, and make the question your own.
+              </p>
+              <StartingPoints compact onPick={onSeed} disabled={isStreaming} />
+            </div>
+          )
         ) : (
           <nav aria-label="Thread library" className="space-y-1">
             {threads.map((t) => {
@@ -246,22 +269,22 @@ function ThreadLibrary({
                   onClick={() => onOpen(t.id)}
                   disabled={isStreaming}
                   aria-current={active ? "true" : undefined}
-                  className={`journey-thread-row block w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-[240ms] ${
+                  className={`block w-full rounded-control border px-3 py-2.5 text-left transition-all duration-[240ms] ${
                     active
-                      ? "border-white/10 bg-white/[0.05] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
-                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-white/[0.02] hover:text-foreground"
+                      ? "border-white/10 bg-surface-selected text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.08)]"
+                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-surface-hover hover:text-foreground"
                   }`}
                 >
                   <p className="line-clamp-2 text-[13px] leading-snug">
                     {t.label?.trim() || "Untitled thread"}
                   </p>
                   {badge && (
-                    <p className="journey-thread-badge mt-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
+                    <p className="journey-thread-badge mt-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
                       <Compass className="h-3 w-3 shrink-0" aria-hidden="true" />
                       <span className="truncate">{badge}</span>
                     </p>
                   )}
-                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/50">
+                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
                     {relativeThreadDate(t.updated_at)}
                   </p>
                 </button>
@@ -279,9 +302,18 @@ export function ChatClient() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  // The live-quality signal for the answer just received: which way the person
+  // marked it, or null if they have not (or have moved to a new turn/thread).
+  // It is a single value on purpose — the control is offered only on the newest
+  // finished answer, so there is only ever one open question at a time.
+  const [answerFeedback, setAnswerFeedback] = useState<"landed" | "missed" | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  // Distinguishes "no conversations yet" from "the list couldn't be fetched".
+  // Without it a transient failure shows a returning member the first-run
+  // empty state as if their history had vanished.
+  const [threadsError, setThreadsError] = useState(false);
   const [baselineData, setBaselineData] = useState<BaselineData | undefined>();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [usageBannerDismissed, setUsageBannerDismissed] = useState(false);
@@ -313,12 +345,50 @@ export function ChatClient() {
   // The archive is opened, not navigated to: a person finishing an arc should be
   // able to see the one they just closed without leaving the conversation.
   const [pastOpen, setPastOpen] = useState(false);
+  // ── Semantic recall (Workers Paid / Vectorize) ────────────────────
+  // A slide-down panel above the transcript that turns a natural-language
+  // question ("what did we say about sleep last month?") into ranked
+  // snippets from server-memory threads. Debounced 350ms; the search
+  // endpoint itself is rate-limited to 20/min, and the panel is inert
+  // for Device-Only accounts (nothing to index). `indexed` reflects
+  // whether *any* vectors exist for this user yet, so the empty-state
+  // copy can differentiate "you have no matches for this phrase" from
+  // "your history has not been embedded yet — start chatting".
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<
+    Array<{ threadId: string; turnIndex: number; role: "user" | "assistant"; snippet: string; score: number; updatedAt: string | null }> | null
+  >(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchIndexed, setSearchIndexed] = useState(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
   // The exact text of a turn that couldn't be delivered, plus why: `unreachable`
   // never got an answer at all (dropped connection, 429, 503), `incomplete` means
   // the stream opened and then died before an answer arrived. Holding it lets us
   // offer a one-tap "Try again" that re-sends the same message without
   // duplicating it in the transcript — the user's words are never lost.
   const [failedTurn, setFailedTurn] = useState<{ text: string; kind: "unreachable" | "incomplete" } | null>(null);
+  // Time-based reassurance while a turn is in flight. Replies can legitimately
+  // take 19–43s, and three bouncing dots alone read as a stall, so named stages
+  // appear on a timer: after ~6s "Thinking it through…", after ~20s a longer-wait
+  // note. Reset on every stream start/end. Plain text, no animation — so it
+  // honours prefers-reduced-motion by construction; the renderer reserves a
+  // fixed-height line so a stage swap can never reflow the bubble (CLS 0).
+  const [waitHint, setWaitHint] = useState<"none" | "thinking" | "long">("none");
+  useEffect(() => {
+    if (!isStreaming) {
+      setWaitHint("none");
+      return;
+    }
+    setWaitHint("none");
+    const tThinking = window.setTimeout(() => setWaitHint("thinking"), 6000);
+    const tLong = window.setTimeout(() => setWaitHint("long"), 20000);
+    return () => {
+      window.clearTimeout(tThinking);
+      window.clearTimeout(tLong);
+    };
+  }, [isStreaming]);
   const [offline, setOffline] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -389,7 +459,10 @@ export function ChatClient() {
   const refreshThreads = useCallback(async (): Promise<ThreadSummary[]> => {
     try {
       const res = await fetch("/api/threads");
-      if (!res.ok) return [];
+      if (!res.ok) {
+        setThreadsError(true);
+        return [];
+      }
       const data = await res.json() as { threads?: { id: string; updated_at: string; title?: string; journey_goal?: string | null; journey_status?: string | null; journey_step?: string | null }[] };
       const items = (data.threads || []).map((t) => ({ id: t.id, updated_at: t.updated_at, title: t.title, journey_goal: t.journey_goal ?? null, journey_status: t.journey_status ?? null, journey_step: t.journey_step ?? null }));
       setThreads((prev) => items.map((item) => ({
@@ -399,8 +472,10 @@ export function ChatClient() {
         // list refresh lands.
         label: clipWords(item.title?.trim() || "", 48) || prev.find((p) => p.id === item.id)?.label,
       })));
+      setThreadsError(false);
       return items;
     } catch {
+      setThreadsError(true);
       return [];
     }
   }, []);
@@ -417,6 +492,8 @@ export function ChatClient() {
     setVeilHasMore(false);
     setFreshOffer(false);
     setPastOpen(false);
+    // The question belonged to the previous conversation's last answer.
+    setAnswerFeedback(null);
     stopDictation();
     scrollerRef.current?.scrollTo({ top: 0 });
   }, [stopDictation]);
@@ -459,6 +536,72 @@ export function ChatClient() {
       await linkJourneyToThread(data.thread?.journey_id ?? null);
     } catch {}
   }, [clearThreadContext, linkJourneyToThread]);
+
+  // Open a thread from a search hit and scroll the referenced turn into the
+  // middle of the viewport, flashing a short highlight so the eye can find
+  // it. Two nested rAFs: the first lets setMessages commit, the second lets
+  // the transcript paint before we ask the browser to scroll — otherwise
+  // the anchor node does not yet exist and the call is silently a no-op.
+  const jumpToTurn = useCallback(async (targetThreadId: string, turnIndex: number) => {
+    setSearchOpen(false);
+    await openThread(targetThreadId);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const node = document.querySelector<HTMLElement>(`[data-turn="${turnIndex}"]`);
+      if (!node) return;
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+      node.classList.add("turn-highlight");
+      window.setTimeout(() => node.classList.remove("turn-highlight"), 1800);
+    }));
+  }, [openThread]);
+
+  // Debounced semantic search. Every keystroke resets the pending request
+  // via AbortController; the network call itself fires 350ms after typing
+  // stops. Escape closes the panel; empty/short queries clear results
+  // without a fetch.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      searchAbortRef.current?.abort();
+      searchAbortRef.current = null;
+      return;
+    }
+    setSearchLoading(true);
+    const timeoutId = window.setTimeout(async () => {
+      searchAbortRef.current?.abort();
+      const ac = new AbortController();
+      searchAbortRef.current = ac;
+      try {
+        const res = await fetch("/api/chat/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q, topK: 8 }),
+          signal: ac.signal,
+        });
+        if (!res.ok) {
+          setSearchResults([]);
+          setSearchIndexed(false);
+          return;
+        }
+        const data = await res.json() as {
+          results?: Array<{ threadId: string; turnIndex: number; role: "user" | "assistant"; snippet: string; score: number; updatedAt: string | null }>;
+          indexed?: boolean;
+        };
+        setSearchResults(data.results ?? []);
+        setSearchIndexed(Boolean(data.indexed));
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        setSearchResults([]);
+      } finally {
+        if (searchAbortRef.current === ac) setSearchLoading(false);
+      }
+    }, 350);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchOpen, searchQuery]);
 
   const startNewThread = useCallback(() => {
     clearThreadContext();
@@ -603,6 +746,36 @@ export function ChatClient() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [journeyExpanded, dictating, stopDictation]);
+
+  // One path for opening and closing the recall panel, shared by the header
+  // button and the ⌘K / Ctrl+K shortcut below, so the two can never drift.
+  const toggleSearch = useCallback(() => {
+    setSearchOpen((v) => {
+      const next = !v;
+      if (next) requestAnimationFrame(() => searchInputRef.current?.focus());
+      else { setSearchResults(null); setSearchQuery(""); }
+      return next;
+    });
+  }, []);
+
+  // The keyboard shortcut the desktop composer already implies: ⌘K (Ctrl+K
+  // off Apple keyboards) summons the past-conversation search. It never fires
+  // mid-generation — the panel can't be read while an answer is arriving —
+  // and never from the composer textarea, where the person is writing, not
+  // navigating. From the search field itself it closes the panel, which is
+  // the same contract as the button's toggle.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "k" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      if (isStreaming) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLTextAreaElement) return;
+      toggleSearch();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isStreaming, toggleSearch]);
 
   useEffect(() => {
     // Tapping the transcript means "I'm reading, not looking at steps". Bound
@@ -810,6 +983,8 @@ export function ChatClient() {
     const controller = new AbortController();
     abortRef.current = controller;
     setIsStreaming(true);
+    // A new answer retires the previous question.
+    setAnswerFeedback(null);
     setMessages([...requestMessages, { role: "assistant", content: "" }]);
     try {
       const response = await fetch("/api/chat", {
@@ -830,7 +1005,7 @@ export function ChatClient() {
           setUsageBannerDismissed(false);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: err.error || "You've used today's answers — Sovereign+ picks up where this leaves off." };
+            u[u.length - 1] = { role: "assistant", content: err.error || "You've used today's answers — Sovereign+ picks up where this leaves off.", notice: true };
             return u;
           });
           return;
@@ -839,7 +1014,7 @@ export function ChatClient() {
           setShowVerify(true);
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: "Verify your email to keep chatting with the AI — the link is in your inbox." };
+            u[u.length - 1] = { role: "assistant", content: "Verify your email to keep chatting with the AI — the link is in your inbox.", notice: true };
             return u;
           });
           return;
@@ -856,7 +1031,7 @@ export function ChatClient() {
           // Session expired or invalid — send the user to sign-in.
           setMessages((prev) => {
             const u = [...prev];
-            u[u.length - 1] = { role: "assistant", content: "Your session has expired. Redirecting you to sign in…" };
+            u[u.length - 1] = { role: "assistant", content: "Your session has expired. Redirecting you to sign in…", notice: true };
             return u;
           });
           setTimeout(() => router.push("/onboard?mode=login"), 1200);
@@ -864,11 +1039,15 @@ export function ChatClient() {
         }
         // Any other non-OK (503 inference failure, 429 burst limit, 500, an
         // unexpected proxy error): the turn is recoverable. Keep the words and
-        // offer a one-tap retry instead of silently dropping them.
+        // offer a one-tap retry instead of silently dropping them. The retry
+        // banner below the thread already says "your message is safe — Try
+        // again", so the empty assistant placeholder is dropped rather than
+        // filled with a redundant error bubble (which used to also earn a Share
+        // button on a turn that produced no answer).
         setFailedTurn({ text: sentText, kind: "unreachable" });
         setMessages((prev) => {
           const u = [...prev];
-          u[u.length - 1] = { role: "assistant", content: err.error || "Something went wrong — your message is safe, tap Try again." };
+          if (u[u.length - 1]?.role === "assistant" && !u[u.length - 1].content.trim()) u.pop();
           return u;
         });
         return;
@@ -922,6 +1101,19 @@ export function ChatClient() {
                   };
                   return u;
                 });
+                continue;
+              }
+              // The `{ recall: true }` frame follows the answer text and simply
+              // flags the assistant message being built. The reserved label slot
+              // above the bubble already holds its height, so flipping this on
+              // reveals the caption with zero layout shift. Session-only: the
+              // flag is stripped before anything is persisted.
+              if (parsed.recall) {
+                setMessages((prev) => {
+                  const u = [...prev];
+                  u[u.length - 1] = { ...u[u.length - 1], recalled: true };
+                  return u;
+                });
               }
             } catch {}
           }
@@ -935,8 +1127,20 @@ export function ChatClient() {
         setMessages((prev) => {
           const u = [...prev];
           const last = u[u.length - 1];
-          if (last && last.role === "assistant" && last.content.trim()) return prev;
-          u[u.length - 1] = { role: "assistant", content: "Sovereign's answer stopped before it arrived — your message is safe, tap Try again." };
+          // Partial words that did paint stay on screen — they are their context
+          // now — but a truncated turn is not a finished answer, so it is marked
+          // a notice and never offers Share. Nothing painted: keep a readable
+          // placeholder bubble (also a notice) so the dead turn still reads as
+          // an answer attempt instead of vanishing — the retry banner sits below.
+          if (last && last.role === "assistant") {
+            if (last.content.trim()) u[u.length - 1] = { ...last, notice: true };
+            else
+              u[u.length - 1] = {
+                role: "assistant",
+                content: "Sovereign's answer stopped before it arrived — your message is safe, tap Try again.",
+                notice: true,
+              };
+          }
           return u;
         });
         return;
@@ -956,10 +1160,22 @@ export function ChatClient() {
       }
       console.error("Chat error:", err);
       // A dropped mobile connection is the prime "lost words" case — recover it.
+      // As with the non-OK path, the retry banner carries the message; a partial
+      // answer that did land is kept and marked a notice (never Share), and a
+      // still-empty placeholder becomes a readable dead-turn bubble, also a notice.
       setFailedTurn({ text: sentText, kind: "unreachable" });
       setMessages((prev) => {
         const u = [...prev];
-        u[u.length - 1] = { role: "assistant", content: "Couldn't reach Sovereign — your message is safe, tap Try again." };
+        const last = u[u.length - 1];
+        if (last && last.role === "assistant") {
+          if (last.content.trim()) u[u.length - 1] = { ...last, notice: true };
+          else
+            u[u.length - 1] = {
+              role: "assistant",
+              content: "Couldn't reach Sovereign — your message is safe, tap Try again.",
+              notice: true,
+            };
+        }
         return u;
       });
     } finally {
@@ -968,6 +1184,25 @@ export function ChatClient() {
       setIsStreaming(false);
     }
   }, [threadId, refreshThreads, refreshUsage, router, applyStateFrame]);
+
+  // The "Did this land?" write. Optimistic: the mark fills immediately and the
+  // request rides behind it; a dropped signal is not worth an error banner (the
+  // choice stays visible for this session either way). Server-memory only — a
+  // Device-Only account never sees the control, and the route refuses it too.
+  const sendFeedback = useCallback(async (turnIndex: number, value: "landed" | "missed") => {
+    if (!threadId || memoryMode !== "server") return;
+    setAnswerFeedback(value);
+    try {
+      await fetch("/api/chat/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId, turnIndex, value }),
+      });
+    } catch {
+      // Best-effort signal: an offline or failed write changes nothing the
+      // person sees. The offline banner already covers the connection story.
+    }
+  }, [threadId, memoryMode]);
 
   const sendMessage = useCallback(async () => {
     if (isStreaming) return;
@@ -1040,7 +1275,7 @@ export function ChatClient() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">Sovereign+ is active — welcome.</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  You now have unlimited conversations, the full depth of your Baseline,
+                  You now have up to 150 AI messages a day, the full depth of your Baseline,
                   and the ability to invite the people you&apos;re figuring things out with.
                 </p>
               </div>
@@ -1087,9 +1322,9 @@ export function ChatClient() {
                   try {
                     const r = await fetch("/api/auth/resend", { method: "POST" });
                     const d = await r.json() as { ok?: boolean; error?: string };
-                    setResendState(d.ok ? "sent" : `error: ${d.error || "Could not send verification email."}`);
+                    setResendState(d.ok ? "sent" : `error: ${d.error || "Couldn't send that email — try again in a moment."}`);
                   } catch {
-                    setResendState("error: Could not send verification email.");
+                    setResendState("error: Couldn't send that email — try again in a moment.");
                   }
                 }}
               >
@@ -1105,9 +1340,11 @@ export function ChatClient() {
           threads={threads}
           activeId={threadId}
           isStreaming={isStreaming}
+          error={threadsError}
           onOpen={openThread}
           onNew={startNewThread}
           onSeed={seedComposer}
+          onRetry={refreshThreads}
         />
         <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="border-b border-border bg-background px-4 py-3">
@@ -1122,32 +1359,9 @@ export function ChatClient() {
                 <Plus className="h-4 w-4" />
                 New thread
               </Button>
-              {threads.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto lg:hidden">
-                  {threads.map((t) => {
-                    const active = t.id === threadId;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => openThread(t.id)}
-                        disabled={isStreaming}
-                        title={t.label || undefined}
-                        className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
-                          active
-                            ? "border-foreground/30 bg-white/[0.07] text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
-                            : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                        }`}
-                      >
-                        {t.journey_goal && (
-                          <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/45 align-middle" />
-                        )}
-                        {chipLabel(t)}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              {/* Thread switcher lives in its own scrollable strip below the
+                  actions (see `thread-strip`), so the memory/search/people icon
+                  buttons can never overlap the chips on a phone. */}
               {/* Device-Only vs. Server memory, one click away right where
                   the choice is felt. The icon is the whole story at a glance:
                   a globe for cross-device, a lock for this-device-only. */}
@@ -1176,14 +1390,14 @@ export function ChatClient() {
                     />
                     <div
                       role="menu"
-                      className="absolute right-0 z-40 mt-2 w-64 rounded-xl border border-white/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
+                      className="absolute right-0 z-40 mt-2 w-64 rounded-panel border border-foreground/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
                     >
                       <button
                         type="button"
                         role="menuitemradio"
                         aria-checked={memoryMode === "server"}
                         onClick={() => void switchMemoryMode("server")}
-                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                        className="flex w-full items-start gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                       >
                         <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span><span className="block font-medium text-foreground">All devices</span><span className="block mt-0.5 text-xs">Conversations sync across your devices.</span></span>
@@ -1193,18 +1407,31 @@ export function ChatClient() {
                         role="menuitemradio"
                         aria-checked={memoryMode === "local"}
                         onClick={() => void switchMemoryMode("local")}
-                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                        className="flex w-full items-start gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                       >
                         <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span><span className="block font-medium text-foreground">On this device only</span><span className="block mt-0.5 text-xs">New chats are never stored on our servers.</span></span>
                       </button>
-                      <Link href="/settings" className="block rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground" onClick={() => setMemoryMenuOpen(false)}>
+                      <Link href="/settings" className="block rounded-control px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground" onClick={() => setMemoryMenuOpen(false)}>
                         Details in <Shield className="inline h-3 w-3 -mt-0.5" aria-hidden="true" /> Settings
                       </Link>
                     </div>
                   </>
                 )}
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSearch}
+                disabled={isStreaming}
+                aria-expanded={searchOpen}
+                title="Search past conversations (⌘K)"
+                className="shrink-0"
+              >
+                <Search className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden lg:inline">Search</span>
+                <span className="sr-only">Search past conversations (⌘K)</span>
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -1217,9 +1444,115 @@ export function ChatClient() {
                 People
               </Button>
             </div>
+            {threads.length > 0 ? (
+              <div className="thread-strip mx-auto mt-2.5 flex max-w-3xl items-center gap-1.5 lg:hidden">
+                {threads.map((t) => {
+                  const active = t.id === threadId;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => openThread(t.id)}
+                      disabled={isStreaming}
+                      title={t.label || undefined}
+                      className={`tap-line shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs transition-all duration-[240ms] ${
+                        active
+                          ? "border-foreground/30 bg-surface-selected text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.1)]"
+                          : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {t.journey_goal && (
+                        <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/45" />
+                      )}
+                      {chipLabel(t)}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : threadsError && !isStreaming ? (
+              <div className="mx-auto mt-2.5 flex max-w-3xl items-center gap-2 lg:hidden">
+                <p className="text-xs leading-relaxed text-muted-foreground/80">
+                  Couldn&apos;t load your conversations.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refreshThreads()}
+                  className="tap-line shrink-0 text-xs font-medium text-foreground underline underline-offset-2"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {peopleOpen && <PeoplePanel tier={tier} onClose={() => setPeopleOpen(false)} />}
+
+          {/* Semantic search panel — slides down between the header and the
+              transcript. Escape closes; a result click calls `jumpToTurn`
+              which opens the referenced thread and scrolls to the exact
+              turn. Local accounts get a different hint because there is
+              literally nothing to search server-side. */}
+          {searchOpen && (
+            <div className="border-b border-border bg-surface-1/95 px-4 py-3 backdrop-blur-sm">
+              <div className="mx-auto max-w-3xl">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setSearchOpen(false); setSearchQuery(""); setSearchResults(null); } }}
+                    placeholder="Search your past conversations…"
+                    aria-label="Search your past conversations"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  />
+                  {searchLoading && (
+                    <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border border-current border-t-transparent text-muted-foreground" aria-hidden="true" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults(null); }}
+                    aria-label="Close search"
+                    className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {memoryMode === "local" ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Device-Only memory keeps your history off our servers, so there is nothing to search here. Switch to All devices in the memory menu to search your past conversations.
+                  </p>
+                ) : searchQuery.trim().length < 2 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">Type at least two characters. Ask in plain words — “what did we say about sleep?” — and it will find the moment.</p>
+                ) : searchResults && searchResults.length === 0 && !searchLoading ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {!searchIndexed
+                      ? "Nothing indexed yet. New conversations appear here within a moment of being sent."
+                      : "No matches for that phrase. Try asking the way you'd say it out loud."}
+                  </p>
+                ) : searchResults && searchResults.length > 0 ? (
+                  <ul className="mt-2 space-y-1.5">
+                    {searchResults.map((r) => (
+                      <li key={`${r.threadId}:${r.turnIndex}:${r.role}`}>
+                        <button
+                          type="button"
+                          onClick={() => void jumpToTurn(r.threadId, r.turnIndex)}
+                          className="w-full rounded-control border border-border/50 bg-surface-2/40 px-3 py-2 text-left transition-colors hover:border-border hover:bg-surface-2"
+                        >
+                          <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
+                            {r.role === "assistant" ? "Sovereign" : "You"}
+                            {r.updatedAt ? ` · ${(() => { try { return new Date(r.updatedAt.endsWith("Z") ? r.updatedAt : r.updatedAt + "Z").toLocaleDateString(); } catch { return ""; } })()}` : ""}
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 block text-sm text-foreground">{r.snippet}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          )}
 
           {/* Rendered as a sibling of the veil, never a descendant: the veil
               carries `backdrop-filter`, which makes it the containing block for
@@ -1301,7 +1634,7 @@ export function ChatClient() {
                         which clips the emblem/headline out of reach on short phones. */}
                     <div className="msg-in my-auto w-full text-center">
                       <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-border/70 bg-surface-2 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12),0_20px_50px_-24px_rgba(0,0,0,0.8)]">
-                        <Logo showWordmark={false} href="#" markClassName="h-10 w-auto" />
+                        <Logo showWordmark={false} href={null} markClassName="h-10 w-auto" />
                       </div>
                       <p className="font-display text-2xl font-normal tracking-tight text-foreground">
                         Ask anything.
@@ -1323,7 +1656,7 @@ export function ChatClient() {
                           <button
                             type="button"
                             onClick={() => { void beginFreshJourney(); }}
-                            className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-md border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            className="inline-flex min-h-[2.75rem] shrink-0 items-center rounded-chip border border-border/60 px-3 text-xs font-medium text-foreground transition-colors duration-[240ms] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                           >
                             Start a fresh journey
                           </button>
@@ -1343,10 +1676,23 @@ export function ChatClient() {
                   return (
                     <div
                       key={idx}
+                      data-turn={idx}
                       className={`msg-in flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                     >
                       {msg.role === "assistant" ? (
                         <div className="flex flex-col gap-1.5">
+                          {/* Reserved from mount in both states (only visibility
+                              toggles), so the recall caption arriving after the
+                              answer text never shifts the bubble — measured CLS
+                              stays 0.0000. Quiet, non-interactive, adds no data. */}
+                          <div
+                            aria-hidden={!msg.recalled}
+                            style={{ visibility: msg.recalled ? "visible" : "hidden" }}
+                            className="flex h-4 items-center gap-1.5 px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70"
+                          >
+                            <span className="h-1 w-1 shrink-0 rounded-full bg-current" aria-hidden="true" />
+                            From what you&apos;ve shared before
+                          </div>
                           <AssistantTurn>
                             {streamingEmpty ? (
                               <>
@@ -1355,7 +1701,29 @@ export function ChatClient() {
                                   <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
                                   <span className="typing-dot h-1.5 w-1.5 rounded-full bg-foreground/70" />
                                 </span>
-                                <span className="sr-only">Sovereign is thinking…</span>
+                                {/* Stage note under the dots, revealed on the
+                                    wait timer above. The box is always present
+                                    at a fixed two-line height (h-10) so the text
+                                    appearing, changing, or wrapping to a second
+                                    line never grows or shrinks the bubble — the
+                                    composer below holds still. */}
+                                <span
+                                  aria-hidden="true"
+                                  className="mt-1 flex h-10 items-start text-xs leading-5 text-muted-foreground/80"
+                                >
+                                  {waitHint === "thinking"
+                                    ? "Thinking it through…"
+                                    : waitHint === "long"
+                                      ? "Still with you — longer questions take a moment."
+                                      : ""}
+                                </span>
+                                <span className="sr-only" role="status" aria-live="polite">
+                                  {waitHint === "thinking"
+                                    ? "Sovereign is thinking it through."
+                                    : waitHint === "long"
+                                      ? "Still with you — longer questions take a moment."
+                                      : "Sovereign is thinking…"}
+                                </span>
                               </>
                             ) : stoppedEmpty ? (
                               <p className="text-sm text-muted-foreground">Response stopped.</p>
@@ -1363,11 +1731,67 @@ export function ChatClient() {
                               <RichText text={msg.content} />
                             )}
                           </AssistantTurn>
+                          {/* The answer's provenance, surfaced in-app. Every genuine
+                              answer is grounded in the person's computed Baseline, so
+                              the line the landing demo shows ("a tendency, not a
+                              verdict") carries into the real answer instead of living
+                              only on the marketing page — the sharpest "demonstrated
+                              on the landing, invisible in the product" gap. It is
+                              deterministic UI, never model output (the prompt still
+                              forbids printing baseline tags), so it cannot drift. It
+                              renders under the exact predicate the Share affordance
+                              uses: a notice (usage cap, email/session gate) or a
+                              truncated turn is not an answer and never claims
+                              grounding. */}
+                          {!isStreaming && !streamingEmpty && !stoppedEmpty && !msg.notice && msg.content.trim() && (
+                            <p className="px-1 text-[12.5px] leading-relaxed text-muted-foreground/80">
+                              <span className="text-foreground/75">Grounded in your Baseline</span> — a tendency, not a verdict.
+                            </p>
+                          )}
                           {/* Every finished answer is worth keeping — the share card
-                              turns a passage into an artifact the person owns. */}
-                          {!isStreaming && !streamingEmpty && !stoppedEmpty && msg.content.trim() && (
+                              turns a passage into an artifact the person owns. A
+                              notice bubble (usage cap, email/session gate) or a
+                              truncated turn is not an answer, so it never earns
+                              Share. */}
+                          {!isStreaming && !streamingEmpty && !stoppedEmpty && !msg.notice && msg.content.trim() && (
                             <div>
                               <ShareCardButton text={msg.content} />
+                            </div>
+                          )}
+                          {/* The live-quality signal (WS3): the offline rubric is
+                              the regression gate, this is the only read on whether an
+                              answer actually landed. Offered once, on the newest
+                              finished answer, and only to a server-memory account —
+                              the offline rubric never sees this, and a Device-Only
+                              account has a zero-retention contract the route also
+                              enforces. `tap-line` carries the touch floor (never a
+                              hand-written size), and the row wraps so it can never
+                              widen the bubble past the viewport. */}
+                          {isLast && !isStreaming && !streamingEmpty && !stoppedEmpty && !msg.notice && msg.content.trim() && memoryMode === "server" && threadId && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+                              <span className="text-[11px] text-muted-foreground/70">Did this land?</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => void sendFeedback(idx, "landed")}
+                                  aria-pressed={answerFeedback === "landed"}
+                                  aria-label="This answer landed"
+                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "landed" ? "border-border/70 bg-surface-selected text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-surface-hover hover:text-foreground"}`}
+                                >
+                                  <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Landed
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void sendFeedback(idx, "missed")}
+                                  aria-pressed={answerFeedback === "missed"}
+                                  aria-label="This answer missed the mark"
+                                  className={`tap-line inline-flex items-center gap-1 rounded-full border px-2.5 text-[11px] transition-colors ${answerFeedback === "missed" ? "border-border/70 bg-surface-selected text-foreground" : "border-transparent text-muted-foreground/70 hover:border-border/60 hover:bg-surface-hover hover:text-foreground"}`}
+                                >
+                                  <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Missed
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1405,7 +1829,7 @@ export function ChatClient() {
                       </span>
                       <div>
                         <p className="text-sm font-medium text-foreground">You&apos;ve used today&apos;s answers.</p>
-                        <p className="text-xs text-muted-foreground">Sovereign+ removes the daily cap — go as deep as you need.</p>
+                        <p className="text-xs text-muted-foreground">Sovereign+ lifts the cap to 150 messages a day — go as deep as you need.</p>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -1425,7 +1849,7 @@ export function ChatClient() {
                   <div
                     role="status"
                     aria-live="polite"
-                    className="mb-2 flex items-center gap-2 rounded-lg border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
+                    className="mb-2 flex items-center gap-2 rounded-control border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
                   >
                     <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" />
                     You&apos;re offline — keep typing, we&apos;ll hold your words until the connection returns.
@@ -1454,7 +1878,7 @@ export function ChatClient() {
                   <div
                     role="status"
                     aria-live="polite"
-                    className="mb-2 flex items-center gap-2 rounded-lg border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
+                    className="mb-2 flex items-center gap-2 rounded-control border border-border/60 bg-surface-2/60 px-3 py-2 text-xs text-muted-foreground"
                   >
                     <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" />
                     {dictationNotice}
@@ -1486,7 +1910,7 @@ export function ChatClient() {
                     onFocus={() => {
                       if (window.matchMedia("(max-width: 640px)").matches) setJourneyExpanded(false);
                     }}
-                    className="max-h-44 min-h-11 flex-1 resize-none border-0 bg-transparent px-0 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="max-h-44 min-h-11 flex-1 resize-none border-0 bg-transparent px-0 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {/* Voice dictation, for browsers that have it and nobody else.
                       Same 44px circle as Send, an `aria-pressed` state instead of
@@ -1506,7 +1930,7 @@ export function ChatClient() {
                       title={dictating ? (dictationPreview ? "Listening — tap to stop" : "Stop dictation") : "Dictate"}
                       className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                         dictating
-                          ? "border-foreground/35 bg-white/[0.10] text-foreground"
+                          ? "border-foreground/35 bg-surface-selected text-foreground"
                           : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
                       }`}
                     >
@@ -1677,15 +2101,15 @@ function PeoplePanel({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate font-medium text-foreground">{c.personName}</span>
-                        <span className="shrink-0 rounded-full border border-border bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        <span className="shrink-0 rounded-full border border-border bg-surface-2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                           {c.myLabel}
                         </span>
                       </div>
                       <p className="mt-0.5 text-xs text-muted-foreground/70">
                         {c.peerSharesBaseline
                           ? "Shares their baseline with you"
-                          : "Hasn’t shared their baseline yet"}
-                        {!c.shareBaseline ? " · you’re not sharing yours" : ""}
+                          : "Hasn't shared their baseline yet"}
+                        {!c.shareBaseline ? " · you're not sharing yours" : ""}
                       </p>
                     </div>
                     {/* A quiet crest for this thread — seeded from the pair, never
@@ -1706,7 +2130,7 @@ function PeoplePanel({
                     <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                       {i.role}
                     </span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
                       {i.acceptedAt ? "accepted" : i.status === "revoked" ? "revoked" : "invited"}
                     </span>
                   </li>
@@ -1724,7 +2148,7 @@ function PeoplePanel({
               </p>
             )}
 
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground/60">
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground/70">
               Someone you invited sees only your name and role — never your birth data. You stay in
               control of sharing in{" "}
               <Link href="/settings" className="font-medium text-foreground/80 underline underline-offset-2">

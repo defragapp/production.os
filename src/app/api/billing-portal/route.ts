@@ -27,6 +27,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ url });
   } catch (err) {
     console.error("[billing-portal] failed to create portal session:", err);
-    return NextResponse.json({ error: "Failed to open billing. Please try again." }, { status: 502 });
+    return NextResponse.json({ error: "Couldn't open billing — try again in a moment." }, { status: 502 });
   }
 }

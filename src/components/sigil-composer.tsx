@@ -57,7 +57,7 @@ export function SigilComposer() {
         localStorage.setItem(ACTIVE_SIGIL_KEY, JSON.stringify({ intentId: share.intent, seed: share.seed, label: share.label }));
       } catch {}
     } catch (err) {
-      setNote(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      setNote(err instanceof Error ? err.message : "Couldn't create your Sigil just now — try again in a moment.");
     } finally {
       setBusy(false);
     }
@@ -99,7 +99,7 @@ export function SigilComposer() {
               aria-pressed={active}
               className={`flex min-h-[44px] items-center justify-center rounded-panel border px-3 text-sm transition-colors duration-200 ${
                 active
-                  ? "border-foreground/30 bg-white/[0.06] text-foreground"
+                  ? "border-foreground/30 bg-surface-selected text-foreground"
                   : "border-border bg-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -130,7 +130,8 @@ export function SigilComposer() {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground/70">
-            Choose a state, then create your Sigil to share it.
+            Grounded is picked to start — choose a different state if you like, then create your
+            Sigil to share it.
           </p>
         )}
       </div>

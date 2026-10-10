@@ -1,14 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nav } from "@/components/nav";
-import { PageTexture } from "@/components/page-texture";
+import { PageShell } from "@/components/page-shell";
+import { PageCrown } from "@/components/page-crown";
+import { SiteFooter } from "@/components/site-footer";
 import { SupportForm } from "./support-form";
 import { getEnv } from "@/lib/env";
 
+const description =
+  "Get in touch with the Sovereign OS team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.";
+
 export const metadata: Metadata = {
   title: "Support",
-  description:
-    "Get in touch with the Sovereign team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.",
+  description,
+  alternates: { canonical: "/support" },
+  openGraph: {
+    title: "Support · Sovereign OS",
+    description,
+    url: "/support",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 // Force dynamic: the page reads the Turnstile site key from the Cloudflare
@@ -26,25 +37,22 @@ export default async function SupportPage() {
   } catch {}
   return (
     <>
-      <PageTexture />
-      <Nav />
-      <main id="main" className="relative overflow-x-hidden bg-background font-sans text-foreground selection:bg-muted">
-        <section className="relative overflow-hidden">
+    <PageShell center={false} wide="wide">
+        <div className="relative">
           <div className="hero-light" aria-hidden="true" />
-          <div className="mx-auto max-w-5xl px-6 pb-14 pt-16 md:pt-20">
-            <h1 className="font-display text-3xl font-normal tracking-tight text-foreground sm:text-4xl">
-              We read everything.
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
-              Questions about your Baseline, a relationship, billing, or the AI itself — send it
-              here. It goes straight to the team, and someone answers personally.
-            </p>
+          <div>
+            <PageCrown
+              align="left"
+              eyebrow="Support"
+              title="We read everything."
+              deck="Questions about your Baseline, a relationship, billing, or the AI itself — send it here. It goes straight to the team, and someone answers personally."
+            />
           </div>
-        </section>
+        </div>
 
         {/* Two columns on desktop: the form carries the action, the side
             panel carries the reassurance that used to float under it. */}
-        <section className="mx-auto grid max-w-5xl gap-6 px-6 pb-20 md:grid-cols-[1.2fr_0.8fr] md:items-start">
+        <section className="mt-10 grid gap-6 md:grid-cols-[1.2fr_0.8fr] md:items-start">
           <div className="glass-panel p-6 md:p-8">
             <SupportForm turnstileSiteKey={turnstileSiteKey} />
           </div>
@@ -88,7 +96,8 @@ export default async function SupportPage() {
             </Link>
           </aside>
         </section>
-      </main>
+    </PageShell>
+    <SiteFooter />
     </>
   );
 }

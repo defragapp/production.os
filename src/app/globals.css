@@ -42,6 +42,11 @@
     --surface-2: 30 7% 8.5%;
     --surface-3: 30 6% 11%;
 
+    /* One warm overlay pair for interactive hover + selected states, replacing
+       the scattered bg-white/[0.0x] fills (cool neutral → warm cream). */
+    --surface-hover: 38 18% 95% / 0.05;
+    --surface-selected: 38 18% 95% / 0.09;
+
     /* Radius scale — controls 8px, panels 12px, chips 6px; fully-round is
        reserved for genuinely circular elements. */
     --radius-sm: 6px;
@@ -70,6 +75,11 @@
     --surface-1: 30 7% 6.5%;
     --surface-2: 30 7% 8.5%;
     --surface-3: 30 6% 11%;
+
+    /* One warm overlay pair for interactive hover + selected states, replacing
+       the scattered bg-white/[0.0x] fills (cool neutral → warm cream). */
+    --surface-hover: 38 18% 95% / 0.05;
+    --surface-selected: 38 18% 95% / 0.09;
   }
 }
 
@@ -235,7 +245,7 @@
    cream edge, crisp top highlight, blur. Backed by the surface-1 elevation
    token so every panel steps through the same layering model. 12px radius —
    the single card/panel step in the scale (controls 8px, chips 6px), same as
-   <Card rounded-xl>. */
+   <Card rounded-panel>. */
 .glass-panel {
   position: relative;
   border-radius: var(--radius-lg);
@@ -253,10 +263,14 @@
 /* Warm backlight behind the product mock on the landing hero. The mock itself
    is deliberately STATIC now (the old hover-in-air float read as restless and
    "techie"); this soft glow from behind is what makes the glass plate feel lit
-   and premium rather than moving. No animation, so no reduced-motion branch. */
+   and premium rather than moving. No animation, so no reduced-motion branch.
+   The horizontal inset is intentionally tighter than the vertical: the mock sits
+   flush to the hero's right column, so a wide sideways bleed pushed the glow
+   into the section's overflow-hidden edge and read as an abrupt cut-off. Keeping
+   the sides in lets the blur fade out inside the viewport. */
 .demo-backlight {
   position: absolute;
-  inset: -18% -14%;
+  inset: -16% -7%;
   z-index: -10;
   pointer-events: none;
   background:
@@ -279,7 +293,7 @@
    Three tiers, one scale:
    • .btn-focal  — the single focal navigation/conversion signal (nav CTA,
                    hero CTA): a translucent glass plate with one slow,
-                   iridescent light orbiting its exterior edge.
+                   warm ember orbiting its exterior edge.
    • .btn-aurora — solid cream for in-app primary actions (forms, chat send).
    • .btn-glass  — translucent secondary actions.
    Everything stays inside the cream/graphite scale and bends to
@@ -368,8 +382,10 @@
 
   /* Focal CTA — premium motion glass. The border is a conic gradient painted
      on border-box under a transparent 1px border: a constant faint hairline
-     with one wide, soft iridescent comet sweeping the perimeter (angle
-     animated via @property --edge). No masked pseudo-element, so it cannot
+     with one wide, soft warm comet sweeping the perimeter (angle
+     animated via @property --edge). Every stop stays inside the warm scale
+     (hue in the low-30s) — the comet reads as a cream→amber→terracotta
+     ember, never a cool cast. No masked pseudo-element, so it cannot
      seam or flicker on small screens; browsers without @property simply get
      the static edge highlight. The plate itself must be an OPAQUE deep-graphite
      gradient: a translucent fill lets the conic light bleed through the whole
@@ -393,7 +409,7 @@
           hsla(40, 30%, 86%, 0.22) 264deg,
           hsla(38, 85%, 78%, 0.85) 296deg,
           hsla(18, 70%, 72%, 0.5) 320deg,
-          hsla(150, 45%, 66%, 0.4) 340deg,
+          hsla(26, 55%, 70%, 0.32) 340deg,
           hsla(40, 30%, 86%, 0.22) 360deg
         ) border-box;
     box-shadow:
@@ -489,10 +505,25 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  /* Landscape notch clearance: on iPhone 15/16 Pro in landscape the left/right
+     insets reach 44px. Full-bleed fixed elements (TabBar) need this so
+     interactive content never sits under the camera housing. Only applies
+     in standalone mode (PWA) since browser safe-area insets are zero. */
+  .px-safe {
+    padding-inline: max(env(safe-area-inset-left, 0px), 1rem);
+  }
   /* Reserve clearance so sticky content (chat composer) clears the tab bar in
      standalone mode; a no-op height in the browser where the bar is hidden. */
   .tab-bar-spacer {
     height: 0;
+  }
+}
+
+/* Landscape notch clearance for fixed-position standalone chrome (TabBar).
+   Only active in PWA mode; browser safe-area insets are zero. */
+@media (display-mode: standalone) and (orientation: landscape) {
+  .standalone-only {
+    padding-inline: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px), 0.5rem);
   }
 }
 
@@ -630,6 +661,16 @@ a,[role="button"] {
   [contenteditable]:not([contenteditable="false"]) {
     font-size: max(16px, 1rem) !important;
   }
+  /* Sticky header on touch: the default /80 translucent blur reads as a
+     shimmering seam in iOS Safari as content scrolls beneath it. Firm the base
+     fill on coarse pointers so the bar stays legible and still; desktop keeps
+     the lighter glass. Only the background alpha changes. Kept in the single
+     coarse-pointer block (the one-place invariant) and placed last so the
+     verify-release probe — which stops at the first nested brace — still
+     captures the 44px tap floor that leads this block. */
+  .site-header {
+    background-color: hsl(var(--background) / 0.92);
+  }
 }
 
 /* ── Modern UI / Polish Enhancements ───────────────────────────── */
@@ -685,6 +726,46 @@ a,[role="button"] {
 }
 .msg-in {
   animation: msg-in 0.24s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+/* Chat thread switcher on phones: its own horizontally scrollable strip under
+   the header actions, so the memory/search/people icon buttons can never sit on
+   top of the chips. Both ends fade to transparent so the row reads as a
+   continuation you can scroll rather than a hard cut, and the native scrollbar
+   is hidden to keep it to one tidy line. Individual chips carry `tap-line`, so
+   the 44px touch floor is enforced by the shared hook, not hand-written here. */
+.thread-strip {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
+}
+.thread-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* Semantic-search jump-to-turn flash. Applied imperatively from the
+   chat client after `data-turn="N"` scrolls into view, removed after
+   the animation window. Uses an outline (not a border) so the flash
+   never changes layout on the message row itself. */
+@keyframes turn-flash {
+  0%   { outline-color: hsla(38, 55%, 78%, 0); }
+  15%  { outline-color: hsla(38, 55%, 78%, 0.55); }
+  70%  { outline-color: hsla(38, 55%, 78%, 0.35); }
+  100% { outline-color: hsla(38, 55%, 78%, 0); }
+}
+.turn-highlight {
+  outline: 2px solid hsla(38, 55%, 78%, 0);
+  outline-offset: 6px;
+  border-radius: 12px;
+  animation: turn-flash 1.8s ease-in-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-highlight {
+    animation: none;
+    outline-color: hsla(38, 55%, 78%, 0.5);
+  }
 }
 
 /* Typing dots for the assistant turn — three real dots with a staggered
@@ -863,6 +944,29 @@ a,[role="button"] {
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-fade {
+    animation: none;
+  }
+}
+
+/* Route-level crossfade — a short opacity-only fade replayed whenever the
+   pathname changes (see components/route-fade.tsx), so navigating between
+   marketing routes reads as one continuous surface rather than a hard cut.
+   Opacity is exempt from the Layout Instability API (spends no CLS budget) and
+   does not create a containing block for the page's fixed overlays. With JS off
+   or reduced-motion, content simply renders at full opacity. */
+.route-fade {
+  animation: route-fade 0.18s ease-out;
+}
+@keyframes route-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-fade {
     animation: none;
   }
 }

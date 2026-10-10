@@ -7,7 +7,7 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  { ignores: ["node_modules/**", ".next/**", ".open-next/**", ".wrangler/**", ".audit-tmp/**", "next-env.d.ts", "tsconfig.tsbuildinfo"] },
+  { ignores: ["node_modules/**", ".next/**", ".open-next/**", ".wrangler/**", ".audit-tmp/**", "next-env.d.ts", "tsconfig.tsbuildinfo", "tail-worker/**", "worker-configuration.d.ts"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {

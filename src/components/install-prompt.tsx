@@ -42,6 +42,10 @@ export function InstallPrompt() {
     if (localStorage.getItem(DISMISS_KEY)) return;
     // Already installed? Nothing to prompt.
     if (window.matchMedia("(display-mode: standalone)").matches) return;
+    // iOS keeps its own signal for "launched from the Home Screen", and older
+    // Safari versions never match the display-mode query — without this the
+    // hint can nag from inside the installed app itself.
+    if ((navigator as Navigator & { standalone?: boolean }).standalone) return;
     // Don't nag inside the sign-in flow itself.
     if (window.location.pathname.startsWith("/onboard")) return;
 
@@ -82,7 +86,7 @@ export function InstallPrompt() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:pb-4 pointer-events-none">
       <div className="mx-auto flex max-w-md items-center gap-3 rounded-panel border border-border/70 bg-surface-1/95 p-3.5 shadow-2xl backdrop-blur-xl pointer-events-auto">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-surface-2 text-foreground">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-border/80 bg-surface-2 text-foreground">
           <Download className="h-4 w-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
@@ -104,7 +108,7 @@ export function InstallPrompt() {
           <button
             type="button"
             onClick={doInstall}
-            className="btn-aurora shrink-0 rounded-md px-3.5 py-1.5 text-xs font-semibold"
+            className="btn-aurora shrink-0 rounded-chip px-3.5 py-1.5 text-xs font-semibold"
           >
             Install
           </button>
@@ -113,7 +117,7 @@ export function InstallPrompt() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss install hint"
-          className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-white/[0.05]"
+          className="shrink-0 rounded-chip p-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-surface-hover"
         >
           <X className="h-4 w-4" />
         </button>

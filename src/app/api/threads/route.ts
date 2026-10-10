@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
-import { getEnv } from "@/lib/env";
+import { JWT_SECRET_ENV_KEY, generateUUID } from "@/lib/auth";
+import { getEnv, waitUntil } from "@/lib/env";
+import { verifySession } from "@/lib/session";
 import type { Thread, ChatMessage } from "@/lib/types";
 import { mergeThreadHistory } from "@/lib/threads";
+import { deleteThreadEmbeddings } from "@/lib/chat-embeddings";
 
 /**
  * Write bounds for a thread.
@@ -32,11 +34,11 @@ async function getAuthPayload(request: NextRequest) {
   const env = await getEnv();
   const secret = env[JWT_SECRET_ENV_KEY];
   if (!secret) return { env, error: NextResponse.json({ error: "JWT_SECRET is not configured" }, { status: 500 }) } as const;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  const payload = await verifyJWT(token, secret);
-  if (!payload) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  return { env, payload } as const;
+  // verifySession (not bare verifyJWT) so a revoked cookie is rejected here,
+  // not only by the middleware matcher.
+  const session = await verifySession(env, request);
+  if (!session) return { env, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
+  return { env, payload: session.payload } as const;
 }
 
 export async function GET(request: NextRequest) {
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (merged.length > MAX_THREAD_MESSAGES || JSON.stringify(merged).length > MAX_THREAD_CHARS) {
       return threadTooLong(merged.length);
     }
-    await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ?").bind(JSON.stringify(merged), body.threadId).run();
+    await env.DB.prepare("UPDATE threads SET message_history = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?").bind(JSON.stringify(merged), body.threadId, payload.sub).run();
     return NextResponse.json({ threadId: body.threadId, messageCount: merged.length });
   }
   const newThreadId = generateUUID();
@@ -110,6 +112,20 @@ export async function DELETE(request: NextRequest) {
   const url = new URL(request.url);
   const threadId = url.searchParams.get("id");
   if (!threadId) return NextResponse.json({ error: "Thread id is required" }, { status: 400 });
+  // Read the message count BEFORE the D1 delete so the Vectorize sweep can
+  // enumerate deterministic ids. Synchronous read (~2ms) but the delete
+  // itself runs in `waitUntil` so a Vectorize hiccup never blocks the user.
+  // NOTE: `json_array_length(message_history)` direct on the column — the
+  // previous `json_array_length(json_extract(message_history))` returned NULL
+  // for a top-level array (extracted-then-re-extracted is not valid JSON for
+  // the length fn), so turnCount was always 0 and a deleted thread silently
+  // kept every one of its vectors. Matches the account-deletion sweep in
+  // api/auth/account, which already uses the direct form.
+  const row = await env.DB.prepare("SELECT json_array_length(message_history) AS n FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).first<{ n: number | null }>();
+  const turnCount = Number(row?.n ?? 0);
   await env.DB.prepare("DELETE FROM threads WHERE id = ? AND user_id = ?").bind(threadId, payload.sub).run();
+  if (turnCount > 0) {
+    waitUntil(deleteThreadEmbeddings(env, payload.sub, threadId, turnCount));
+  }
   return NextResponse.json({ ok: true });
 }

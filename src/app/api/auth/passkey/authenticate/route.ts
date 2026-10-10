@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEnv } from "@/lib/env";
+import { hashClientIp } from "@/lib/ip-hash";
 import {
   buildAuthenticationOptions,
   completeAuthentication,
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ requestId, options });
   } catch (e) {
     console.error("[passkey:auth:options]", e);
-    return NextResponse.json({ error: "Could not start passkey sign-in." }, { status: 500 });
+    return NextResponse.json({ error: "Couldn't start sign-in — try again." }, { status: 500 });
   }
 }
 
@@ -38,12 +39,13 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Missing passkey response" }, { status: 400 });
   }
 
-  // Per-IP + per-credential throttle, mirroring the password login route.
-  const ip = request.headers.get("cf-connecting-ip") || "unknown";
-  const rlKey = `pkauth-rl:${ip}:${response.id}`;
+  // Per-IP + per-credential throttle, mirroring the password login route. The IP
+  // contributes a one-way keyed token, never the raw address (#62).
+  const ipToken = await hashClientIp(request.headers.get("cf-connecting-ip") || "unknown", env.JWT_SECRET);
+  const rlKey = `pkauth-rl:${ipToken}:${response.id}`;
   const count = parseInt((await env.SESSION_KV.get(rlKey)) || "0", 10);
   if (count >= AUTH_RATE_LIMIT_MAX) {
-    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+    return NextResponse.json({ error: "Too many attempts — try again in a few minutes." }, { status: 429 });
   }
   await env.SESSION_KV.put(rlKey, String(count + 1), { expirationTtl: AUTH_RATE_LIMIT_TTL });
 

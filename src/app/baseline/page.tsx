@@ -10,6 +10,7 @@ import { PageShell } from "@/components/page-shell";
 import { Stepper } from "@/components/stepper";
 import { PageHeader } from "@/components/page-header";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { WhyWeAskFirst } from "@/components/why-we-ask";
 import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineForm } from "@/components/baseline-form";
 import { BaselineDrawer } from "@/components/baseline-drawer";
@@ -116,22 +117,7 @@ function BaselineContent() {
               unlock, what happens to my birth data. One box, directly above the
               form — not a page they have to scroll past — and only when they came
               from a conversation, because nobody else needs the explanation. */}
-          {fromChat && (
-            <div className="mb-6 rounded-panel border border-border/60 bg-white/[0.03] px-4 py-4">
-              <Eyebrow as="p" scale="sm">Why we ask first</Eyebrow>
-              <p className="mt-2 text-sm leading-relaxed text-foreground">
-                Chat opens the moment your Baseline exists. It is the plain-language picture your
-                conversations are read against — where you tend to start, what keeps coming back,
-                which threads are yours to carry. Without it, every answer starts from nothing and
-                has to guess.
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Your birth time and place are used for one thing only: computing that starting point from
-                NASA/JPL planetary positions. Nothing is shared without a yes, and you can update these
-                details here any time. It takes about a minute.
-              </p>
-            </div>
-          )}
+          {fromChat && <WhyWeAskFirst />}
           <BaselineForm
             submitLabel="Build my Baseline"
             onSaved={() => {

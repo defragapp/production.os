@@ -28,6 +28,8 @@ const config: Config = {
           1: "hsl(var(--surface-1))",
           2: "hsl(var(--surface-2))",
           3: "hsl(var(--surface-3))",
+          hover: "hsl(var(--surface-hover))",
+          selected: "hsl(var(--surface-selected))",
         },
       },
       borderRadius: {

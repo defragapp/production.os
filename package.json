@@ -2,13 +2,14 @@
   "name": "production-os",
   "version": "0.1.0",
   "private": true,
-  "//release": "CANONICAL RELEASE PATH, in this order: (1) `npm run verify:release` — every gate in scripts/verify-release.mjs green (the count grows with each ratchet; the script's own header is the source of truth), (2) `git push origin main`, (3) `npx wrangler deployments list` POLLED for ~2 minutes to see whether a new version rolled out. Workers Builds on the git integration is SUPPOSED to fire on every push to main, but it is NOT dependable on its own — on release 11586ad no build-system-authored version had landed ~6 minutes after the push, so the release had to be shipped by hand. Treat step 3 as a CHECK of the push, not an assumption: if no new version appears within ~2 minutes, run `rm -rf .open-next .next && npm run deploy` exactly once. A CLI-authored version shows your email as Author; a build-system version shows undefined. NEVER run the CLI deploy while a push-triggered build is still in flight — that is a second build of the same commit at once, and colliding builds stall static-asset binding propagation (the 503/hang seen on /, /privacy, /terms).",
+  "//release": "CANONICAL RELEASE PATH: (1) `npm run verify:release` — every gate in scripts/verify-release.mjs green (the script header is source-of-truth for gate count), (2) `git push origin main` — push-to-deploy via Workers Builds is LIVE and verified 2026-10-09 (by worker TAG via the Builds API: triggers `ea6e4bc3…`/`7115623b…` exist, builds fire on every push to `main` and are green, latest deployed version `1602b4df…` == live deployment `6ae1c673…`). The earlier 'NOT provisioned' claim was a name-vs-tag query bug — name-based `/builds/workers/{name}/…` calls return []/12040; always use the tag. Deployments read `source: \"wrangler\"` because the triggers' deploy_command runs `wrangler deploy` — that is Builds deploying, not CLI. Build tokens `f40e7197…`/`f96c21f9…` are wired and valid — DO NOT delete. CLI `npm run deploy` (chains `opennextjs-cloudflare deploy` + `tail:deploy`) is the out-of-band fallback only. Collision rule (live): do NOT run CLI deploy while a push-triggered build is in flight — colliding builds can stall static-asset binding propagation.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env cloudflare",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy && npm run tail:deploy",
+    "cf-typegen": "wrangler types",
+    "cf-typegen:check": "wrangler types --check",
     "db:migrate": "wrangler d1 execute production-os-db --local --file=./schema.sql",
     "db:migrate:remote": "wrangler d1 execute production-os-db --remote --file=./schema.sql",
     "db:migrate:0001": "wrangler d1 execute production-os-db --local --file=./migrations/0001_token_version.sql",
@@ -19,10 +20,24 @@
     "db:migrate:0003:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0003_journeys.sql",
     "db:migrate:0004": "wrangler d1 execute production-os-db --local --file=./migrations/0004_compliance_and_owner.sql",
     "db:migrate:0004:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0004_compliance_and_owner.sql",
+    "db:migrate:0005": "wrangler d1 execute production-os-db --local --file=./migrations/0005_threads_user_updated_index.sql",
+    "db:migrate:0005:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0005_threads_user_updated_index.sql",
+    "db:migrate:0006": "wrangler d1 execute production-os-db --local --file=./migrations/0006_relationship_history.sql",
+    "db:migrate:0006:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0006_relationship_history.sql",
+    "db:migrate:0007": "wrangler d1 execute production-os-db --local --file=./migrations/0007_nudge.sql",
+    "db:migrate:0007:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0007_nudge.sql",
+    "db:migrate:0008": "wrangler d1 execute production-os-db --local --file=./migrations/0008_admin_audit_log.sql",
+    "db:migrate:0008:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0008_admin_audit_log.sql",
+    "db:migrate:0009": "wrangler d1 execute production-os-db --local --file=./migrations/0009_answer_feedback.sql",
+    "db:migrate:0009:remote": "wrangler d1 execute production-os-db --remote --file=./migrations/0009_answer_feedback.sql",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify:release": "node scripts/verify-release.mjs"
+    "verify:release": "node scripts/verify-release.mjs",
+    "verify:edge": "node scripts/verify-edge-cache.mjs",
+    "tail:deploy": "wrangler deploy --config tail-worker/wrangler.jsonc",
+    "tail:secret:resend": "wrangler secret put RESEND_API_KEY --config tail-worker/wrangler.jsonc",
+    "tail:dev": "wrangler dev --config tail-worker/wrangler.jsonc"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.2",
@@ -40,7 +55,6 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260910.1",
     "@opennextjs/cloudflare": "^1.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
@@ -62,6 +76,10 @@
     "workerd": true
   },
   "overrides": {
-    "postcss": "^8.5.28"
+    "brace-expansion@^1.0.0": "^1.1.21",
+    "brace-expansion@^2.0.0": "^2.1.7",
+    "brace-expansion@^5.0.0": "^5.0.12",
+    "postcss": "^8.5.28",
+    "undici": "^7.29.1"
   }
 }

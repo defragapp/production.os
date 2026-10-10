@@ -235,7 +235,7 @@ export function OwnerConsole() {
             {minting ? "Minting…" : "Mint pass link"}
           </Button>
           {mintedLink && (
-            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+            <div className="space-y-2 rounded-chip border border-border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">
                 Copy this link now — it is shown only once and cannot be retrieved after.
               </p>
@@ -294,7 +294,7 @@ export function OwnerConsole() {
             </Button>
           </div>
           {lookupResult != null && typeof lookupResult === "object" && "email" in (lookupResult as Record<string, unknown>) && (
-            <pre className="overflow-x-auto rounded-md border border-border bg-muted/30 p-3 font-mono text-xs text-foreground">
+            <pre className="overflow-x-auto rounded-chip border border-border bg-muted/30 p-3 font-mono text-xs text-foreground">
               {JSON.stringify(lookupResult, null, 2)}
             </pre>
           )}

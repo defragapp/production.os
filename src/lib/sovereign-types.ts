@@ -114,6 +114,21 @@ export interface ConsequenceCandidate {
   evidence: string[];
 }
 
+/**
+ * A verbatim statement pulled from an earlier conversation by the semantic
+ * recall layer (chat-recall). Offered to the model as pattern-visibility only.
+ * Never carries another person's data; always the user's own past turns.
+ */
+export interface PriorSignal {
+  snippet: string;
+  role: "user" | "assistant";
+  score: number;
+  /** D1 `threads.updated_at` string, or null when unresolvable. */
+  occurredAt: string | null;
+  threadId: string;
+  turnIndex: number;
+}
+
 export interface ReasoningContext {
   level: 1 | 2 | 3 | 4;
   domains: Domain[];
@@ -136,6 +151,9 @@ export interface ReasoningContext {
   relationalSignals?: RelationalSignal[];
   /** Deterministic group-level signals (Level 4). Empty when level < 4 or < 2 peers. */
   systemSignals?: SystemSignal[];
+  /** Semantic recall from the user's own earlier conversations. Empty when
+   *  memory_mode='local' (never reaches Vectorize) or nothing clears the bar. */
+  priorSignals?: PriorSignal[];
 }
 
 /**
@@ -159,6 +177,13 @@ export interface ConsentedPeer {
   };
   /** Between-design notes derived from comparing both users' computations. */
   betweenDesign: string[];
+  /**
+   * The peer's OWN earlier verbatim statements, surfaced only when history
+   * sharing is consented (peer's a_/b_share_history flag), the requesting user
+   * is Sovereign+, the inquiry scope is relational, and memory_mode is server.
+   * Absent (undefined) for a baseline-only peer. Never another third party.
+   */
+  recollections?: string[];
   /**
    * Optional HD computation data for deterministic signal extraction.
    * Internal only — never rendered verbatim to the prompt. The signal engine
@@ -188,7 +213,13 @@ export type SafetyViolationType =
   | "destiny"
   | "overvalidation"
   | "prescriptive-authority"
-  | "unsupported-claim";
+  | "unsupported-claim"
+  | "therapy-claim"
+  | "fixed-family-role"
+  | "spiritual-causation"
+  | "projection-as-fact"
+  | "institutional-tone"
+  | "excessive-disclaimer";
 
 export interface SafetyViolation {
   type: SafetyViolationType;

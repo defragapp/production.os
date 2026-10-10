@@ -14,6 +14,7 @@ import type {
   SafetyViolation,
   SafetyViolationType,
 } from "./sovereign-types";
+import { selectCrisisResources } from "./crisis-resources";
 
 const NEGATIVES = new Set([
   "not", "no", "never", "don't", "dont", "doesn't", "doesnt", "isn't", "isnt",
@@ -34,6 +35,14 @@ interface LexiconRule {
    * knowledge about her inner world).
    */
   insideNegativeSkips?: boolean;
+  /**
+   * When true, a negation token in the 40-char window BEFORE the match must
+   * NOT cancel the rule. Used by rules whose own wording contains negation
+   * ("I cannot … I cannot …") — there the repeated fence is the violation
+   * itself, and the look-back window is guaranteed to contain the first
+   * "cannot".
+   */
+  skipNegationLookback?: boolean;
 }
 
 const LEXICON: LexiconRule[] = [
@@ -58,6 +67,11 @@ const LEXICON: LexiconRule[] = [
       /\bavoidant(?: |-)attachment\b/i,
       /\banxious(?: |-)attachment\b/i,
       /\bthis sounds like a?\s*(?:textbook |classic |clear |case of )?\w+\s*(?:disorder|syndrome)\b/i,
+      // Paraphrase-resistant pathologizing: a pop-clinical noun asserted as the
+      // cause ("your fear of abandonment is driving this"). The causal frame is
+      // required so a hedged interpretive question ("could a fear of
+      // abandonment be why…?") stays allowed — only diagnosis-as-fact is blocked.
+      /\b(?:fear of (?:abandonment|rejection|intimacy|engulfment)|inner\s+child|wounded\s+child|abandonment\s+(?:issue|wound|trauma)|attachment\s+(?:issue|wound)|trust\s+issue|control\s+issue)[^.]{0,24}\b(?:is|are|was|were)\s+(?:why|driving|causing|behind|the\s+reason)\b/i,
     ],
   },
   {
@@ -72,6 +86,13 @@ const LEXICON: LexiconRule[] = [
       /\byou attract (?:people|partners|relationships) who (?:take advantage|hurt|use|leave)\b/i,
       /\bthe real you (?:is|is that|wants)\b/i,
       /\bdeep down you(?:'re| are)\b/i,
+      // "You attract toxic partners" — the original rule required a trailing
+      // "who…" clause; the derogatory-qualified object form is the same verdict
+      // and must be caught too.
+      /\byou\s+(?:always\s+)?(?:attract|draw\s+in|pull\s+in|surround\s+yourself\s+with)\s+(?:toxic|narcissis\w*|abusive|manipulative|selfish|emotionally\s+unavailable|the\s+wrong|bad|damaged)\s+(?:people|partners?|relationships?|friends?|them)\b/i,
+      // "You're someone who makes everything about yourself" — an identity
+      // verdict wrapped in "someone who…" that never names a listed adjective.
+      /\byou(?:'re| are)\s+(?:just\s+)?(?:a\s+)?(?:person|someone|type\s+of\s+person)\s+who\s+(?:makes?\s+everything\s+about|only\s+thinks\s+about|can'?t\s+(?:hear|take|accept|see)|never\s+(?:listens?|admits?))\b/i,
     ],
   },
   {
@@ -99,6 +120,13 @@ const LEXICON: LexiconRule[] = [
       /\byou\s+intimidate\s+(?:him|her)\b/i,
       /\b(?:he|she)\s+misses\s+you\s+but\s+(?:won'?t|can'?t)\s+say\s+it\b/i,
       /\bthey\s+actually\s+(?:do\s+care|care)\b\s?about you\b/i,
+      // Bare declarative inner-state claims (no adverb present): "She cares
+      // about you", "He loves you", "He misses you". The 40-char negation look-
+      // back in flagged() still spares the honest "I can't tell whether she
+      // cares about you" framing, so this lifts recall without killing hedged text.
+      /\b(?:he|she|they)\s+(?:deep\s+down\s+|secretly\s+|actually\s+|truly\s+|genuinely\s+|clearly\s+)?(?:cares?\s+about|loves?|misses?|needs?)\s+you\b/i,
+      // "He's just too scared to say it" — asserting the felt reason for silence.
+      /\b(?:he|she|they)\s+(?:is|'s|are|'re)\s+(?:just\s+|too\s+)?(?:scared|afraid|terrified)\s+to\s+(?:say|admit|open|commit|love|be\s+with)\b/i,
     ],
   },
   {
@@ -132,7 +160,7 @@ const LEXICON: LexiconRule[] = [
   {
     type: "baseline-determinism",
     severity: "high",
-    note: "Presenting Baseline as fixed identity, destiny, or instruction is prohibited.",
+    note: "Presenting the Baseline or Human Design as fixed identity — for the user or another person — is prohibited.",
     patterns: [
       /\byour\s+baseline\s+(?:says|predicts|determines|destines|means)\s+you\b/i,
       /\baccording\s+to\s+your\s+baseline[,]?\s+you(?:'re| are)\s+\w+\b/i,
@@ -141,6 +169,11 @@ const LEXICON: LexiconRule[] = [
       /\byour\s+life\s+path\s+(?:means|determines|predestines|destines)\s+you\b/i,
       /\bhuman\s+design\s+dictates\b/i,
       /\byou\s+are\s+(?:a\s+)?(?:pure\s+)?generator\b.*\bso\s+you\s+should\b/i,
+      // Naming ANOTHER person a Human Design type hands down an identity verdict
+      // about them and name-drops the framework in the same breath. The 40-char
+      // negation look-back still spares honest "I can't tell whether she is a
+      // Generator" framing, so hedged references stay allowed.
+      /\b(?:he|she|they|your\s+(?:partner|wife|husband|spouse|boyfriend|girlfriend|ex|mother|mom|mum|father|dad|sister|brother|friend|boss|coworker|co-worker|colleague|roommate))(?:(?:'s|’s|'re|’re)|\s+(?:is|are))\s+(?:a\s+true\s+|a\s+pure\s+|just\s+|actually\s+|really\s+|basically\s+|simply\s+|clearly\s+|classic\s+|a\s+|an\s+)*(?:generator|projector|reflector|manifesting\s+generator|manifestor)s?\b/i,
     ],
   },
   {
@@ -216,6 +249,68 @@ const LEXICON: LexiconRule[] = [
       /\bevidence\s+proves?\b/i,
     ],
   },
+  {
+    type: "projection-as-fact",
+    severity: "medium",
+    note: "Naming someone as 'projecting' as a certain fact is prohibited — it can only be offered as one possible interpretation.",
+    patterns: [
+      /\b(?:is|are)\s+(?:definitely\s+|clearly\s+|just\s+|simply\s+|obviously\s+)?project(?:ing|ion)\b/i,
+      /\b(?:they|he|she)(?:'re|’re|\s+are|\s+is)\s+projecting\b[^.!?]{0,24}?\b(?:onto|on\s+to)\b/i,
+      // Bare verb form: "He projects his guilt onto you" — the same verdict
+      // without a "is/are" helper.
+      /\b(?:they|he|she)\s+projects?\b[^.!?]{0,24}?\b(?:onto|on\s+to)\b/i,
+    ],
+  },
+  {
+    type: "fixed-family-role",
+    severity: "high",
+    note: "Installing a family role as fixed identity is prohibited — the role can be named as experienced, never as what someone is.",
+    patterns: [
+      /\b(?:you\s+(?:are|were|'re|’re)|they\s+made\s+you)\s+(?:the\s+)?(?:scapegoat|golden\s+child|family\s+fixer|identified\s+patient|peacekeeper)\b/i,
+      /\bcast\s+you\s+as\s+the\s+(?:scapegoat|golden\s+child|family\s+fixer|identified\s+patient|peacekeeper)\b/i,
+    ],
+  },
+  {
+    type: "spiritual-causation",
+    severity: "high",
+    note: "Claiming a spiritual, ancestral, or curse-based cause as certain is prohibited.",
+    patterns: [
+      /\b(?:literal|real|ancestral|generational)\s+curse\b/i,
+      /\b(?:God|the\s+universe|your\s+bloodline|your\s+ancestors?)\s+(?:caused|is\s+causing|is\s+forcing|wants|made)\b/i,
+      /\blow\s+frequency\b/i,
+    ],
+  },
+  {
+    type: "therapy-claim",
+    severity: "high",
+    note: "Presenting this tool as therapy or treatment — or promising that therapy or anything will cure — is prohibited.",
+    patterns: [
+      /\b(?:as\s+your\s+therapist|acting\s+as\s+your\s+(?:therapist|counselor|counsellor))\b/i,
+      /\b(?:therap(?:y|ist)|counsel(?:ing|ling)|treatment)\s+will\s+(?:fix|heal|cure|solve|resolve|change)\b/i,
+      /\bthis\s+will\s+heal\s+your\s+trauma\b/i,
+      /\bI\s+can\s+(?:treat|cure|diagnose)\b/i,
+    ],
+  },
+  {
+    type: "institutional-tone",
+    severity: "low",
+    note: "Canned institutional phrasing is prohibited — write in the product's own plain voice.",
+    patterns: [
+      /\bas\s+an\s+ai\b/i,
+      /\binsufficient\s+data\b/i,
+      /\bthe\s+subject\s+presents\b/i,
+      /\bit\s+is\s+recommended\s+that\b/i,
+    ],
+  },
+  {
+    type: "excessive-disclaimer",
+    severity: "low",
+    skipNegationLookback: true,
+    note: "Repeated disclaimers in a row read as defensive and cold; one honest limit statement is enough.",
+    patterns: [
+      /\bi\s+(?:cannot|can'?t)\b[^.!?]{0,160}[.!?]\s*\bi\s+(?:cannot|can'?t)\b/i,
+    ],
+  },
 ];
 
 function containsNegative(text: string): boolean {
@@ -247,8 +342,10 @@ function flagged(
       const before = body.slice(Math.max(0, match.index - 40), match.index);
       const inside = body.slice(match.index, match.index + Math.min(match.length, 60));
       // Negation DIRECTLY before the claim cancels it (e.g. "I can't
-      // determine whether he is trying to hurt you").
-      if (containsNegative(before)) continue;
+      // determine whether he is trying to hurt you"). Rules whose own wording
+      // contains negation opt out — for them the look-back window is part of
+      // the violation itself, not a hedge around it.
+      if (!rule.skipNegationLookback && containsNegative(before)) continue;
       // Negation INSIDE the claim only cancels identity-style wording
       // ("you are NOT the problem"). For inner-world claims the negative is
       // itself the assertion ("she doesn't care about you").
@@ -277,6 +374,11 @@ const LEAK_MARKERS: RegExp[] = [
   /\bUSER DEFINITIONS\b/i,
   /\breasoning context\b/i,
   /\bepistemic status\b/i,
+  // Internal enum tokens and derived-data labels never occur in natural prose;
+  // if the model echoes them ("your baseline-supported signals", "derived
+  // baseline") it is leaking the reasoning layer and must be repaired.
+  /\b(?:baseline-supported|model-hypothesis|user-interpretation)\b/i,
+  /\bderived (?:baseline|signals?|summaries?)\b/i,
 ];
 
 function detectLeakage(text: string): { index: number; length: number } | null {
@@ -360,6 +462,24 @@ const ESCALATE_PATTERNS = [
   /\btake\s+my\s+(?:own\s+)?life\b/i,
   /\bbed\s+myself\s+up\b/i,
   /\bending\s+(?:my\s+)?life\b/i,
+  // Spanish crisis disclosures (kept to unmistakable phrasings; accented and
+  // unaccented forms both match, since typing without accents is common).
+  /\b(?:quiero|voy\s+a|pienso)\s+(?:morir|suicidarme|matarme)\b/i,
+  /\bno\s+quiero\s+(?:vivir|seguir\s+(?:viviendo|adelante)|seguir)\b/i,
+  /\bme\s+quiero\s+(?:matar|suicidar)\b/i,
+  /\bacabar\s+con\s+mi\s+vida\b/i,
+  /\bquitarme\s+la\s+vida\b/i,
+  /\bno\s+tengo\s+(?:razones|motivos|ganas)\s+(?:de|para)\s+vivir\b/i,
+  /\b(?:me\s+hago\s+(?:daño|dano)|hacerme\s+(?:daño|dano)|autolesion(?:arme|es)?)\b/i,
+  /\bsuicidio\b|\bpensamientos\s+suicidas\b/i,
+  // French crisis disclosures (both straight and typographic apostrophes).
+  /\bje\s+(?:veux|vais)\s+(?:me\s+tuer|me\s+suicider)\b/i,
+  /\bje\s+veux\s+mourir\b/i,
+  /\bje\s+ne\s+veux\s+plus\s+(?:vivre|continuer)\b/i,
+  /\b(?:mettre\s+fin\s+à\s+mes\s+jours|mettre\s+un\s+terme\s+à\s+ma\s+vie|en\s+finir\s+avec\s+la\s+vie)\b/i,
+  /\b(?:automutilation|plus\s+de\s+raison\s+de\s+vivre)\b/i,
+  /\b(?:je\s+ne\s+vois\s+plus\s+d['’]avenir|je\s+suis\s+fatigu[ée]e?\s+de\s+vivre)\b/i,
+  /\bpens[ée]es\s+suicidaires\b/i,
 ];
 
 const GROUNDED_PATTERNS = [
@@ -368,19 +488,65 @@ const GROUNDED_PATTERNS = [
   /\bmolest(?:ed|ation)?\b/i,
   /\bdomestic\s+violence\b/i,
   /\bhit\s+me\b(?!\s+with\s+an\s+(?:idea|emotion))/i,
-  /\b(?:hits|hit|beat|beats|beaten|slapped|slaps|punched|kicks|kicked|strangled|hurt)\s+(?:me|my)\b/i,
-  /\bmy\s+(?:partner|husband|wife|boyfriend|girlfriend|dad|father|mom|mother|stepdad|stepmom|parent)\s+(?:hits|hits?|beat|beats|hurts?|pushes|slaps|abuses|abused)\b/i,
+  // Bare verb+me forms are ambiguous in writing, so this rule stays silent
+  // unless the sentence is unambiguous physical violence — a clear past/passive
+  // act ("I was hit", "he knocked me down"), a non-idiomatic verb ("strangles
+  // me"), or a verb that can't parse as emotional hurt ("slaps me"). "Did he
+  // mean to hurt me?" and "she hurts my feelings" must NOT route a plain
+  // relationship question to the DV script. Named-abuser disclosures are
+  // covered by the next rule; sexual-abuse and "hit me with an idea"-style
+  // idioms keep their own dedicated handling.
+  /\b(?:hits?|slaps?|punch(?:es|ed)?|kicks?|strangl(?:es|ed)|chokes?|shoves)\s+me\b/i,
+  /\bwas\s+(?:hit|beaten|strangled|choked|knocked\s+down|slapped|punched|kicked|burned)\b/i,
+  /\b(?:beat|beats|hit|hits)\s+me\s+(?:up\b|with\b|by\b|when\b|and\b|black(?:ed|s)?\b|knocks?\b)/i,
+  /\b(?:my\s+)?(?:ex(?:-\w+)?|partner|husband|wife|boyfriend|girlfriend|dad|father|mom|mother|stepdad|stepmom|parent)\s+(?:hits?|beats?|hurts?|pushes|slaps|abuses|abused)\s+me\b/i,
+  /\b(?:he|she|they)(?:'s|\s+is|\s+was)?\s+hurts?\s+me\b/i,
   /\bforced\s+me\s+to\b/i,
   /\b(?:touches?|touched)\s+me\s+without\s+(?:my\s+)?consent\b/i,
   /\bwas\s+(?:sexually\s+)?abused\b/i,
   /\b(?:childhood|growing\s+up)(?:\s+\w+)?\s+(?:abuse|trauma)\b/i,
   /\bmy\s+ex\s+(?:hit|beat|abused|stalked)\s+me\b/i,
+  // Spanish abuse/violence disclosures (physical or unambiguous; accented and
+  // unaccented forms both match). Note: JS \b treats accented finals like ó as
+  // non-word, so accented past-tense verbs use (?!\S) instead of a trailing \b.
+  /\bme\s+(?:pega|golpea|empuja|ahorca|estrangula)\b/i,
+  /\bme\s+(?:peg[oó]|golpe[oó]|empuj[oó]|ahorc[oó])(?!\S)/i,
+  /\b(?:fui\s+golpead[oa]|me\s+han\s+golpeado|fui\s+agredid[oa])\b/i,
+  /\bme\s+oblig(?:a|ó|o)\s+(?:a\s+acostarme|a\s+tener\s+sexo|a\s+hacer\s+algo\s+sexual)\b/i,
+  /\bme\s+toc(?:a|ó|o)\s+sin\s+(?:mi\s+)?(?:consentimiento|permiso)\b/i,
+  /\bno\s+me\s+deja\s+salir\b/i,
+  /\b(?:violencia\s+dom[eé]stica|maltrat(?:o|a))\b/i,
+  /\b(?:abus(?:o\s+sexual|ad[oa])|fui\s+violad[oa])\b/i,
+  /\bme\s+viol(?:a|ó|o)(?!\S)/i,
+  /\b(?:acoso|me\s+acosa)\b/i,
+  // French abuse/violence disclosures (both apostrophe forms).
+  /\bil\s+me\s+(?:bat|tape|frappe|frappait|pousse|étrangle)\b/i,
+  /\bil\s+m['’]a\s+(?:frapp[ée]e?|battue?|pouss[ée]e?|viol[ée]e?)\b/i,
+  /\bje\s+suis\s+(?:battue?|frapp[ée]e?|viol[ée]e?)\b/i,
+  /\b(?:violence\s+domestique|maltraitance)\b/i,
+  /\bil\s+me\s+force\s+(?:à\s+(?:avoir\s+des\s+rapports\s+sexuels|faire\s+quelque\s+chose\s+de\s+sexuel))\b/i,
+  /\b(?:ne\s+me\s+laisse\s+pas\s+partir|m['’]oblige\s+à\s+avoir\s+des\s+rapports)\b/i,
+  /\bil\s+me\s+touche\s+sans\s+(?:mon\s+)?consentement\b/i,
+  /\b(?:me\s+harc[èe]le|harc[ée]l(?:ement|é|ée))(?!\S)/i,
+  /\babus\s+sexuel\b/i,
 ];
 
 export function detectSafetyMode(messages: ChatMessage[]): SafetyMode {
-  const text = messages.map((m) => m.content).join("\n");
-  if (ESCALATE_PATTERNS.some((p) => p.test(text))) return "escalate";
-  if (GROUNDED_PATTERNS.some((p) => p.test(text))) return "grounded";
+  // Only the user's turns carry disclosure intent. The assistant's own
+  // safety/helpline text repeats crisis and abuse words, so scanning it would
+  // let our prior reply re-trigger the gate on an unrelated later turn.
+  const userTurns = messages.filter((m) => m.role === "user");
+  const userText = userTurns.map((m) => m.content).join("\n");
+  // Crisis stays conservative and thread-wide: any self-harm signal from the
+  // user in the retained thread keeps routing to resources. Erring toward help
+  // here is intentional and is never loosened for answer quality.
+  if (ESCALATE_PATTERNS.some((p) => p.test(userText))) return "escalate";
+  // Abuse/grounding is scoped to the CURRENT user turn. A disclosure is
+  // acknowledged + redirected on the turn it appears; once the conversation
+  // moves to an unrelated, safe question, inference resumes rather than
+  // freezing forever. A fresh disclosure in the current turn still fires.
+  const currentTurn = userTurns.length > 0 ? userTurns[userTurns.length - 1].content : "";
+  if (GROUNDED_PATTERNS.some((p) => p.test(currentTurn))) return "grounded";
   return "standard";
 }
 
@@ -427,35 +593,110 @@ export function buildExtractionDeflection(): string {
     "",
     "What I can tell you plainly: this is a self-reflection space, your answers are grounded in your own Baseline and what you've shared, and nothing here is a substitute for professional care. If you're curious how Sovereign works at a high level, the FAQ and the Terms say what I can honestly say.",
     "",
-    "If there's something real you want to look at — a pattern, a relationship, a decision — I'm right here for that.",
+    "If there's something real you want to look at — a dynamic, a relationship, a decision — I'm right here for that.",
+  ].join("\n");
+}
+
+/**
+ * Pre-model cross-account data-request detector.
+ *
+ * The thread loader already scopes every read to the authenticated caller
+ * (Gate 34 proves a stranger's session cannot reach another account's rows),
+ * so this is defence in depth for the ASK itself: a request shaped like
+ * "show me another user's baseline" or "dump all users" is refused before any
+ * model tokens are spent, rather than relying on the loader to return an empty
+ * result the model might then narrate around. Deliberately narrow — it fires
+ * on other-people's-private-data and bulk-dump shapes, never on the ordinary
+ * relationship questions ("how might another person see this", "my partner's
+ * side") that are the product. Consented peer summaries are assembled through
+ * buildConsentedPeers and never reach here as a match.
+ */
+const CROSS_ACCOUNT_PATTERNS = [
+  // "another/other/someone else's" (+ optional user/account/person) + a private-data noun.
+  /\b(?:another|other|someone\s+else|somebody\s+else|anyone\s+else)(?:\s+(?:user|account|person|people|member|customer|client))?\s*(?:'?s|s')\s+(?:baseline|data|thread|conversation|message|chart|record|profile|email|password|login)s?\b/i,
+  // "all/every/each/any <user|account|…>'s <private noun>".
+  /\b(?:all|every|each|any)\s+(?:registered\s+)?(?:user|account|member|customer|people|person)s?\s*(?:'?s|s')\s+(?:baseline|data|thread|conversation|message|chart|record|profile|email|password|login)s?\b/i,
+  // "everyone's <private noun>".
+  /\beveryone\s*(?:'?s|s')\s+(?:baseline|data|thread|conversation|message|chart|record|profile|email|password|login)s?\b/i,
+  // Exfil verb + collective: "dump all users", "export the entire database".
+  /\b(?:dump|export|scrape|harvest|enumerate)\b[^.]{0,30}?\b(?:all|every|the\s+(?:entire|whole|full))\b[^.]{0,30}?\b(?:user|account|baseline|thread|database|customer|member|record|email)s?\b/i,
+];
+
+export function detectCrossAccountRequest(messages: ChatMessage[]): boolean {
+  // Only the human turns carry intent to exfiltrate; assistant text is our own.
+  const text = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
+  return CROSS_ACCOUNT_PATTERNS.some((p) => p.test(text));
+}
+
+/** The deflection the chat route streams in place of a model call for a
+ *  cross-account ask. Honest about the boundary, it grants nothing, confirms
+ *  nothing about who else is on the platform, and points a genuinely locked-out
+ *  person at a human. */
+export function buildCrossAccountDeflection(): string {
+  return [
+    "I can only work with your own account and the people who have chosen to share with you here. Someone else's private data — their Baseline, their threads, their sign-in — isn't something I'll pull up or hand over, to you or to anyone.",
+    "",
+    "What I can do is look at a relationship through what you've shared and how you experience it. And if you think someone has gotten into your account without permission, the support page tells you how to reach a person about it.",
   ].join("\n");
 }
 
 export function buildSafetyResponse(mode: Exclude<SafetyMode, "standard">): string {
+  const { resources, selectionNotice } = selectCrisisResources(mode);
+  const lines = resources.map((r) => r.line);
   if (mode === "escalate") {
     return [
       "Thank you for trusting me with this. I'm not equipped to analyze what you're going through — and right now, what matters most is that you're not alone in it.",
       "",
       "If you are thinking about ending your life, please reach out now — you don't carry this alone:",
-      "- US: National Suicide Prevention Lifeline — call or text 988 (988lifeline.org)",
-      "- US: Crisis Text Line — text HOME to 741741",
-      "- Canada: call or text 988",
-      "- UK: Samaritans — call 116 123",
-      "- International: find help near you at findahelpline.com",
+      ...lines,
       "",
-      "A counselor or care provider is the right person to help with what you're feeling. I'm still here for exploring patterns and meaning when you want to talk something through — gently, and at your pace.",
+      selectionNotice,
+      "",
+      "A counselor or care provider is the right person to help with what you're feeling. I'm still here for exploring what keeps happening and what it means when you want to talk something through — gently, and at your pace.",
     ].join("\n");
   }
   return [
     "Thank you for telling me what you've experienced. I'm a non-clinical reflection tool, and I am not able to analyze a situation involving abuse or violence — that deserves trained, professional support, and it is not yours to carry in isolation.",
     "",
     "Please reach out to a professional or helpline you trust:",
-    "- US: National Domestic Violence Hotline — call 800-799-7233 or text START to 88788 (thehotline.org)",
-    "- Canada: Crisis Services Canada — 800-363-9010 (crisisservicescanada.ca)",
-    "- UK: National Domestic Abuse Helpline — 0808 2000 247 (nationaldahelpline.org.uk)",
+    ...lines,
     "",
-    "If you are in immediate danger, local emergency services can help. I'm still here for exploring patterns and meaning at other times.",
+    selectionNotice,
+    "",
+    "If you are in immediate danger, local emergency services can help. I'm still here for exploring what keeps happening and what it means at other times.",
   ].join("\n");
+}
+
+/**
+ * Deterministic brand-lexicon scrub for the final model answer. The nouns here
+ * are banned in user-facing copy (see AGENTS.md / BRAND.md). The small model
+ * still reaches for "pattern" even after the system-prompt steering, and unlike
+ * the semantic safety lexicon — where a blind swap could change meaning and must
+ * go through repair/fallback — a pure synonym substitution of these words is
+ * safe to apply directly to validated text: "dynamic"/"tension"/"celestial" are
+ * never themselves prohibited, so this can't introduce a violation. Applied to
+ * the validated answer in the generation pipeline before it is stored/streamed.
+ */
+const BRAND_SYNONYMS: Array<{ re: RegExp; out: string }> = [
+  { re: /\bPatterns\b/g, out: "Dynamics" },
+  { re: /\bPATTERNS\b/g, out: "DYNAMICS" },
+  { re: /\bpatterns\b/g, out: "dynamics" },
+  { re: /\bPattern\b/g, out: "Dynamic" },
+  { re: /\bPATTERN\b/g, out: "DYNAMIC" },
+  { re: /\bpattern\b/g, out: "dynamic" },
+  { re: /\bFriction\b/g, out: "Tension" },
+  { re: /\bfriction\b/g, out: "tension" },
+  { re: /\bNatal\b/g, out: "Celestial" },
+  { re: /\bnatal\b/g, out: "celestial" },
+  { re: /\bEphemeris\b/g, out: "Planetary data" },
+  { re: /\bephemeris\b/g, out: "planetary data" },
+];
+
+export function scrubBrandVocabulary(text: string): string {
+  if (!text) return text;
+  let out = text;
+  for (const { re, out: replacement } of BRAND_SYNONYMS) out = out.replace(re, replacement);
+  return out;
 }
 
 export function buildGroundedFallback(): string {

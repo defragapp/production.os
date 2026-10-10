@@ -121,13 +121,13 @@ export function BaselineForm({
 
       if (!res.ok) {
         const err = await res.json() as { error?: string };
-        throw new Error(err.error || "Failed to compute baseline");
+        throw new Error(err.error || "Couldn't compute your Baseline just now — try again in a moment.");
       }
 
       onSaved();
       onDone?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -227,7 +227,7 @@ export function BaselineForm({
                   key={b.key}
                   type="button"
                   onClick={() => setBucket(b.key)}
-                  className={`tap-line rounded-md border px-3.5 py-2 text-sm transition-colors ${
+                  className={`tap-line rounded-chip border px-3.5 py-2 text-sm transition-colors ${
                     bucket === b.key
                       ? "border-foreground/60 bg-foreground/[0.08] text-foreground"
                       : "border-border text-muted-foreground hover:text-foreground"

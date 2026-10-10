@@ -7,7 +7,10 @@ import type { Metadata } from "next";
  * in the layout because the page itself is a client component.
  */
 export const metadata: Metadata = {
-  title: "You're invited — Sovereign OS",
+  // The root layout's title template ("%s · Sovereign OS") appends the brand
+  // suffix, so this carries only the page name — a literal "… — Sovereign OS"
+  // here would render the suffix twice.
+  title: "You're invited",
   description:
     "Someone invited you to connect on Sovereign OS — a private AI platform for understanding yourself, your people, and the systems you live within.",
   robots: { index: false, follow: false },

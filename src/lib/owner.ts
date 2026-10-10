@@ -25,6 +25,13 @@ import type { AppEnv } from "./env";
 export interface OwnerSession {
   env: AppEnv;
   userId: string;
+  /**
+   * The owner's live email, read from the row during the identity check. The
+   * owner audit log (#49) hashes this to a SHA-256 digest for its actor record —
+   * it is never written raw, and requiring it here keeps the routes from making
+   * a second DB read just to know who acted.
+   */
+  email: string;
 }
 
 /**
@@ -66,5 +73,5 @@ export async function requireOwner(
   if (!row || !isOwnerEmail(row.email) || Number(row.email_verified) !== 1) {
     return { denial: ownerNotFound() };
   }
-  return { session: { env, userId } };
+  return { session: { env, userId, email: row.email } };
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOwner, ownerNotFound } from "@/lib/owner";
 import { createGrant, revokeGrant, giftLink, GIFT_CODE_MAX_LENGTH } from "@/lib/promo";
+import { writeAuditLog } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
   const { session, denial } = await requireOwner(request);
   if (denial) return denial;
   if (!session) return ownerNotFound();
-  const { env, userId } = session;
+  const { env, userId, email } = session;
 
   let body: { durationDays?: unknown; maxRedemptions?: unknown; note?: unknown };
   try { body = await request.json(); } catch { body = {}; }
@@ -24,6 +25,16 @@ export async function POST(request: NextRequest) {
       durationDays: body.durationDays,
       maxRedemptions: body.maxRedemptions,
       note: body.note,
+    });
+    // Durable, fail-silent record of the entitlement action (#49). The target
+    // is the grant's code_hash and counts only — never the redeemable code.
+    await writeAuditLog(env, {
+      actorId: userId,
+      actorEmail: email,
+      action: "promo.grant_mint",
+      targetType: "promo_grant",
+      targetId: grant.code_hash,
+      metadata: { durationDays: grant.duration_days, maxRedemptions: grant.max_redemptions },
     });
     const origin = new URL(request.url).origin;
     return NextResponse.json(
@@ -56,7 +67,7 @@ export async function DELETE(request: NextRequest) {
   const { session, denial } = await requireOwner(request);
   if (denial) return denial;
   if (!session) return ownerNotFound();
-  const { env, userId } = session;
+  const { env, userId, email } = session;
 
   let body: { codeHash?: string };
   try { body = await request.json(); } catch {
@@ -70,6 +81,14 @@ export async function DELETE(request: NextRequest) {
   try {
     const result = await revokeGrant(env, userId, codeHash);
     if (!result.revoked) return NextResponse.json({ error: "That pass was already closed or doesn't belong to you." }, { status: 409 });
+    await writeAuditLog(env, {
+      actorId: userId,
+      actorEmail: email,
+      action: "promo.grant_revoke",
+      targetType: "promo_grant",
+      targetId: codeHash,
+      metadata: { recipientDowngraded: result.recipientDowngraded },
+    });
     return NextResponse.json({ revoked: true, recipientDowngraded: result.recipientDowngraded });
   } catch (err) {
     console.error("[owner/promo] revoke failed:", err);

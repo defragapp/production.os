@@ -1,0 +1,26 @@
+{
+  "fixtureId": "family_context-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-10T20:54:15.466Z",
+  "promptSha": "5a7f3cd018c87b92b83a863864dfbf7f8267d586dcd526f2cbe8fa27ec0dbe9e",
+  "text": "One possibility worth examining is that when a whole family depends on one person to hold everything together, everyone may be experiencing a similar dynamic, where they're all connected to this person as a source of stability and support. This person's initiative and ability to take action when situations are safe may be a source of comfort for others.\n\nA way to see this is that the family's reliance on one person might create a shared experience of emotional security, even if it's unspoken. This could be a temporary solution, but it may also reinforce a dynamic of expecting this person to always be the one to take charge, which can be a heavy burden for them.\n\nIt may be worth considering what happens when this person is unavailable or unable to take charge. Does the family system collapse, or do other members find ways to adapt and take on more responsibility? What does this say about the underlying dynamics and expectations within the family?",
+  "usage": {
+    "prompt_tokens": 3058,
+    "completion_tokens": 184,
+    "total_tokens": 3242,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 46.94191396795213
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.5,
+    "relational": 0,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 3.4
+}

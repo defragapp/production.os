@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { Stepper } from "@/components/stepper";
+import { FormSkeleton } from "@/components/ui/form-skeleton";
 import { LoadingScreen } from "@/components/ui/loading";
 
 // Accepting an invite is three moves, and the middle one (the Baseline) is
@@ -100,9 +101,9 @@ function AcceptCard({
         onAccepted(inviterName);
         return;
       }
-      setError(data.error || "Could not accept the invitation.");
+      setError(data.error || "Couldn't accept that invitation — try again in a moment.");
     } catch {
-      setError("Could not accept the invitation. Please try again.");
+      setError("Couldn't accept that invitation — try again in a moment.");
     } finally {
       setAccepting(false);
     }
@@ -146,23 +147,25 @@ function AcceptCard({
               You&apos;ll need an account with that email address to accept it.
             </p>
             <div className="flex flex-col gap-2">
-              <Link
-                href={`/onboard?mode=signup&invite=${encodeURIComponent(token)}`}
-                className="btn-aurora w-full px-4 py-2.5 text-center text-sm font-medium"
-              >
-                Create a free account
-              </Link>
-              <Link
-                href={`/onboard?mode=login&invite=${encodeURIComponent(token)}`}
-                className="btn-glass w-full px-4 py-2.5 text-center text-sm font-medium text-foreground"
-              >
-                Sign in
-              </Link>
+              <Button asChild variant="aurora" className="w-full">
+                <Link
+                  href={`/onboard?mode=signup&invite=${encodeURIComponent(token)}`}
+                >
+                  Create a free account
+                </Link>
+              </Button>
+              <Button asChild variant="glass" className="w-full">
+                <Link
+                  href={`/onboard?mode=login&invite=${encodeURIComponent(token)}`}
+                >
+                  Sign in
+                </Link>
+              </Button>
             </div>
           </>
         ) : (
           <>
-            <div className="glass-panel px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+            <div className="rounded-panel border border-border/60 bg-surface-2/50 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
               You&apos;re signed in. When you accept,{" "}
               <span className="font-medium text-foreground">{inviterName}</span> becomes a connection.
             </div>
@@ -187,12 +190,11 @@ function AcceptCard({
 
             {needsBaseline ? (
               <div className="flex flex-col gap-2">
-                <Link
-                  href={`/baseline?invite=${encodeURIComponent(token)}`}
-                  className="btn-aurora w-full px-4 py-2.5 text-center text-sm font-medium"
-                >
-                  Set up my baseline
-                </Link>
+                <Button asChild variant="aurora" className="w-full">
+                  <Link href={`/baseline?invite=${encodeURIComponent(token)}`}>
+                    Set up my baseline
+                  </Link>
+                </Button>
                 <Button variant="outline" onClick={handleAccept} disabled={accepting}>
                   {accepting ? "Checking…" : "Check again"}
                 </Button>
@@ -236,7 +238,11 @@ export default function InvitePage() {
       return;
     }
     let cancelled = false;
-    fetch(`/api/invites/info?token=${encodeURIComponent(t)}`)
+    fetch("/api/invites/info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: t }),
+    })
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled) setInfo(d as InfoData);
@@ -254,7 +260,12 @@ export default function InvitePage() {
   return (
     <PageShell className="max-w-md">
           {token === undefined ? (
-            <PageHeader title="Invitation" description="Checking your invitation…" />
+            <>
+              <PageHeader title="Invitation" description="Checking your invitation…" />
+              {/* Reserve the card on the first paint: a bare heading that a
+                  card later drops beneath is a layout shift, not a fade. */}
+              <FormSkeleton fields={1} label="Checking your invitation…" />
+            </>
           ) : token === null ? (
             <>
               <PageHeader title="Invitation" description="This invitation link doesn't look right." />
@@ -266,7 +277,7 @@ export default function InvitePage() {
                     whole link comes along.
                   </p>
                   <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                   {/* A broken invite link shouldn't dead-end: signing in or
                       starting fresh still works without the token. */}
@@ -281,10 +292,13 @@ export default function InvitePage() {
               </Card>
             </>
           ) : info === null ? (
-            <PageHeader title="Invitation" description="Checking your invitation…" />
+            <>
+              <PageHeader title="Invitation" description="Checking your invitation…" />
+              <FormSkeleton fields={1} label="Checking your invitation…" />
+            </>
           ) : info.status === "invalid" ? (
             <>
-              <PageHeader title="Invitation" description="This invitation isn't valid." />
+              <PageHeader title="Invitation" description="This invitation doesn't look right." />
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-sm text-muted-foreground">
@@ -292,7 +306,7 @@ export default function InvitePage() {
                     invite link. Ask the person who invited you to share their current link.
                   </p>
                   <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                 </CardContent>
               </Card>
@@ -308,7 +322,7 @@ export default function InvitePage() {
                     you again.
                   </p>
                   <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                 </CardContent>
               </Card>
@@ -323,7 +337,7 @@ export default function InvitePage() {
                     to send a fresh invite link.
                   </p>
                   <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                 </CardContent>
               </Card>

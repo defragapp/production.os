@@ -1,0 +1,26 @@
+{
+  "fixtureId": "repeated_pattern-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-10T20:52:35.031Z",
+  "promptSha": "2417583f4043dcf58514f937a41733c2caee9c165180f8c482184e3adeff1be7",
+  "text": "This dynamic of pulling away when a relationship gets close is worth examining. It may be that when relationships approach the intensity or intimacy you desire, the reflex to guard what it loves becomes more pronounced. This could be a signal that your inner response is trying to protect something precious to you, something that's vulnerable to being hurt.\n\nOne possibility worth considering is that your inner response is trying to shield you from the potential costs of being in a relationship. These costs might not be overt, but they could be tied to your sense of self-worth, your need for control, or your fear of losing autonomy. It's as if your inner response is saying, \"If I get too close, I risk losing myself.\"\n\nThis dynamic may also be connected to your tendency to hold and protect what matters. When relationships get close, you might feel like you're being asked to compromise or surrender some part of yourself, which could trigger a defensive response. It's worth exploring whether this reflex is a way of maintaining your sense of identity or autonomy in the face of intimacy.\n\nTo better understand this dynamic, it might be helpful to examine the conversations you have with your partners when you start to pull away. What do you say to them, and what do you hope to achieve by pulling back? Are there any specific fears or concerns that arise when relationships get too close?",
+  "usage": {
+    "prompt_tokens": 3023,
+    "completion_tokens": 272,
+    "total_tokens": 3295,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 48.758931753225625
+  },
+  "observed": {
+    "clarity": 0.5499999999999999,
+    "groundedness": 0.5,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 1,
+    "safety": 1
+  },
+  "observedTotal": 4.699999999999999
+}

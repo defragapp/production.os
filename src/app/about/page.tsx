@@ -1,12 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nav } from "@/components/nav";
-import { PageTexture } from "@/components/page-texture";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { PageCrown } from "@/components/page-crown";
+import { PageShell } from "@/components/page-shell";
+import { SiteFooter } from "@/components/site-footer";
+
+const description =
+  "Sovereign OS is a private AI mirror for understanding yourself, your people, and the systems you live within — grounded in your Baseline, not a diagnosis or a verdict.";
 
 export const metadata: Metadata = {
   title: "Our Philosophy",
-  description:
-    "Sovereign is a private AI mirror for understanding yourself, your people, and the systems you live within — not a diagnosis, not astrology, not a verdict.",
+  description,
+  alternates: { canonical: "/about" },
+  openGraph: {
+    title: "Our Philosophy · Sovereign OS",
+    description,
+    url: "/about",
+    type: "website",
+    images: [{ url: "/opengraph-image?v=6", width: 1200, height: 630, alt: "Sovereign OS" }],
+  },
 };
 
 // The three things a first-time visitor actually needs to trust: what it is,
@@ -29,38 +41,57 @@ const PRINCIPLES = [
 export default function AboutPage() {
   return (
     <>
-      <PageTexture />
-      <Nav />
-      <main
-        id="main"
-        className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden bg-background font-sans text-foreground selection:bg-muted"
-      >
-        <section className="relative w-full px-6 py-14 md:py-20">
-          <div className="hero-light" aria-hidden="true" />
-          <div className="relative mx-auto w-full max-w-3xl">
-            <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
-              Our Philosophy
-            </p>
-            <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-tight text-foreground md:text-[3.25rem]">
-              A tool for <span className="italic">understanding</span>, not a verdict.
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
-              Most self-understanding is sold as a verdict. Sovereign works like a clear-eyed
-              conversation: a grounded starting point, honest language, and the deciding left to you.
-            </p>
+    <PageShell center={false} wide="wide">
+        {/* Hero wash lives inside the shell now — absolute against the shell's
+            main, fading toward the viewport top edge like the app glow. */}
+        <div className="hero-light" aria-hidden="true" />
+        <div className="relative">
+            <PageCrown
+              align="left"
+              eyebrow="Our Philosophy"
+              title={<>A tool for <span className="italic">understanding</span>, not a verdict.</>}
+              deck="Most self-understanding is sold as a verdict. Sovereign OS works like a clear-eyed conversation: a grounded starting point, honest language, and the deciding left to you."
+            />
 
             <p className="mt-8 text-balance border-l border-foreground/25 pl-5 font-display text-xl italic leading-relaxed tracking-tight text-foreground/90 md:text-2xl md:leading-[1.5]">
               A sovereign human isn&apos;t someone who needs no one — it&apos;s someone who can stay
               connected to themselves while understanding the people and systems around them.
             </p>
 
-            <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            <div className="mt-14 grid gap-6 sm:grid-cols-3">
               {PRINCIPLES.map((p) => (
                 <div key={p.title}>
                   <h2 className="mb-1.5 font-display text-base font-normal tracking-tight text-foreground">{p.title}</h2>
                   <p className="text-sm leading-6 text-muted-foreground">{p.body}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Why now — the moment that made Sovereign worth building. Factual
+                editorial, not a founder bio: the operator’s personal background
+                belongs on a real /team page once one is authored; this section
+                answers the investor question “why this, why now” without
+                inventing a résumé. */}
+            <div className="mt-14 max-w-2xl">
+              <Eyebrow className="mb-3">Why now</Eyebrow>
+              <h2 className="mb-4 font-display text-2xl font-normal leading-tight tracking-tight text-foreground md:text-3xl">
+                Assistant software got <span className="italic">amnesic</span>.
+              </h2>
+              <p className="text-base leading-7 text-muted-foreground">
+                Large language models made it cheap to build a chat interface for everything, and
+                the market answered by shipping assistants that reset the moment you close the tab.
+                They remember your questions but not your life. The value you give them — context,
+                candor, the actual shape of your relationships — leaks out as training data or ad
+                targeting, and comes back as a slightly better autocorrect to a stranger&apos;s phone.
+              </p>
+              <p className="mt-4 text-base leading-7 text-muted-foreground">
+                The other option — a static personality quiz, a horoscope app — is honest about
+                being entertainment but cannot meet you where your life actually is. Neither is what
+                most people want when they&apos;re trying to make sense of a hard week. There is a
+                middle lane no one has built seriously yet: an assistant that <em className="text-foreground/90 not-italic">remembers only
+                you</em>, grounded in a stable reference frame, and doesn&apos;t pretend to be an oracle.
+                That is what Sovereign OS is for.
+              </p>
             </div>
 
             <div className="mt-12 flex flex-wrap items-center gap-5">
@@ -74,9 +105,9 @@ export default function AboutPage() {
                 Read the FAQ →
               </Link>
             </div>
-          </div>
-        </section>
-      </main>
+        </div>
+    </PageShell>
+    <SiteFooter />
     </>
   );
 }

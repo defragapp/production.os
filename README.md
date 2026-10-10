@@ -9,18 +9,20 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 |---|---|
 | Frontend | Next.js App Router + React 19 + Tailwind CSS + shadcn/ui |
 | Adapter | `@opennextjs/cloudflare` (OpenNext) |
-| Runtime | Cloudflare Workers (edge, `nodejs_compat`) |
-| Database | Cloudflare D1 (SQLite) — **10 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants` |
+| Runtime | Cloudflare Workers (`nodejs_compat` is implicit at the `compatibility_date`; it is deliberately not declared) |
+| Database | Cloudflare D1 (SQLite) — **13 tables**: `users`, `baselines`, `threads`, `invites`, `relationships`, `passkeys`, `chat_usage`, `journeys`, `journey_events`, `promo_grants`, `nudge`, `admin_audit_log`, `answer_feedback` |
 | Sessions | Cloudflare KV (`SESSION_KV`) — rate-limit + reset/verify + `ops:` counters (JWTs live in the cookie; `users.token_version` revokes them early) |
 | Device-Only memory | Client-side AES-GCM 256 non-extractable `CryptoKey` in IndexedDB `sovereign-memory` (`memory_mode='local'` → zero-retention edge inference, no D1 thread write) |
 | AI Inference | Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`, explicit `max_tokens=1024`, 2,000-char input cap) |
 | AI Routing | AI Gateway (ID: `sovereign-ai-gateway`) + direct Workers AI fallback |
+| Semantic recall | Cloudflare Vectorize (index `chat-embeddings`, binding `VECTORIZE`) — per-user-namespaced turn embeddings for chat search |
 | Entitlements | `tier.ts resolveTier()` — Free vs `sovereign+` (Stripe) vs owner (`chadowen93@gmail.com`) vs SHA-256-hashed 30-day gift passes (`promo.ts`) |
 | Baseline Engine | NASA/JPL Horizons API (planetary positions) |
 | Auth | Passkeys (WebAuthn, passkey-first) + Email/Password fallback (PBKDF2-100k + HMAC pepper) + JWT (HS256) |
 | Bot Protection | Cloudflare Turnstile (best-effort, env-gated) |
 | Email | Resend (`sovereign@defrag.app`, verified domain, click/open tracking) |
 | Payments | Stripe (Free vs Sovereign+ monthly/annual) |
+| Scheduled jobs | Cloudflare Cron Triggers (`0 3 * * *` UTC) via `src/custom-worker.ts` — token/invite/`chat_usage` cleanup + the daily transit-nudge scan |
 
 > The full authentication model — session handling, password hashing/pepper,
 > the Cloudflare Workers PBKDF2 ceiling, best-effort Turnstile, and the
@@ -34,38 +36,58 @@ Baseline engine uses the NASA/JPL Horizons API for natal chart computation.
 
 ## Release flow
 
-The proven, reliable path is **verify → push → confirm → (fallback) deploy**.
-Workers Builds (the git integration) is *supposed* to fire on every push to
-`main`, and sometimes produces a build-system-authored version within a couple
-of minutes. But it is **not dependable on its own**: on release `11586ad` no new
-version had landed ~6 minutes after the push, and the release had to be shipped
-with a single CLI `npm run deploy`. So treat the push as a *candidate* deploy and
-verify it, rather than assuming it:
+The proven, reliable path is **verify → push → confirm**.
+Workers Builds (git integration) is connected and verified as of 2026-10-06.
+A push to `main` is the canonical production path and must build/deploy both
+Workers projects (`production-os` and `sovereign-tail`).
+
+Before push, run the full ratchet:
 
 ```bash
 npm run verify:release                          # every gate green, or do not ship
-git push origin main                            # Workers Builds MAY ship it
-npx wrangler deployments list                   # poll ~2 min for the new version
+git push origin main                            # canonical path (Workers Builds)
 ```
 
-If `wrangler deployments list` shows no new version within ~2 minutes, run the
-CLI deploy exactly once against the clean tree:
+Then confirm both check-runs and both Worker rollouts in the dashboard Builds view.
+
+> **This deploys two Workers, not one.** `production-os` and `sovereign-tail`
+> are separate Workers with separate `wrangler.jsonc` files and separate
+> version streams. `npm run deploy` chains `npm run tail:deploy` after the main
+> OpenNext deploy, so a Tail Worker config change reaches production with the
+> same command.
+>
+> Do not drop that chain. `redact_query_string: true` was committed to
+> `tail-worker/wrangler.jsonc` and still sat unapplied in production, because
+> only the main deploy ran; the drift was only caught by hand. Gate 33 in
+> `verify:release` now asserts the chain exists, so a main-only deploy fails the
+> ratchet instead of shipping half a release.
+>
+> If you deploy the main Worker by any *other* route — including a future
+> Workers Builds wiring — you must run `npm run tail:deploy` yourself.
+
+If a build is in flight, do not also run a CLI deploy — two builds of the same
+commit collide and stall static-asset binding propagation (the 503/hang seen on
+`/`, `/privacy`, `/terms`).
+
+`npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`),
+then `wrangler deploy` for `production-os` (100% of traffic; live at
+`sovereign.defrag.app`), then `npm run tail:deploy` for `sovereign-tail`. Both
+land at 100%. A CLI-authored version shows your email as Author in the listing; a
+build-system version shows `undefined`; a version created by a direct API PATCH
+shows `Automatic deployment on upload` — which is how you can tell a config was
+hand-patched into production rather than shipped through the release path.
+
+Confirm both landed:
 
 ```bash
-rm -rf .open-next .next && npm run deploy
+npx wrangler versions list                      # production-os
+cd tail-worker && npx wrangler versions list    # sovereign-tail
 ```
-
-`npm run deploy` runs `opennextjs-cloudflare build` (which calls `next build`)
-and then `wrangler deploy`, which rolls out to 100% of traffic; live at
-`sovereign.defrag.app`. A CLI-authored version shows your email as Author in the
-listing; a build-system version shows `undefined`.
 
 Do **not** run `npm run deploy` while a push-triggered build is still in flight:
 that is a second build of the same commit colliding, and the collision stalls
 static-asset binding propagation (the 503/hang previously seen on `/`, `/privacy`,
-`/terms`). Poll first, deploy from the CLI only once you have confirmed no build
-landed. The dashboard still lists a preview-branches trigger for non-`main`
-branches; treat it as unverified until a build from it shows up in the listing.
+`/terms`). Use CLI deploy only as fallback when a push build fails or does not fire.
 
 ## Setup
 
@@ -139,31 +161,43 @@ npm run test       # Vitest unit tests (auth, stripe, sovereign safety/reasoning
 npm run build      # Plain Next.js build (OpenNext runs this internally)
 npx opennextjs-cloudflare build   # OpenNext compiler → .open-next/ (what CI runs)
 npm run preview    # OpenNext build + preview in Workers runtime (workerd)
-npm run deploy     # OpenNext build + deploy to Cloudflare edge
+npm run deploy     # OpenNext build + deploy both Workers (fallback path; see AGENTS.md)
 ```
 
 Run `npm run verify:release` before pushing — it is the whole ratchet. Its own
-header enumerates the gates and is the single source of truth for the count; at
-release `82f825c` it runs **105 checks across 31 numbered gates**: types, lint, the
-28 Vitest suites (296 tests), committed contract wiring, a clean OpenNext build,
+header enumerates the gates and is the single source of truth for the count; the
+run prints its own check total at the end. It covers: types, lint, the Vitest
+suites, committed contract wiring, a clean OpenNext build,
 the browser AES-GCM vault round-trip, the zero-CLS JourneyBar veil, a live
 authenticated walk over every surface in both memory modes, draft/503 recovery,
 whole-surface ergonomics (44px + 0 overflow at 390/768/1440), the PWA manifest,
 and the launch gates — compliance & 18+ age gate, IP & bundle isolation, owner
-console & 30-day gift pass, and the iOS 16px input auto-zoom floor. Preview-backed
+console & the gift-pass funnel, and the iOS 16px input auto-zoom floor. Preview-backed
 gates run against LOCAL D1 only and report SKIPPED (never a false PASS) if the
 environment cannot boot.
 
 > Note: `next build` alone does NOT produce `.open-next/`. To build the
 > Workers bundle locally, always use `npx opennextjs-cloudflare build`
-> (or `npm run preview` / `npm run deploy`).
+
+> **Do not shorten the release path to `typecheck && lint && test`.**
+> Those three are necessary but not sufficient: they passed 100% green on a
+> commit whose Workers bundle could not build at all. A dependency override
+> pinning `brace-expansion` to v5 forced an ESM-only package onto
+> `minimatch@3`, which imports the CommonJS default export — so the OpenNext
+> bundle died with `does not provide an export named 'default'`, while
+> `tsc`, ESLint and all 544 Vitest tests reported success. Nothing in the
+> type system or the unit suite loads `.open-next/worker.js`.
+>
+> Gate 1 (the clean OpenNext build) is the **only** check that catches
+> ESM/CJS interop and bundling regressions. If you are ever tempted to run a
+> subset of the gates, run Gate 1 too, or run the whole ratchet.
 
 ## Project Structure
 
 ```
 open-next.config.ts            # OpenNext Cloudflare config (defaults)
 wrangler.jsonc                 # Worker config: D1, KV, AI, AI Gateway, static assets
-schema.sql                     # Canonical D1 baseline — 10 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants); migrations/0001–0004 layer onto existing DBs
+schema.sql                     # Canonical D1 baseline — 13 tables (users, baselines, threads, invites, relationships, passkeys, chat_usage, journeys, journey_events, promo_grants, nudge, admin_audit_log, answer_feedback); migrations/0001–0009 layer onto existing DBs
 assets/ace-of-cups.jpg         # Canonical brand artwork (source of truth for the mark)
 scripts/build-brand-assets.mjs # Regenerates public/brand/*.png from the source artwork (node scripts/build-brand-assets.mjs)
 public/brand/                  # Emitted raster mark: emblem-full, emblem-core, emblem-core-bold, icon, apple-icon
@@ -193,11 +227,14 @@ src/
 │   │   └── webhooks/stripe/route.ts   # Stripe webhook → subscription_tier
 │   ├── account/page.tsx               # Account management
 │   ├── baseline/page.tsx              # Baselines list
+│   ├── self/page.tsx                  # "Self" lens — your own Baseline in plain language (auth-aware CTA)
+│   ├── people/page.tsx                # "People" lens — your connections and shared dynamics
+│   ├── systems/page.tsx               # "Systems" lens — the rooms/families you move through
+│   ├── s/[id]/page.tsx                # Public shared Sigil page (+ branded OG image)
 │   ├── chat/chat-client.tsx           # Chat client (SSE streaming, thread switcher)
 │   ├── chat/page.tsx                  # Chat page (server wrapper around ChatClient)
 │   ├── onboard/page.tsx               # Server wrapper (force-dynamic) — redirects authed users with a baseline to /chat
-│   ├── onboard/onboard-server.tsx     # Onboard server gate (legacy re-export; superseded by page.tsx)
-│   ├── onboard/onboard-content.tsx    # Client two-phase flow: account → baseline → plan (Turnstile-gated)
+│   ├── onboard/onboard-content.tsx    # Client two-step flow: account → baseline (Turnstile-gated)
 │   ├── upgrade/checkout-client.tsx    # Upgrade client → POST /api/checkout
 │   ├── upgrade/page.tsx               # Paywall → Stripe Checkout
 │   ├── terms/page.tsx                 # Terms of service
@@ -225,6 +262,7 @@ src/
 │   ├── sovereign-safety.ts            # Layer-1 deterministic validation, negation-aware, leakage guard, high-risk routing
 │   ├── sovereign-model.ts             # Non-streaming model adapter (gateway-first + direct fallback; explicit max_tokens)
 │   ├── chat-history.ts                # Idempotent merge of stored + client-sent transcript (prevents duplicate-turn writes)
+│   ├── chat-embeddings.ts             # Vectorize semantic recall — embed turns into `chat-embeddings`, retrieve relevant past context
 │   ├── markdown-lite.ts               # Dependency-free markdown subset → tokens for assistant answers
 │   ├── limits.ts                      # FREE_TIER_DAILY_LIMIT (5 msgs/day) + related ceilings
 │   ├── stripe.ts                      # Stripe pricing tiers + webhook verification
@@ -250,8 +288,9 @@ src/
 │   ├── brand-emblem-data.ts           # inlined brand emblem data
 │   ├── types.ts                       # Shared TypeScript types (incl. MemoryMode)
 │   ├── utils.ts                       # cn() class merger + D1 date helpers (formatD1Date, formatDateOfBirth)
-│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 28 files / 296 tests)
-└── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
+│   └── *.test.ts                      # Vitest unit tests (auth, stripe, sovereign-* modules; 46 files / 544 tests)
+├── middleware.ts                      # Auth gate: public routes, 401 JSON / redirect
+└── custom-worker.ts                   # Worker entry: re-exports OpenNext `fetch` + adds the `scheduled` cron handler
 ```
 
 ## Sovereign Reasoning Engine
@@ -289,8 +328,8 @@ correction, leakage) and §53 regressions are covered in
 
 ## Notes
 
-- Routes run in the Cloudflare Workers runtime via the OpenNext adapter (compatibility flag `nodejs_compat`; no explicit `runtime = "edge"` exports).
-- Passwords are hashed with PBKDF2-HMAC-SHA256 at **100,000 iterations** (the Cloudflare Workers / workerd WebCrypto ceiling — values above 100k throw at runtime) and then keyed with an HMAC using the `PASSWORD_PEPPER` secret, so a leaked D1 dump is not crackable on its own. Stored hashes are versioned (`pbkdf2$<iter>$pepper$<hmac>`) and older/un-peppered rows are transparently upgraded on successful login. Login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, KV-backed). See [`docs/auth.md`](docs/auth.md).
+- Routes run in the Cloudflare Workers runtime via the OpenNext adapter. `nodejs_compat` is implicit at the declared `compatibility_date` and is intentionally NOT listed in `compatibility_flags` (Gate 33 fails if it reappears); there are no explicit `runtime = "edge"` exports.
+- Passwords are hashed with PBKDF2-HMAC-SHA256 at **100,000 iterations** (the Cloudflare Workers / workerd WebCrypto ceiling — values above 100k throw at runtime) and then keyed with an HMAC using the `PASSWORD_PEPPER` secret, so a leaked D1 dump is not crackable on its own. Stored hashes are versioned (`pbkdf2$<iter>$pepper$<hmac>`) and older/un-peppered rows are transparently upgraded on successful login. Login is rate-limited (10 attempts / 5 min per IP+email) and thread chat is capped for free tier (5 msgs/day, tracked in the D1 `chat_usage` table). See [`docs/auth.md`](docs/auth.md).
 - JWT session tokens are stored in an httpOnly, Secure, SameSite=Lax cookie (7-day expiry) and verified on every API call via middleware + route guards.
 - **Passkeys (WebAuthn) are live** and passkey-first for return logins: `@simplewebauthn/server` v13 (edge-compatible), a `passkeys` D1 table, and `/api/auth/passkey/{register,authenticate}` endpoints (POST options / PUT verify; challenges are single-use in KV). A "Continue with passkey" button tops the login card and an "Add a passkey" control lives on the account page; enrollment requires an existing session and the password stays as the fallback, so nobody is locked out. Raw WebAuthn `DOMException`s are mapped to friendly, actionable messages instead of being surfaced to the user. The browser ceremony must be validated on a real device. See [`docs/auth.md`](docs/auth.md) §9.
 - The chat route verifies the AI Gateway call and falls back to a direct Workers AI call if the gateway is unavailable. Generation is non-streaming (one complete, validated answer); it is delivered to the client as a single SSE `content` event and persisted to D1 threads.
@@ -304,9 +343,9 @@ correction, leakage) and §53 regressions are covered in
 - **Anti-extraction IP guard + fair-use ceilings.** `/api/chat` deflects prompt-injection/system-prompt-extraction *before* any model call (zero token cost), caps per-message input at 2,000 chars, windows context to 20 messages (`max_tokens=1024`), and enforces atomic D1 daily ceilings (5 free / 150 `sovereign+`, owner exempt).
 - **iOS input floor.** On coarse pointers every `input`/`textarea`/`select`/`contenteditable` computes `font-size ≥ 16px` (`globals.css` `!important` floor) so Safari never auto-zooms on tap.
 - The baseline is computed server-side against the NASA/JPL Horizons API; raw data and derived astrology/numerology/Human Design fields are stored in D1.
-- The AI's system prompt is a "Pattern Interruption" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry. Baseline is context, never a fixed identity or verdict.
+- The AI's system prompt is an "Evidence-Separation" directive: non-clinical, evidence-separated (Observed / Baseline-supported / Interpretive / Unknown), with four levels of inquiry. Baseline is context, never a fixed identity or verdict.
 - Transactional emails are sent from `sovereign@defrag.app` via Resend (verified domain with DKIM/SPF, click and open tracking enabled). Fallback to console-log when `RESEND_API_KEY` is unset.
-- Five email templates ship in `src/lib/email.ts` (welcome, verify, password-reset, billing-success, trial-ending), each using the branded `emailShell`/`emailButton` design system.
+- Ten transactional email templates ship in `src/lib/email.ts` (welcome, verify, password-reset, payment-received, payment-failed, subscription-canceled, invite, invite-accepted, support-received, support-notification), all rendered through the branded `emailShell`/`emailButton` design system — which carries the `bgcolor` attributes and `color-scheme` declarations Outlook and dark-mode clients need, a hidden preheader for the inbox preview line, and a generated plain-text alternative. `node scripts/send-test-emails.mjs --dry` previews the set through the real code path; drop `--dry` to deliver them to one inbox. `src/lib/email.test.ts` pins the billing set and the shell invariants.
 - Observability is enabled in `wrangler.jsonc` with head sampling at rate 0.1 (10% of traces).
 - **One brand mark, sourced from artwork.** The mark is the canonical Ace-of-Cups engraving in `assets/ace-of-cups.jpg`. `scripts/build-brand-assets.mjs` (run with `node scripts/build-brand-assets.mjs`) isolates the line-art into transparent PNGs and emits `public/brand/`: `emblem-core-bold.png` (nav/footer logo + social card — the engraving with hairlines thickened by a morphological dilate so it reads at header size instead of collapsing into a smudge), `emblem-core.png`/`emblem-full.png` (thin cuts), and `icon.png`/`apple-icon.png` (graphite plates for the tab favicon and iOS home-screen icon). Every surface draws from these files — there is no separate or hand-redrawn logo. The retired SVG glyph system (`lib/brand-mark.ts`, `icon.svg`, `apple-icon.tsx`) has been deleted; `icon.test.ts` guards that the PNGs exist and the surfaces reference them.
 - `npm audit` is clean (0 vulnerabilities). The `postcss` advisory previously inherited via `next@15` is resolved by a root `overrides` pinning `postcss@^8.5.28`; no Next 16 upgrade is required.

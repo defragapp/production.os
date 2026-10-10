@@ -3,6 +3,15 @@ export interface AppEnv {
   SESSION_KV: KVNamespace;
   AI: Ai;
   ASSETS: Fetcher;
+  /**
+   * Cloudflare Vectorize index (`chat-embeddings`, dim=1024, cosine) holding
+   * per-turn embeddings for server-memory chat history. Powers
+   * /api/chat/search — the 'big brain' semantic recall layer described in
+   * docs/ai-system.md. Null when the binding is missing (e.g. local dev
+   * without an index provisioned) so the app still boots; the embed path
+   * becomes a no-op and search returns an empty list.
+   */
+  VECTORIZE?: VectorizeIndex;
   AI_GATEWAY_ID: string;
   FROM_EMAIL: string;
   BASELINE_HORIZONS_URL: string;
@@ -32,12 +41,33 @@ export interface AppEnv {
    * that can't load the widget still gets through. See lib/turnstile.ts.
    */
   TURNSTILE_REQUIRED?: string;
+  /**
+   * Optional cosine-similarity floor for auto-recall, overriding the hardcoded
+   * default in chat-recall.ts so sensitivity can be tuned from prod logs
+   * without a code change. Unset → the module default (0.82) applies. Values
+   * outside 0..1 or non-numeric are ignored and fall back to the default.
+   *
+   * Typed as number for the module contract, but the Workers runtime delivers
+   * plain-text [vars] as a STRING (see wrangler.jsonc, "0.82"); chat-recall's
+   * resolveScoreFloor coerces it, so do not assume native-number methods here.
+   */
+  RECALL_MIN_SCORE?: number;
+  /**
+   * Angular orb (in degrees) within which a transiting Saturn/Jupiter crossing a
+   * natal Sun/Moon counts as an exact conjunction for the transit-nudge engine
+   * (transit-signals.ts). Default 1.5 when unset; out-of-range/non-numeric are
+   * ignored and fall back to the default. Same string-delivery caveat as
+   * RECALL_MIN_SCORE: the runtime passes plain-text [vars] as a STRING ("1.5"),
+   * coerced by resolveConjunctionOrb — do not call native-number methods here.
+   */
+  TRANSIT_CONJUNCTION_ORB?: number;
 }
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 let _cachedEnv: AppEnv | null = null;
 let _envPromise: Promise<AppEnv> | null = null;
+let _cachedCtx: ExecutionContext | null = null;
 
 /**
  * Returns the Cloudflare environment bindings.
@@ -50,10 +80,38 @@ export async function getEnv(): Promise<AppEnv> {
   if (_envPromise) return _envPromise;
 
   _envPromise = getCloudflareContext({ async: true }).then(
-    (ctx) => ((_cachedEnv = ctx.env as unknown as AppEnv) as unknown as AppEnv)
+    (ctx) => {
+      _cachedCtx = ctx.ctx;
+      return (_cachedEnv = ctx.env as unknown as AppEnv) as unknown as AppEnv;
+    }
   );
 
   return _envPromise;
+}
+
+/**
+ * Schedule background work past the response boundary. This is the only
+ * supported way to keep per-turn chat embeddings (Workers AI + Vectorize
+ * upsert) off the critical TTFB path from within a Next.js route handler:
+ * `getCloudflareContext` exposes the underlying Worker `ExecutionContext`,
+ * and `waitUntil` tells the runtime to keep the isolate alive until the
+ * promise settles even after the Response has been returned.
+ *
+ * Falls back to a swallowed promise when no context is available (e.g. unit
+ * tests running outside the OpenNext wrapper) so callers never need to
+ * null-check to be safe.
+ */
+export function waitUntil(promise: Promise<unknown>): void {
+  if (_cachedCtx) {
+    _cachedCtx.waitUntil(promise.catch((err) => console.error("[waitUntil]", err)));
+    return;
+  }
+  // No context yet — kick getEnv() so the next call has one, and let the
+  // current promise settle in the background (best-effort, may be cancelled
+  // if the isolate is torn down before it resolves).
+  void getEnv().then(() => {
+    _cachedCtx?.waitUntil(promise.catch((err) => console.error("[waitUntil]", err)));
+  });
 }
 
 /**

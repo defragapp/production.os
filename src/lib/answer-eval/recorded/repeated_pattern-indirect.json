@@ -1,0 +1,26 @@
+{
+  "fixtureId": "repeated_pattern-indirect",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-10T20:52:45.766Z",
+  "promptSha": "f10b508fbf5f2b57ec6c7a3655f756eed50beac2c5d89f15b1d7e37dc9010436",
+  "text": "Let's examine what's happening here. It may be that your Baseline quality of holding and protecting what matters is creating a dynamic where you're more likely to prioritize your own emotional safety over the needs of others. When people try to get close to you, it might be triggering a reflex to guard what it loves, which could lead to a sense of withdrawal or distance.\n\nOne possibility worth examining is that your initiative to move into action is tied to feeling safe, and when you're unsure of how to navigate a relationship, you might become hesitant or still. This could cause you to miss opportunities for connection or create a sense of disconnection.\n\nIt's also possible that your Baseline is simply not yet developed enough to handle the complexity of relationships, leading to a recurring dynamic of being alone. However, this is not a fixed identity – your Baseline can evolve and grow as you do.\n\nWhat do you think might be happening in these situations, and what would you like to explore further?",
+  "usage": {
+    "prompt_tokens": 3027,
+    "completion_tokens": 200,
+    "total_tokens": 3227,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 46.932831012643874
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.8333333333333334,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 1,
+    "safety": 1
+  },
+  "observedTotal": 5.4833333333333325
+}

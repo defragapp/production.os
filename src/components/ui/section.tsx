@@ -17,6 +17,7 @@ export function Section({
   actions,
   children,
   className,
+  id,
   rule = true,
 }: {
   title?: React.ReactNode;
@@ -24,12 +25,15 @@ export function Section({
   actions?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  /** Anchor id for deep-linking (e.g. /settings#invitations). Adds scroll
+   *  margin so the sticky header never covers the heading on arrival. */
+  id?: string;
   /** Render the fading divider under the section (default on). */
   rule?: boolean;
 }) {
   const hasHeader = Boolean(title || description || actions);
   return (
-    <section className={className}>
+    <section id={id} className={id ? `scroll-mt-24 ${className ?? ""}` : className}>
       {hasHeader && (
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="min-w-0">

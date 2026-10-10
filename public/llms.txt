@@ -1,11 +1,11 @@
 # Sovereign OS
 
-> A private AI platform for understanding yourself, your people, and the systems you live within. Sovereign computes a personal **Baseline** from the user's date, time, and place of birth using NASA/JPL planetary coordinates, then uses a reflection-first AI (not diagnosis, not astrology, not psychology) to help the user examine patterns in their own words — including relationship and family patterns, with context from people who accept an invitation.
+> A private AI platform for understanding yourself, your people, and the systems you live within. Sovereign computes a personal **Baseline** from the user's date, time, and place of birth using NASA/JPL planetary coordinates, then uses a reflection-first AI (not diagnosis, not astrology, not psychology) to help the user examine what keeps recurring in their own words — including relationship and family dynamics, with context from people who accept an invitation.
 
 ## What it is
 
 - **Your Baseline is the anchor.** One input — birth date, time, place — produces a plain-language picture of tendencies: how you tend to communicate, feel, and decide. It is a frame of reference, never a verdict, never destiny.
-- **You explore in your own words.** The AI grounds every answer in the user's Baseline and in what the user actually said. It separates *observed* facts, *Baseline-supported* interpretation, *interpretive* readings (which require the user's confirmation), and *unknowns* it declares plainly.
+- **You explore in your own words.** The AI grounds every answer in the user's Baseline and in what the user actually said. It separates *observed* facts, *Baseline-supported* interpretation, *interpretive* possibilities (which require the user's confirmation), and *unknowns* it declares plainly.
 - **Relationships need a yes.** A person only enters a user's context if they accept an invitation, and the relationship stays scoped to each person's own data. No one can see another person's raw Baseline.
 - **Four levels of inquiry.** The AI works at four levels: Reflection (you), Meaning (what you mean by a loaded word like love, success, or safety), Relationship (what happens between two people), and System (roles, loyalties, and rules inside a family or group).
 
@@ -14,7 +14,7 @@
 Sovereign never presents an interpretation as an observation. Every response distinguishes:
 1. **Observed** — what the user said happened.
 2. **Baseline-supported** — interpretation grounded in the computed Baseline.
-3. **Interpretive** — a plausible reading offered for confirmation.
+3. **Interpretive** — a plausible interpretation offered for confirmation.
 4. **Unknown** — what cannot be determined.
 
 It does not diagnose, does not pathologize, does not moralize, does not issue relationship verdicts, does not claim knowledge of another person's hidden emotions, and does not predict outcomes. Users can correct any interpretation and the AI accepts the correction without defensiveness.
@@ -27,7 +27,7 @@ It does not diagnose, does not pathologize, does not moralize, does not issue re
 - Follow a deterministic **Journey** — a guided self-reflection arc that tracks milestones and adapts prompts to what the conversation has already surfaced.
 - Use voice dictation for hands-free input (Web Speech API, progressive enhancement).
 - Choose **Device-Only** memory: all conversation data encrypted client-side with AES-GCM 256 in IndexedDB; the edge never stores a transcript for that account.
-- Upgrade to Sovereign+ (subscription or gift pass) for 150 messages/day and the full people/relationships feature set.
+- Upgrade to Sovereign+ (subscription or gift pass) for expanded daily capacity and the full people/relationships feature set.
 
 ## What Sovereign is not
 
@@ -51,4 +51,4 @@ It does not diagnose, does not pathologize, does not moralize, does not issue re
 
 ## Privacy
 
-User birth data and conversations are private. Sovereign never sells data, never trains third-party models on user conversations, and every AI answer is generated per-user — one person's conversations never feed another's answers. Relationships appear only through invitations the other person accepted. In Device-Only memory mode, transcripts are sealed in the user's browser vault and the server retains nothing. Sessions are revocable server-side before expiry. A pre-model safety guard deflects prompt-injection attempts without reaching the AI, ensuring system instructions remain private.
+User birth data and conversations are private. Sovereign never sells data, never trains third-party models on user conversations, and every AI answer is generated per-user — one person's conversations never feed another's answers. Relationships appear only through invitations the other person accepted. In Device-Only memory mode, transcripts are sealed in the user's browser vault and the server retains nothing. Sessions are revocable server-side before expiry. Attempts to extract Sovereign's internal instructions are deflected, so its system directives stay private.

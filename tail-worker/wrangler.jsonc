@@ -1,0 +1,21 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "sovereign-tail",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-10",
+  // nodejs_compat omitted — implicit at this compatibility date (>= 2026-08-04).
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1.0,
+    // This Tail Worker receives a COPY of every request event from
+    // production-os and can email alert payloads to SUPPORT_INBOX. Without
+    // redaction, the query-string tokens it forwards off the platform are the
+    // same ones the main Worker now redacts — close the second path too.
+    "redact_query_string": true
+  },
+  "vars": {
+    "SUPPORT_INBOX": "chadowen93@gmail.com",
+    "FROM_EMAIL": "sovereign@defrag.app",
+    "ALERT_COOLDOWN_MINUTES": "60"
+  }
+}

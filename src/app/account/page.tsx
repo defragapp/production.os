@@ -94,7 +94,7 @@ export default function AccountPage() {
       const res = await fetch("/api/auth/export");
       if (!res.ok) {
         const body = await res.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || "We couldn't build your export just now. Please try again.");
+        throw new Error(body?.error || "Couldn't package your data — try again in a moment.");
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -107,7 +107,7 @@ export default function AccountPage() {
       URL.revokeObjectURL(url);
       setExportNote("Saved — that file is everything we hold about you.");
     } catch (err) {
-      setExportNote(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      setExportNote(err instanceof Error ? err.message : "Couldn't package your data — try again in a moment.");
     } finally {
       setExporting(false);
     }
@@ -145,7 +145,7 @@ export default function AccountPage() {
       if (!res.ok || !data.url) throw new Error(data.error || "Couldn't open billing — try again in a moment.");
       window.location.href = data.url;
     } catch (err) {
-      setPortalError(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      setPortalError(err instanceof Error ? err.message : "Couldn't open billing — try again in a moment.");
       setPortalLoading(false);
     }
   };
@@ -165,9 +165,9 @@ export default function AccountPage() {
   const emailVerified = Boolean(user.email_verified);
   const unverifiedNotice =
     verifyStatus === "ok" ? "Email verified — thank you."
-    : verifyStatus === "invalid" ? "That verification link is invalid."
+    : verifyStatus === "invalid" ? "That verification link doesn't look right."
     : verifyStatus === "expired" ? "That verification link has expired. Request a new one below."
-    : verifyStatus === "missing" ? "No verification token was provided."
+    : verifyStatus === "missing" ? "That link is missing its code — open the full link from your email."
     : null;
 
   // D1's datetime('now') yields "YYYY-MM-DD HH:MM:SS" (UTC, no marker),
@@ -181,7 +181,7 @@ export default function AccountPage() {
       <PageShell>
           <PageHeader title="Account" description="Your plan, profile, and account preferences." />
           {unverifiedNotice && (
-            <div className={`mb-4 rounded-md border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-border bg-muted/30 text-foreground" : "border-border/80 bg-muted/40 text-foreground"}`}>
+            <div className={`mb-4 rounded-chip border px-4 py-3 text-sm ${verifyStatus === "ok" ? "border-border bg-muted/30 text-foreground" : "border-border/80 bg-muted/40 text-foreground"}`}>
               {unverifiedNotice}
             </div>
           )}
@@ -200,7 +200,7 @@ export default function AccountPage() {
                 {isPlus ? (
                   <>
                     <ul className="space-y-2 text-sm text-muted-foreground">
-                      <PlanFeature>Unlimited AI messages — no daily cap</PlanFeature>
+                      <PlanFeature>Up to 150 AI messages a day</PlanFeature>
                       <PlanFeature>Invite people into your relationships</PlanFeature>
                       <PlanFeature>Your full Baseline, same private engine</PlanFeature>
                     </ul>
@@ -211,7 +211,7 @@ export default function AccountPage() {
                     >
                       {portalLoading ? "Opening billing..." : "Manage subscription"}
                     </Button>
-                    <p className="text-center text-xs text-muted-foreground/70">Cancel anytime — two clicks, no emails.</p>
+                    <p className="text-center text-xs text-muted-foreground/70">Cancel anytime — no emails needed.</p>
                     {portalError && <p role="alert" className="text-xs text-destructive">{portalError}</p>}
                   </>
                 ) : (
@@ -255,7 +255,7 @@ export default function AccountPage() {
                   <span className="text-sm text-muted-foreground">Display name</span>
                   <span className="text-sm font-medium">
                     {user.display_name || (
-                      <span className="text-muted-foreground/60">— not set —</span>
+                      <span className="text-muted-foreground/70">— not set —</span>
                     )}
                   </span>
                 </div>
@@ -280,9 +280,9 @@ export default function AccountPage() {
                         try {
                           const r = await fetch("/api/auth/resend", { method: "POST" });
                           const d = await r.json() as { ok?: boolean; error?: string };
-                          setResent(d.ok ? "sent" : `error: ${d.error || "Could not send verification email."}`);
+                          setResent(d.ok ? "sent" : `error: ${d.error || "Couldn't send that email — try again in a moment."}`);
                         } catch {
-                          setResent("error: Could not send verification email.");
+                          setResent("error: Couldn't send that email — try again in a moment.");
                         }
                       }}
                     >
@@ -358,7 +358,7 @@ export default function AccountPage() {
               </div>
             </div>
 
-            <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/[0.04] p-4">
+            <div className="mt-2 rounded-control border border-destructive/30 bg-destructive/[0.04] p-4">
               <p className="text-sm font-medium text-foreground">Sign out or delete</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 Signing out ends this session on this device. Deleting erases your Baseline, chat

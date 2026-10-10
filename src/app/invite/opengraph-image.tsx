@@ -28,7 +28,7 @@ export default function InviteOpengraphImage() {
         }}
       >
         <div style={{ display: "flex", fontSize: 26, letterSpacing: "0.28em", color: "#8a857b" }}>
-          SOVEREIGN.OS
+          SOVEREIGN OS
         </div>
         <div
           style={{

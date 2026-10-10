@@ -1,24 +1,88 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "production-os",
-  "main": ".open-next/worker.js",
+  "main": "./src/custom-worker.ts",
   "compatibility_date": "2026-09-10",
-  "compatibility_flags": ["nodejs_compat"],
+  // nodejs_compat is intentionally NOT declared. As of compatibility_date
+  // 2026-08-04 the runtime enables nodejs_compat AND nodejs_compat_v2 by
+  // default, and the docs say verbatim to omit them from new configurations.
+  // v2 bundles extra polyfills/globals, so re-declaring the old flag only
+  // invited confusion about which behaviour was active.
+  // https://developers.cloudflare.com/workers/configuration/compatibility-flags/
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  // head_sampling_rate 1.0 for the launch window; revert to 0.1 at T+10d.
-  // Full-trace logs during launch week are the whole point of a paid
-  // Workers Logs plan — this is what makes the 1102 / JPL 429 diagnosis
-  // possible the moment traffic appears.
-  "observability": { "enabled": true, "head_sampling_rate": 1.0 },
+  // head_sampling_rate is at the 0.1 steady state (reverted from the 1.0 launch window
+  // in e8bdcce). Full-trace logs during the migration week were what made the 1102 /
+  // JPL 429 diagnosis possible; that window has closed.
+  //
+  // redact_query_string is the load-bearing setting here, and it DEFAULTS TO
+  // FALSE. Email-verification tokens, invite tokens and password-reset tokens
+  // all ride in query strings (`/api/auth/verify?token=`,
+  // `/onboard?reset=`, `/api/invites/info?token=`), so at the default every
+  // one of them lands in Workers Logs in cleartext for the full 7-day
+  // retention window — retrievable by anyone with dashboard access to the
+  // log store. Turned on here so the log URL keeps path and status but drops
+  // the query. Flip this back only together with moving those tokens to
+  // POST bodies or fragments.
+  // https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+  "observability": {
+    "enabled": true,
+    // Steady state is 0.1 (README). The 1.0 full-trace window was migration
+    // visibility only; reverted after the cutover settled (launch-checklist §4).
+    "head_sampling_rate": 0.1,
+    "redact_query_string": true
+  },
+  // Smart Placement is deliberately NOT enabled. Every hot backend this
+  // Worker talks to is Cloudflare-native and already colocated — D1, KV,
+  // Vectorize and Workers AI all run in the same network the Worker does, so
+  // there is no round trip left to remove. The only true external hop is the
+  // NASA/JPL Horizons API (a single, anycasted, far-away host) and the docs
+  // are explicit that host/hostname hints "do not work correctly for
+  // broadcast, anycast, multicast, or replicated resources". Enabling it would
+  // add a forwarding hop and, per the docs, only helps fetch handlers — at the
+  // cost of an extra leg for every request.
+  // https://developers.cloudflare.com/workers/configuration/placement/
   "d1_databases": [
-    { "binding": "DB", "database_name": "production-os-db", "database_id": "f4274cce-4444-4501-85a9-58c28bff27ac" }
+    // ASU account (cjowen93@asu.edu) — created 2026-09-30 during migration.
+    // Source-account D1 (f4274cce-…) is retired after Phase 8 decommission.
+    { "binding": "DB", "database_name": "production-os-db", "database_id": "8d09a3f5-bcda-4153-b63f-7018b1398c0b" }
   ],
   "kv_namespaces": [
-    { "binding": "SESSION_KV", "id": "8ccb87e3a5554f849d69053df7275a29" }
+    // ASU account — created 2026-09-30 during migration. Sessions are
+    // intentionally not copied across accounts; all users re-auth once
+    // after cutover (per KV Session Data Migration Convention).
+    { "binding": "SESSION_KV", "id": "defc15c51e4647d2b48d5b94138f8000" }
   ],
   "ai": { "binding": "AI" },
+  // Workers Paid feature: Vectorize backs the chat semantic-recall layer
+  // (/api/chat/search). Index `chat-embeddings` (dim=1024, cosine) provisioned
+  // 2026-10-01 via `wrangler vectorize create`. Per-user namespace isolation
+  // is enforced via the `namespace` field on insert, keyed by users.id.
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "chat-embeddings" }
+  ],
+  // Workers Paid feature: Tail Workers stream a copy of every log/exception
+  // this Worker emits into `sovereign-tail`, which forwards alert-worthy
+  // signals to the operator's support inbox (1 email per hour per unique
+  // failure shape). Same-account service binding; deploy sovereign-tail
+  // BEFORE this Worker or the binding rejects on push.
+  "tail_consumers": [
+    { "service": "sovereign-tail" }
+  ],
+  "triggers": { "crons": ["0 3 * * *"] },
   "vars": {
     "AI_GATEWAY_ID": "sovereign-ai-gateway",
+    // Auto-recall cosine floor for /api/chat + /api/chat/search (chat-recall.ts).
+    // The Workers runtime delivers [vars] as text strings; chat-recall coerces
+    // this to a number at read time and ignores anything outside 0..1 (falling
+    // back to the module default). Lower it (e.g. "0.78") to widen recall,
+    // raise it to tighten. Declared here so it is a visible knob, not a hidden
+    // magic number.
+    "RECALL_MIN_SCORE": "0.82",
+    // Transit-nudge conjunction orb in degrees (transit-signals.ts resolveConjunctionOrb).
+    // Delivered as a text string; coerced to a number and clamped 0..5, falling back
+    // to 1.5 when unset/invalid. Widen (e.g. "2.5") to fire nudges earlier, tighten
+    // for only dead-exact transits. Visible tuning knob, not a hidden constant.
+    "TRANSIT_CONJUNCTION_ORB": "1.5",
     "FROM_EMAIL": "sovereign@defrag.app",
     "SUPPORT_INBOX": "chadowen93@gmail.com",
     "BASELINE_HORIZONS_URL": "https://ssd.jpl.nasa.gov/api/horizons.api",
@@ -27,7 +91,11 @@
     "STRIPE_SUCCESS_URL": "https://sovereign.defrag.app/chat?billing=success",
     "STRIPE_CANCEL_URL": "https://sovereign.defrag.app/upgrade?billing=cancelled",
     "STRIPE_PORTAL_RETURN_URL": "https://sovereign.defrag.app/account",
-    "TURNSTILE_SITE_KEY": "0x4AAAAAAExjLzsh-Wwl9x4Y",
+    // ASU-owned Turnstile widget `sovereign` (created 2026-09-30 via
+    // `wrangler turnstile widget create`). Matches the account that owns
+    // the Worker; the secret counterpart lives in the Worker's encrypted
+    // secret store, not here.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFKmqD5R_vJ220SR",
     "NEXT_PUBLIC_CF_BEACON_TOKEN": "8b2341038462480c95e05d8e11f07213",
     "TURNSTILE_REQUIRED": "true"
   }

@@ -1,0 +1,569 @@
+# Open tasks — reconciled 2026-10-07 (this pass) from threads 61b587a3, 4b798035, 3fb1011e, 0e54bb64, 9fa21c6a, a9034055, 628d00dc; first compiled 2026-10-06 19:35
+
+Maintained by `/goal` (`.qoder/skills/goal/SKILL.md`). One row per verifiable thing; the
+`#` of an open row never changes. Re-derive with
+`node .qoder/skills/goal/scripts/scan-threads.mjs --days 2 --full`.
+
+**SUPERSESSION NOTE — release path (added 2026-10-09 late, verified with the account's own
+Cloudflare API `ac9a47dd…8349` by worker TAG — CORRECTS the earlier same-day note below):**
+The earlier "Workers Builds is **NOT** provisioned" note was WRONG — it was caused by a
+**name-vs-tag query bug** (Builds API paths take the worker `external_script_id` tag;
+`/builds/workers/{name}/…` returns `[]`/`12040`, the documented failure mode). Verified by
+tag: **triggers exist** — `production-os` `ea6e4bc3-d4b4-45bb-8bab-69bada6f3933` (created
+2026-10-02T07:38Z) and `sovereign-tail` `7115623b-7785-4a0a-918b-1092591fde32` (created
+2026-10-06T01:04Z), both `branch_includes ["main"]`, `path_includes ["*"]`, both modified
+2026-10-09T17:49Z during the #50 repair. **Builds fire on every push to `main` and are
+green**: 18:01Z/18:25Z/20:40Z/20:48Z/20:50Z/20:52Z all `build_outcome: "success"` on BOTH
+Workers, latest deploying version `1602b4df-16cf-4469-ac9d-4712d8b5000f` == live
+deployment `6ae1c673-…` (20:54:47Z). The two "orphaned" build tokens are NOT orphans —
+`f40e7197…` (production-os) and `f96c21f9…` (sovereign-tail) are the wired build tokens on
+the triggers, and every green build since 18:01Z used them. Deployments read
+`source: "wrangler"` because the triggers' `deploy_command` runs `npx wrangler deploy` /
+`npx -y wrangler@4.131.1 deploy` — that is Builds deploying via wrangler, not CLI. The
+shipping path is therefore **`git push origin main`** (push-to-deploy on both Workers); CLI
+`npm run deploy` is the out-of-band fallback. Collision rule (live, not hypothetical):
+never run a CLI deploy while a push-triggered build is in flight. Keep everything above
+here as the prior (superseded) snapshot; do not rewrite history, correct by dated note.
+
+**SUPERSESSION NOTE — release path (added 2026-10-09, verified with the account's own
+Cloudflare API `ac9a47dd…8349`):** Workers Builds is **NOT provisioned** on this
+account. `GET /builds/workers/{name}/triggers` and `…/builds` return `[]` for BOTH
+`production-os` and `sovereign-tail`; build config returns **12040** ("No build
+configuration associated with that script tag"); there is no repo connection and no
+`.github/workflows`; and **every deployment ever on both Workers is `source:
+"wrangler"` (CLI)** — including the 18:01–18:03Z entries previously attributed to a
+"24eb43f push with green Workers Builds check-runs" (those runs' `Workers Builds`
+check-run claims describe infrastructure that does not exist in the live API). The
+shipping path is the CLI: `npm run deploy` (chains `tail:deploy`, ships both Workers);
+push to `main` updates source of truth only and does NOT deploy. Rows in *Current
+evidence* / historical entries mentioning "Workers Builds check-runs `success`" are
+left as written (per the deploy-path precedent, corrected with a dated supersession
+note rather than rewriting the snapshots); future shipping notes cite CLI deploys +
+live smoke checks instead. **Current account state (verified again 2026-10-09):** the
+two orphaned build tokens `f40e7197…`/`f96c21f9…` (wrap user tokens `645da541…`/
+`376fa03e…`, zero triggers reference them) are left **in place** by owner decision —
+natural cleanup point is the dashboard Connect flow, after new build tokens are wired
+and first push-triggered builds go green. `DELETE /builds/tokens/{uuid}` exists for
+that cleanup. Production is otherwise clean: no triggers, no builds, no build configs
+on either Worker.
+
+Current evidence: this pass's four commits (`93c9545`/`a78bf85`/`3cab4f8`/`7d65707`) are
+**pushed to `main` and live** — `HEAD` `7d65707` == `origin/main`, both Workers Builds
+check-runs `completed/success`. Since then the launch-audit Pass 2+3 ran against live
+`sovereign.defrag.app`, yielding one clear code fix (the sign-in password label, F3) and a
+genuine negative control for #9, plus the #22 Veil-CLS fix layered on top.
+**Shipped:** `git push origin HEAD:main` pushed `7d65707..311d935` (F3 + Gate 34 + #22
+CLS scoping + this ledger) to production. Both Workers Builds check-runs
+(`production-os`, `sovereign-tail`) came back `completed/success`; live
+`sovereign.defrag.app` returns `200` on `/`, `/privacy`, `/terms`, `/faq` and the
+expected `307` on `/upgrade`, with no deploy-collision 503/hang. The ratchet on this
+tree (F3 + Gate 34 + #22): **117/117 checks green, 0 skips, exit 0, 524s**, read to its
+final line (`.audit-tmp/verify-22b.log`) — the count stays 117 because #22 scopes
+existing gate measurements, it adds no check. The prior tree's run was 116/116; the +1
+is Gate 34. NOTE: a *parallel tab*'s 10 uncommitted PageShell edits (`about`/`blog`/`blog[slug]`/`faq`/`invite`/`support`/`upgrade`/`offline`/`s/[id]`/`lens-page`)
+were present during that run but are NOT in the pushed commits (isolated by explicit
+pathspec) and so are not deployed; my commits touch only the gate script, docs, and the
+already-committed `onboard-content` fix, none of which alter those pages.
+
+**This pass (2026-10-07) — tree state, verified empirically:** `origin/main` is `311d935`;
+local HEAD is `0aacd4d` with **two committed-but-unpushed** docs/test commits on top
+(`d5a9c14`, `0aacd4d` — the latter's message records a 117/117 0-skip ratchet at 01:58,
+`.audit-tmp/verify-email.log`, on the then-committed tree). The entire email-audit
+implementation batch — `email.ts` shell/receipt redesign, `receiptFields()` in
+`stripe.ts`, webhook-route mapping, `send-test-emails.mjs` rewrite, README/stripe-plan/
+ledger doc drift — is **live only in the working tree (19 modified files), uncommitted,
+and NOT fully verified**: the 09:34 run (`.audit-tmp/verify-emails.log`) ended `PASS WITH
+SKIPS` (preview-gated checks skipped in a sandboxed environment) and the batch's final
+mtimes are 09:40 — *after* that run. Production therefore still serves the pre-audit
+`email.ts` (dead receipt rows, missing shell `bgcolor`/preheader/MSO fallback). The tree
+also still carries the parallel tab's page/design-token edits (mtimes Oct 6 21:27, the
+`duration-[240ms]`/`ease-spring`/CTA-padding set across the 9 public pages +
+`lens-page.tsx`) — same not-mine, isolate-by-pathspec situation as before. No competing
+builds were running at scan time. Environmental: thread `61b587a3` was destroyed mid-run
+by the `/Volumes/EXTREME` dropout (SanDisk Unlocker partition presenting, 270 phantom
+"deletions"); reads are healthy again and both held commits (`d5a9c14`/`0aacd4d`) are
+intact in the object store — nothing phantom-deleted was ever committed.
+
+**Work-through update (same day, this thread):** #30 executed AND SHIPPED. Full
+uncontended `verify:release` on the exact email-batch tree: **117/117, 0 skips, 535s**,
+read to its final line (`.audit-tmp/verify-30.log`). Committed pathspec-isolated as
+`e7d101e` (`fix(email): …`, 8 files — the parallel tab's 10 page/`lens-page` edits
+deliberately left uncommitted, mtime unchanged). Owner go-ahead given; `git push origin
+HEAD:main` shipped `311d935..f78c710` (four commits: `d5a9c14`+`0aacd4d`+`e7d101e`+ledger).
+Both `Workers Builds` check-runs for `f78c710` — `production-os` and `sovereign-tail` —
+came back `completed/success`; live `sovereign.defrag.app` answers `/`, `/privacy`,
+`/terms`, `/faq`, `/api/health` all 200, no collision 503/hang. Production now sends the
+audited email templates.
+
+**Work-through update (same evening, this thread):** #11 (F-F) shipped `1737269`, the #32/#34
+advisory pair `d7ade71`, #33 `2b5a522`, and the copy/controls batch **#37 + #39 + #41 + #42 +
+the #11 residue** `25d09d1` — all with a 0-skip 117/117 ratchet on the exact tree beforehand
+(`.audit-tmp/verify-ff.log`, `verify-passkey.log`, `verify-copy.log`). Two mechanics worth
+recording for the next pass: (1) the parallel tab pushed the branch itself at 19:42, so this
+thread's commits went out inside `47584ac` rather than by its own push — the ref-safety check
+returned *Everything up-to-date*, which is a valid outcome here, not a failure; (2) that same
+tab's commit bundled three unrelated changes (the #38 prompt fix, the #45 design-token batch,
+and docs) under a message naming only #38, and it swept this thread's then-uncommitted ledger
+lines into `fe69539`. Both are recorded on their rows. Live after deploy: 15 public routes
+swept — all 200 except the expected `307` on `/upgrade`; `/api/health` body
+`{"status":"ok","latency_ms":…}`; the landing HTML no longer contains either deleted
+"priority" claim and carries exactly one `next=%2Fupgrade` signup CTA.
+
+## P0 — security, privacy, data integrity, production failure
+
+| # | Task | Owner | Status | Source thread | Evidence |
+|---|------|-------|--------|---------------|----------|
+| 1 | Revoke compromised API token `steep-smoke-dc94` and its companion R2 S3 access/secret key pair | owner | blocked-dashboard | 4b798035, 628d00dc, 0e54bb64 | `docs/launch-checklist.md` §6 unchecked; pasted into chat 2026-10-02, compromised by this project's own rule. Dashboard → My Settings → API Tokens → Delete |
+| 2 | Rotate `ASU_MIGRATION_TOKEN` down: drop `Zone > Read` (or revoke if migration is done) | owner | blocked-dashboard | 628d00dc | checklist §6 unchecked |
+| 3 | Rotate/revoke vestigial `R2_*` credentials in `.dev.vars` | owner | blocked-dashboard | 628d00dc | checklist §6; repo side already cleaned — `0320ece`/`0fd7270` touched no live binding |
+| 4 | Confirm no compromised credential is still active in the control plane | owner | blocked-verification | 628d00dc | needs dashboard/`wrangler` after #1–#3 |
+| 28 | **Rotate the live Stripe secret key** `sk_live_51TV1FSBk78yJ8Hww…` pasted into chat on 2026-10-07, then `npx wrangler secret put STRIPE_SECRET_KEY` | owner | blocked-dashboard | this pass | Compromised-on-paste by this project's own rule — a live `sk_live_` key is full-account access (charges, refunds, payouts, customer PII). It was used only for reversible config work (webhook event list, product description) and never written to the repo; the temp copy at `/tmp/sv_sk` is deleted. Until it is rolled, anyone with this transcript can charge or refund real customers. Roll in dashboard → Developers → API keys → *Roll secret*, then update the Worker secret; `STRIPE_WEBHOOK_SECRET` is separate and does NOT need rotating with it. |
+
+## P1 — launch blocker / serious user-facing defect
+
+| # | Task | Owner | Status | Source thread | Evidence |
+|---|------|-------|--------|---------------|----------|
+| 5 | Register the Stripe webhook endpoint `https://sovereign.defrag.app/api/webhooks/stripe` for the eleven events, then `npx wrangler secret put STRIPE_WEBHOOK_SECRET` for `production-os` | owner | done-verified | 4b798035, 628d00dc, 2026-10-07 | Verified against the live account `acct_1TV1FSBk78yJ8Hww`: endpoint `we_1UJuNpBk78yJ8HwwPUlSiOZd` **enabled**; added the one missing event (`invoice.payment_succeeded`) so all **11** events the route handles are subscribed. `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` already on `production-os`. Unsigned POST to the live route returns **400 `Missing stripe-signature`** (not 500) → deployed, receiving, secret configured. Prices active: $20/mo `price_1Te0g9…`, $99/yr `price_1Tq6nP…`, product `prod_UdHEFXmi3YN78U`. |
+| 6 | One real purchase end-to-end: checkout → tier flip → receipt → cancel → dunning | owner | blocked-external | 628d00dc, 2026-10-07 | Checklist §2. Config side now fully verified: `/api/checkout` stamps `client_reference_id` + `metadata.account_id` + `customer_email` (stripe.ts:118–123) and the webhook maps those to set `subscription_tier='sovereign+'` + dedup receipt + dunning — so a paid session **will** upgrade the right account. A real Checkout Session was created and rendered in Chrome at 390 + 1280 (then expired; zero open sessions left on the account), so the hosted payment page itself is verified. The three webhook email templates are pinned by `src/lib/email.test.ts` (now 15 tests) and all ten templates were delivered for real to `defragapp@gmail.com` through the live Resend key (11/11 message ids, no failures). A signed live trigger is still not possible without the Stripe CLI login (test-mode only) — `testHelpers` returns 404 on the live API. Remaining is a human paying a real card through the app (agent must not spend owner money). |
+| 7 | Author the zone Cache Rules (sigil OG immutable, legal-static, SEO-crawler) on `defrag.app`, then re-run `npm run verify:edge` | owner | blocked-dashboard | 4b798035 | last measurement **2/10 cached**; checklist §3 unchecked. Ready-to-paste dashboard-AI prompt in thread `4b798035`; a `Zone > Cache Rules: Edit` token would let `scripts/verify-edge-cache.mjs` drive it |
+| 30 | Ship the email-audit batch: pathspec-isolated commit of the 10 email/stripe/docs files (leave the parallel tab's 9 page edits + `lens-page.tsx` alone), push `HEAD:main` together with the two unpushed commits `d5a9c14`/`0aacd4d`, confirm both Workers check-runs | agent | closed-shipped | this pass | shipped in `f78c710` (`311d935..f78c710` push after a 117/117 0-skip ratchet on the exact tree); both Workers Builds check-runs success; live routes 200. See *Closed this pass*. Checkbox hygiene: `docs/launch-checklist.md` §1's webhook-registration box (L28) can be ticked once #5's registration is dashboard-confirmed by the owner |
+
+## P2 — reliability, comprehension, performance, maintainability
+
+| # | Task | Owner | Status | Source thread | Evidence |
+|---|------|-------|--------|---------------|----------|
+| 8 | F-G: prompt-delimit peer-controlled identity strings (`display_name`, relationship label) before they enter another user's reasoning context | agent | closed-this-pass | 0e54bb64 | see *Closed this pass* — `src/lib/peer-identity.ts` sanitizer applied at the `buildConsentedPeers` entry and the render seam; 4 targeted suites green |
+| 9 | Empirically test cross-account isolation with a real negative control (user A cannot read B's Baseline/thread/journey) | agent | closed-this-pass | 628d00dc | see *Closed this pass* — new Gate 34 drives the live routes with a valid stranger session; J.5's retracted negative control is now run for real |
+| 10 | Long-turn dead air: measured chat turns at 19.4s / 43.0s show no early canvas motion because `{state}` flushes only after generation | agent | open-design | 628d00dc | J.6. Hard constraint: do **not** "add streaming" — the pre-generation state-stream seam does not exist. `chat_timing` dimensions are already logged |
+| 11 | F-F: per-recipient cap on signup/resend email (third-party verify-email bombing; today only Turnstile mitigates) | agent | closed-shipped | 0e54bb64 | see *Closed this pass* — shipped in `1737269`; both Workers Builds check-runs success; live `/api/auth/resend` and `/api/invites` answer unauthenticated POSTs 401 (auth before guard, correct precedence) |
+| 12 | Pre-deploy gate gap on the push path: Workers Builds deploys `main` on push with no machinery between push and production (CI retired for billing/secret reasons) | agent | open-design | 628d00dc | J.7; `a2f88f9` removed `verify.yml` |
+| 13 | F-C: `verifySession` fails open on a D1 read error | owner | deferred-decision | 0e54bb64 | deliberate availability trade-off, documented at `src/lib/session.ts` L38-45; flipping it fails every login during a D1 blip. Needs an owner decision, not a patch |
+| 14 | F-H advisory bundle — split into individual rows (#31–#36) below; no work starts on an item without its own row | agent | closed-split | 0e54bb64 | superseded by #31–#36 |
+
+## P3 — polish and comprehension
+
+| # | Task | Owner | Status | Source thread | Evidence |
+|---|------|-------|--------|---------------|----------|
+| 15 | Full pixel pass on live production: 8 pages, 320/390/768/1024/1440, lazy-scroll + accordion interaction, every screenshot read | agent | closed-this-pass | 4b798035 | CLOSED by the 2026-10-07 live audit below: every public route captured and read at 1440 + true 390 (Playwright `isMobile`/`hasTouch`), scroll-through to fire Reveal, mobile nav drawer exercised, form validation + FAQ accordion + passkey + focus ring exercised, and link/asset integrity swept (23 internal targets, 0 broken). No code change warranted. Pass 2+3 ran on live `sovereign.defrag.app` at 1920 (funnel + public routes): no console errors, no overflow, plan rows reach full opacity, focus ring present, dead-ends offer next actions. TRUE 390/1440 pixel captures still blocked (browser bridge can't resize; CSP blocks iframe proxies) — but overflow/44px/16px at those widths are asserted green by Gates 24/30 |
+| 16 | Rendered inspection of authed surfaces (chat, settings, baseline) — the cold-white hairline (`border-white/10`) consolidation decision waits on it | agent | open | a9034055 | visual pass shipped its 6 edits in `0fd7270`; authed pixels never captured. This pass read the authed-surface SOURCE (`/redeem`/`/settings`/`/baseline` copy vs the engine): claims accurate, banned vocab only in code comments — no code change warranted. The pixel capture + hairline decision still need a resize-capable browser. |
+| 17 | Landing mobile trust-row separators look loose — adjudicate against the desktop rhythm | agent | open | a9034055 | observed, not filed as a fix |
+| 18 | iOS device-profile audit of coarse-pointer floors, install prompt, offline retry on a real device or simulator | blocked | blocked-device | 4b798035 | code-complete since `1d52daa`; no device profile exercised since the tone sweep |
+| 19 | Funnel review with Fathom numbers (landing CTA → onboard → quota moment → upgrade) | owner | blocked-access | 4b798035 | analytics are owner-visible only |
+| 20 | Anonymous "full comparison" link in the landing plans block points at `/upgrade`, which 307s a stranger to signup | agent | closed-shipped | 9fa21c6a | RESOLVED in `36bda8a`: the landing "full comparison" link now anchors the public in-page `#plans` section (a real anchor at `landing-client.tsx` L278), not the auth-gated `/upgrade`. Re-verified this pass — no `/upgrade` link remains in `landing-client.tsx`, so no 307 to signup for a stranger |
+| 21 | `/redeem` and `/onboard` were verified by text dump, not pixels | agent | partial | 4b798035 | Pass 2 walked `/onboard` (login + signup, Turnstile renders, inline errors) on live at 1920 and surfaced the F3 sign-in label fix (see *Closed this pass*); `/redeem` auth-gated pixels + true 390 still not captured (Gate 29 walks the redeemed card at 390 in preview). This pass verified `/redeem` copy against the engine by code — the "up to 150 AI messages a day" claim equals `SOVEREIGN_PLUS_DAILY_LIMIT=150`, gift→sovereign+, no card→"nothing is charged" — accurate, no change. |
+| 22 | Veil-CLS gate flakes under load — quiet its measurement window | agent | closed-this-pass | 628d00dc | see *Closed this pass* — the live `/chat` CLS gates now reset-and-measure-the-transition instead of asserting the raw whole-load accumulator (which carried hydration noise); verified green inside the 117/117 run |
+
+## P4 — speculative (do not turn into architecture)
+
+| # | Task | Owner | Status | Source thread | Evidence |
+|---|------|-------|--------|---------------|----------|
+| 23 | Testimonials: `TESTIMONIALS = []` and the component is unmounted after the landing refactor — populate with real, permitted quotes or leave hidden | owner | blocked-decision | 9fa21c6a | `src/content/testimonials.ts`. Inventing quotes would break the honesty contract |
+| 24 | Astrology-adjacency framing: `/about` meta says "not astrology", `/faq` says "numerology" for an engine that is astrology + Human Design + Gene Keys | agent | closed-this-pass | 628d00dc | Single source `src/content/baseline-systems.ts`; `about` meta drops "not astrology"; `/faq` + pricing read `baselineSystemsPhrase()`. Named identically everywhere, no owner decision needed |
+| 25 | No `/team` / founder trust surface on a product that asks for relationship data | owner | blocked-decision | 628d00dc | J.8 |
+| 29 | Check Stripe's own **"email receipts"** toggle (Settings → Customer emails) so a paying customer does not get two receipts per charge | owner | blocked-dashboard | this pass | `src/lib/email.ts` `payment-received` carries a deliberate belt-and-suspenders comment about this exact toggle. Our send is now a real on-brand receipt (Plan / Billing / Amount / Paid / Next billing), so a second Stripe-branded one alongside it reads as duplication, not reassurance. Not readable through the API — dashboard only. |
+| 31 | Non-atomic KV limiters (reset, resend-cooldown, and now the F-F recipient cap): a large concurrent burst can read the same count and overshoot | agent | open | 0e54bb64 (F-H split) | D1-slot like `claimAnswer` is the atomic alternative; needed only if any limiter is ever load-bearing for money/quota, not abuse-braking |
+| 32 | Stripe webhook idempotency — the row's premise was STALE (a generic `stripe-event:${id}` guard already shipped); the real defect was mark-BEFORE-process swallowing retries | agent | closed-shipped | 0e54bb64 (F-H split) | `d7ade71` pushed, both `Workers Builds` check-runs success; see *Closed this pass* |
+| 33 | Passkey challenge take-over: registration/authentication challenges stored where a concurrent ceremony could consume the other's | agent | closed-shipped | 0e54bb64 (F-H split) | `2b5a522` pushed `d7ade71..2b5a522`; both `Workers Builds` check-runs success. Auth already keyed per-ceremony; registration moved to the same shape (`pkreg:${userId}:${requestId}`) |
+| 34 | `/api/health` returns error detail strings on a public route | agent | closed-shipped | 0e54bb64 (F-H split) | `d7ade71` pushed; live body is now `{"status":"ok","latency_ms":…}` with detail to `console.error` |
+| 35 | Owner-console access keyed on mutable `email` string — an account email change could hand owner rights to a new address-holder (or revoke them) | agent | open | 0e54bb64 (F-H split) | move to a stable user-id allowlist |
+| 36 | Account deletion proceeds without a re-auth step | agent | open | 0e54bb64 (F-H split) | pair with the passkey/password re-confirm UX when the destructive-flows pass is scheduled |
+
+## Calendar-gated
+
+| # | Task | Owner | Status | Source thread | Evidence |
+|---|------|-------|--------|---------------|----------|
+| 26 | Decommission the gmail relay address | owner | due-2026-10-16 | 4b798035 | checklist §5 |
+| 27 | Source-account teardown: cancel Workers Paid subscription after 14 days healthy + freshest D1 export | owner | due-~2026-10-16 | 628d00dc | checklist §7 prerequisites |
+
+## Deferred from today's threads — closed by someone else, recorded so nobody re-does it
+
+| Task | Closed by | How verified |
+|---|---|---|
+| Offline-shell chunk cache fix + landing slice + QA artifact hygiene | `0fd7270` (`628d00dc`) | 116/116 ratchet, live Playwright hard-`setOffline` test with screenshots read; deployed `sw.js` md5 ≡ verified tree |
+| F-A owner-only `/api/agent-lee`, F-B dotted-API matcher, F-D support-email escaping, F-E thread-delete Vectorize erasure | `0320ece` (`0e54bb64`) | live: `/api/invites/abc.` → 401, `/api/agent-lee` → 401, `/sw.js` → 200; `security-review.test.ts` uses Next's own matcher compiler |
+| AI audit changes A–F (current-turn safety routing, definition capture, concision, third-party framework verdicts, 6-message unknown scan, non-consented relational framing) | `01d24f5` + `6d941f8` (`3fb1011e`) | 418→421 tests green, Gate 4 proven green on an internal filesystem (external-SSD I/O diagnosed), deployed `11e9ebcd`, routes 200 |
+| Visual pass CTA ladder / radii / demo plates | `0fd7270` (`a9034055`) | edits confirmed in committed HEAD; `git status` clean |
+| 48 preview-backed gates skipped in sandboxed runs | `628d00dc` | a full run with 0 skips executed them all on the host |
+| Stale local `main` pointer (the ref-safety trap) | `0fd7270` push | local `main` aligned to `origin/main`; `git push origin HEAD:main` remains the required form |
+
+## Closed this pass
+
+| Task | Closed by | How verified |
+|---|---|---|
+| #8 F-G peer-identity prompt-delimiting | this pass (agent) | New `sanitizePeerIdentity` in `src/lib/peer-identity.ts` (dependency-free) strips newline/`#`/quotes/brackets/angle/backtick, collapses whitespace, caps at 40. Applied at the single entry choke point `buildConsentedPeers` (`sovereign-connections.ts`) AND re-applied idempotently at the render seam + the two signal call sites (`sovereign-reasoning.ts`). Tests: `peer-identity.test.ts`, a render-layer `peer-identity prompt-delimiting (F-G)` block, and an entry-layer block in `sovereign-connections.test.ts` — 72/72 across the 4 affected suites. UI `personName()` left untouched. |
+| #9 cross-account isolation negative control | this pass (agent) | New **Gate 34** in `scripts/verify-release.mjs` seeds a second fully-valid account (own `users` row, live `token_version`) that owns nothing, then drives the live preview routes: the owner reads a sentinel Baseline the stranger's identical GET never surfaces; the owner's thread is 404 by id and absent from the stranger's list; a journey PATCH is refused and leaves the row byte-identical; a thread DELETE that answers `ok` destroys nothing. Positive control + teardown included. Smoke-green on an isolated preview boot, then green inside the full 117/117 run. |
+| F3 sign-in password label (from audit Pass 2) | this pass (agent) | `src/app/onboard/onboard-content.tsx`: the label is now `{isLogin ? "Password" : "Password (at least 8 characters)"}` — the 8-char floor is a signup requirement and should not tell a returning person their own password needs 8 characters. `minLength={8}` left unconditional (harmless — every stored password is ≥8). |
+| #22 Veil-CLS gate load flake | this pass (agent) | Root cause: the live `/chat` CLS gates (`gateAuthenticated` arrival, the 390 veil-reveal, Gate 12 occlusion arrival, Gate 15 dismissal) asserted the raw `window.__cls.total` accumulator, which sums `/chat`'s unavoidable async hydration shifts (nav-fade, journey/thread fetch) and intermittently tipped 0.01 under CPU contention. Fix follows the file's OWN established pattern (Gate 8 fixture + Gate 13 already reset before the interaction): added a `window.__clsReset()`/`__clsRead()` seam to `CLS_OBSERVER_SCRIPT`, scoped the veil-reveal assertion to the deterministic expand transition, excluded `/chat`'s raw load total from the arrival tally (still covered by the static routes + Gate 12), and made Gate 12 assert *settled* quietness and Gate 15 measure the fold transition. No check added (count stays 117). Also corrected a residual header count drift `thirty-three`→`thirty-four` gates. Verified inside the full **117/117, 0 skips** uncontended run — Gates 9/12/13/15 green with preview actually executing, not skipped. |
+| Email template audit — design, necessity, deliverability, receipt fields | this pass (agent) | Inventoried all call sites: 12 templates shipped, **2 had none** (`billing-success` duplicated `payment-received`; `trial-ending` advertised a free trial the product does not have) and `sendTransactionalEmail` was a dead export — all three deleted, with `email.test.ts` now asserting the removed names throw. Rendered every template through the real `email.ts` (Node type-stripping + fetch interception, so the artefacts are byte-identical to production output) and screenshotted at 375 + 700: the shared shell was missing `bgcolor` attributes, `color-scheme`/`supported-color-schemes`, a preheader, and any MSO fallback in **12/12** — all four now live in `emailShell`, plus a `@media (max-width:480px)` card rule and Get help · Privacy footer links. Every send now carries a generated plain-text part (`toPlainText`). The receipt went from prose to a Plan/Billing/Amount/Paid/Next billing summary table — and its `next`/`interval` rows were dead because `webhooks/stripe/route.ts` never passed them and formatted the date with `toDateString()`; that mapping moved to `receiptFields()`/`invoiceDate()` in `src/lib/stripe.ts` (UTC-pinned, 6 new tests). `scripts/send-test-emails.mjs` was a drifted mirror copy of the design (wrong brand colours, still listing `trial-ending`) — rewritten to call the real `sendTemplate`, so it can no longer mislead a release pass. 11/11 renders delivered for real to `defragapp@gmail.com`. |
+| #30 verify + commit the email-audit batch | this pass (agent) | Full uncontended `npm run verify:release` on the exact tree: **117/117 green, 0 SKIPPED lines, exit line read** (535s, `.audit-tmp/verify-30.log`). Pre-commit secret scan of the staged diff: no live key bytes (only the truncated `sk_live_51TV1FSBk78yJ8Hww…` *reference* in #28, which identifies the key to roll). Committed pathspec-isolated `e7d101e` — exactly the 8 email/stripe/docs files; `git status` after commit shows the parallel tab's 10 page/`lens-page` edits still untouched in the worktree. Owner gave explicit go-ahead; pushed `311d935..f78c710` via `git push origin HEAD:main` (origin/main verified unchanged first — pure FF). Both `Workers Builds` check-runs (`production-os`, `sovereign-tail`) `completed/success` on `f78c710`; live `/`, `/privacy`, `/terms`, `/faq`, `/api/health` → 200. |
+| #11 F-F per-recipient email cap | this pass (agent) | Test-first: `src/lib/email-guard.test.ts` written before wiring — 7/10 red at the contract block, then 10/10 green. New `recipientMailAllowed()` (`src/lib/email-guard.ts`): one shared recipient-keyed KV counter (`recipient-mail-rl:${email}`, cap **6/hour**, TTL-restart window), deliberately mirroring the reset route's established per-recipient pattern and `claimAnswer`'s fail-open degradation policy; the accepted non-atomicity is filed as #31 instead of silently re-architected. Wired at three call sites: signup verify/welcome (token still minted, mail skipped when capped), `/api/auth/resend` (checked BEFORE the cooldown is spent; honest 429 copy), and `/api/invites` (invite row + share link still created, only the mail is capped — kills the bomb without dead-ending the feature). Full local suite **474/474 across 40 files**, `tsc --noEmit` exit 0, eslint clean on all five touched files. Full ratchet on the final tree: **117/117, 0 skips, 501s** (`.audit-tmp/verify-ff.log`). Owner go-ahead given; committed `1737269` (6 files, parallel tab's edits untouched) and pushed `f50f9c5..1737269` — both `Workers Builds` check-runs `completed/success`, live `/` + `/api/health` 200, touched routes 401 unauthenticated. |
+| #32 + #34 advisory pair (webhook retry ordering, public health detail) | this pass (agent) | Test-first `src/lib/advisory-hardening.test.ts` (source-contract style, the repo's pattern for routes — no alias config exists to import them): 4 of 7 red before the edits, 7/7 after. **#34:** the 503 body no longer carries the caught error message (binding error strings can name databases/namespaces/permissions on an unauthenticated public route); the detail now goes to `console.error("[health] degraded:", …)` where wrangler tail and the alerting tail worker already read logs — grep proved the `error` field had one producer and zero consumers. **#32:** the ledger premise was wrong — a generic `stripe-event:${event.id}` dedup guard already shipped at the route top; the actual flaw was writing the marker BEFORE dispatch, making the webhook at-most-once (a mid-handler D1 blip left the event marked, so Stripe's retry was skipped as a duplicate). Marker now written only after the switch completes; a missing `event.id` no longer collapses all such events into one `undefined` key; replay-safety of re-run handlers documented (idempotent tier UPDATEs + per-invoice/per-customer email dedup). Suite **481/481 across 41 files**, tsc 0, eslint clean. Shipped in `d7ade71`. |
+| #33 passkey registration per-ceremony challenge | this pass (agent) | The F-H row's worry confirmed in source: the auth ceremony already keyed its challenge by a random per-ceremony `requestId`, but registration used one shared slot per user (`pkreg:${userId}`) — two tabs starting setup overwrote each other's challenge and the first ceremony failed as "expired" (self-trample; registration is session-authenticated, so no cross-user vector exists). Fix mirrors the established auth shape: `pkreg:${user.userId}:${requestId}` with a `crypto.randomUUID()` per ceremony; the requestId ships alongside the options and is echoed back on PUT (400 with honest retry copy if absent — a stale client bundle just re-starts the ceremony). Three layers wired: `src/lib/passkeys.ts`, the register route, `AddPasskeyButton` in `src/components/passkey.tsx`. Contract block 5 tests: 4 red before, 12/12 after; Full suite **486/486 across 41 files**, tsc 0, eslint clean. Full uncontended ratchet on the final tree: **117/117 green, 0 skips, 517s** (`.audit-tmp/verify-passkey.log`, final line read: `RESULT: PASS`). Owner go-ahead given; committed `2b5a522` (5 files, parallel tab's 10 page edits left untouched in the worktree) and pushed `d7ade71..2b5a522` — both `Workers Builds` check-runs (`production-os`, `sovereign-tail`) `completed/success`; live `/` and `/api/health` 200 (health body now `{"status":"ok","latency_ms":…}`), `POST` and `PUT` on the register route both 401 unauthenticated. |
+| Doc-drift batch (see table below) | this pass (agent) | Every row's claim re-verified against the tree before editing; edits are comments/markdown only. |
+| #37 + #39 + #41 + #42 + #11 residue (copy honesty, dead classes, dead control, return path, log visibility) | this pass (agent) | Test-first: `src/lib/plan-copy-and-controls.test.ts` — 9 of 12 red before the edits, 12/12 after. **#37** re-verified from source before deleting anything: `sovereign-model.ts` has no subscription-tier routing (its "tier" hits are the shared model fallback ladder) and the operator `support-notification` template carries only name/email/topic/message — so "Priority reply speeds" and "Priority support (a person replies first)" were claims at the moment of payment for behaviour that does not exist; both removed, with a comment recording *why* so nobody re-adds them. **#39** `bg-surface/40` → `bg-surface-1/40` (`surface` has no DEFAULT, so the class never compiled and the plans wrapper had no tint); the inert `journey-thread-row` name dropped — and writing the test corrected the row's own evidence: `.journey-past-trigger`/`.journey-thread-badge` also have no `globals.css` rule, they are ratchet selectors, so the invariant is "CSS **or** ratchet consumes the hook", which now covers every `journey-*` class in the file. **#41** `Logo` gained an inert-art branch (`href={null}`, no `nav-brand` hook — a span is not a tap target) used by the three decorative medallions; footer/`error`/`not-found` take the `/` default so the two error surfaces keep a working brand link instead of a focusable dead end. **#42** the paid plans CTA carries `next=%2Fupgrade`, mirroring `pricing-table.tsx`; the free CTAs deliberately unchanged. **#11 residue** the capped `welcome` branch now `console.warn`s like the verify branch. Gate 7a's `logo.includes("nav-brand")` assertion still holds. Suite **498/498 across 42 files**, tsc 0, eslint clean. Full uncontended ratchet on the final tree: **117/117 green, 0 skips, 519s** (`.audit-tmp/verify-copy.log`, final line read: `RESULT: PASS`) — Gate 7a's tap-floor hook assertion and the browser touch-floor gates stayed green with the decorative medallions no longer carrying `.nav-brand`. |
+
+## Doc drift corrected in this pass
+
+| Task | File | What was wrong |
+|---|---|---|
+| Gate count and check total in the ratchet header | `scripts/verify-release.mjs` | header claimed "thirty-two numbered gates (110 individual checks)" and enumerated to 32 while Gate 33 exists in the script — and AGENTS.md names this header as the source of truth |
+| Table count, migration range, runtime claim | `README.md` | "10 tables" vs 11 in `schema.sql` (`nudge` missing); "migrations/0001–0004" vs 7 files; architecture line still said edge + `nodejs_compat` |
+| Sampling-status note | `QA_ACTION_LIST.md` | §4 still flagged `head_sampling_rate: 1.0` and claimed it "feeds Gate 33 expectations"; the main Worker was already reverted to `0.1` in `e8bdcce` and no gate inspects the rate. §2 (middleware drift) marked resolved |
+| Stale sampling comment above the live value | `wrangler.jsonc` | the block above `head_sampling_rate: 0.1` still said "1.0 for the launch window; revert to 0.1 at T+10d" — rewritten to describe the current steady state (tail Worker's `1.0` is intentional and left as-is) |
+| Deploy-path claims in historical summaries | `REMEDIATION_SUMMARY.md`, `VECTOR_HOTFIX_SUMMARY.md` | asserted "Workers Builds is still not connected"; connected and verified 2026-10-06 — corrected with a dated supersession note rather than rewriting the snapshots |
+| Route + tail-worker claims | `LAUNCH_TODO.md` | claimed `SELF`/`PEOPLE`/`SYSTEMS` have no route files (they exist and serve 200) and referenced a `pingParent()` no-op that no longer exists |
+| Middleware header | `src/middleware.ts` | comment listed `/invite` among auth-gated public pages while the code leaves it public by fall-through |
+| Email-template inventory in the architecture list | `README.md` | claimed "Five email templates … billing-success, trial-ending" — two of those five had no call site and one advertised a trial that does not exist; now lists the ten that actually ship, and points at `scripts/send-test-emails.mjs` |
+| Tier-limit claims | `docs/stripe-plan.md` | three places sold `sovereign+` as "unlimited" (enforcement table, a suggested "unlock unlimited" in-chat nudge, and "consider a fair-use ceiling") while `src/lib/limits.ts` has capped it at 150/day since the tier shipped — corrected to the real ceiling, with a note never to print "unlimited" |
+| **Live Stripe product description** | `prod_UdHEFXmi3YN78U` (account `acct_1TV1FSBk78yJ8Hww`) | Checkout rendered "Unlimited AI answers … with no daily cap" beside the $20/mo price — a false claim at the moment of payment, and the only place it existed (the site itself says "Up to 150 AI messages a day"). Rewritten through the API to the site's own three bullets and re-verified in Chrome on a fresh session (then expired). Before/after JSON kept in `.audit-tmp/stripe-checkout/` |
+
+## Pixel pass — 2026-10-07 late (append-only; another writer held the tables above)
+
+**Correction that unblocks three rows: #15's "true 390/1440 captures are blocked" premise is
+empirically false.** Playwright 1.63 is already a devDependency and the ratchet already drives
+arbitrary viewports (`verify-release.mjs:919`); capturing live production at any width takes about
+a minute. Ran 55 captures — 11 public routes × 320/390/768/1024/1440, with `hasTouch`/`isMobile`
+set on the three mobile widths so `(pointer: coarse)` actually matches (scripts + artefacts in
+`.audit-tmp/pixel-pass/`). **Measured green across the board: zero horizontal overflow at every
+width, exactly one `h1` per page, zero 44px touch-floor violations on hook classes, zero sub-16px
+form-font violations, zero unnamed controls, zero `img` without `alt`, and the focus ring computes
+to `solid 2px rgb(229,222,210)` at `2px` offset — the BRAND.md spec exactly.** Screenshots read at
+1440/390/320 for `/`, `/faq`, `/onboard`, `/support`. Two things this does NOT cover, stated so
+nobody re-derives them: the **authed** surfaces (`/chat`, `/settings`, `/baseline`, `/account`,
+`/redeem`) remain blocked by ground rule 2 (no audit accounts in production) — not by the browser
+bridge; and a first-pass contrast probe reported 1.01:1 on `.btn-aurora`/`.btn`, which is a **tool
+artifact, not a defect** — those buttons paint their background with gradients/pseudo-elements, so
+reading `backgroundColor` resolves transparent; the pixels show cream-on-dark and dark-on-cream,
+both legible. Trust the screenshot.
+
+### New rows (P2)
+
+| # | Task | Owner | Status | Evidence |
+|---|------|-------|--------|----------|
+| 37 | **Sovereign+ sells a benefit the code does not implement.** Delete or build the two "priority" lines | agent | closed-shipped | `25d09d1`, live: the deployed landing HTML no longer contains either claim. Both lines deleted after re-verifying the premise independently — see *Closed this pass*. No live residue: the Stripe product description in `.audit-tmp/stripe-checkout/product-after.json` never carried the claim. |
+| 38 | **The human-first vocabulary decree is unenforced in the AI channel — and the prompt teaches the banned words.** | agent | closed-shipped | Shipped by a **parallel tab** in `47584ac` (with a `sovereign-prompt.test.ts` pin). Diff re-read here and it does address the row: "those patterns"→"those dynamics", "one pattern in your Baseline is…"→"one dynamic you often notice is…", "identify qualities, patterns"→"…dynamics", the Level-3 "the pattern they describe"→"what keeps happening as they describe it", "When you identify a pattern"→"When you notice a dynamic". Backend identifiers were not renamed. |
+
+### New rows (P3)
+
+| # | Task | Owner | Status | Evidence |
+|---|------|-------|--------|----------|
+| 39 | Dead Tailwind class renders the plans table untinted | agent | closed-shipped | `25d09d1`, live. `bg-surface-1/40` now compiles; the inert `journey-thread-row` name is gone. Correction to this row's original evidence: `.journey-past-trigger` and `.journey-thread-badge` have **no rule in `globals.css` either** — they are ratchet selectors (`scripts/verify-release.mjs`), which is why the contract test accepts *CSS or ratchet* as consumption. |
+| 40 | Sub-AA body text on the dark canvas | agent | closed-shipped | **Fixed in `8ca41dd`.** Raised all 18 sub-AA `text-muted-foreground` tones — `/50` (3.10:1), `/55` (3.52:1), `/60` (3.99:1) — to `/70` (5.05:1): chat-client eyebrows/labels/composer placeholder, the shared `ui/input.tsx` placeholder, the support textarea placeholder, account "— not set —", pricing "Not included", both baseline-drawer disclaimers, and both share-card labels. No gate asserted those literals; `contrast-floors-and-register.test.ts` now pins that none of the files carry a `/50\|/55\|/60` muted tone. Original diagnosis: Against `--background 30 8% 4.5%`: `text-muted-foreground/50` = 3.10:1 (`chat-client.tsx:154,227,264`), `/55` = 3.52:1 (`:1542`), `/60` = 3.99:1 at `text-xs` (`chat-client.tsx:232,1924`, `baseline-drawer.tsx:130,149`, `pricing-table.tsx:57`, `share-card.tsx:222,241`) — all under the 4.5:1 AA floor for small text; `/70` = 5.05:1 passes. Corroborated live: the sweep measured exactly 3.99:1 on the 11px "from NASA/JPL planetary data" label in the landing demo plate. Fix: raise to `/70`. |
+| 41 | `<Logo href="#">` is a focusable link that goes nowhere | agent | closed-shipped | `25d09d1`, live. `href={null}` renders inert art for the three decorative medallions (`ui/loading.tsx`, the landing hero mock, the `/chat` empty state); `site-footer.tsx`, `error.tsx` and `not-found.tsx` now take the `/` default — the two error surfaces keep a working brand link. |
+| 42 | Landing plans CTA drops the return path | agent | closed-shipped | `25d09d1`, live: the deployed `/` HTML contains exactly one `/onboard?mode=signup&next=%2Fupgrade` (the paid plans CTA) and the three plain free CTAs. Same split as `pricing-table.tsx`, deliberately. |
+| 43 | `/support` form controls overflow by 6px at 200% text | agent | open | Measured at 390×844 with root font-size doubled: inputs, the topic `select`, and the message `textarea` sit at `L=96 R=396`. `scrollWidth` still reports 390 because the parent clips, so **no gate catches this** — the loss is invisible to the ratchet. Minor, but it is the page a paying person goes to for help. |
+| 44 | Hand-written touch floors duplicated away from the single hook block | agent | closed-shipped | **Dedup subset shipped in `8ca41dd`.** Removed the redundant inline floors where the coarse block already applies the 44px via a sanctioned hook or the `.journey-bar` ancestor: `terms-gate.tsx` `tap-line`/`btn-focal` (−4× `min-h-[44px]`) and the four in-bar `journey-canvas` buttons (−`min-h-[2.75rem]`; the "New" chip keeps its `min-w`, which the coarse block does not floor). Gate 7b re-measured "every journey control ≥ 44px tall" green in the 117/117 run. **Premise corrected here:** `journey-canvas.tsx:315` sits inside `.past-arc-sheet`, and `chat-client.tsx` has no `.journey-bar` ancestor anywhere — those two `min-h-[2.75rem]` are load-bearing and were kept (and the chat line is :1533, not the row's stale :1510). `sigil-composer.tsx:100,112` are NOT a safe dedup: they carry a literal with no hook, so removing it regresses the touch floor; the proper fix needs a new segmented-control hook in the coarse block — an owner/design decision, left deliberately, not silently. The ratchet-protected literals `chat-client.tsx` (:1664) and `offline-retry.tsx:71` were untouched. |
+| 45 | The 10-file design-token batch still has no numbered row | owner | closed-shipped | **Shipped unilaterally by a parallel tab in `47584ac`** (the commit that also carries #38), while this ledger still said "adjudicate". The row itself was correct that all its dependencies resolve and that dropping the hand-written `min-h-[48px]` is right; what did NOT happen is the owner decision the row asked for, and the batch went out under a commit message that only names #38. Live consequence checked here: all 10 routes answer 200 (15-route public sweep), and Gate 24/30's browser touch-floor and contrast measurements were green in the 117/117 run that covered the same files. Kept as a numbered row so the provenance is not lost. |
+| 46 | Legal-page heading register drift | agent | closed-shipped | **Fixed in `8ca41dd`.** Rewrote the 16 `terms/page.tsx` `<h2>` headings to the plain brand register `privacy/page.tsx` uses ("1. Acceptance of Terms"→"1. Agreeing to these terms", "5. Prohibited Conduct"→"5. What you agree not to do", "11. Limitation of Liability"→"11. Our limit on liability", etc.). Section bodies are unchanged except one stale by-name cross-ref, "Section 5 (Prohibited Conduct)"→"the rules in Section 5". `terms.test.ts` asserts only the version format, never the heading strings, and there are no `id=` anchors, so nothing broke; `contrast-floors-and-register.test.ts` pins the new register and that all 16 numbered sections survive. |
+
+### Re-triage of rows already filed
+
+| # | Correction |
+|---|---|
+| 34 | **Shipped while this pass ran — `d7ade71`.** Was mis-prioritised as "P4 speculative" when it was a live, five-line info leak: `api/health/route.ts` returned the raw caught error message (and deliberately composed `VECTORIZE.describe: ${vErr.message}`, which can name databases, namespaces and permissions) on an unauthenticated public route. The 503 body is now `{ status: "degraded", latency_ms }`, with detail sent to `console.error` where `wrangler tail` and the tail worker already read it (`health/route.ts:61-66`); `advisory-hardening.test.ts` pins it. The same commit closed **#32**, and in a different place than that row guessed: the processed-marker was written *before* the handler switch, making the Stripe webhook at-most-once, so a mid-handler D1 blip left the event marked and swallowed Stripe's retry as a duplicate. |
+| 35 | **Correctly low-priority, and the reason should be recorded so nobody over-engineers it.** Owner rights require `email_verified === 1` (`owner.ts:66`), so signing up as `chadowen93@gmail.com` grants nothing without access to that inbox. A stable user-id allowlist is still tidier; it is not urgent. |
+| 36 | **Also correctly low-priority, for a reason the row does not state.** Deletion needs only a session JWT, but the cookie is `sameSite: "lax"` (`auth/route.ts:269`), so a cross-site delete is not reachable. Re-auth is defence-in-depth, not a hole. |
+| 11 | Shipped while this pass ran: committed `1737269`, pushed, main Worker at 100% on `de117610` (17:54 local), tail on `1c3cd8c2`. Residue CLOSED and SHIPPED in `25d09d1`: the capped-`welcome` branch (`auth/route.ts`) now logs `"[auth] recipient mail cap reached — welcome email skipped"`, matching the verify branch, and a contract test pins that both cap sites warn. |
+| — | **Measurement note for future passes:** `/support` and `/onboard` never reach Playwright's `networkidle` (60s timeout at all five widths) because Turnstile holds a connection open. Use `domcontentloaded` + a fixed settle when scripting those two, or the capture silently degrades. |
+
+## Authed-surface + residual-item pass — 2026-10-07 late (this thread; append-only)
+
+**Shipped this thread:** `16969df` `fix(copy): drop "semantic" jargon from the chat search hints` — the two rendered "semantic" strings in the recall panel replaced with plain words, pinned by a source-contract assertion. Full ratchet **117/117, 0 skips** on the exact tree; pushed `d1ef474..16969df` (pure FF, origin/main verified unchanged first); both `Workers Builds` check-runs (`production-os`, `sovereign-tail`) `completed/success`; live `/`, `/systems`, `/terms`, `/faq`, `/privacy`, `/api/health` all 200. Confirms the earlier Family-&-Teams rename, `/terms` register, and pricing de-jargon are live.
+
+**#16 CLOSED (rendered inspection of authed surfaces).** Captured `/chat`, `/settings`, `/baseline`, `/account`, `/redeem` against a LOCAL seeded preview (`opennextjs-cloudflare preview --port 8789`, serving the shipped `.open-next`; JWT minted for the content-rich fixture user `7v7f1r00-…01`, 2 threads / 2 journeys / 1 baseline) at **390 and 1440** — all `200`, **zero console errors, zero horizontal overflow**; every screenshot read. The `border-white/10` "cold-white hairline" consolidation this row was waiting on: **no change warranted** — those hairlines sit only on decorative medallions/plates and the active memory pill; the `/settings` connection/invite cards use `white/[0.07]` with a warm `hsla(38,…)` inset shadow and read as one system. Minor, local-only: `scripts/e2e/seed-local.sql` fixture thread text uses the banned word "pattern" (never ships to prod, but false-flags a future visual audit).
+
+**#43 ADJUDICATED benign — no safe code fix (owner decision if desired).** Root-caused with Playwright at 390×844 / 200% root font: the deliberate `w-[300px]` Turnstile slot + rem-based `PageShell` gutters (`px-6` doubles to 48px) → gutter(96)+widget(300)=396 > 390, a **6px right-edge bleed** of the widget's decorative padding; the interactive checkbox (left) stays fully usable. **The overflow gates pass only because `<main>` carries `overflow-hidden`, which masks child overflow from `documentElement`** — so the clip cannot be surfaced without failing them, and shrinking a fixed-size security iframe clips the challenge / regresses CLS. Every candidate fix is net-worse or a product call: `size:"compact"` changes the signup/support challenge UX globally; a narrower gutter is a design change; `overflow-x-auto` on the form forces a ~100px horizontal scroll (worse than a 6px bleed). Left as-is deliberately.
+
+**#17 ADJUDICATED acceptable — no change.** Landing trust row (`landing-client.tsx` L245-252): symmetric 20px dot separators, identical rhythm desktop↔mobile; the only mobile artifact is a possible leading-dot on a wrapped line. A tweak risks the landing overflow/Reveal gates for no clear gain.
+
+## Two-round live audit — 2026-10-07 (this thread; append-only). Closes #15.
+
+**Deployed state confirmed first:** `HEAD`==`origin/main`==`1dac224`, tree clean, latest version at 100%, live `/` 200, `/api/health` `{"status":"ok"}`.
+
+**ROUND 1 — static pixels + iOS real-use + integrity.** Captured every public route (`/ /about /self /people /systems /blog /blog/[slug] /faq /support /terms /privacy /onboard /offline /redeem /reset`) at **1440 and true 390** (`isMobile`/`hasTouch` so `(pointer: coarse)` matches), plus a scroll-through re-capture to fire the `Reveal` IntersectionObserver, and **read every screenshot**. All polished and cohesive; the Family & Teams rename is live across nav, drawer, footer, and lens pages. Hard iOS checks green: `viewport-fit: cover`, **no** `maximumScale` cap (WCAG 1.4.4 zoom preserved), `dvh` in `page-shell`, `env(safe-area-inset-*)` wired into nav/footer/install-prompt/tab-bar, `touch-action: manipulation`, and the `@media (pointer: coarse)` 44px floors + 16px input floor (`!important`, Gate 30). **iOS inputs measured ≥16px at 390 (none flagged); the 14px hits are desktop-only and correct.** Link/asset integrity: 23 internal targets **0 broken**; `/manifest.webmanifest`, all brand/maskable/PWA icons, `/sw.js`, `/apple-splash` all 200. Non-defects investigated and cleared: the `/systems` "void" was pre-scroll `Reveal` (renders fully on scroll); `/offline` showing the landing is `OfflineRetry`'s **intentional** auto-walk (`window.location.replace` to `/` or `/chat` after a real `/api/auth` probe, one-time guard vs captive-portal loop); the 2 "console errors" on `/support`+`/onboard` are the benign Cloudflare beacon `%c%d` styled-log noise (skill: don't touch).
+
+**ROUND 2 — interaction, as a user.** On live, iOS: `/onboard` Sign-in↔Create toggle flips, **passkey button present** on the sign-in view; empty/invalid submit triggers **native browser validation** ("Please include an '@'…", "Please fill out this field.") with the field's focus ring — accessible, correct (never submitted real data). `/support` required-field validation + Turnstile interactive checkbox render. `/faq` accordion opens (7 rows, single-open). First Tab stop is "Skip to content" with the brand focus ring `2px solid rgb(234,227,215)` @ `2px` offset.
+
+**Verdict:** the public platform is polished, iOS-optimized for real use, and functionally sound — **no code change was warranted**, and none was made (fabricating a cosmetic edit risks regressing a 117/117-tuned system). Remaining open ledger rows are all owner-blocked (dashboard/decision/real-device/real-money: #1–#7, #19, #20, #23–#29) or need owner data / a scheduled pass (#35 needs the owner's stable user-id from prod D1; #31/#36 deferred by design; #10/#12/#13 open-design).
+
+## Legacy harvest — asset triage and build order — 2026-10-08 (this thread; append-only)
+
+Phase 0 (preservation) and Phase 1 (verdicts + drift) are complete; Phase 2 is the
+build-order document. No `src/` file was modified by this pass, and no legacy repo was
+mutated — each source's status/stash/head/branch signature was confirmed identical
+before and after. Artifacts: `/Users/cjo/_legacy-harvest/` (6 bundles + 2 `-all`
+superseding bundles + 6 archives + uncommitted-state patches, ~550 MB, internal disk,
+all `git bundle verify`-clean with matching `refs/heads/main`).
+
+Findings that changed the plan's premises are recorded in
+[`legacy-asset-inventory.md`](./legacy-asset-inventory.md) §corrections and
+[`legacy-implementation-plan.md`](./legacy-implementation-plan.md) §0. Read them before
+starting any row below — in particular: the predecessor eval harness scores five of six
+axes as **hardcoded constants** (`narrative-generator.ts:32-43`) and its cost ceiling is
+three no-op functions (`free-tier-capacity.ts`), so both are shape-only ports whose oracle
+must be built here. Standing rule adopted: **a check may not return a value it did not
+compute.**
+
+| # | Task | Owner | Status | Source thread | Evidence |
+|---|------|-------|--------|---------------|----------|
+| 47 | Push the legacy bundles to a second copy off this machine | owner | done-verified | this pass | **Closed with a per-file server proof, 2026-10-08.** All 43 files (648,506,556 B) at `~/Library/Mobile Documents/com~apple~CloudDocs/_legacy-harvest-2026-10-08/`; `rsync -a --stats` then a full `shasum -a 256` sweep — `diff` of sorted source vs destination hash lists was **empty**. Server possession then proved for **every** file, not one: `brctl evict` succeeded on **43/43** (it refuses with `NSFileProviderErrorDomain -2008` while content is server-absent, and it did exactly that at 17:2x before the queue drained), and `verify-copy.sh` was then run *through* the iCloud path, where each read of a dataless file forces a real fetch — **34/34 artifacts hashed OK and 8/8 `git bundle verify` OK from the server side**, with `bundles/sovv-main.bundle` returning sha256 `aed01635ebdc8e27e4fd6ff88204b518e90dd1fddf84ff562f4de009f0cfcbfd`, identical to the original and to `manifest.tsv`'s `bundle_sha256`. Copy left **evicted** afterwards, so it no longer occupies the 98%-full internal volume. Method in `.audit-tmp/prove-offsite.sh`. **Two caveats, recorded not glossed:** per-file `brctl status` is unusable on this machine (returns `BRCloudDocsErrorDomain:30` "Client zone not found" even for synced files), so evict-then-refetch is the only trustworthy assertion; and iCloud syncs deletions under this Apple ID, so this is a second copy, not an immutable archive. Do NOT delete `/Users/cjo/_legacy-harvest/` — see #70. **Corrected same day, after this row was first written:** the archive's `git bundle verify` phase was an invalid check — that command exits `error: need a repository to verify a bundle` outside any git repo, so it appeared to pass 8/8 only because `/Users/cjo` is accidentally a git repository. Replaced with a clone-and-fsck restore test (`.audit-tmp/restore-test.sh`, shipped as `restore-test.sh` inside the archive). It found that **4 of 8 bundles do not rebuild** — `openapi` and `sovereign.final` clone with `missing commit` broken links and their `-all` variants fail outright, because both source repos are **shallow** (`.git/shallow`, 23 and 45 boundary commits) and `git bundle create` writes the parent pointer but not the parent across a graft. `git fsck` against the *source* repos is clean, so the objects are on this disk and the bundle step dropped them. Fixed by archiving each repo's raw `.git` (`gitdirs/*-gitdir.tar.gz`, 6 files ≈260 MB, `.audit-tmp/preserve-gitdirs.sh`); the OPENAPI `.git` archive holds **264 refs against the bundle's 1**, fsck-clean, plus 2 dangling commits and the worktree admin dirs. Manifest now **46 artifacts**; all six `gitdir` tars evict-proved and refetched with matching sha256; EXTREME mirror identical at 56 files. Restore path for `openapi`/`sovereign.final` is the `.git` archive, not the bundle. |
+| 48 | Build the answer-quality eval harness (recorded-answer replay, six axes computed from text, mandatory negative control) | agent | closed-shipped | ef57b51 | **Closed 2026-10-09: shipped in `ef57b51`, live 20:32Z via CLI `npm run deploy` (smoke 200 on `/`, `/privacy`, `/terms`, `/faq`). Repeated wrangler redeploys have landed since from the origin/main tip (`07def85`+ docs-only commits — identical app code); newest verified as of this read: production-os `75b33676…` (20:51:42Z), sovereign-tail `bd618030…` (20:50:45Z), all `source:"wrangler"`, live smoke still 200. — `src/lib/answer-eval/` (fixtures/rubric/runner/record) + co-located gate `src/lib/answer-eval.test.ts`, 15/15 tests, tree verified 117/117. §1. Six axes (clarity, groundedness, relational, uncertainty, actionability, safety) are computed from the delivered text, never constants — the "a check may not return a value it did not compute" rule. Twelve recorded answers (six legacy ids × direct/indirect) captured through the REAL pipeline (`buildReasoningContext` → `generateSovereignResponse`) on the owner-approved test account, direct `ai/run` tier (honest: the AI Gateway binding is unreachable from plain Node; 1:1 model+prompt, `tier:"direct"` recorded). The gate is free and deterministic: zero model calls; it replays recorded text through the same `SovereignModel` seam as `sovereign-evals.test.ts:25` and pins (1) promptSha drift — a changed prompt forces re-capture, the exact #53 before/after seam; (2) byte-identical replay (validation+scrub must not mangle recorded text); (3) per-axis thresholds = `floor(observed − 0.05)` (2-decimal floor, mechanically derived from the recorded `observed`, re-asserted in-test so they can never be hand-picked); (4) the negative control (banned-vocab + pathology-laden answer) fails: safety 0, total 1.75 < weakest real fixture 3.5, and the pipeline refuses it (`usedFallback`). Banned-vocabulary scan across all 12 recorded answers: zero hits; every `must_include_any` satisfied; `pressure` deliberately excluded per #61. **Namespace fix found in the build, recorded not glossed:** the capture driver is named **`capture.mjs`, not `record.mjs`** — vite-node's default `resolve.extensions` puts `.mjs` before `.ts`, so a `record.mjs` would shadow the pure `record.ts` module under the test import and re-run the paid capture inside vitest (observed live: fresh 12-call captures + `thresholdFor` undefined; renamed and re-verified, gate is now 415ms and free). Thresholds live in `recorded/thresholds.json` (capture artifact); fixtures carry `expect.must_avoid` + `expect.must_include_any` (deviation from the plan's `expect.axes` listed in §1, documented here). Re-capture command: `CLOUDFLARE_API_TOKEN=$(cat ~/.cf_token) node src/lib/answer-eval/capture.mjs`. Unblocks #53 (the reduced Baseline context) and #52's before/after. |
+| 49 | Owner audit log: migration `0008` + `src/lib/audit.ts` + two owner-console call sites | agent | closed-shipped | 35cafcb | **Closed 2026-10-09: shipped in `35cafcb` (both Workers Builds green, live).** §2. Closes a real gap — owner entitlement actions are currently unprovable after the fact (`schema.sql`, `0001`–`0007`). Ports `SOVV:utils/audit.ts` with three forced divergences: no `ip` column, `actor_email_hash` not email, no FK on `actor_id` (because `account/route.ts:59` hard-deletes with `ON DELETE CASCADE` and a cascading audit table would self-erase). Keeps legacy's fail-silent catch, with its reason. |
+| 50 | Crisis-resource registry with provenance, `selectionSource`, and the unknown-jurisdiction path | agent | closed-shipped | fa89005 | **Closed 2026-10-09: shipped in `fa89005` — `src/lib/crisis-resources.ts` registry with contact lines + provenance (`selectionSource`), unknown-jurisdiction fallback, registry-backed `buildSafetyResponse`; 18 new tests; live.** **Infra note (recorded, not glossed):** the Workers Builds builds for `fa89005` failed at *initialization* on both Workers ("build token selected … has been deleted or rolled") — the two triggers' build tokens wrap user-scoped Cloudflare API tokens that were deleted/rolled on the account, and the Builds system cannot accept this machine's account-scoped `cfat_` token as a replacement (dashboard action required to repair; triggers reverted to the original tokens, experimental tokens deleted). The batch was shipped via the documented CLI fallback (`npm run deploy`, ships both Workers) after confirming no build was in flight; live smoke checks passed (HTTP 200 on `/`, `/privacy`, `/terms`, `/self`, `/people`, `/systems`). **~~Repair landed the same evening — push-to-deploy is restored.~~ SUPERSEDED 2026-10-09 — see the supersession note at the top of this file.** The live API on `ac9a47dd…8349` shows zero triggers/builds and build-config 12040 on both Workers, and every deployment ever is `source: "wrangler"` — including the 18:01–18:03Z entries below — so this repair narrative is **not** reflected in account state. The dashboard build-token repair took effect between the 17:01Z `fa89005` failure and the 18:01Z push of `24eb43f`: both original build tokens (`f40e7197…` production-os / `f96c21f9…` sovereign-tail) became valid again and are correctly wired to their triggers, and the `24eb43f` push produced **green Workers Builds on BOTH Workers** (verified via GitHub check-runs `success`, plus deployments at 18:01–18:03Z). No tokens needed deletion and no triggers needed patching; the experimental tokens (`302cf945…`, `8ae1a66a…`, `5aabd535…`) were already removed. §3. Today `buildSafetyResponse` (`sovereign-safety.ts:486-511`) emits a fixed four-jurisdiction list stating nothing about how it was chosen, and has no fallback path. The invariant worth importing is `safety-resources.ts:139` — *"without relying on a model-generated contact"*. Provenance test is completeness-only; review **recency** deliberately stays out of the gate so it cannot turn red on its own calendar. |
+| 51 | Decide `urgent` vs `emergency` presentation split | owner | blocked-decision | this pass | §3, §11.4. User-visible crisis copy, so a product call, not an engineering one. Designed so the answer is a flip: `SafetyMode` stays 3-valued and the split lands as a `presentation` field on the returned object. |
+| 52 | Expand `SafetyViolationType` with the six missing output-safety categories | agent | closed-shipped | fa89005 | **Closed 2026-10-09: shipped in `fa89005` — `SafetyViolationType` extended with the six categories (`therapy-claim`, `fixed-family-role`, `spiritual-causation`, `projection-as-fact`, `institutional-tone`, `excessive-disclaimer`), LEXICON +6 rules in `src/lib/sovereign-safety.ts` with the forbidden output-safety categories exercised in `sovereign-safety.test.ts`; live (deployed via CLI fallback — infra note in #50).** §4. Missing: `therapy-claim`, `fixed-family-role`, `spiritual-causation`, `projection-as-fact`, `institutional-tone`, `excessive-disclaimer` (legacy has 13 distinct types over 14 patterns — an earlier note said 14, corrected by reading `safety.ts:18-48`). Data-only port: `buildRepairInstruction` already renders each rule's `note`. Not ported: the paragraph-swap `safeRewrite` (violates the repair/fallback rule at `sovereign-safety.ts:513-522`) and `allowFrameworkLabels` (no surface needs it in v1). |
+| 53 | Reduced model-safe Baseline context + the three missing separation lines | agent | closed-shipped | 2026-10-10 AI audit | **Closed 2026-10-10 (this pass).** The Baseline is now rendered in plain language with no internal tag, de-duplicated (Sun/Moon were emitted twice), and **bounded to ≤3 selected signals** per turn via `selectBaselineSignals` (`sovereign-baseline.ts`) at the render seam `sovereign-reasoning.ts` (`renderReasoningContext`). See the *Sovereign AI product audit* section below for the full before/after (recorded-answer re-capture + prompt char/token measurement). |
+| 54 | Degradation contract: port the two pure functions, add a circuit breaker, and real daily spend accounting (`0010_ai_spend_daily.sql` — **0009 is taken by WS3 `answer_feedback`**) | agent | open | this pass | §6. `shouldBypassAi`/`tuneTokenBudget` are `port-directly` (verdict upgraded — pure, no KV coupling); state in `SESSION_KV` per the non-session precedent at `nasa-jpl.ts:184` and `email-guard.ts:40`. Do **not** port the reserve/settle/void trio: three functions that look like a ledger and record nothing. Neuron rates must be re-derived for `llama-3.1-8b-instruct-fp8`, not copied. Ceiling opt-in by env var so migration order cannot take chat down. |
+| 55 | Send `Retry-After` (and `cache-control: private, no-store`) on the daily-cap 429 | agent | closed-shipped | afb6ba9 | **Closed 2026-10-09: shipped in `afb6ba9` — the fair-use 429 emits `Retry-After: secondsUntilUtcMidnight()` and `Cache-Control: private, no-store`; live.** §6(c). Verified: no response in this repo emits `Retry-After` anywhere in `src`. The copy at `api/chat/route.ts:216-218` already promises "tomorrow's reset" that the client cannot see. Legacy computes it to next UTC midnight in `free-tier-capacity.ts:freeCapacityResponse`. One-line, standards-correct. |
+| 56 | Refuse `cross_account_data_request` before the model call | agent | closed-shipped | afb6ba9 | **Closed 2026-10-09: shipped in `afb6ba9` — `detectCrossAccountRequest` + `buildCrossAccountDeflection` (`sovereign-safety.ts`) refuse "show me another user's baseline"/"dump all users" asks before any model call; covered in `sovereign-safety.test.ts`; live.** §7.1. `EXTRACTION_PATTERNS` (`sovereign-safety.ts:452-466`) covers prompts, instructions, credentials and internal symbols — **not** "show me another user's baseline" or "dump all users". Legacy has that category (`input-safety.ts:119-122`). Cheapest security win in the set; #9/Gate 34 already proved isolation holds, this refuses the ask rather than relying on the loader. |
+| 57 | Multilingual crisis patterns (Spanish, French) | agent | closed-shipped | fa89005 | **Closed 2026-10-09: shipped in `fa89005` — Spanish/French ESCALATE and GROUNDED patterns via `skipNegationLookback` + multilingual routing in `src/lib/sovereign-safety.ts`, covered by the new multilingual test suite; live (deployed via CLI fallback — infra note in #50).** §7.3. `input-safety.ts:39-40,48-49,55,75,84-85` carry non-English crisis phrasings; this repo has none, and `MIN_ADULT_AGE` (`date-of-birth.ts:24`) and the whole funnel are English-only. A person in crisis writing their first language currently gets `standard`. |
+| 58 | Do NOT port `clearlyNonImmediatePatterns` — record the decision so nobody re-imports it | agent | deferred-decision | this pass | §7. Legacy suppresses crisis handling for "hypothetically" / "in a story" / "years ago" (`input-safety.ts:132-135`). This repo's comment at `sovereign-safety.ts:426-428` states the opposite policy in as many words: thread-wide, conservative, "never loosened for answer quality". Kept as a row so the trade is explicit rather than accidental. |
+| 59 | Approve recorded-answer capture on the consented test account | owner | owner-approved | ef57b51 | **Approved 2026-10-09 (in-session "ok") and executed — 12 real-model calls on `defragapp@gmail.com` (`tier.ts:30`, never a real user), paid tier spent one-off, artifacts committed with #48 in `ef57b51`.** §11.3. Capture mechanism (recorded, honest): direct Workers AI `ai/run/@cf/meta/llama-3.1-8b-instruct-fp8` from `~/.cf_token` (account-scoped) — the gateway REST path returns `Invalid provider` (code 2008) from plain Node, and the AI Gateway binding is unreachable outside a Worker, so the recorded tier is `"direct"` (1:1 model + prompt). Token read from env only (`capture.mjs`), never written to any file. What it unblocks (#48, then #53 and #52's before/after): deterministic, free replay of every recorded answer on every `npm test`. |
+| 60 | Ratify the no-`zod` rule for every ported legacy contract | owner | blocked-decision | this pass | §11.2. 27 deps, zero `zod`. The three ported modules that used it get plain TS validators in house style (`validateSovereignText`, `markdown-lite`, `email-guard`). Adding it to the Worker bundle to port three files is not worth the supply-chain surface — overrule with a reason if you disagree. |
+| 61 | Settle whether `pressure` stays an approved word | owner | owner-approved | ef57b51 | **Settled 2026-10-09 (in-session decision): `pressure` stays an approved word.** §11.6. AGENTS.md wins over the legacy `plain-language.fixture.json` (which listed it in `must_avoid`): the fixture file is legacy source material with no port in this repo, and the migration rule for every `must_avoid` list is re-derivation from `LEXICON` + AGENTS.md, never copying. Landed in code with #48 (`ef57b51`): `pressure` is deliberately excluded from `BANNED_VOCAB` (`fixtures.ts:9` documents the exclusion), and its negative-control answer uses the banned words (`pattern`, `friction`, `natal`, pathology nouns) that LEXICON rejects. |
+| 62 | Hash the IP before it becomes a KV rate-limit key | agent | closed-shipped | 05ed9b1 | **Closed 2026-10-09: shipped in `05ed9b1` — `src/lib/ip-hash.ts` (`hashClientIp`, secret-keyed SHA-256) keys the login and signup buckets; a raw IP never enters an ephemeral KV key; live.** §8, §11.7. `api/auth/route.ts:156-159` builds `login-rl:${ip}:${emailForRl}` from `cf-connecting-ip` with no hashing helper anywhere in `src/lib`. Small hardening task, and it is what lets a privacy document make a true claim: today the honest sentence is "a raw IP appears in an ephemeral KV key", which contradicts the predecessor's `DATA_FLOW_MAP.md` ("IP hash (SHA-256) in D1"). Decide: fold into #49 or track separately. |
+| 63 | Move the durable audit scripts out of `.audit-tmp/` into committed `scripts/audit/` | agent | open | this pass | §9. **Zero** tracked files under `.audit-tmp/` (gitignored at `.gitignore:36`; `git ls-files .audit-tmp` is empty) while 20 `.mjs` scripts live there, including the live-authed and security-review passes. This pass scanned them: no `github_pat_`, `sk_live_`, or `Bearer` literal present — a future batch must re-run that scan and say so in the copy commit. |
+| 64 | Fix the six stale evidence citations in committed docs | agent | open | this pass | §9. `git grep -ln "\.audit-tmp/" -- '*.md'` → `LATENCY_PROFILE_REPORT.md`, `VECTOR_HOTFIX_SUMMARY.md` (both at repo root, not `docs/`), `docs/cloudflare-account-migration.md`, `docs/launch-checklist.md`, `docs/open-tasks.md`. Plus a sixth found this pass: `docs/ai-evaluation-and-cost.md:119` points the dynamic-E2E-eval gap at `TODO.md`, **which does not exist**. A fresh clone cannot verify a single shipped claim until this is done. |
+| 65 | `verify:release` emits a tracked `docs/evidence/<date>-ratchet.md` | agent | open | this pass | §9. Head sha, environment, the final `N/M checks green` line, skip count — a summary, not raw logs, so `SQLITE_BUSY` noise cannot be mistaken for a pass. Gate count stays sourced to the `verify-release.mjs` header (thirty-four numbered gates) and quoted nowhere else. |
+| 66 | `src/lib/docs-drift.test.ts`: assert every factual claim in the compliance docs against code | agent | open | this pass | §8. The mechanism no predecessor had — the documents were true when written and nothing detected when they stopped being true. 14 drift rows already enumerated in the inventory's §drift table. Blocked until #48–#54 ship so the docs describe code that exists. |
+| 67 | Adopt-or-reject the four remaining input-safety categories | owner | blocked-decision | this pass | §11.5. `unverifiable_threat`, `severe_confusion`, `medical_urgency`, `minor_safety` — each implies its own user-visible reply text, so each is a product decision. Listed separately from #56 deliberately: that one is unambiguous, these are not. |
+| 68 | MCP / ChatGPT surface (`defragsrelationalswap:apps/defrag-chatgpt-app`) | owner | deferred-decision | this pass | §plan item 8, ranked last. A real second channel, but it needs its own plan: MCP deps, an OAuth handoff, and a separate deploy path. Not folded into this build order. |
+| 69 | Decide whether the compliance/trust document set is a launch requirement or post-launch | owner | blocked-decision | this pass | §11.8. Sets whether `legacy-implementation-plan.md` §8 is scheduled behind #48–#54 or deferred indefinitely. The 21 legal + 5 security docs in `OPENAPI:docs/` are all `stale-assertions` (14-row drift table in the inventory), so nothing can be copied — it has to be re-derived, and that only works once the code it describes exists. |
+| 70 | Put a durable third copy of the harvest somewhere that cannot sync a deletion | owner | open-design | this pass | #47 moved the archive off its only disk, but both remaining copies (internal SSD + iCloud Drive) are under this machine's and this Apple ID's control, and the internal volume is at **98% (19 GiB free)** with **Time Machine reporting `No destinations configured`** — this machine has no automatic backup of anything. Facts measured while closing #47, for whoever picks the target: no second physical drive is attached (the `SanDisk Unlocker` volume is a 36 MB CD-partition installer shim belonging to the EXTREME drive itself, not a spare); `ssh -T git@github.com` authenticates as **defragapp** even though the fine-grained PAT cannot write, so a push to an existing repo is possible but repo *creation* is not; and `worktrees/openapi-worktree.tar.gz` is **131 MB**, over GitHub's 100 MiB per-file limit, so a git-hosted archive must omit it or use LFS. `EXTREME` alone has 1.7 TiB free but is the volume with recorded phantom deletions — a copy there is a copy onto the flakier disk, not a backup. **Two things measured while re-checking the GitHub route (2026-10-08, read-only API):** (1) the `defragapp` account was created **2026-05-05** and has exactly **one** repo — `production.os`, **public**, created 2026-09-10, 2,419 KB, `main` = `4924d69` (identical to this working tree). Every legacy name 404s (`SOVV`, `sovereign-os`, `defragsrelationalswap`, `openapi`, `sovereign.final`, `defrag2`, `defrag.app`), and an *unauthenticated* `users/defragapp` also reports `public_repos: 1`, so this is not a token-scope artefact. **The earlier build attempts were never on GitHub — the `/Users/cjo/_legacy-harvest/` bundles are their only surviving copy**, which is what makes #47 and this row load-bearing rather than tidy-up. (2) A token with **admin** on `production.os` was supplied in-session; it is not persisted anywhere (no git remote URL, no `.dev.vars`, no committed config) and should be revoked once the owner is done with it. **Hard stop on pushing the harvest into `production.os`:** that repo is *public*, so six abandoned attempts' uncommitted diffs, stash patches and tarballs would be published to the internet — and `worktrees/openapi-worktree.tar.gz` (131 MB) exceeds GitHub's 100 MiB push limit anyway, so the push would be rejected before that happened. A GitHub target must therefore be a **private** repo, which needs `Administration` create permission that this token's scope cannot be probed for read-only. **Candidate offsite surfaces, measured rather than assumed:** `gcloud` lists `wintermintct@gmail.com` as the active account but its token will not refresh (`invalid_grant: Bad Request`; `gsutil ls` → "credentials are invalid"), so it is **not** usable this pass without an interactive `gcloud auth login`; `az` reports `Azure for Students` / `Enabled` and is live; `wrangler r2 bucket list` fails for want of `CLOUDFLARE_API_TOKEN` in the shell environment, so the R2 route (10 GB free, zero egress, and already the vendor of record) needs an owner-supplied token and creates a resource on the production account. |
+| 71 | Enable R2 on the ASU account, then push the harvest to a bucket | owner | blocked-dashboard | this pass | The owner supplied an account-scoped API token for `ac9a47ddb8928af2f3535e2a1e4d8349` (**Cjowen2@asu.edu's Account**, type `standard`, token active until **2026-11-08**). `/tokens/verify` passes, but `POST /accounts/<id>/r2/buckets` returns **error 10042 "Please enable R2 through the Cloudflare Dashboard."** — one dashboard click (R2 must be subscribed to, which attaches usage-based billing even though the free tier is 10 GB / zero egress). The token is **not** written to any file, remote URL, `.dev.vars`, or committed config; it lives only in-shell. Caveat to decide with eyes open: this bucket would sit in the **same Cloudflare account as production**, so it is a different-failure-mode copy, not a different-vendor copy. | 
+| 72 | Reclaim the 7.75 GB orphaned pack in the accidental repository at `/Users/cjo` | owner | blocked-decision | this pass | Found while measuring why the internal volume is at 98%. `/Users/cjo/.git` exists — **four commits, 149 tracked files, branch `feat/vercel-ai-integration`, all three branches pointing at the same commit, object store 9.4 GB**. `git count-objects -vH` reports `size-garbage: 7.75 GiB` from one file, `.git/objects/pack/tmp_pack_q9nAFF`, left by an interrupted `git gc`/repack. Deleting it is the single biggest space win available on this machine, but it is a destructive action on a repo nobody is consciously operating, so it needs an explicit owner decision (`git fsck` first, then remove the tmp pack only). **Also a live hazard for #47:** the harvest directory sits *untracked inside* this repository, so `git clean -fdx` run from `/Users/cjo` would delete it along with everything else untracked in home. |
+| 73 | Harvest the seven source sets the inventory has never looked at | agent | open | this pass | Enumerated while archiving `.git` directories, all read-only, none in `docs/legacy-asset-inventory.md`: (a) **`/Users/cjo/Dev/THISISDEFRAG`** — a Vercel/Supabase-generation attempt, tracked by the home repo, with its own `api-v2/` (`middleware/safety.ts`, `middleware/security.ts`, `lib/audit.ts`, `db/schema.sql`, `db/schema_analytics.sql`, `lib/stripe.ts`, `v1/admin/stats.ts`) — a second opinion on the same three seams as #49/#52/#56; (b) **264 refs in `OPENAPI/.git`** vs the 1 the bundle kept, including `refs/copilot/checkpoints/*` (agent checkpoint commits); (c) **`/Users/cjo/copilot-worktrees/{SOVV,OPENAPI}/…`** — six live named worktree checkouts (`defragapp-animated-garbanzo`, `-didactic-fishstick`, `-special-spoon`, `-curly-fortnight`, `-laughing-adventure`, `-potential-succotash`) that may hold uncommitted work; (d) **ten `sovereign-*` worktrees under `/private/tmp`** recorded in `OPENAPI/.git/worktrees`, all `prunable` (working dirs gone, committed state survives only in the `.git` archive) with self-describing names — `health-fix`, `geist-live`, `humanist-live`, `library-language`, `policy-rights`, `public-copy`, `public-intelligence`, `release-verify`, `route-integrity`, `visual-v2`; (e) **4 dangling commits** across `openapi`/`sovereign.final`; (f) the remaining ~145 local repos from the depth-4 sweep; (g) `.gemini/history/*` session snapshots, which are probably *not* product code and should be confirmed rather than assumed either way. Depends on #70/#71 only for storage, not for analysis. |
+
+**Numbering note:** the plan assumed the ledger's max row was #48; the actual highest is
+#46 (rows 1–46, contiguous, verified with `awk -F'|'`), so this section starts at #47. No
+parallel task file was created — `/goal` re-derives this ledger and a second list
+guarantees drift.
+
+---
+
+**Strategy port shipped 2026-10-09** — the Baseline question-universe strategy (ported from
+the legacy `OPENAPI` product docs, not applied verbatim: none of its file paths or its
+`sovereign-answer.v2` contract exists in this repo) landed in three commits, each on a
+117/117-green ratchet and each live via Workers Builds:
+
+- `0760f95` — hero demo question rail on the landing (Myself / A decision / A
+  relationship / Family & team, all answerable from the one fixture Baseline in the
+  drawer) + four FAQ capability-and-limits questions.
+- `1fd673b` — "The Useful Distinction" answer directive in `sovereign-prompt.ts` + its
+  test (name the one distinction that changes the moment; no banned vocabulary).
+- `c27a720` — chat empty-state intents "A decision" and "What's active now" joined the
+  four reasoning levels; `/self`, `/people`, `/systems` each show a quiet `Try asking`
+  example under their existing demo (`src/components/try-asking.tsx`).
+
+Working premise: the strategy's "unsupported Human Design authority" warning does **not**
+apply to this repo — type/authority/profile are genuinely computed here
+(`src/lib/sovereign-humandesign.ts`, tested).
+
+---
+
+## Polish pass — focal-comet warm-only + returning-user thread-load error state — 2026-10-10 (this thread; append-only)
+
+Two in-repo polish items from the design/UX sweep, plus one stale ledger row re-verified.
+No prompt, gate, safety, or server-contract change — both are render-only.
+
+| Task | Closed by | How verified |
+|---|---|---|
+| #17 warm-only focal comet | this pass (agent) | The `.btn-focal` conic edge carried the **only cool stop in the entire stylesheet** — `hsla(150, 45%, 66%, 0.4)` (hue 150, green) at `340deg` — inside a system documented as warm-only ("hue sits in the low-30s", "deliberately no blue/indigo cast", `BRAND.md`). Replaced with a warm `hsla(26, 55%, 70%, 0.32)` so the cream→amber→terracotta sweep stays inside the scale; the two "iridescent" comments (`globals.css`) and `BRAND.md`'s comet row reworded to "warm comet" so a future dev is not invited to re-add a cool stop. `grep` proves no other cool stop exists and no test pins the gradient. |
+| #19 returning-user thread-load error state | this pass (agent) | A failed `/api/threads` fetch `return []`ed — indistinguishable from "you have no conversations yet" — so a returning member whose request blinked saw the **first-run** empty state ("Start with what's real…") as if their history had vanished, with no retry. Added a `threadsError` flag set on BOTH failure exits (`!res.ok` and the `catch`) and cleared on success; the desktop thread rail (`ThreadLibrary`) and the mobile chip strip now render a "Couldn't load your conversations" retry instead of the first-run prompt. New source-shape contract `src/lib/chat-thread-load-state.test.ts` (2/2). The pre-existing first-run prompt is preserved in the non-error branch. |
+| #20 anonymous landing "full comparison" dead-end | this pass (agent, re-verified) | Ledger said "still present" at `landing-client.tsx` L313-318 pointing at `/upgrade` (307 to signup for a stranger). **Already resolved** in `36bda8a`: the link now anchors the public in-page `#plans` section (real anchor at L278). No `/upgrade` link remains in `landing-client.tsx`. Row moved to `closed-shipped`. |
+
+Two other sweep items resolved themselves before this pass and need no work: radius
+unification (`56faa4f` — zero `rounded-md` remain; the scale is `rounded-panel`/`-chip`/
+`-control`/`-full`) and the landing link destinations (`36bda8a`).
+
+---
+
+## Visual-refinement pass — button focus offset + control radius token — 2026-10-10 (this thread; append-only)
+
+Measured-render audit of the live preview (`opennextjs-cloudflare preview` @ 8787) across
+public + authed routes at 390 / 1440: computed radii, type hierarchy, box-shadows,
+background/border colors, focus coverage, document overflow, and WCAG contrast (this model
+can't view images, so every finding is a *measured* DOM/CSS value, not a screenshot read).
+The system was overwhelmingly clean — no arbitrary radii, no hex colours, no focus-coverage
+holes, zero document overflow on every route, all text ≥ AA contrast, and a palette entirely
+inside hue 18–40 (the cool stop removed in the previous pass was the only one). Two genuine
+defects were found and fixed:
+
+| Refinement | File | How verified |
+|---|---|---|
+| The primary `<Button>` painted a pure-white focus seam | `src/components/ui/button.tsx` | `buttonVariants` set `focus-visible:ring-offset-2` with **no** offset colour, so Tailwind's `--tw-ring-offset-color` default (`#fff`) applied. Every *other* control in the app (chat rows, journey, inputs, support form) adds `ring-offset-background`; the primitive was the lone exception. Measured on the rendered focus state: box-shadow was `rgb(253,253,253) 0 0 0 2px, rgb(229,222,210) 0 0 0 4px` — a **bright white band inside the warm ring**. Fixed by adding `focus-visible:ring-offset-background`. Pixel proof (sharp, dsf=2): pure-white pixels around the focused control went **1280 → 0**, and `--tw-ring-offset-color` reads `hsl(30 8% 4.5%)`. |
+| Off-scale 4px radius on the journey text controls | `src/components/journey-canvas.tsx` | `rounded-sm` = `calc(var(--radius) - 4px)` = **4px**, off BRAND.md's 6 / 8 / 12 scale, while the *same component* already used `rounded-chip` (6px) for its input, chips, and list rows. The ten `rounded-sm` outliers snapped to `rounded-chip`. Rendered re-audit: `NON-TOKEN radius: none` on `/chat` and `/self` (the remaining `12px 12px 4px` is the deliberate message-bubble tail). |
+
+Both changes are render-only — no prompt, gate, safety, or server-contract change, so no live
+eval re-capture is required. New source-contract ratchet `src/lib/control-focus-and-radius.test.ts`
+(2/2) pins both so a later refactor cannot reintroduce the white seam or the 4px radius.
+
+---
+
+## Security fix — account deletion honoured a revoked session — 2026-10-10 (this thread; append-only)
+
+**P1 (security).** Open-task #36 flagged "account deletion re-auth". The re-auth half is a
+separate UX/product decision (see below), but auditing the route surfaced a more acute
+defect in the *same* handler.
+
+**Before.** `DELETE /api/auth/account` (`src/app/api/auth/account/route.ts`) verified the
+caller with a bare `verifyJWT(token, secret)` — signature + expiry only. The whole of
+`/api/auth/*` is on the middleware's public allowlist (sign-in has to be reachable), so the
+route is **not** gated by the middleware `verifySession` pass, and its own check was the only
+one. `verifyJWT` never reads `users.token_version`, so a cookie that sign-out or a password
+reset had already revoked (still inside its 7-day JWT life) could still run this handler —
+deleting the account and cancelling the user's Stripe subscriptions. This is the exact class
+the 2026-10 review called out in F-B ("a revoked cookie still reached the verifyJWT-only
+routes"), and it contradicted the codebase's own stated invariant: `getAuthPayload`
+(`src/lib/connections.ts`) documents that routes must reject a revoked cookie *at the route*
+"as well as at the middleware gate", and the sibling `/api/auth/*` data routes
+`accept-terms` and `export` already use `verifySession` for precisely this reason. `account`
+was the lone outlier.
+
+**Opportunity.** Make the destructive handler run the same full session check its siblings
+already run, so `token_version` revocation is enforced on account deletion.
+
+**Change.** One handler, no new dependencies, no crypto change: `account/route.ts` now calls
+`verifySession(env, request)` (the canonical helper that compares the token's generation to
+the live `users.token_version`) and uses `session.payload.sub`; the bare `verifyJWT` import
+was dropped. Everything else (Stripe cancellation, Vectorize snapshot, D1 cascade, cookie
+clear) is byte-identical.
+
+**Risk.** A valid, live session behaves exactly as before; only a *revoked* cookie changes
+from 200 to 401. The missing-secret path now returns 401 (via `verifySession` → `null`)
+instead of 500 — not a security regression, and the sibling routes answer the same way.
+
+**Verification.** `src/lib/security-review.test.ts` gains **F-H** (source-scan ratchet, the
+repo's stated convention for route-entry invariants, same as F-A/F-B/F-E): it asserts the
+handler imports `@/lib/session`, calls `verifySession(env, request)`, and contains no
+`verifyJWT`. Focused run `npx vitest run src/lib/security-review.test.ts` green (19 passed);
+`npx tsc --noEmit` clean; `npx eslint` on both files clean; `npm run verify:release` green.
+
+**Not done (separate decision, left open).** #36's *re-authentication* half — requiring a
+password (or fresh passkey assertion) in the delete modal, not just the typed "DELETE"
+confirmation — is a UX/flow change (new field + credential-check path) and is left as a P2
+product decision, not silently bundled into this security fix.
+
+**Remaining uncertainty.** The revocation guarantee reduces to `verifySession`, the app's
+most-used auth helper (every `/api/*` request); it is exercised in production on every
+sign-out, and now also unit-pinned here. A live behavioural probe (mint a stale `tv` cookie
+against prod) was not run — no test account, and it is not needed to prove the route now
+calls the correct helper.
+
+---
+
+## Privacy hardening — `private, no-store` on session-scoped responses — 2026-10-10 (this thread; append-only)
+
+**P2 (privacy / cache-hygiene).** Not previously filed.
+
+**Before.** The middleware's `noStore()` set `Cache-Control` only for `pathname.startsWith("/api/")`.
+The protected page routes were therefore left with whatever Next/OpenNext emits, and a real
+session cookie against the local OpenNext build showed `/chat`, `/account`, `/settings`,
+`/baseline` all returning **`Cache-Control: public, max-age=0, must-revalidate`** with
+**no `Vary: Cookie`** — while `/api/*` was correctly `no-store`. `public` without `Vary:
+Cookie` tells a shared cache it may store a response that varies by session. Today the bodies
+are user-independent shells (`<ChatClient />` takes no props; the `/account`/`/settings`/
+`/baseline` pages are client shells), so a spot-check for the account email and id in 27–30 KB
+of each page's HTML returned **0 hits** — no live leak. But it is exactly the "cache
+authenticated HTML" hazard the operating rules forbid, and open-task **#7 plans to add Zone
+Cache Rules** that would turn a latent header into a real one.
+
+**Opportunity.** Put the cache directive at the one chokepoint every response passes through,
+so no future cache rule can store a session-scoped response.
+
+**Change.** `src/middleware.ts`: `PROTECTED_PAGES` moved to module scope (with a
+`isProtectedPagePath()` helper) so `noStore()` can see it; `noStore()` now applies
+`Cache-Control: private, no-store` to **`/api/*` OR any protected page**, and the two
+session-dependent `/onboard` redirects are wrapped in it too. No user-visible behaviour change:
+`/faq`, `/about`, `/` and the other public surfaces still carry Next's public cache header.
+
+**Risk.** `/api/*` moves from `no-store` to `private, no-store` (strictly more restrictive).
+No test asserted the old exact value (only the chat 429 pins `private, no-store`), and no
+route reads its own response's cache header. Public pages are untouched.
+
+**Verification.** Rendered check on the local OpenNext preview (authed cookie) after the
+change: every protected page now carries `private, no-store` — and the unauthenticated
+`/chat` redirect does too — while `/faq` and the other public surfaces are unchanged. Note
+the final header is `private, no-store, public, max-age=0, must-revalidate`: OpenNext still
+appends Next's own page directive, so the two coexist. That is not cosmetic-clean, but it is
+functionally correct — RFC 9111 makes `no-store` authoritative ("a cache MUST NOT store"),
+so the `public` stop is inert, and Cloudflare honours `no-store`. New source-scan ratchet
+**F-I** in `src/lib/security-review.test.ts` pins the middleware predicate
+(`startsWith("/api/") || isProtectedPagePath(pathname)`) and the `private, no-store` literal.
+`npx vitest run src/lib/security-review.test.ts` 20/20; `tsc`/`eslint` clean;
+`npm run verify:release` green.
+
+**Deferred, not done — #63 (move the audit scripts to `scripts/audit/`).** Investigated this
+pass: `.audit-tmp/` holds **36** `.mjs` scripts (the row says 20), 26 of which hardcode
+`.audit-tmp/...` paths relative to cwd (a move preserves cwd, so those survive), but **2 use
+script-relative imports that a move breaks** — `authed-capture.mjs` (`../src/lib/auth.ts`) and
+`rerun-veil.mjs` (`../scripts/verify-release.mjs`). Secret scan across all 36 is clean (no
+`github_pat_`, `sk_live_`, `Bearer`, `AKIA`). Left as its own pass: it is 36 files of scratch
+tooling with a "which are durable?" curation call, zero product value, so it does not belong
+bundled with a privacy fix. Plan recorded here so it is mechanical next time: `git mv`-equivalent
+(the dir is gitignored, so plain `mv` + `git add`), fix the two import paths to `../../…`,
+re-run the secret scan, and dry-run each surviving script from the repo root.
+
+## Sovereign AI product audit + perceptiveness fixes — 2026-10-10 (this thread; append-only)
+
+**Scope.** Audited Sovereign's AI *as a product* (not just an LLM call): traced the full
+pipeline (auth → sanitize → pre-model deflection → context build → classify/meaning/unknowns/
+corrections/scope → render → model → validate → repair → fallback → SSE → persistence), ran a
+deterministic probe over 15 representative scenarios (no model calls), and read the 12 captured
+live answers. Then fixed the six measured findings (F1–F6) **test-first**, one eval re-capture.
+
+**Before (measured, not asserted).**
+- The Baseline block was **byte-identical on every one of the 15 scenarios** — all qualities,
+  every turn, and each theme stated **4×** (Baseline `theme:`, Baseline `Qualities:`, context
+  `Sun — core expression:`, context `Derived qualities:`). `buildSystemPrompt` alone measured
+  **13,240 chars ≈ 3,310 tok**, fixed every turn.
+- The prompt **printed the internal tag** ("Sun core expression: …", "Jupiter expansion: …")
+  and then forbade reproducing it. The 8B model reproduced it anyway (recorded answers:
+  `repeated_pattern-direct/indirect`, `family_context-direct`, `simulation_request-direct`,
+  `correction_case-direct`, `single_event-indirect`) — the audit axis "absence of framework
+  name-dropping" failed. **The contradiction lived inside the prompt, not the model.**
+- `"My father died last month…"` classified **level 3 / dyadic** (bare family noun in
+  `BETWEEN_PERSON_CUES`), flipping the framing to "the other person".
+- `scanUnknowns` fired **zero** unknowns on `"Why does my partner keep lying…"`,
+  `"My boss is definitely trying to sabotage me."`, and `"Will my ex come back to me?"` — the
+  exact turns that most need the motive/prediction guardrail; the cues were pronoun-only.
+- A rejected hypothesis was blocked only as an **exact substring**; `correction_case-direct`
+  re-derived a near-identical reading from the Baseline and passed.
+
+**Change.**
+- **F2** `sovereign-prompt.ts`: `deriveBaseline` emits **plain-language** qualities (no planet/
+  role tag); the Evidence-Separation directive no longer describes a tag; the Baseline section
+  stops printing `— theme:` twice.
+- **F1** `sovereign-baseline.ts` + `sovereign-reasoning.ts`: `buildBaselineSignals` drops the
+  separate Sun/Moon duplicate; new `selectBaselineSignals(signals, latestText, 3)` renders the
+  two anchor qualities plus anything the turn's words point at — **bounded, not dumped**.
+- **F3** `isLossContext` gate: loss/bereavement suppresses the relational cue in
+  `classifyQuestion`, `determineScope`, `scopeOfMessage` — grief is self-reflection, not a
+  question about "the other person". Genuine conflict keeps routing to Level 3 (pinned).
+- **F4** expanded `INNER_WORLD_CUES` (role nouns + certainty-of-intent claims) and `FUTURE_CUES`
+  (third-person "will X").
+- **F5** the REJECTED-HYPOTHESES render now instructs: do not rebuild the same conclusion from a
+  different angle or another Baseline quality — start from the new detail.
+- **F6** Level-4 guidance now requires second-person address ("what happens between you and
+  them").
+
+**Safety, preserved.** No lexicon, crisis/abuse routing, extraction/cross-account deflection, or
+repair/fallback change — F1–F6 are all pre-model context/prompt. `sovereign-safety.test.ts` and
+the negative control stay green. Nothing was weakened to raise answer quality.
+
+**Verification.** Tests written first (red: 11 failing), then made green. `npx vitest run`:
+**613/613 across 51 files**. `tsc` + `eslint` clean. Answer-eval **re-captured** (12 live
+`ai/run` calls, `tier:"direct"`); after re-capture the eval gate is **15/15**. Before/after read:
+**zero internal tags** in the new answers (6 had them before), and `correction_case-direct` no
+longer re-asserts the rejected reading — it turns to the user's new material and asks. Totals
+moved both ways on single stochastic samples (e.g. `repeated_pattern-indirect` 5.10→5.48),
+which is why the gate pins *thresholds derived from the capture*, not a fixed number.
+
+**Remaining uncertainty (honest).** The 8B model still *recites* the Baseline in plain words
+(e.g. `simulation_request-indirect` restates two quality lines) — recitation is reduced, not
+eliminated; the retrieval-heavy recitation is the same instruction-adherence limit behind F7
+(insight-lists / double closing questions), which is **not** fixed here. `correction_case-direct`
+scored lower on the text rubric (2.59) precisely because it stopped leaning on the Baseline —
+the rubric rewards grounding, so a *better* epistemic answer can score lower; noted, not gated
+away. Device-Only peer-baseline gating (F9) and the Level-4 third-person validator (beyond the
+prompt steer) are left open.

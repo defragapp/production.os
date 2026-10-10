@@ -1,0 +1,26 @@
+{
+  "fixtureId": "family_context-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-10T20:54:05.817Z",
+  "promptSha": "65086a98fc9064a9163bcaaa0b7422043f9dbeccbaef9581ca13c3c2b8dad562",
+  "text": "You feel worn down by being the one everyone in your family leans on when things go wrong.\n\nOne possibility worth examining is that your tendency to hold and protect what matters, as shown in your Baseline, is getting deeply connected to being needed by others. This might be making it harder for you to set boundaries or take time for yourself. \n\nIt may be that repeatedly taking on this role reinforces the dynamic of others relying on you, even if it's not sustainable for you. This could be leading to feelings of depletion and burnout. \n\nWhat does \"family\" mean to you? Is it a close-knit group, a dynamic system, or something else entirely?",
+  "usage": {
+    "prompt_tokens": 3058,
+    "completion_tokens": 136,
+    "total_tokens": 3194,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 45.68777105771005
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.5,
+    "relational": 0.75,
+    "uncertainty": 0,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 3.25
+}

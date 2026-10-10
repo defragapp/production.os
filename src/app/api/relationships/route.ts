@@ -24,27 +24,30 @@ export async function PATCH(request: NextRequest) {
   const me = await loadUser(env, payload.sub);
   if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { myLabel?: string; shareBaseline?: boolean };
+  let body: { myLabel?: string; shareBaseline?: boolean; shareHistory?: boolean };
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
 
-  const row = await env.DB.prepare("SELECT id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline, created_at FROM relationships WHERE id = ?").bind(request.nextUrl.searchParams.get("id") ?? "").first<RelationshipRow>();
+  const row = await env.DB.prepare("SELECT id, user_a, user_b, a_label, b_label, a_share_baseline, b_share_baseline, a_share_history, b_share_history, created_at FROM relationships WHERE id = ?").bind(request.nextUrl.searchParams.get("id") ?? "").first<RelationshipRow>();
   if (!row) return NextResponse.json({ error: "Connection not found" }, { status: 404 });
   const iAmA = row.user_a === me.id;
   if (!iAmA && row.user_b !== me.id) return NextResponse.json({ error: "Not your connection" }, { status: 403 });
 
-  const label = body.myLabel !== undefined ? normalizedLabel(body.myLabel, iAmA ? row.a_label : row.b_label) : null;
-  const share = body.shareBaseline !== undefined ? (body.shareBaseline ? 1 : 0) : null;
+  // A single PATCH may set the label and/or the baseline-share flag and/or the
+  // history-share flag, always on the CALLER's own side (a_* when user_a else b_*).
+  // Build the SET list from whichever fields are present so partial updates work.
+  const prefix = iAmA ? "a_" : "b_";
+  const sets: string[] = [];
+  const binds: Array<string | number> = [];
 
-  if (label !== null && share !== null) {
-    await env.DB.prepare(
-      iAmA
-        ? "UPDATE relationships SET a_label = ?, a_share_baseline = ?, created_at = created_at WHERE id = ?"
-        : "UPDATE relationships SET b_label = ?, b_share_baseline = ?, created_at = created_at WHERE id = ?",
-    ).bind(label, share, row.id).run();
-  } else if (label !== null) {
-    await env.DB.prepare(iAmA ? "UPDATE relationships SET a_label = ? WHERE id = ?" : "UPDATE relationships SET b_label = ? WHERE id = ?").bind(label, row.id).run();
-  } else if (share !== null) {
-    await env.DB.prepare(iAmA ? "UPDATE relationships SET a_share_baseline = ? WHERE id = ?" : "UPDATE relationships SET b_share_baseline = ? WHERE id = ?").bind(share, row.id).run();
+  const label = body.myLabel !== undefined ? normalizedLabel(body.myLabel, iAmA ? row.a_label : row.b_label) : null;
+  if (label !== null) { sets.push(`${prefix}label = ?`); binds.push(label); }
+  if (body.shareBaseline !== undefined) { sets.push(`${prefix}share_baseline = ?`); binds.push(body.shareBaseline ? 1 : 0); }
+  if (body.shareHistory !== undefined) { sets.push(`${prefix}share_history = ?`); binds.push(body.shareHistory ? 1 : 0); }
+
+  if (sets.length > 0) {
+    // `created_at = created_at` keeps the row's timestamp untouched (explicit no-op).
+    sets.push("created_at = created_at");
+    await env.DB.prepare(`UPDATE relationships SET ${sets.join(", ")} WHERE id = ?`).bind(...binds, row.id).run();
   }
 
   const views = await relationshipViews(env, me);

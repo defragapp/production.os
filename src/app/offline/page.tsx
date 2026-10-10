@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { OfflineRetry } from "@/components/offline-retry";
+import { Eyebrow } from "@/components/ui/eyebrow";
 
 export const metadata: Metadata = {
   title: "Offline",
-  description: "Sovereign is unreachable right now — your data is safe and waiting.",
+  description: "Sovereign OS is unreachable right now — your data is safe and waiting.",
   robots: { index: false, follow: false },
 };
 
@@ -31,15 +32,13 @@ export default function OfflinePage() {
           height={96}
           className="mb-8 opacity-90"
         />
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">
-          No connection
-        </p>
+        <Eyebrow className="mb-3">No connection</Eyebrow>
         <h1 className="max-w-md font-display text-3xl font-normal leading-[1.15] tracking-tight text-foreground">
           Your <span className="italic">Baseline</span> is safe. We just can&apos;t reach it right now.
         </h1>
         <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
           Nothing was lost. Your conversation lives on this device or on our servers, depending on
-          how you set Sovereign up — and it is waiting either way. Once you have a signal again,
+          how you set Sovereign OS up — and it is waiting either way. Once you have a signal again,
           pick up right where you left off.
         </p>
         <OfflineRetry />

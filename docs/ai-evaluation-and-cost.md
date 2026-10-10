@@ -116,7 +116,8 @@ either already live or cheap/free to finish:
 ## 5. Gaps / open items
 
 - **Dynamic E2E AI eval** still requires a second consented test account
-  (invite → email verify → accept → chat). Tracked in `TODO.md`.
+  (invite → email verify → accept → chat). Tracked in the open-task ledger
+  (`docs/open-tasks.md` #48, gated on the owner-consent decision #59).
 - Brand mark: the overflowing-cup engraving (`assets/ace-of-cups.jpg`) ships as a
   single canonical mark, rasterized to `public/brand/*.png` by
   `scripts/build-brand-assets.mjs` and reused across nav, favicon, iOS icon, and the

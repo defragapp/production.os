@@ -8,6 +8,14 @@ import type { User } from "@/lib/types";
  * Marks the signed-in user's account as verified when the token matches a
  * stored (hashed) verification token that has not expired. The token is only
  * accepted for the account it was issued to.
+ *
+ * Why GET (vs the invite-status lookup, which is POST): this URL is the target
+ * of a link clicked in an email, and a browser can only open a clicked link with
+ * GET — a POST is not achievable here. The token is therefore protected at rest
+ * rather than by transport placement: it is SHA-hashed (`hashResetToken`) before
+ * storage, single-use, expiring, and requires the caller's session cookie. The
+ * Worker config also sets `redact_query_string: true`, so the token never lands
+ * in Workers Logs. See docs/auth.md.
  */
 export async function GET(request: NextRequest) {
   const env = await getEnv();
@@ -16,6 +24,10 @@ export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token") || "";
   if (!token) return NextResponse.redirect(new URL("/account?verify=missing", request.url));
 
+  // Bare JWT is deliberate here: the real gate is the single-use, SHA-hashed
+  // token matched against this account (below), and holding that token is the
+  // proof. A revoked session cookie cannot verify an account it has no token
+  // for, so `verifySession` adds nothing on this pre-verification path.
   const cookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!cookie) return NextResponse.redirect(new URL("/onboard?mode=login&verify=required", request.url));
   const payload = await verifyJWT(cookie, secret);

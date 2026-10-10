@@ -93,7 +93,7 @@ export function buildRelationalSignals(
       signals.push({
         category: "channel-activation",
         peers: [selfName, peerName],
-        description: `Your combined designs activate the "${ch.name}" circuit — a shared channel where pressure between you two naturally produces a specific kind of output or understanding. It's something that exists in the BETWEEN, not in either person alone.`,
+        description: `Your combined designs activate the "${ch.name}" circuit — a shared channel where pressure between the two of you naturally produces a specific kind of output or understanding. It's something that exists in the BETWEEN, not in either person alone.`,
         epistemicStatus: "baseline-supported",
       });
     }
@@ -105,7 +105,7 @@ export function buildRelationalSignals(
   const complementSelf = [...peerCenters].filter((c) => !selfCenters.has(c));
   const complementPeer = [...selfCenters].filter((c) => !peerCenters.has(c));
   if (complementSelf.length > 0 && complementPeer.length > 0) {
-    const desc = `${selfName} naturally processes ${complementSelf.slice(0, 2).map((c) => CENTER_MEANING[c] ?? c).join(", and ")}, while ${peerName} naturally handles ${complementPeer.slice(0, 2).map((c) => CENTER_MEANING[c] ?? c).join(", and ")}. This can create ease (each fills the other's blind spot) or friction (each assumes the other has it covered).`;
+    const desc = `${selfName} naturally processes ${complementSelf.slice(0, 2).map((c) => CENTER_MEANING[c] ?? c).join(", and ")}, while ${peerName} naturally handles ${complementPeer.slice(0, 2).map((c) => CENTER_MEANING[c] ?? c).join(", and ")}. This can create ease (each fills the other's blind spot) or tension (each assumes the other has it covered).`;
     signals.push({
       category: "center-complement",
       peers: [selfName, peerName],

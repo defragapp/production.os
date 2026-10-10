@@ -74,5 +74,25 @@ export function TurnstileWidget({ siteKey, onToken, onError }: TurnstileWidgetPr
   }, [siteKey]);
 
   if (!siteKey) return null;
-  return <div ref={containerRef} className="flex min-h-[65px] justify-center" />;
+  // Sized to the standard Turnstile footprint (300×65) on the graphite surface
+  // token, so the container reads as an intentional dark slot from first paint.
+  // Without it the wrapper is an unstyled box and the iframe's brief pre-theme
+  // default flash lands on raw page background instead of dark graphite.
+  // FIXED-height slot was measured and rejected: turnstile.render() injects
+  // `<div><div></div><input type=hidden></div>` whose host settles at 71px
+  // before the challenge iframe sizes itself, so a min-height let the slot grow
+  // 65px → 71px and push the form (the residual /onboard signup shift). Pinning
+  // the box with h-[65px] + overflow-hidden would hide that 6px of dead space —
+  // and also clip a genuine interactive challenge whenever Turnstile needs more
+  // room than the compact default. Blocking a signup to buy 0.0019 CLS is the
+  // wrong trade, so the slot stays growable and the reservation moves to the
+  // parent, sized to the measured 75px footprint (see onboard-content.tsx). A
+  // later expansion happens on click, which the Layout Instability API already
+  // exempts as recent-input.
+  return (
+    <div
+      ref={containerRef}
+      className="mx-auto flex min-h-[65px] w-[300px] max-w-full items-center justify-center overflow-hidden rounded-chip bg-surface-1"
+    />
+  );
 }

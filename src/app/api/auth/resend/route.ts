@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, generateResetToken, hashResetToken } from "@/lib/auth";
 import { emailVerificationEnabled, sendTemplate } from "@/lib/email";
+import { recipientMailAllowed } from "@/lib/email-guard";
 import { getEnv } from "@/lib/env";
 
 /** Resend cooldown per user (seconds). */
@@ -18,6 +19,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Email verification is not configured" }, { status: 400 });
   }
 
+  // Bare JWT is enough here (unlike DELETE /api/auth/account): this only
+  // re-sends the verification email to the account's OWN address, and it is
+  // capped per user and per recipient. Re-verification is independent of
+  // session revocation, so a `verifySession` read buys nothing and costs a D1
+  // round-trip.
   const cookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!cookie) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const payload = await verifyJWT(cookie, secret);
@@ -25,7 +31,13 @@ export async function POST(request: NextRequest) {
 
   const rlKey = `verify-resend:${payload.sub}`;
   if (await env.SESSION_KV.get(rlKey)) {
-    return NextResponse.json({ error: "Verification email already sent. Please check your inbox — you can request another in 10 minutes." }, { status: 429 });
+    return NextResponse.json({ error: "That email's already on its way — check your inbox. You can ask for another in 10 minutes." }, { status: 429 });
+  }
+  // F-F: the cooldown protects this account; the recipient cap protects this
+  // address from everyone else's signups. Checked before the cooldown is
+  // spent, so a capped refusal costs this user nothing.
+  if (!(await recipientMailAllowed(env, payload.email))) {
+    return NextResponse.json({ error: "Too many verification emails were just sent to this address — try again in an hour." }, { status: 429 });
   }
   await env.SESSION_KV.put(rlKey, "1", { expirationTtl: RESEND_COOLDOWN });
 

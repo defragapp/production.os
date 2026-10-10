@@ -191,7 +191,7 @@ export default function SettingsPage() {
       const data = await res.json() as { error?: string; code?: string; invite?: InviteRow };
       if (!res.ok) {
         if (data.code === "plus_required") setInviteRequiresPlus(true);
-        else setInviteError(data.error || "Could not send the invitation.");
+        else setInviteError(data.error || "Couldn't send that invitation — try again in a moment.");
         return;
       }
       setInviteEmail("");
@@ -200,7 +200,7 @@ export default function SettingsPage() {
       setInviteSuccess(`Invitation sent to ${data.invite?.name || data.invite?.emailMasked || email}.`);
       await loadPeople();
     } catch {
-      setInviteError("Could not send the invitation.");
+      setInviteError("Couldn't send that invitation — try again in a moment.");
     } finally {
       setInviteSending(false);
     }
@@ -427,7 +427,7 @@ export default function SettingsPage() {
                                 type="button"
                                 onClick={() => { setEditingLabel(c.relationId); setLabelDraft(c.myLabel); }}
                                 aria-label="Edit label"
-                                className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                className="rounded-chip p-2 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
@@ -446,7 +446,7 @@ export default function SettingsPage() {
                                   type="button"
                                   onClick={() => setConfirmAction(`conn:${c.relationId}`)}
                                   aria-label="Remove connection"
-                                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-destructive"
+                                  className="rounded-chip p-2 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-destructive"
                                 >
                                   <X className="h-4 w-4" />
                                 </button>
@@ -495,8 +495,9 @@ export default function SettingsPage() {
               </Section>
 
               <Section
+                id="invitations"
                 title="Invitations"
-                description="Invite someone to connect. The link is valid for 7 days."
+                description="Invite someone to connect. The link is valid for 7 days. They see your name, the role you chose, and how your Baselines meet — your own threads and birth data stay private to you, and either of you can remove the connection at any time."
               >
                 <div className="space-y-4">
                   {tier === "free" && (
@@ -618,12 +619,12 @@ export default function SettingsPage() {
                                     />
                                     <div
                                       role="menu"
-                                      className="absolute right-0 z-40 mt-2 w-56 rounded-xl border border-white/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
+                                      className="absolute right-0 z-40 mt-2 w-56 rounded-panel border border-foreground/10 bg-surface-2 p-1.5 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)]"
                                     >
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                         onClick={() => void textShare(inv)}
                                       >
                                         <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Send a text message
@@ -631,7 +632,7 @@ export default function SettingsPage() {
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                         onClick={() => void whatsappShare(inv)}
                                       >
                                         <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> Share on WhatsApp
@@ -640,7 +641,7 @@ export default function SettingsPage() {
                                         <button
                                           type="button"
                                           role="menuitem"
-                                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                          className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                           onClick={() => void deviceShare(inv)}
                                         >
                                           <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> More ways…
@@ -649,7 +650,7 @@ export default function SettingsPage() {
                                       <button
                                         type="button"
                                         role="menuitem"
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                                        className="flex w-full items-center gap-2 rounded-chip px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
                                         onClick={() => void copyShareLink(inv)}
                                       >
                                         <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Copy link
@@ -698,7 +699,7 @@ export default function SettingsPage() {
                     Choose where your conversations live. Server memory keeps every thread in your
                     account so you can start on one device and finish on another. Device-Only keeps
                     new conversations encrypted on this device with a key that never leaves it — they
-                    never reach our servers, and they don’t follow you between devices.
+                    never reach our servers, and they don&apos;t follow you between devices.
                   </p>
                   <div role="radiogroup" aria-label="Memory mode" className="grid gap-2 sm:grid-cols-2">
                     {([
@@ -716,8 +717,8 @@ export default function SettingsPage() {
                           onClick={() => void switchMemoryMode(value)}
                           className={`rounded-panel border p-3 text-left transition-colors ${
                             active
-                              ? "border-foreground/40 bg-white/[0.06]"
-                              : "border-border/60 hover:border-border hover:bg-white/[0.03]"
+                              ? "border-foreground/40 bg-surface-selected"
+                              : "border-border/60 hover:border-border hover:bg-surface-hover"
                           }`}
                         >
                           <span className="flex items-center gap-2">

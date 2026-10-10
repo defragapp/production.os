@@ -1,0 +1,26 @@
+{
+  "fixtureId": "single_event-direct",
+  "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
+  "tier": "direct",
+  "capturedAt": "2026-10-10T20:52:19.092Z",
+  "promptSha": "44df802462b1f5eca198ca24ce08a994d7a5b23480af0e393c88650499070b83",
+  "text": "It may be worth examining how helping your friend moved you. What does helping mean to you? What does it look like when you help someone, and what happens in you afterwards?",
+  "usage": {
+    "prompt_tokens": 3080,
+    "completion_tokens": 37,
+    "total_tokens": 3117,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "neurons": 43.404226241633296
+  },
+  "observed": {
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.16666666666666666,
+    "relational": 0.75,
+    "uncertainty": 0.9,
+    "actionability": 0,
+    "safety": 1
+  },
+  "observedTotal": 3.8166666666666664
+}

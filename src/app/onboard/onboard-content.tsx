@@ -10,6 +10,7 @@ import { Nav } from "@/components/nav";
 import { TurnstileWidget } from "@/components/turnstile";
 import { Stepper } from "@/components/stepper";
 import { BaselineForm } from "@/components/baseline-form";
+import { WhyWeAskFirst } from "@/components/why-we-ask";
 import { PasskeySignInButton } from "@/components/passkey";
 import { Alert } from "@/components/ui/alert";
 import { cn, safeInAppPath } from "@/lib/utils";
@@ -118,11 +119,11 @@ export function OnboardContent() {
 
       if (!authRes.ok) {
         const err = await readJsonSafe<{ error?: string }>(authRes);
-        throw new Error(err?.error || `We couldn't create your account right now (${authRes.status}). Please try again.`);
+        throw new Error(err?.error || "That didn't go through on our end — try again in a moment.");
       }
 
       const data = await readJsonSafe<{ user?: { email?: string }; hasBaseline?: boolean }>(authRes);
-      if (!data) throw new Error("Unexpected response from the server. Please try again.");
+      if (!data) throw new Error("We couldn't read the response — try again in a moment.");
       if (data.user?.email) setEmail(data.user.email);
       // Session cookie is set — sync the persistent Nav chrome before the soft
       // navigation, which alone would not remount it (logged-out menu bug).
@@ -150,7 +151,7 @@ export function OnboardContent() {
       }
       setTurnstileToken(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
       setTurnstileToken(null);
     } finally {
       setLoading(false);
@@ -171,12 +172,12 @@ export function OnboardContent() {
 
       if (!res.ok) {
         const err = await readJsonSafe<{ error?: string }>(res);
-        throw new Error(err?.error || "Failed to send reset email");
+        throw new Error(err?.error || "Couldn't send that email — try again in a moment.");
       }
 
       setResetSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -196,13 +197,13 @@ export function OnboardContent() {
 
       if (!res.ok) {
         const err = await readJsonSafe<{ error?: string }>(res);
-        throw new Error(err?.error || "Failed to reset password");
+        throw new Error(err?.error || "Couldn't reset that password — check the link and try again.");
       }
 
-      setNotice("Password reset successfully. You can now sign in.");
+      setNotice("All set — sign in with your new password.");
       router.push("/onboard?mode=login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Something went wrong on our end — try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -378,7 +379,7 @@ export function OnboardContent() {
                       className={cn(
                         "tap-line rounded-full px-4 py-1.5 text-sm transition-colors",
                         on
-                          ? "bg-white/[0.08] font-medium text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
+                          ? "bg-surface-selected font-medium text-foreground shadow-[inset_0_1px_0_hsla(38,18%,95%,0.12)]"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
@@ -403,7 +404,15 @@ export function OnboardContent() {
               <CardContent className="pt-6">
                 {isLogin && (
                   <>
-                    <PasskeySignInButton />
+                    {/* Passkey-first: the credential-less, one-tap path is the
+                        focal action at the top of the card (solid cream), with
+                        the email/password form demoted to the fallback beneath
+                        an explicit divider. Registration still needs a session,
+                        so this focal path lives on sign-in only. */}
+                    <p className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+                      Recommended · fastest way back in
+                    </p>
+                    <PasskeySignInButton focal />
                     <div className="my-4 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
                       <span className="h-px flex-1 bg-border" />
                       or use your password
@@ -425,7 +434,10 @@ export function OnboardContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password (at least 8 characters)</Label>
+                    {/* The 8-char floor is a signup requirement only; a returning
+                        person signing in shouldn't be told their own password
+                        needs 8 characters. */}
+                    <Label htmlFor="password">{isLogin ? "Password" : "Password (at least 8 characters)"}</Label>
                     <Input
                       id="password"
                       type="password"
@@ -485,7 +497,19 @@ export function OnboardContent() {
                       returning user and their account. */}
                   {!isLogin && (
                     <>
-                      <div className="space-y-2 pt-1">
+                      {/* min-h reserves the widget's MEASURED steady footprint so
+                          nothing below it ever moves: turnstile.render() settles
+                          its host box at 71px (65px box + 6px of dead space it
+                          carries), and this wrapper adds `pt-1` = 4px → 75px.
+                          The 65px floor was 6px short, which is the residual
+                          0.0019 /onboard signup shift (measured live: the box ran
+                          69px empty → 75px mounted). A floor only ever floors, so
+                          the larger number is safe in both states and never
+                          clips: the slot keeps its own min-height in
+                          components/turnstile.tsx for a challenge that needs more
+                          room — that expansion happens on click, which the Layout
+                          Instability API already exempts as recent-input. */}
+                      <div className="min-h-[75px] space-y-2 pt-1">
                         {turnstileSiteKey && !tsFailed && (
                           <TurnstileWidget
                             key={tsKey}
@@ -511,7 +535,7 @@ export function OnboardContent() {
                               setTsFailed(false);
                               setTsKey((k) => k + 1);
                             }}
-                            className="shrink-0 underline underline-offset-4 hover:text-foreground"
+                            className="tap-line tap-line-center shrink-0 underline underline-offset-4 hover:text-foreground"
                           >
                             Retry
                           </button>
@@ -545,10 +569,11 @@ export function OnboardContent() {
           <div className="mb-8 text-center">
             <h1 className="font-display text-3xl font-normal tracking-tight">Build your Baseline</h1>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-              A plain-language picture of how you tend to communicate, feel, and decide — built
-              from NASA/JPL planetary data. Takes about a minute.
+              A plain-language picture of how you tend to communicate, feel, and decide.
             </p>
           </div>
+
+          <WhyWeAskFirst />
 
           <Card>
             <CardContent className="pt-6">

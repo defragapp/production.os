@@ -4,14 +4,16 @@ import {
   verifyPassword, passwordNeedsRehash, PBKDF2_ITERATIONS, SESSION_COOKIE_NAME, JWT_SECRET_ENV_KEY, tokenVersionOf,
 } from "@/lib/auth";
 import { sendTemplate, emailVerificationEnabled } from "@/lib/email";
+import { recipientMailAllowed } from "@/lib/email-guard";
 import { generateResetToken, hashResetToken } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
+import { hashClientIp } from "@/lib/ip-hash";
 import { bumpTokenVersion, verifySession } from "@/lib/session";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { syncStripeTier } from "@/lib/stripe";
 import { FREE_TIER_DAILY_LIMIT } from "@/lib/limits";
 import { readUsage } from "@/lib/usage";
-import { CURRENT_TERMS_VERSION } from "@/lib/terms";
+import { CURRENT_TERMS_VERSION, termsNeedReaccept } from "@/lib/terms";
 import { resolveTier } from "@/lib/tier";
 import type { User } from "@/lib/types";
 
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
   // email_verified column. Fall back rather than 500ing the session check.
   let user: User | null;
   try {
-    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, memory_mode, gift_expires_at, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
+    user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, display_name, memory_mode, gift_expires_at, created_at, terms_version FROM users WHERE id = ?").bind(payload.sub).first<User>();
   } catch {
     try {
       user = await env.DB.prepare("SELECT id, email, stripe_customer_id, subscription_tier, email_verified, created_at FROM users WHERE id = ?").bind(payload.sub).first<User>();
@@ -69,11 +71,36 @@ export async function GET(request: NextRequest) {
   // never disagree with the gate.
   const isFree = user.subscription_tier === "free";
   const usage = { used: isFree ? await readUsage(env, payload.sub) : 0, limit: isFree ? FREE_TIER_DAILY_LIMIT : null };
+  // Newest undismissed transit nudge within the last 72h (Turn 10). The daily
+  // cron enqueues at most one per user per UTC day; this surfaces the freshest
+  // one for the front-end's quiet nudge affordance. Read defensively — a
+  // pre-migration D1 with no `nudge` table must never 500 the session probe,
+  // which every page calls. A miss simply means "no nudge right now".
+  let nudge: { id: string; text: string; kind: string } | null = null;
+  try {
+    const nudgeRow = await env.DB.prepare(
+      "SELECT id, text, kind FROM nudge WHERE user_id = ? AND dismissed_at IS NULL AND created_at >= datetime('now','-72 hours') ORDER BY created_at DESC LIMIT 1",
+    ).bind(payload.sub).first<{ id: string; text: string; kind: string }>();
+    nudge = nudgeRow ? { id: nudgeRow.id, text: nudgeRow.text, kind: nudgeRow.kind } : null;
+  } catch (e) {
+    console.error("[auth] nudge read failed:", e);
+    nudge = null;
+  }
   return NextResponse.json({
     user,
     turnstileSiteKey: env.TURNSTILE_SITE_KEY || null,
     usage,
     hasBaseline,
+    nudge,
+    // Terms state for the in-app re-acceptance gate (see <TermsGate /> and
+    // POST /api/auth/accept-terms). null/undefined `stored` is treated as
+    // “not yet applicable” and never triggers the modal — the login path
+    // backfills it silently.
+    terms: {
+      stored: user.terms_version ?? null,
+      current: CURRENT_TERMS_VERSION,
+      needsReaccept: termsNeedReaccept(user.terms_version),
+    },
     // Effective-entitlement detail for the account/upgrade surfaces: a gifted
     // pass reads as Sovereign+ (with its expiry) but is not a paid subscription.
     tier: {
@@ -123,19 +150,23 @@ export async function POST(request: NextRequest) {
   if (intent !== "login") {
     const turnstileValid = await verifyTurnstileToken(env, body.turnstileToken);
     if (!turnstileValid) {
-      return NextResponse.json({ error: "Security verification failed. Please try again." }, { status: 400 });
+      return NextResponse.json({ error: "That security check didn't go through — try again in a moment." }, { status: 400 });
     }
   }
 
-  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  // #62: the abuse-brake buckets are keyed by a one-way, secret-keyed token of
+  // the client IP — never the address itself — so a raw IP no longer sits in an
+  // ephemeral KV key. See lib/ip-hash.ts. The email half of the login key stays
+  // verbatim: it is already the person's own input, not a network identifier.
+  const ipToken = await hashClientIp(request.headers.get("cf-connecting-ip") || "unknown", secret);
   const emailForRl = body.email?.trim().toLowerCase() || "unknown";
-  const rlKey = `login-rl:${ip}:${emailForRl}`;
+  const rlKey = `login-rl:${ipToken}:${emailForRl}`;
   const rlCount = parseInt((await env.SESSION_KV.get(rlKey)) || "0", 10);
-  if (rlCount >= LOGIN_RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  if (rlCount >= LOGIN_RATE_LIMIT_MAX) return NextResponse.json({ error: "Too many attempts — try again in a few minutes." }, { status: 429 });
   await env.SESSION_KV.put(rlKey, String(rlCount + 1), { expirationTtl: LOGIN_RATE_LIMIT_TTL });
 
   if (intent !== "login") {
-    const signupKey = `signup-ip-rl:${ip}`;
+    const signupKey = `signup-ip-rl:${ipToken}`;
     const signupCount = parseInt((await env.SESSION_KV.get(signupKey)) || "0", 10);
     if (signupCount >= SIGNUP_IP_RATE_LIMIT_MAX) {
       return NextResponse.json(
@@ -216,12 +247,23 @@ export async function POST(request: NextRequest) {
         const tokenHash = await hashResetToken(token);
         const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
         await env.DB.prepare("UPDATE users SET verification_token = ?, verification_expires = ? WHERE id = ?").bind(tokenHash, expires, userId).run();
-        await sendTemplate(env, "verify", email, { origin, token });
+        // F-F: the token is minted either way, but the inbox of one recipient
+        // is capped — a flooded address can still ask for the email again once
+        // the window clears; mass signups against it stop producing mail.
+        if (await recipientMailAllowed(env, email)) {
+          await sendTemplate(env, "verify", email, { origin, token });
+        } else {
+          console.warn("[auth] recipient mail cap reached — verification email skipped");
+        }
       } catch (e) {
         console.error("[auth] verification email failed:", e);
       }
-    } else {
+    } else if (await recipientMailAllowed(env, email)) {
       await sendTemplate(env, "welcome", email, { origin });
+    } else {
+      // Same visibility as the verify branch: a signup whose welcome mail was
+      // capped must be greppable in the logs, not silently mail-less.
+      console.warn("[auth] recipient mail cap reached — welcome email skipped");
     }
   }
   // Carry the account's live session generation into the new cookie. A token

@@ -11,14 +11,16 @@ function str(v: unknown): string | undefined {
 /**
  * The collapsible "Your Baseline" panel (composer-level, not per-message).
  * Simplified titles, every framework, no raw JSON. Collapsed by default so the
- * AI holds the detail and the panel only adds context on request.
+ * AI holds the detail and the panel only adds context on request — except where
+ * the Baseline IS the page (`/baseline`), which passes `defaultOpen` so the
+ * computed picture is visible on first paint and can still be folded away.
  *
  * When `overlay` is true, the open panel folds upward from the toggle button as
  * a floating, scrollable popover instead of pushing the page layout down —
  * used by the landing demo so opening it never grows the page.
  */
-export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay?: boolean }) {
-  const [open, setOpen] = useState(false);
+export function BaselineDrawer({ data, overlay, defaultOpen }: { data?: BaselineData; overlay?: boolean; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
 
   const d = data ?? {};
   const astro = d.astrology as Record<string, unknown> | undefined;
@@ -40,9 +42,15 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
         c.gates ? `${c.gates.join("–")} ${c.name ?? ""}`.trim() : (c.name ?? ""),
       ).filter(Boolean)
     : [];
-  const geneKeys = Array.isArray((d.geneKeys as { keys?: unknown } | undefined)?.keys)
+  const geneKeysRaw = Array.isArray((d.geneKeys as { keys?: unknown } | undefined)?.keys)
     ? ((d.geneKeys as { keys: unknown }).keys as Array<{ gate?: number; line?: number; frequency?: string; theme?: string }>)
     : [];
+  // The engine can emit the same Gate+line twice (a planet and an axis landing
+  // on the same line), and showing "Gate 43 line 3" two rows apart reads as a
+  // bug. Collapse duplicates on gate+line before the slice, keeping the first.
+  const geneKeys = geneKeysRaw.filter(
+    (k, i) => geneKeysRaw.findIndex((o) => o.gate === k.gate && o.line === k.line) === i,
+  );
   const lifePath = num?.lifePath !== undefined && num?.lifePath !== null ? String(num.lifePath) : undefined;
 
   const chips: { label: string; value: string }[] = [];
@@ -62,7 +70,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
           {chips.map((c) => (
             <span
               key={c.label}
-              className="inline-flex items-baseline gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1"
+              className="inline-flex items-baseline gap-1.5 rounded-chip border border-border bg-background/60 px-2.5 py-1"
             >
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{c.label}</span>
               <span className="text-xs font-medium text-foreground">{c.value}</span>
@@ -95,7 +103,8 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
           <p className="text-xs leading-relaxed text-foreground">
             {hdType || "—"}
             {hdProfile && hdProfile !== "0/0" ? ` · profile ${hdProfile}` : ""}
-            {hdStrategy || hdAuthority ? ` (${[hdStrategy, hdAuthority].filter(Boolean).join(" · ")})` : ""}
+            {hdStrategy ? ` · Strategy: ${hdStrategy}` : ""}
+            {hdAuthority ? ` · Authority: ${hdAuthority}` : ""}
           </p>
           {centers.length > 0 && (
             <p className="mt-1.5 text-xs text-muted-foreground">
@@ -127,15 +136,15 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
         </div>
       )}
 
-      <p className="text-[11px] leading-relaxed text-muted-foreground/60">
-        Your Baseline describes tendencies, not your identity. Computed from the ten natal
+      <p className="text-[11px] leading-relaxed text-muted-foreground/70">
+        Your Baseline describes tendencies, not your identity. Computed from the ten celestial
         bodies via the NASA/JPL Horizons API through the Sovereign derivation engine.
       </p>
     </>
   );
 
   return (
-    <div className="relative rounded-lg border border-border/60 bg-background/40">
+    <div className="relative rounded-control border border-border/60 bg-background/40">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -146,7 +155,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
           <span className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
             Your Baseline
           </span>
-          <span className="hidden text-[11px] text-muted-foreground/60 sm:inline">
+          <span className="hidden text-[11px] text-muted-foreground/70 sm:inline">
             from NASA/JPL planetary data
           </span>
         </span>
@@ -158,7 +167,7 @@ export function BaselineDrawer({ data, overlay }: { data?: BaselineData; overlay
 
       {open && (
         overlay ? (
-          <div className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain rounded-lg border border-border/60 bg-card p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+          <div className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain rounded-control border border-border/60 bg-card p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl">
             {content}
           </div>
         ) : (
