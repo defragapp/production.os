@@ -133,7 +133,7 @@ export function SupportForm({ turnstileSiteKey }: { turnstileSiteKey?: string })
       </button>
 
       <p className="text-center text-xs leading-5 text-muted-foreground/70">
-        Goes straight to the Sovereign team — never a third party.
+        Goes straight to the Sovereign OS team — never a third party.
       </p>
     </form>
   );

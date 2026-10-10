@@ -40,7 +40,7 @@ export function Logo({
       />
       {showWordmark && (
         <span className="font-sans text-[13px] font-semibold uppercase leading-none tracking-[0.2em] text-foreground">
-          Sovereign<span className="text-muted-foreground">.OS</span>
+          Sovereign <span className="text-muted-foreground">OS</span>
         </span>
       )}
     </>

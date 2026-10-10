@@ -4,7 +4,7 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 
 export const metadata: Metadata = {
   title: "Offline",
-  description: "Sovereign is unreachable right now — your data is safe and waiting.",
+  description: "Sovereign OS is unreachable right now — your data is safe and waiting.",
   robots: { index: false, follow: false },
 };
 
@@ -38,7 +38,7 @@ export default function OfflinePage() {
         </h1>
         <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
           Nothing was lost. Your conversation lives on this device or on our servers, depending on
-          how you set Sovereign up — and it is waiting either way. Once you have a signal again,
+          how you set Sovereign OS up — and it is waiting either way. Once you have a signal again,
           pick up right where you left off.
         </p>
         <OfflineRetry />

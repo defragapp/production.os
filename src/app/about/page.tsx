@@ -6,7 +6,7 @@ import { PageShell } from "@/components/page-shell";
 import { SiteFooter } from "@/components/site-footer";
 
 const description =
-  "Sovereign is a private AI mirror for understanding yourself, your people, and the systems you live within — grounded in your Baseline, not a diagnosis or a verdict.";
+  "Sovereign OS is a private AI mirror for understanding yourself, your people, and the systems you live within — grounded in your Baseline, not a diagnosis or a verdict.";
 
 export const metadata: Metadata = {
   title: "Our Philosophy",
@@ -50,7 +50,7 @@ export default function AboutPage() {
               align="left"
               eyebrow="Our Philosophy"
               title={<>A tool for <span className="italic">understanding</span>, not a verdict.</>}
-              deck="Most self-understanding is sold as a verdict. Sovereign works like a clear-eyed conversation: a grounded starting point, honest language, and the deciding left to you."
+              deck="Most self-understanding is sold as a verdict. Sovereign OS works like a clear-eyed conversation: a grounded starting point, honest language, and the deciding left to you."
             />
 
             <p className="mt-8 text-balance border-l border-foreground/25 pl-5 font-display text-xl italic leading-relaxed tracking-tight text-foreground/90 md:text-2xl md:leading-[1.5]">
@@ -90,7 +90,7 @@ export default function AboutPage() {
                 most people want when they&apos;re trying to make sense of a hard week. There is a
                 middle lane no one has built seriously yet: an assistant that <em className="text-foreground/90 not-italic">remembers only
                 you</em>, grounded in a stable reference frame, and doesn&apos;t pretend to be an oracle.
-                That is what Sovereign is for.
+                That is what Sovereign OS is for.
               </p>
             </div>
 

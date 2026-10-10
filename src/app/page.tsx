@@ -52,7 +52,7 @@ const jsonLd = {
   operatingSystem: "Web",
   url: "https://sovereign.defrag.app",
   description:
-    "Sovereign is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
+    "Sovereign OS is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
     { "@type": "Offer", name: "Sovereign+ Monthly", price: "20", priceCurrency: "USD" },

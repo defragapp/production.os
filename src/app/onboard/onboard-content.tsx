@@ -10,6 +10,7 @@ import { Nav } from "@/components/nav";
 import { TurnstileWidget } from "@/components/turnstile";
 import { Stepper } from "@/components/stepper";
 import { BaselineForm } from "@/components/baseline-form";
+import { WhyWeAskFirst } from "@/components/why-we-ask";
 import { PasskeySignInButton } from "@/components/passkey";
 import { Alert } from "@/components/ui/alert";
 import { cn, safeInAppPath } from "@/lib/utils";
@@ -568,10 +569,11 @@ export function OnboardContent() {
           <div className="mb-8 text-center">
             <h1 className="font-display text-3xl font-normal tracking-tight">Build your Baseline</h1>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-              A plain-language picture of how you tend to communicate, feel, and decide — built
-              from NASA/JPL planetary data. Takes about a minute.
+              A plain-language picture of how you tend to communicate, feel, and decide.
             </p>
           </div>
+
+          <WhyWeAskFirst />
 
           <Card>
             <CardContent className="pt-6">

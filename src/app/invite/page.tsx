@@ -277,7 +277,7 @@ export default function InvitePage() {
                     whole link comes along.
                   </p>
                   <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                   {/* A broken invite link shouldn't dead-end: signing in or
                       starting fresh still works without the token. */}
@@ -306,7 +306,7 @@ export default function InvitePage() {
                     invite link. Ask the person who invited you to share their current link.
                   </p>
                   <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                 </CardContent>
               </Card>
@@ -322,7 +322,7 @@ export default function InvitePage() {
                     you again.
                   </p>
                   <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                 </CardContent>
               </Card>
@@ -337,7 +337,7 @@ export default function InvitePage() {
                     to send a fresh invite link.
                   </p>
                   <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
-                    Back to Sovereign
+                    Back to Sovereign OS
                   </Button>
                 </CardContent>
               </Card>

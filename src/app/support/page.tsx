@@ -7,7 +7,7 @@ import { SupportForm } from "./support-form";
 import { getEnv } from "@/lib/env";
 
 const description =
-  "Get in touch with the Sovereign team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.";
+  "Get in touch with the Sovereign OS team. Questions about your Baseline, relationships, subscriptions, or the AI itself — we read everything and answer personally.";
 
 export const metadata: Metadata = {
   title: "Support",

@@ -72,7 +72,7 @@ export function emailShell(title: string, bodyHtml: string, preheader?: string):
 <tr>
 <td style="background:#0c0b09;padding:22px 28px;text-align:center;border-bottom:1px solid rgba(250,245,236,0.08);border-radius:12px 12px 0 0;">
 <span style="font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;color:#f4efe4;font-size:14px;font-weight:600;letter-spacing:0.22em;">
-SOVEREIGN<span style="color:#8a857b">.OS</span>
+SOVEREIGN<span style="color:#8a857b"> OS</span>
 </span>
 </td>
 </tr>

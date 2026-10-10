@@ -61,7 +61,7 @@ const HOW_IT_WORKS = [
   {
     step: "01",
     title: "Map your Baseline",
-    desc: "Enter your birth details once. Sovereign creates an enduring reference for how you naturally process and react under pressure.",
+    desc: "Enter your birth details once. Sovereign OS creates an enduring reference for how you naturally process and react under pressure.",
   },
   {
     step: "02",
@@ -138,7 +138,7 @@ export function LandingClient() {
                   Understand <span className="italic">who you are</span> — and why your relationships work the way they do.
                 </h1>
                 <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base lg:text-lg">
-                  Sovereign is a private space to make sense of what keeps happening, grounded in your Baseline and built for real life.
+                  Sovereign OS is a private space to make sense of what keeps happening, grounded in your Baseline and built for real life.
                 </p>
 
                 <div className="mt-7 flex flex-col items-start gap-4 sm:flex-row sm:items-center">

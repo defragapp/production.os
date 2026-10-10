@@ -71,7 +71,7 @@ export default async function SigilOgImage({
             letterSpacing: "0.24em",
           }}
         >
-          INTENT SIGIL · SOVEREIGN.OS
+          INTENT SIGIL · SOVEREIGN OS
         </div>
       </div>
     ),

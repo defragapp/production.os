@@ -108,7 +108,7 @@ export function RedeemCard() {
               cut off when it was shared. Ask the sender to forward the whole link again.
             </p>
             <Button variant="outline" className="mt-4 w-full" onClick={() => router.push("/")}>
-              Back to Sovereign
+              Back to Sovereign OS
             </Button>
           </CardContent>
         </Card>

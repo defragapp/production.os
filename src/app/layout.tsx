@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     template: "%s · Sovereign OS",
   },
   description:
-    "Sovereign is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
+    "Sovereign OS is a private space to understand yourself and the people around you. It builds a personal Baseline from your birth data and helps you make sense of what keeps happening — then leaves the deciding to you.",
   applicationName: "Sovereign OS",
   manifest: "/manifest.webmanifest",
   authors: [{ name: "Sovereign OS" }],

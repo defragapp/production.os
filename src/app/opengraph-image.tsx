@@ -39,7 +39,7 @@ export default function OpengraphImage() {
             fontWeight: 700,
           }}
         >
-          SOVEREIGN.OS
+          SOVEREIGN OS
         </div>
         <div
           style={{

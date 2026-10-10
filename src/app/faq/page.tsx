@@ -75,7 +75,7 @@ export default function FaqPage() {
           className="mb-8"
           eyebrow="FAQ"
           title="Questions, answered"
-          deck="What Sovereign is, how it works, and what it means for you."
+          deck="What Sovereign OS is, how it works, and what it means for you."
         />
 
         <Link
