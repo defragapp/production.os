@@ -4,6 +4,27 @@ Maintained by `/goal` (`.qoder/skills/goal/SKILL.md`). One row per verifiable th
 `#` of an open row never changes. Re-derive with
 `node .qoder/skills/goal/scripts/scan-threads.mjs --days 2 --full`.
 
+**SUPERSESSION NOTE — release path (added 2026-10-09 late, verified with the account's own
+Cloudflare API `ac9a47dd…8349` by worker TAG — CORRECTS the earlier same-day note below):**
+The earlier "Workers Builds is **NOT** provisioned" note was WRONG — it was caused by a
+**name-vs-tag query bug** (Builds API paths take the worker `external_script_id` tag;
+`/builds/workers/{name}/…` returns `[]`/`12040`, the documented failure mode). Verified by
+tag: **triggers exist** — `production-os` `ea6e4bc3-d4b4-45bb-8bab-69bada6f3933` (created
+2026-10-02T07:38Z) and `sovereign-tail` `7115623b-7785-4a0a-918b-1092591fde32` (created
+2026-10-06T01:04Z), both `branch_includes ["main"]`, `path_includes ["*"]`, both modified
+2026-10-09T17:49Z during the #50 repair. **Builds fire on every push to `main` and are
+green**: 18:01Z/18:25Z/20:40Z/20:48Z/20:50Z/20:52Z all `build_outcome: "success"` on BOTH
+Workers, latest deploying version `1602b4df-16cf-4469-ac9d-4712d8b5000f` == live
+deployment `6ae1c673-…` (20:54:47Z). The two "orphaned" build tokens are NOT orphans —
+`f40e7197…` (production-os) and `f96c21f9…` (sovereign-tail) are the wired build tokens on
+the triggers, and every green build since 18:01Z used them. Deployments read
+`source: "wrangler"` because the triggers' `deploy_command` runs `npx wrangler deploy` /
+`npx -y wrangler@4.131.1 deploy` — that is Builds deploying via wrangler, not CLI. The
+shipping path is therefore **`git push origin main`** (push-to-deploy on both Workers); CLI
+`npm run deploy` is the out-of-band fallback. Collision rule (live, not hypothetical):
+never run a CLI deploy while a push-triggered build is in flight. Keep everything above
+here as the prior (superseded) snapshot; do not rewrite history, correct by dated note.
+
 **SUPERSESSION NOTE — release path (added 2026-10-09, verified with the account's own
 Cloudflare API `ac9a47dd…8349`):** Workers Builds is **NOT provisioned** on this
 account. `GET /builds/workers/{name}/triggers` and `…/builds` return `[]` for BOTH
