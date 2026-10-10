@@ -149,7 +149,7 @@ swept — all 200 except the expected `307` on `/upgrade`; `/api/health` body
 | 17 | Landing mobile trust-row separators look loose — adjudicate against the desktop rhythm | agent | open | a9034055 | observed, not filed as a fix |
 | 18 | iOS device-profile audit of coarse-pointer floors, install prompt, offline retry on a real device or simulator | blocked | blocked-device | 4b798035 | code-complete since `1d52daa`; no device profile exercised since the tone sweep |
 | 19 | Funnel review with Fathom numbers (landing CTA → onboard → quota moment → upgrade) | owner | blocked-access | 4b798035 | analytics are owner-visible only |
-| 20 | Anonymous "full comparison" link in the landing plans block points at `/upgrade`, which 307s a stranger to signup | owner | blocked-decision | 9fa21c6a | `landing-client.tsx` L313-318, still present. Both fixes are judgment calls: keep the signup CTA, or send strangers to the FAQ only. Not unilateral |
+| 20 | Anonymous "full comparison" link in the landing plans block points at `/upgrade`, which 307s a stranger to signup | agent | closed-shipped | 9fa21c6a | RESOLVED in `36bda8a`: the landing "full comparison" link now anchors the public in-page `#plans` section (a real anchor at `landing-client.tsx` L278), not the auth-gated `/upgrade`. Re-verified this pass — no `/upgrade` link remains in `landing-client.tsx`, so no 307 to signup for a stranger |
 | 21 | `/redeem` and `/onboard` were verified by text dump, not pixels | agent | partial | 4b798035 | Pass 2 walked `/onboard` (login + signup, Turnstile renders, inline errors) on live at 1920 and surfaced the F3 sign-in label fix (see *Closed this pass*); `/redeem` auth-gated pixels + true 390 still not captured (Gate 29 walks the redeemed card at 390 in preview). This pass verified `/redeem` copy against the engine by code — the "up to 150 AI messages a day" claim equals `SOVEREIGN_PLUS_DAILY_LIMIT=150`, gift→sovereign+, no card→"nothing is charged" — accurate, no change. |
 | 22 | Veil-CLS gate flakes under load — quiet its measurement window | agent | closed-this-pass | 628d00dc | see *Closed this pass* — the live `/chat` CLS gates now reset-and-measure-the-transition instead of asserting the raw whole-load accumulator (which carried hydration noise); verified green inside the 117/117 run |
 
@@ -358,3 +358,20 @@ the legacy `OPENAPI` product docs, not applied verbatim: none of its file paths 
 Working premise: the strategy's "unsupported Human Design authority" warning does **not**
 apply to this repo — type/authority/profile are genuinely computed here
 (`src/lib/sovereign-humandesign.ts`, tested).
+
+---
+
+## Polish pass — focal-comet warm-only + returning-user thread-load error state — 2026-10-10 (this thread; append-only)
+
+Two in-repo polish items from the design/UX sweep, plus one stale ledger row re-verified.
+No prompt, gate, safety, or server-contract change — both are render-only.
+
+| Task | Closed by | How verified |
+|---|---|---|
+| #17 warm-only focal comet | this pass (agent) | The `.btn-focal` conic edge carried the **only cool stop in the entire stylesheet** — `hsla(150, 45%, 66%, 0.4)` (hue 150, green) at `340deg` — inside a system documented as warm-only ("hue sits in the low-30s", "deliberately no blue/indigo cast", `BRAND.md`). Replaced with a warm `hsla(26, 55%, 70%, 0.32)` so the cream→amber→terracotta sweep stays inside the scale; the two "iridescent" comments (`globals.css`) and `BRAND.md`'s comet row reworded to "warm comet" so a future dev is not invited to re-add a cool stop. `grep` proves no other cool stop exists and no test pins the gradient. |
+| #19 returning-user thread-load error state | this pass (agent) | A failed `/api/threads` fetch `return []`ed — indistinguishable from "you have no conversations yet" — so a returning member whose request blinked saw the **first-run** empty state ("Start with what's real…") as if their history had vanished, with no retry. Added a `threadsError` flag set on BOTH failure exits (`!res.ok` and the `catch`) and cleared on success; the desktop thread rail (`ThreadLibrary`) and the mobile chip strip now render a "Couldn't load your conversations" retry instead of the first-run prompt. New source-shape contract `src/lib/chat-thread-load-state.test.ts` (2/2). The pre-existing first-run prompt is preserved in the non-error branch. |
+| #20 anonymous landing "full comparison" dead-end | this pass (agent, re-verified) | Ledger said "still present" at `landing-client.tsx` L313-318 pointing at `/upgrade` (307 to signup for a stranger). **Already resolved** in `36bda8a`: the link now anchors the public in-page `#plans` section (real anchor at L278). No `/upgrade` link remains in `landing-client.tsx`. Row moved to `closed-shipped`. |
+
+Two other sweep items resolved themselves before this pass and need no work: radius
+unification (`56faa4f` — zero `rounded-md` remain; the scale is `rounded-panel`/`-chip`/
+`-control`/`-full`) and the landing link destinations (`36bda8a`).
