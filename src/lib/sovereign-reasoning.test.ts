@@ -10,6 +10,7 @@ import {
   windowHistoryPreservingCorrections,
   buildReasoningContext,
   buildReasoningPrompt,
+  determineScope,
 } from "./sovereign-reasoning";
 import { deriveBaseline } from "./sovereign-prompt";
 import type { ChatMessage } from "./types";
@@ -51,6 +52,47 @@ describe("classifyQuestion (conservative classification)", () => {
     const c = classifyQuestion("My whole family fights at every dinner.");
     expect(c.level).toBe(4);
     expect(c.domains).toContain("system");
+  });
+});
+
+describe("bereavement is not a relationship inquiry (F3)", () => {
+  // A bare family noun ("my father") used to route grief to Level 3 / dyadic,
+  // where the prompt frames the deceased as "the other person". Loss is a
+  // self-reflection turn.
+  const grief = "My father died last month and I can't stop feeling like I should have called him more.";
+
+  it("does not route a loss to Level 3 / the between domain", () => {
+    const c = classifyQuestion(grief);
+    expect(c.level).toBe(1);
+    expect(c.domains).not.toContain("between");
+  });
+
+  it("returns self scope for a loss even though a family noun is present", () => {
+    expect(determineScope([{ role: "user", content: grief }])).toBe("self");
+  });
+
+  it("still routes a genuine relational question about a family member to Level 3", () => {
+    const c = classifyQuestion("My father criticizes everything I do and I shut down.");
+    expect(c.level).toBe(3);
+    expect(c.domains).toContain("between");
+    expect(determineScope([{ role: "user", content: "My father criticizes everything I do." }])).toBe("dyadic");
+  });
+});
+
+describe("scanUnknowns covers how motive and future questions are normally asked (F4)", () => {
+  const inner = (content: string) =>
+    scanUnknowns([{ role: "user", content }]).some((u) => /inner world|motives/i.test(u.question + u.reason));
+  const future = (content: string) =>
+    scanUnknowns([{ role: "user", content }]).some((u) => /happens next|future/i.test(u.question + u.reason));
+
+  it("flags a role-noun motive question, not only a pronoun one", () => {
+    expect(inner("Why does my partner keep lying to me about small things?")).toBe(true);
+  });
+  it("flags a certainty claim about another person's intent", () => {
+    expect(inner("My boss is definitely trying to sabotage me.")).toBe(true);
+  });
+  it("flags a third-person future question", () => {
+    expect(future("Will my ex come back to me?")).toBe(true);
   });
 });
 
@@ -434,6 +476,58 @@ describe("scanUnknowns window", () => {
       msgs.push({ role: "assistant", content: `Noted, update ${i}.` });
     }
     expect(scanUnknowns(msgs)).toHaveLength(0);
+  });
+});
+
+describe("baseline rendering: plain, bounded, no internal tags (F1/F2)", () => {
+  const RICH = deriveBaseline({
+    astrology: {
+      sunSign: "Cancer",
+      moonSign: "Leo",
+      planets: {
+        sun: { theme: "protection, belonging, and emotional context" },
+        moon: { theme: "visible expression, authorship, and creative direction" },
+        mercury: { theme: "emotional memory and the words carried underneath feelings" },
+        venus: { theme: "relational care and the shape of belonging" },
+        mars: { theme: "initiative that moves when it feels safe" },
+        jupiter: { theme: "meaning, exploration, and wider possibility" },
+        saturn: { theme: "structure, responsibility, and durable progress" },
+      },
+    },
+  });
+
+  it("renders a bounded set of baseline signals, not the whole Baseline every turn", async () => {
+    const history: ChatMessage[] = [{ role: "user", content: "I've been noticing I get quiet after big social weekends." }];
+    const ctx = await buildReasoningContext({ history, baseline: RICH });
+    const system = buildReasoningPrompt(ctx, history, RICH)[0].content;
+    const block = system
+      .split("BASELINE CONTEXT (derived signals — context, not verdict):")[1]
+      .split("USER INTERPRETATIONS")[0];
+    const rendered = (block.match(/^- Baseline:/gm) ?? []).length;
+    expect(rendered).toBeGreaterThan(0);
+    expect(rendered).toBeLessThanOrEqual(3);
+    // Strictly fewer lines than the full pool — the dump is gone.
+    expect(rendered).toBeLessThan(ctx.baselineSignals.length);
+  });
+
+  it("never renders an internal planet/role tag in the reasoning context", async () => {
+    const history: ChatMessage[] = [{ role: "user", content: "Why do I always get anxious before work meetings?" }];
+    const ctx = await buildReasoningContext({ history, baseline: RICH });
+    const system = buildReasoningPrompt(ctx, history, RICH)[0].content;
+    expect(system).not.toMatch(/\b(?:Sun|Moon|Mercury|Venus|Mars|Jupiter|Saturn)\s+(?:core expression|inner response|processing|relating|initiative|expansion|structure)\b/i);
+  });
+});
+
+describe("a correction is not rebuilt from the Baseline (F5)", () => {
+  it("instructs the model to start from the new detail, not re-derive the rejection", async () => {
+    const history: ChatMessage[] = [
+      { role: "user", content: "I keep taking on everyone's problems." },
+      { role: "assistant", content: "One possibility worth examining is that you overextend in order to feel needed." },
+      { role: "user", content: "No, that's not it. I just worry a lot." },
+    ];
+    const ctx = await buildReasoningContext({ history, baseline: BASELINE });
+    const system = buildReasoningPrompt(ctx, history, BASELINE)[0].content;
+    expect(system).toMatch(/do not rebuild the same conclusion/i);
   });
 });
 

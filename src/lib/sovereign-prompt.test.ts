@@ -28,7 +28,10 @@ describe("deriveBaseline", () => {
     });
     expect(d.sunSign).toBe("Leo");
     expect(d.numerologyLifePath).toBe(7);
-    expect(d.qualities.some((q) => q.includes("Sun"))).toBe(true);
+    // Qualities are plain-language lines — no internal planet/role tag reaches
+    // the model (see the tag-leak regression test below).
+    expect(d.qualities.some((q) => q.includes("visible expression, authorship, and creative direction"))).toBe(true);
+    expect(d.qualities.some((q) => /\b(?:Sun core expression|Mars initiative)\b/.test(q))).toBe(false);
     expect(d.pressureResponse).toContain("Outwardly");
   });
 
@@ -71,11 +74,12 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("not headings or tags to print");
   });
 
-  it("never feeds the model a leakable '(<planet> — <word>)' quality slug", () => {
-    // Regression pin: the old quality format embedded "(Jupiter — expansion)" /
-    // "(Saturn — structure)" directly in the Baseline text the model reads, and
-    // it reproduced those tags verbatim. The label is now folded into prose
-    // ("Jupiter expansion: ..."), and the directive forbids printing the tag.
+  it("never feeds the model an internal quality tag it could reproduce", () => {
+    // Regression: the Baseline used to label each quality with a planet/role tag
+    // ("Sun core expression: …", "Jupiter expansion: …"). The 8B model reproduced
+    // those tags verbatim ("…a quality that shows up in your Baseline as your Sun
+    // core expression"), which is framework name-dropping. No tag reaches the
+    // prompt at all now — the theme text survives, expressed in plain language.
     const prompt = buildSystemPrompt(deriveBaseline({
       astrology: {
         sunSign: "Leo",
@@ -87,12 +91,19 @@ describe("buildSystemPrompt", () => {
         },
       },
     }));
-    // No parenthetical slug of the form "(<planet> — ...)" or "— <role>)".
+    expect(prompt).not.toMatch(/\b(?:Sun|Moon|Mercury|Venus|Mars|Jupiter|Saturn)\s+(?:core expression|inner response|processing|relating|initiative|expansion|structure)\b/i);
+    // No parenthetical slug of the form "(<planet> — ...)".
     expect(prompt).not.toMatch(/\((?:Sun|Moon|Mercury|Venus|Mars|Jupiter|Saturn)\s+—/);
-    expect(prompt).not.toMatch(/— (?:expansion|structure|core expression|inner response|processing|relating|initiative)\)/);
-    // The planet grounding is still present, just expressed as a prose label.
-    expect(prompt).toContain("Jupiter expansion:");
-    expect(prompt).toContain("Saturn structure:");
+    // The theme is still present, just in plain language.
+    expect(prompt).toContain("meaning, exploration, and wider possibility");
+    expect(prompt).toContain("structure, responsibility, and durable progress");
+  });
+
+  it("keeps group (Level 4) answers addressed to the person", () => {
+    // Level 4 invites a detached essay register ("each member", "the central
+    // person"). The prompt must still require second-person address.
+    const prompt = buildSystemPrompt(deriveBaseline({}));
+    expect(prompt).toMatch(/what happens between you and them/i);
   });
 
   it("directs the model to prefer one meaningful observation over many generic ones", () => {

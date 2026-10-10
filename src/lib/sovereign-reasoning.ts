@@ -9,7 +9,7 @@
 
 import type { DerivedBaseline } from "./sovereign-prompt";
 import { buildSystemPrompt } from "./sovereign-prompt";
-import { buildBaselineSignals, buildBaselineLimitations } from "./sovereign-baseline";
+import { buildBaselineSignals, buildBaselineLimitations, selectBaselineSignals } from "./sovereign-baseline";
 import {
   buildGroundedFallback,
   buildRepairInstruction,
@@ -195,18 +195,38 @@ const INNER_WORLD_CUES = [
   /\bthey\s+mean\b/i,
   /\b(?:does|did)\s+he\s+actually\b/i,
   /\bwhat\s+(?:does|did)\s+it\s+say\s+about\s+their\b/i,
+  // Role nouns, not only pronouns — the commonest phrasing of a motive question.
+  /\b(?:why|how)\s+(?:do|does|did|is|are|was|were)\s+(?:my|the)\s+(?:partner|husband|wife|spouse|fianc(?:é|e)|boyfriend|girlfriend|ex|boss|coworker|co-worker|colleague|friend|roommate|mom|mum|mother|dad|father|sister|brother|son|daughter|child)\b/i,
+  // A certainty claim about another person's intent toward the user.
+  /\b(?:definitely|clearly|obviously|surely|plainly)\s+(?:trying|intending|planning|wanting)\s+to\b/i,
+  /\b(?:is|are|was|were)\s+(?:trying|intending|planning)\s+to\s+(?:sabotage|hurt|manipulate|undermine|control|use|betray|deceive|trick|get\s+rid\s+of)\s+me\b/i,
 ];
 
 const FUTURE_CUES = [
   /\bwill\s+I\b/i,
   /\bam\s+I\s+going\s+to\b/i,
   /\bis\s+this\s+going\s+to\b/i,
-  /\bwill\s+(?:this|it|they)\b/i,
+  /\bwill\s+(?:my|the|he|she|they|we|it|this)\b/i,
+  /\b(?:is|are)\s+(?:he|she|they|my\s+\w+|the\s+\w+)\s+going\s+to\b/i,
   /\bis\s+it\s+destin(?:ed|y)\b/i,
   /\bwill\s+it\s+always\b/i,
   /\bare\s+we\s+going\s+to\b/i,
   /\bam\s+I\s+ever\b/i,
 ];
+
+// Loss and bereavement are self-reflection, not a relationship inquiry. A bare
+// family noun ("my father died") otherwise routes grief to Level 3 / dyadic,
+// where the prompt frames the deceased as "the other person" and would weave in
+// pairwise signals. Genuine relational conflict ("my father criticizes me")
+// still carries no loss cue and classifies normally.
+export const LOSS_CUES = [
+  /\b(?:died|dead|passed\s+away|passed\s+on|funeral|memorial|grief|grieving|bereav\w*|widow(?:ed|er)?|my\s+late)\b/i,
+  /\blost\s+(?:my|her|his|our|their)\s+(?:mother|father|mom|dad|mum|sister|brother|son|daughter|partner|wife|husband|child|baby|grandmother|grandfather|grandma|grandpa|friend)\b/i,
+];
+
+export function isLossContext(text: string): boolean {
+  return LOSS_CUES.some((rx) => rx.test(text));
+}
 
 export function classifyQuestion(latestUserContent: string): ReasoningClassification {
   const domains = new Set<Domain>([]);
@@ -214,7 +234,9 @@ export function classifyQuestion(latestUserContent: string): ReasoningClassifica
 
   const selfHit = SELF_CUES.some((rx) => rx.test(latestUserContent));
   const meaningHits = findMeaningTriggers(latestUserContent);
-  const betweenHit = BETWEEN_PERSON_CUES.some((rx) => rx.test(latestUserContent));
+  // A loss suppresses the relational cue: grief is self-reflection, not a
+  // question about "the other person".
+  const betweenHit = !isLossContext(latestUserContent) && BETWEEN_PERSON_CUES.some((rx) => rx.test(latestUserContent));
   const systemHit = SYSTEM_CUES.some((rx) => rx.test(latestUserContent));
   const choiceHit = CHOICE_CUES.some((rx) => rx.test(latestUserContent));
 
@@ -312,7 +334,7 @@ function peerNameIn(text: string): string | undefined {
 function scopeOfMessage(text: string): { scope: CorrectionScope; peerName?: string } {
   const peer = peerNameIn(text);
   if (SYSTEM_CUES.some((rx) => rx.test(text))) return peer ? { scope: "system", peerName: peer } : { scope: "system" };
-  if (BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return peer ? { scope: "relational", peerName: peer } : { scope: "relational" };
+  if (!isLossContext(text) && BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return peer ? { scope: "relational", peerName: peer } : { scope: "relational" };
   return { scope: "self" };
 }
 
@@ -598,7 +620,7 @@ function detectPersons(history: ChatMessage[]): AuthorizationContext["people"] {
 export function determineScope(history: ChatMessage[]): RelationshipScope {
   const text = history.slice(-2).map((m) => m.content).join(" ");
   if (SYSTEM_CUES.some((rx) => rx.test(text))) return "system";
-  if (BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return "dyadic";
+  if (!isLossContext(text) && BETWEEN_PERSON_CUES.some((rx) => rx.test(text))) return "dyadic";
   return "self";
 }
 
@@ -738,7 +760,11 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   }
   if (ctx.baselineSignals.length) {
     lines.push("BASELINE CONTEXT (derived signals — context, not verdict):");
-    for (const s of ctx.baselineSignals.slice(0, 8)) {
+    // Bounded relevance selection (F1): hand the model the two anchor qualities
+    // plus anything the turn's own words point at, not the whole Baseline every
+    // turn — reciting the full pool is what makes the answer read as generic.
+    const latest = ctx.observations[ctx.observations.length - 1]?.content ?? "";
+    for (const s of selectBaselineSignals(ctx.baselineSignals, latest, 3)) {
       lines.push(`- ${s.source}: ${s.value}${s.interpretation ? ` (${s.interpretation})` : ""}`);
     }
   }
@@ -779,6 +805,7 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
   if (activeRejected.length) {
     lines.push("REJECTED HYPOTHESES (do NOT re-assert, do NOT defend):");
     for (const r of activeRejected) lines.push(`- ${r}`);
+    lines.push("  The person rejected the above. Do not rebuild the same conclusion from a different angle or from another Baseline quality — start from the new detail they just gave you.");
   }
   if (activeConfirmed.length) {
     lines.push("CONFIRMED INTERPRETATIONS (user accepted these):");

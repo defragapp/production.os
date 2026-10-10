@@ -2,25 +2,25 @@
   "fixtureId": "partial_data-direct",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-09T20:00:39.615Z",
-  "promptSha": "0e622016599c2c6aa6d9810ef3402126affbc8f647f3ef72a8f52b231da3ea9a",
-  "text": "When you describe the fight, you say you only know your side, and your version feels loud and one-sided. This could indicate that you're holding onto your perspective tightly, perhaps as a way to protect what matters to you. \n\nIt's possible that the fight has awakened a reflex to guard what you love, which is a tendency you have when feeling protective. This could make it harder to hear the other person's perspective or to consider that there might be more to the situation than what you're aware of.\n\nWhat does the fight mean to you? What does it represent, and how does it make you feel?",
+  "capturedAt": "2026-10-10T20:53:02.517Z",
+  "promptSha": "13eb74290cc7c89cb73d527fd7dc95e5e93b5fd0b1b94240debad3af10a070cb",
+  "text": "You're left with your own account of the fight, and it feels unbalanced, like there's a missing piece. One possibility worth examining is that the dynamic between you and your roommate involves a power imbalance. You might be carrying the emotional weight of the argument, while your roommate's perspective remains unknown to you.\n\nIt may be that, in this situation, you tend to focus on your own experiences and feelings, which can create a sense of one-sidedness. This doesn't necessarily mean your roommate is intentionally withholding their perspective, but rather that you're primarily aware of your own reactions and thoughts.\n\nWhen we explore this further, it could be helpful to look at how you navigate communication and conflict in your relationship. One way to do this is by examining the qualities that tend to show up when you're in a disagreement. In your Baseline, it's mentioned that a quality that tends to show when you're at your best is holding and protecting what matters. This might suggest that you're particularly protective of your own needs and feelings during conflicts.\n\nIt's also worth considering how you respond to the uncertainty of not knowing your roommate's side of the story. You might feel a reflex to guard what it loves, which could be contributing to the sense of one-sidedness. This doesn't mean you're being overly defensive; it's just a natural response to feeling uncertain or vulnerable.\n\nTo better understand this dynamic, you might ask yourself: What would happen if you were to seek out your roommate's perspective and listen actively? How might that change your understanding of the situation? What would be the benefits and challenges of exploring this further?",
   "usage": {
-    "prompt_tokens": 3070,
-    "completion_tokens": 125,
-    "total_tokens": 3195,
+    "prompt_tokens": 3031,
+    "completion_tokens": 328,
+    "total_tokens": 3359,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 45.56570418179035
+    "neurons": 50.332325731404126
   },
   "observed": {
-    "clarity": 0.9999999999999999,
-    "groundedness": 0.6,
+    "clarity": 0.5499999999999999,
+    "groundedness": 0.6666666666666666,
     "relational": 0.75,
     "uncertainty": 0.9,
     "actionability": 1,
     "safety": 1
   },
-  "observedTotal": 5.25
+  "observedTotal": 4.866666666666667
 }

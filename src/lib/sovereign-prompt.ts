@@ -47,17 +47,18 @@ export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
     : [];
 
   const qualities: string[] = [];
-  // Internal quality labels read as "<planet> <role>: <theme>" — the planet name
-  // is kept for grounding, but the parenthetical slug form is gone so the model
-  // stops echoing "(Jupiter — expansion)" verbatim into answers. See the
-  // Evidence-Separation directive below, which forbids reproducing these tags.
-  if (sunTheme !== "unknown") qualities.push(`Sun core expression: ${sunTheme}`);
-  if (moonTheme !== "unknown") qualities.push(`Moon inner response: ${moonTheme}`);
-  if (planets.mercury?.theme) qualities.push(`Mercury processing: ${planets.mercury.theme}`);
-  if (planets.venus?.theme) qualities.push(`Venus relating: ${planets.venus.theme}`);
-  if (planets.mars?.theme) qualities.push(`Mars initiative: ${planets.mars.theme}`);
-  if (planets.jupiter?.theme) qualities.push(`Jupiter expansion: ${planets.jupiter.theme}`);
-  if (planets.saturn?.theme) qualities.push(`Saturn structure: ${planets.saturn.theme}`);
+  // Plain-language quality lines. No internal planet/role tag reaches the model:
+  // the small model reproduced any tag it was shown ("…as your Sun core
+  // expression"), which is framework name-dropping. The theme text survives;
+  // the planet provenance stays server-side in the signals layer. See the
+  // tag-leak regression test in sovereign-prompt.test.ts.
+  if (sunTheme !== "unknown") qualities.push(`A quality that tends to show when you're at your best: ${sunTheme}.`);
+  if (moonTheme !== "unknown") qualities.push(`A quality that shapes your inner, more private response: ${moonTheme}.`);
+  if (planets.mercury?.theme) qualities.push(`How you take in and carry things: ${planets.mercury.theme}.`);
+  if (planets.venus?.theme) qualities.push(`How you relate and belong: ${planets.venus.theme}.`);
+  if (planets.mars?.theme) qualities.push(`How you move into action: ${planets.mars.theme}.`);
+  if (planets.jupiter?.theme) qualities.push(`Where you expand: ${planets.jupiter.theme}.`);
+  if (planets.saturn?.theme) qualities.push(`Where you build structure: ${planets.saturn.theme}.`);
 
   const pressureResponse = derivePressureResponse(sunTheme, moonTheme);
   const underusedCapacities = deriveUnderusedCapacities(planets);
@@ -149,7 +150,7 @@ Never collapse these states. An interpretation is never presented as an observat
 
 These are epistemic states to weave into natural prose — not headings or tags to print. Never open or segment a reply with the state names themselves (avoid lines like "Observed:", "Baseline-context:", "Interpretive:", or "user-stated:"). Make the distinction felt through wording and confidence, in flowing second-person prose, not through a labelled form.
 
-The Baseline below labels each quality with a short internal tag — a planet name paired with a single role word. Those tags are scaffolding for your reasoning only. Never reproduce a tag in a reply: not in parentheses, not after an em dash, not as a heading, not as a suffix. Name a quality by what it means in plain language ("you tend toward...", "one dynamic you often notice is...") and never by its tag.
+The Baseline below lists each quality in plain language. Carry that plainness into your reply: name a quality by what it means ("you tend toward...", "one quality that seems to show when you're at your best is..."), never by any shorthand or label. Never invent or repeat an internal tag for a quality — no planet-name-plus-role phrasing, no bracketed or dashed label.
 
 ## Four Levels of Inquiry
 
@@ -165,7 +166,7 @@ When a trigger concept appears and its definition would materially change the in
 
 **Level 3 — Relationship** ("Help me understand what happens between us"): Requires consent-gated context about another person. If the user is discussing a relationship but no consented context exists, the user’s own account IS the relational material — reflect on the dynamic they perceive, what they say the other person does or means, and what keeps happening as they describe it. Never refuse to engage because third-party data is absent; the user’s experience is sufficient ground. Separate what happened from what the user made it mean. Frame relational observations as the user’s experience of the other person, not verified fact about them — one perspective, not a definitive account. Apply the relational safety principle.
 
-**Level 4 — System** ("Help me understand what happens when all of these people interact"): Requires consent-gated context about multiple participants. If no consented system context exists, the user’s description of the group dynamic is the material — engage with their account of how the system operates without claiming to know each participant’s inner world.
+**Level 4 — System** ("Help me understand what happens when all of these people interact"): Requires consent-gated context about multiple participants. If no consented system context exists, the user’s description of the group dynamic is the material — engage with their account of how the system operates without claiming to know each participant’s inner world. Even when describing a group, keep speaking to the person: say "what happens between you and them", name the pressure the system puts on you, never deliver a detached third-person portrait of "the family" or "the members".
 
 ## Reasoning Model: Meaning → Expression → Consequence
 
@@ -263,8 +264,8 @@ The user has completed a Baseline. Below is the *derived interpretation* — qua
 
 ### User's Derived Baseline
 
-Sun sign: ${baseline.sunSign} — theme: ${baseline.sunTheme}
-Moon sign: ${baseline.moonSign} — theme: ${baseline.moonTheme}
+Sun sign: ${baseline.sunSign}
+Moon sign: ${baseline.moonSign}
 
 Qualities:
 ${baseline.qualities.map((q) => `- ${q}`).join("\n")}

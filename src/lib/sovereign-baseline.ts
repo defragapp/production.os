@@ -10,29 +10,14 @@ import type { BaselineSignal } from "./sovereign-types";
 
 export function buildBaselineSignals(baseline: DerivedBaseline): BaselineSignal[] {
   const signals: BaselineSignal[] = [];
-  const sunTheme = baseline.sunTheme !== "unknown" ? baseline.sunTheme : null;
-  const moonTheme = baseline.moonTheme !== "unknown" ? baseline.moonTheme : null;
 
-  if (sunTheme) {
-    signals.push({
-      source: "Sun — core expression",
-      value: sunTheme,
-      interpretation: "A quality that tends to express when the person is centered.",
-      epistemicStatus: "baseline-supported",
-    });
-  }
-  if (moonTheme) {
-    signals.push({
-      source: "Moon — inner response",
-      value: moonTheme,
-      interpretation: "A quality that tends to shape the person's inner, more private response.",
-      epistemicStatus: "baseline-supported",
-    });
-  }
+  // No separate Sun/Moon signals: those two themes are already the first entries
+  // in baseline.qualities (rendered once, in plain language). Emitting them again
+  // here duplicated the same line in the prompt and taught the model to recite it.
   for (const quality of baseline.qualities) {
     if (quality === "Insufficient data for quality derivation") continue;
     signals.push({
-      source: "Derived qualities",
+      source: "Baseline",
       value: quality,
       epistemicStatus: "baseline-supported",
     });
@@ -41,7 +26,7 @@ export function buildBaselineSignals(baseline: DerivedBaseline): BaselineSignal[
     signals.push({
       source: "Response under pressure",
       value: baseline.pressureResponse,
-      interpretation: "How the person's qualities may express when stressed — a tendency, not a rule.",
+      interpretation: "How these qualities may express under stress — a tendency, not a rule.",
       epistemicStatus: "baseline-supported",
     });
   }
@@ -55,6 +40,34 @@ export function buildBaselineSignals(baseline: DerivedBaseline): BaselineSignal[
   }
 
   return signals;
+}
+
+/**
+ * Bounded relevance selection for the per-turn reasoning block (F1).
+ *
+ * The prompt is seeded with the *whole* Baseline every turn otherwise, and the
+ * model reaches for whichever line it saw most rather than the one that fits the
+ * question. This keeps the two anchor qualities (the most broadly relevant) plus
+ * any signal the turn's own words point at, capped at `max`. The full signal pool
+ * stays on `ctx.baselineSignals` — only what the model reads is trimmed.
+ */
+export function selectBaselineSignals(
+  signals: BaselineSignal[],
+  latestText: string,
+  max = 3,
+): BaselineSignal[] {
+  if (signals.length <= max) return signals;
+
+  const textTokens = new Set(latestText.toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? []);
+  const anchors = signals.slice(0, 2);
+  const out = [...anchors];
+  for (const s of signals) {
+    if (out.length >= max) break;
+    if (out.includes(s)) continue;
+    const toks = s.value.toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? [];
+    if (toks.some((t) => textTokens.has(t))) out.push(s);
+  }
+  return out.slice(0, max);
 }
 
 export function buildBaselineLimitations(baseline: DerivedBaseline): string[] {

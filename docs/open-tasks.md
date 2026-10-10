@@ -312,7 +312,7 @@ compute.**
 | 50 | Crisis-resource registry with provenance, `selectionSource`, and the unknown-jurisdiction path | agent | closed-shipped | fa89005 | **Closed 2026-10-09: shipped in `fa89005` — `src/lib/crisis-resources.ts` registry with contact lines + provenance (`selectionSource`), unknown-jurisdiction fallback, registry-backed `buildSafetyResponse`; 18 new tests; live.** **Infra note (recorded, not glossed):** the Workers Builds builds for `fa89005` failed at *initialization* on both Workers ("build token selected … has been deleted or rolled") — the two triggers' build tokens wrap user-scoped Cloudflare API tokens that were deleted/rolled on the account, and the Builds system cannot accept this machine's account-scoped `cfat_` token as a replacement (dashboard action required to repair; triggers reverted to the original tokens, experimental tokens deleted). The batch was shipped via the documented CLI fallback (`npm run deploy`, ships both Workers) after confirming no build was in flight; live smoke checks passed (HTTP 200 on `/`, `/privacy`, `/terms`, `/self`, `/people`, `/systems`). **~~Repair landed the same evening — push-to-deploy is restored.~~ SUPERSEDED 2026-10-09 — see the supersession note at the top of this file.** The live API on `ac9a47dd…8349` shows zero triggers/builds and build-config 12040 on both Workers, and every deployment ever is `source: "wrangler"` — including the 18:01–18:03Z entries below — so this repair narrative is **not** reflected in account state. The dashboard build-token repair took effect between the 17:01Z `fa89005` failure and the 18:01Z push of `24eb43f`: both original build tokens (`f40e7197…` production-os / `f96c21f9…` sovereign-tail) became valid again and are correctly wired to their triggers, and the `24eb43f` push produced **green Workers Builds on BOTH Workers** (verified via GitHub check-runs `success`, plus deployments at 18:01–18:03Z). No tokens needed deletion and no triggers needed patching; the experimental tokens (`302cf945…`, `8ae1a66a…`, `5aabd535…`) were already removed. §3. Today `buildSafetyResponse` (`sovereign-safety.ts:486-511`) emits a fixed four-jurisdiction list stating nothing about how it was chosen, and has no fallback path. The invariant worth importing is `safety-resources.ts:139` — *"without relying on a model-generated contact"*. Provenance test is completeness-only; review **recency** deliberately stays out of the gate so it cannot turn red on its own calendar. |
 | 51 | Decide `urgent` vs `emergency` presentation split | owner | blocked-decision | this pass | §3, §11.4. User-visible crisis copy, so a product call, not an engineering one. Designed so the answer is a flip: `SafetyMode` stays 3-valued and the split lands as a `presentation` field on the returned object. |
 | 52 | Expand `SafetyViolationType` with the six missing output-safety categories | agent | closed-shipped | fa89005 | **Closed 2026-10-09: shipped in `fa89005` — `SafetyViolationType` extended with the six categories (`therapy-claim`, `fixed-family-role`, `spiritual-causation`, `projection-as-fact`, `institutional-tone`, `excessive-disclaimer`), LEXICON +6 rules in `src/lib/sovereign-safety.ts` with the forbidden output-safety categories exercised in `sovereign-safety.test.ts`; live (deployed via CLI fallback — infra note in #50).** §4. Missing: `therapy-claim`, `fixed-family-role`, `spiritual-causation`, `projection-as-fact`, `institutional-tone`, `excessive-disclaimer` (legacy has 13 distinct types over 14 patterns — an earlier note said 14, corrected by reading `safety.ts:18-48`). Data-only port: `buildRepairInstruction` already renders each rule's `note`. Not ported: the paragraph-swap `safeRewrite` (violates the repair/fallback rule at `sovereign-safety.ts:513-522`) and `allowFrameworkLabels` (no surface needs it in v1). |
-| 53 | Reduced model-safe Baseline context + the three missing separation lines | agent | open | this pass | §5. Depends on #48. Measured on this tree: prompt 13,248 chars ≈ 3,312 tok, Baseline dump 2,231 ≈ 558 tok (17%) interpolated unconditionally at `sovereign-prompt.ts:256-277`. Honest framing: **not the cost lever** — done for answer focus. Gates the dump from `ctx.level`/`ctx.baselineSignals` at the single call site `sovereign-reasoning.ts:887`; cap of 3 from `SOVV:active-signals.ts:66`. |
+| 53 | Reduced model-safe Baseline context + the three missing separation lines | agent | closed-shipped | 2026-10-10 AI audit | **Closed 2026-10-10 (this pass).** The Baseline is now rendered in plain language with no internal tag, de-duplicated (Sun/Moon were emitted twice), and **bounded to ≤3 selected signals** per turn via `selectBaselineSignals` (`sovereign-baseline.ts`) at the render seam `sovereign-reasoning.ts` (`renderReasoningContext`). See the *Sovereign AI product audit* section below for the full before/after (recorded-answer re-capture + prompt char/token measurement). |
 | 54 | Degradation contract: port the two pure functions, add a circuit breaker, and real daily spend accounting (`0010_ai_spend_daily.sql` — **0009 is taken by WS3 `answer_feedback`**) | agent | open | this pass | §6. `shouldBypassAi`/`tuneTokenBudget` are `port-directly` (verdict upgraded — pure, no KV coupling); state in `SESSION_KV` per the non-session precedent at `nasa-jpl.ts:184` and `email-guard.ts:40`. Do **not** port the reserve/settle/void trio: three functions that look like a ledger and record nothing. Neuron rates must be re-derived for `llama-3.1-8b-instruct-fp8`, not copied. Ceiling opt-in by env var so migration order cannot take chat down. |
 | 55 | Send `Retry-After` (and `cache-control: private, no-store`) on the daily-cap 429 | agent | closed-shipped | afb6ba9 | **Closed 2026-10-09: shipped in `afb6ba9` — the fair-use 429 emits `Retry-After: secondsUntilUtcMidnight()` and `Cache-Control: private, no-store`; live.** §6(c). Verified: no response in this repo emits `Retry-After` anywhere in `src`. The copy at `api/chat/route.ts:216-218` already promises "tomorrow's reset" that the client cannot see. Legacy computes it to next UTC midnight in `free-tier-capacity.ts:freeCapacityResponse`. One-line, standards-correct. |
 | 56 | Refuse `cross_account_data_request` before the model call | agent | closed-shipped | afb6ba9 | **Closed 2026-10-09: shipped in `afb6ba9` — `detectCrossAccountRequest` + `buildCrossAccountDeflection` (`sovereign-safety.ts`) refuse "show me another user's baseline"/"dump all users" asks before any model call; covered in `sovereign-safety.test.ts`; live.** §7.1. `EXTRACTION_PATTERNS` (`sovereign-safety.ts:452-466`) covers prompts, instructions, credentials and internal symbols — **not** "show me another user's baseline" or "dump all users". Legacy has that category (`input-safety.ts:119-122`). Cheapest security win in the set; #9/Gate 34 already proved isolation holds, this refuses the ask rather than relying on the loader. |
@@ -503,3 +503,67 @@ tooling with a "which are durable?" curation call, zero product value, so it doe
 bundled with a privacy fix. Plan recorded here so it is mechanical next time: `git mv`-equivalent
 (the dir is gitignored, so plain `mv` + `git add`), fix the two import paths to `../../…`,
 re-run the secret scan, and dry-run each surviving script from the repo root.
+
+## Sovereign AI product audit + perceptiveness fixes — 2026-10-10 (this thread; append-only)
+
+**Scope.** Audited Sovereign's AI *as a product* (not just an LLM call): traced the full
+pipeline (auth → sanitize → pre-model deflection → context build → classify/meaning/unknowns/
+corrections/scope → render → model → validate → repair → fallback → SSE → persistence), ran a
+deterministic probe over 15 representative scenarios (no model calls), and read the 12 captured
+live answers. Then fixed the six measured findings (F1–F6) **test-first**, one eval re-capture.
+
+**Before (measured, not asserted).**
+- The Baseline block was **byte-identical on every one of the 15 scenarios** — all qualities,
+  every turn, and each theme stated **4×** (Baseline `theme:`, Baseline `Qualities:`, context
+  `Sun — core expression:`, context `Derived qualities:`). `buildSystemPrompt` alone measured
+  **13,240 chars ≈ 3,310 tok**, fixed every turn.
+- The prompt **printed the internal tag** ("Sun core expression: …", "Jupiter expansion: …")
+  and then forbade reproducing it. The 8B model reproduced it anyway (recorded answers:
+  `repeated_pattern-direct/indirect`, `family_context-direct`, `simulation_request-direct`,
+  `correction_case-direct`, `single_event-indirect`) — the audit axis "absence of framework
+  name-dropping" failed. **The contradiction lived inside the prompt, not the model.**
+- `"My father died last month…"` classified **level 3 / dyadic** (bare family noun in
+  `BETWEEN_PERSON_CUES`), flipping the framing to "the other person".
+- `scanUnknowns` fired **zero** unknowns on `"Why does my partner keep lying…"`,
+  `"My boss is definitely trying to sabotage me."`, and `"Will my ex come back to me?"` — the
+  exact turns that most need the motive/prediction guardrail; the cues were pronoun-only.
+- A rejected hypothesis was blocked only as an **exact substring**; `correction_case-direct`
+  re-derived a near-identical reading from the Baseline and passed.
+
+**Change.**
+- **F2** `sovereign-prompt.ts`: `deriveBaseline` emits **plain-language** qualities (no planet/
+  role tag); the Evidence-Separation directive no longer describes a tag; the Baseline section
+  stops printing `— theme:` twice.
+- **F1** `sovereign-baseline.ts` + `sovereign-reasoning.ts`: `buildBaselineSignals` drops the
+  separate Sun/Moon duplicate; new `selectBaselineSignals(signals, latestText, 3)` renders the
+  two anchor qualities plus anything the turn's words point at — **bounded, not dumped**.
+- **F3** `isLossContext` gate: loss/bereavement suppresses the relational cue in
+  `classifyQuestion`, `determineScope`, `scopeOfMessage` — grief is self-reflection, not a
+  question about "the other person". Genuine conflict keeps routing to Level 3 (pinned).
+- **F4** expanded `INNER_WORLD_CUES` (role nouns + certainty-of-intent claims) and `FUTURE_CUES`
+  (third-person "will X").
+- **F5** the REJECTED-HYPOTHESES render now instructs: do not rebuild the same conclusion from a
+  different angle or another Baseline quality — start from the new detail.
+- **F6** Level-4 guidance now requires second-person address ("what happens between you and
+  them").
+
+**Safety, preserved.** No lexicon, crisis/abuse routing, extraction/cross-account deflection, or
+repair/fallback change — F1–F6 are all pre-model context/prompt. `sovereign-safety.test.ts` and
+the negative control stay green. Nothing was weakened to raise answer quality.
+
+**Verification.** Tests written first (red: 11 failing), then made green. `npx vitest run`:
+**613/613 across 51 files**. `tsc` + `eslint` clean. Answer-eval **re-captured** (12 live
+`ai/run` calls, `tier:"direct"`); after re-capture the eval gate is **15/15**. Before/after read:
+**zero internal tags** in the new answers (6 had them before), and `correction_case-direct` no
+longer re-asserts the rejected reading — it turns to the user's new material and asks. Totals
+moved both ways on single stochastic samples (e.g. `repeated_pattern-indirect` 5.10→5.48),
+which is why the gate pins *thresholds derived from the capture*, not a fixed number.
+
+**Remaining uncertainty (honest).** The 8B model still *recites* the Baseline in plain words
+(e.g. `simulation_request-indirect` restates two quality lines) — recitation is reduced, not
+eliminated; the retrieval-heavy recitation is the same instruction-adherence limit behind F7
+(insight-lists / double closing questions), which is **not** fixed here. `correction_case-direct`
+scored lower on the text rubric (2.59) precisely because it stopped leaning on the Baseline —
+the rubric rewards grounding, so a *better* epistemic answer can score lower; noted, not gated
+away. Device-Only peer-baseline gating (F9) and the Level-4 third-person validator (beyond the
+prompt steer) are left open.

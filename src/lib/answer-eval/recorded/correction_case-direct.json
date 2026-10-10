@@ -2,25 +2,25 @@
   "fixtureId": "correction_case-direct",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-09T20:01:20.934Z",
-  "promptSha": "135a43ae9fc163bbf25ec0f782dbcdb61e56d5c57e44c9fb45b2c6db574422ae",
-  "text": "It may be that the worry about others' problems is connected to a deeper tendency of yours. Your Baseline suggests that you have a Sun core expression related to holding and protecting what matters, and a Moon inner response that reflexively guards what it loves. This could indicate a dynamic where you're more invested in others' well-being than you initially let on.",
+  "capturedAt": "2026-10-10T20:53:43.002Z",
+  "promptSha": "23014fe027a29a3685c48d1ec747e120670fd1c2e3adc99498c3483e11bb8b8b",
+  "text": "When you say \"it's not about being needed,\" it's unclear what being needed means to you. What does it mean to feel needed in your experience?",
   "usage": {
-    "prompt_tokens": 3128,
-    "completion_tokens": 73,
-    "total_tokens": 3201,
+    "prompt_tokens": 3123,
+    "completion_tokens": 33,
+    "total_tokens": 3156,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 45.0061969216913
+    "neurons": 43.892185798846185
   },
   "observed": {
-    "clarity": 0.9999999999999999,
-    "groundedness": 0.6363636363636364,
+    "clarity": 0.7,
+    "groundedness": 0.14285714285714285,
     "relational": 0.75,
-    "uncertainty": 0.9,
+    "uncertainty": 0,
     "actionability": 0,
     "safety": 1
   },
-  "observedTotal": 4.286363636363636
+  "observedTotal": 2.5928571428571425
 }

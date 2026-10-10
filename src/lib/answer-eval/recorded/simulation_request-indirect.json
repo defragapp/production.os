@@ -2,25 +2,25 @@
   "fixtureId": "simulation_request-indirect",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-09T20:01:16.962Z",
-  "promptSha": "e7571908abbfc19ad43a5e8d3a45b5f87606dff4bb7bd1d703cc89a7393ea46a",
-  "text": "One possibility worth examining is that you're considering the timing of your expression because you tend to protect what matters, and right now, you're not sure how the other person will respond. This reflex to guard what it loves (Moon inner response) might be influencing your decision. \n\nIt may be that your hesitation has nothing to do with the message itself, but rather with the potential reaction of the other person. This could be an opportunity to explore what you're trying to protect and what you're hoping for in this situation. \n\nWhat does saying something now mean to you, and what does it mean to wait for a better moment?",
+  "capturedAt": "2026-10-10T20:53:40.058Z",
+  "promptSha": "ae6e0d14ab107597f4c4bfed358ff14c84d708854e4e6b79600bb8228d099f6c",
+  "text": "One quality that tends to show when you're at your best is Holding and protecting what matters. You might be considering how to approach this situation in a way that safeguards your priorities and values.\n\nIn your private moments, a reflex to guard what you love is present. You might be weighing the potential risks and benefits of speaking up now versus waiting for a more opportune time. This could be related to how you take in and carry things, which is often associated with emotional memory and the words carried underneath feelings.\n\nConsidering your relational care and the shape of belonging, you might be thinking about how your words could impact the relationships involved. Your initiative tends to move when you feel safe, and you may be hesitant to act without a clear sense of security.\n\nGiven these dynamics, it might be helpful to examine what's driving your decision. Is it a desire to protect your relationships, or is it a concern about how others might react? One possibility worth exploring is that you're tied to the outcome, and this is affecting your timing. It may be that you're waiting for a moment that feels \"better\" because you're attached to a specific result.\n\nThis could indicate that you're holding onto a certain expectation, which might be influencing your decision. It may be worth considering what would happen if you spoke up now, even if it's not the \"optimal\" moment. This could help you understand how your actions are connected to your sense of safety and security.",
   "usage": {
-    "prompt_tokens": 2996,
-    "completion_tokens": 128,
-    "total_tokens": 3124,
+    "prompt_tokens": 2957,
+    "completion_tokens": 294,
+    "total_tokens": 3251,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 44.624486055225134
+    "neurons": 48.42437244486064
   },
   "observed": {
-    "clarity": 0.9999999999999999,
-    "groundedness": 0.7,
+    "clarity": 0.5499999999999999,
+    "groundedness": 1,
     "relational": 0.75,
     "uncertainty": 0.9,
-    "actionability": 0,
+    "actionability": 1,
     "safety": 1
   },
-  "observedTotal": 4.35
+  "observedTotal": 5.199999999999999
 }

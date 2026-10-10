@@ -2,25 +2,25 @@
   "fixtureId": "partial_data-indirect",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-09T20:00:52.309Z",
-  "promptSha": "09668b7ca35750bbce06bd43ee7a54dde687fd6bbb2889e8c1731a7d0b35dd70",
-  "text": "One possibility worth examining is that you tend to hold and protect what matters to you, especially when it comes to your inner world. This might lead you to fill in the missing part of the conflict with what feels most protective, rather than what is actually present. It may be worth looking into whether your reflex to guard what you love influences how you navigate conflicts, making you more likely to assume the worst-case scenario or to try to control the narrative to prevent harm.\n\nIt may be that this tendency is not inherently bad, but rather a way to safeguard your emotional well-being. However, it's also possible that this dynamic could be limiting your ability to see the whole picture and respond to the situation in a more open and curious way.\n\nA question to consider: What would happen if you were to approach the conflict with a sense of curiosity, rather than a need to protect your inner world? What might you learn or discover about the other person's perspective, and how might that change your understanding of the situation?",
+  "capturedAt": "2026-10-10T20:53:11.504Z",
+  "promptSha": "79962f76f490a27038daf2ffcecf6c961ff0eb844b0e7d47606e3ea3db45467c",
+  "text": "One way to approach this is to recognize that your reflex to guard what it loves can sometimes become a mental process of defending your own interpretation. When this happens, you might wonder if you're protecting your understanding of the situation, rather than the core needs or values it represents.\n\nIt's possible that the missing part of the conflict is not as unknown as it seems. Your Baseline suggests that you hold and protect what matters, which means you care deeply about the underlying issues. You might be more interested in understanding the dynamics than in guessing what the other side might be thinking.\n\nConsider if you could separate the information you have from the story you've made up about the missing part. This distinction can help you identify the gaps in your knowledge and what you can do differently in the future.",
   "usage": {
-    "prompt_tokens": 3012,
-    "completion_tokens": 203,
-    "total_tokens": 3215,
+    "prompt_tokens": 2973,
+    "completion_tokens": 158,
+    "total_tokens": 3131,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 46.804538851603866
+    "neurons": 45.091422031633556
   },
   "observed": {
     "clarity": 0.7,
-    "groundedness": 0.7,
+    "groundedness": 0.6666666666666666,
     "relational": 0.75,
     "uncertainty": 0.9,
     "actionability": 1,
     "safety": 1
   },
-  "observedTotal": 5.05
+  "observedTotal": 5.016666666666667
 }
