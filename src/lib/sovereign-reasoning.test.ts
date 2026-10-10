@@ -201,6 +201,29 @@ describe("windowHistoryPreservingCorrections", () => {
   it("always keeps the latest message", () => {
     expect(windowed[windowed.length - 1].content).toBe("message number 14");
   });
+
+  // ── Regression: `slice(-0)` collapsed the window ──────────────────────────
+  // Before the fix, once the correction set reached `max`, the budget went to 0
+  // and `nonPreserved.slice(-0)` kept the ENTIRE non-preserved history — the
+  // 20-message window was defeated by a long thread full of rejections.
+  it("stays bounded when the corrections alone meet or exceed the window", () => {
+    const long: ChatMessage[] = [];
+    for (let i = 0; i < 40; i++) {
+      long.push({ role: "user", content: `No, that's not it — take ${i}.` });
+      long.push({ role: "assistant", content: `Response ${i}.` });
+    }
+    const bounded = windowHistoryPreservingCorrections(long, 20);
+    expect(long.length).toBe(80);
+    // The window holds instead of returning all 80 messages.
+    expect(bounded.length).toBeLessThanOrEqual(20);
+    expect(bounded.length).toBeLessThan(long.length);
+    // The newest turn is still the one kept.
+    expect(bounded[bounded.length - 1].content).toBe("Response 39.");
+  });
+
+  it("handles an empty history without emitting an undefined turn", () => {
+    expect(windowHistoryPreservingCorrections([], 20)).toEqual([]);
+  });
 });
 
 describe("buildReasoningContext", () => {

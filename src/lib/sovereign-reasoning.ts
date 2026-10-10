@@ -866,16 +866,35 @@ export function windowHistoryPreservingCorrections(
   history: ChatMessage[],
   max: number = MAX_CONTEXT_MESSAGES,
 ): ChatMessage[] {
+  if (history.length === 0) return [];
+
   const lastIndex = history.length - 1;
-  const preserved = new Set<number>([]);
+  // Indices the window must keep: every rejection-cued user turn (so the model
+  // is never re-offered an interpretation the person already rejected) and the
+  // newest message.
+  const preserved = new Set<number>();
   history.forEach((m, i) => {
     if (m.role === "user" && REJECTION_CUES.some((rx) => rx.test(m.content))) preserved.add(i);
   });
   preserved.add(lastIndex);
 
-  const nonPreserved = history.map((_, i) => i).filter((i) => !preserved.has(i));
-  const keep = [...preserved, ...nonPreserved.slice(-(Math.max(0, max - preserved.size)))].sort((a, b) => a - b);
-  return keep.map((i) => history[i]);
+  // Bound the total at `max`. When the corrections alone overflow the budget,
+  // keep the newest ones — the freshest rejection is the reading the model is
+  // most likely to repeat — never the whole thread.
+  //
+  // The old code wrote `nonPreserved.slice(-(Math.max(0, max - preserved.size)))`.
+  // When the budget reached 0 that became `slice(-0)`, which is `slice(0)` — the
+  // ENTIRE non-preserved array. So a thread with ≥ max rejection cues defeated
+  // the window entirely (unbounded prompt/token cost). The `budget > 0` guard is
+  // the fix; `slice(-0) === slice(0)` is the trap it closes.
+  const preservedSorted = [...preserved].sort((a, b) => a - b);
+  const kept = preservedSorted.length > max ? preservedSorted.slice(-max) : preservedSorted;
+  const keptSet = new Set(kept);
+  const nonPreserved = history.map((_, i) => i).filter((i) => !keptSet.has(i));
+  const budget = Math.max(0, max - kept.length);
+  const tail = budget > 0 ? nonPreserved.slice(-budget) : [];
+
+  return [...kept, ...tail].sort((a, b) => a - b).map((i) => history[i]);
 }
 
 export function buildReasoningPrompt(
