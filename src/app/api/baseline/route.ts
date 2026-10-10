@@ -6,6 +6,10 @@ import { isAdultIso, UNDER_18_ERROR } from "@/lib/date-of-birth";
 import { getEnv } from "@/lib/env";
 import type { AppEnv } from "@/lib/env";
 import type { Baseline } from "@/lib/types";
+import { buildBaselineSignals } from "@/lib/sovereign-baseline";
+import { deriveBaseline } from "@/lib/sovereign-prompt";
+
+export const dynamic = 'force-dynamic';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +48,17 @@ export async function GET(request: NextRequest) {
   const payload = await verifyJWT(token, secret);
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const baseline = await env.DB.prepare("SELECT user_id, tob, pob, dob, nasa_jpl_json_data, created_at, updated_at FROM baselines WHERE user_id = ?").bind(payload.sub).first<Baseline>();
-  return NextResponse.json({ baseline });
+  
+  if (!baseline) return NextResponse.json({ baseline: null });
+
+  try {
+    const parsed = JSON.parse(baseline.nasa_jpl_json_data || "{}");
+    const derived = deriveBaseline(parsed);
+    const signals = buildBaselineSignals(derived);
+    return NextResponse.json({ baseline, signals });
+  } catch (err) {
+    return NextResponse.json({ baseline, signals: [] });
+  }
 }
 
 export async function POST(request: NextRequest) {

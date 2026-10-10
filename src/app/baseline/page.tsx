@@ -25,6 +25,7 @@ function BaselineContent() {
   const [fromChat, setFromChat] = useState(false);
   const [row, setRow] = useState<Baseline | null>(null);
   const [parsed, setParsed] = useState<BaselineData | null>(null);
+  const [baselineSignals, setBaselineSignals] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -41,8 +42,10 @@ function BaselineContent() {
   const loadBaseline = useCallback(async () => {
     const baselineRes = await fetch("/api/baseline");
     if (!baselineRes.ok) return null;
-    const bd = await baselineRes.json() as { baseline?: Baseline | null };
-    const baseline = bd.baseline ?? null;
+    const data = await baselineRes.json() as { baseline?: Baseline | null; signals?: any[] };
+    const baseline = data.baseline ?? null;
+    const signals = data.signals ?? [];
+
     if (baseline?.nasa_jpl_json_data) {
       try {
         setParsed(JSON.parse(baseline.nasa_jpl_json_data) as BaselineData);
@@ -53,6 +56,7 @@ function BaselineContent() {
       setParsed(null);
     }
     setRow(baseline);
+    setBaselineSignals(signals);
     return baseline;
   }, []);
 
@@ -154,90 +158,129 @@ function BaselineContent() {
     <PageShell center={false} wide="prose">
       <PageHeader
         title="Your Baseline"
-        description="The picture computed from NASA/JPL planetary data, and the birth information it came from."
+        description="A private reference Sovereign can use in conversation. It describes tendencies, not your identity."
       />
 
-          {editing ? (
-            <Section
-              title="Update birth information"
-              description="Saving recomputes your whole Baseline from the new details."
-              rule={false}
-            >
-              <BaselineForm
-                key={`${row?.dob}-${row?.tob}-${row?.pob}`}
-                submitLabel="Recompute My Baseline"
-                defaults={{ dob: row?.dob, pob: row?.pob, tob: row?.tob, timePrecision: meta?.timePrecision }}
-                onSaved={() => {
-                  void loadBaseline();
-                  setEditing(false);
-                }}
-              />
-              <Button
-                variant="ghost"
-                className="mt-3 w-full"
-                onClick={() => setEditing(false)}
-                disabled={false}
-              >
-                Cancel
-              </Button>
-            </Section>
-          ) : (
-            <>
-              <Section
-                title="Birth information"
-                description="Only ever used to compute your Baseline — never shared."
-                actions={
-                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                    Edit
-                  </Button>
-                }
-                rule={false}
-              >
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
-                      <Calendar className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
-                      <Eyebrow as="span" scale="sm">Date of birth</Eyebrow>
-                    </div>
-                    <p className="mt-1 text-sm text-foreground">{formatDateOfBirth(row?.dob)}</p>
-                  </div>
-                  <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
-                      <Clock className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
-                      <Eyebrow as="span" scale="sm">Time of birth</Eyebrow>
-                    </div>
-                    <p className="mt-1 text-sm text-foreground">
-                      {row?.tob || "—"}
-                      {meta?.timePrecision === "approximate" && (
-                        <span className="ml-1.5 text-xs text-muted-foreground">(approximate)</span>
-                      )}
+      {editing ? (
+        <Section
+          title="Update birth information"
+          description="Saving recomputes your whole Baseline from the new details."
+          rule={false}
+        >
+          <BaselineForm
+            key={`${row?.dob}-${row?.tob}-${row?.pob}`}
+            submitLabel="Recompute My Baseline"
+            defaults={{ dob: row?.dob, pob: row?.pob, tob: row?.tob, timePrecision: meta?.timePrecision }}
+            onSaved={() => {
+              void loadBaseline();
+              setEditing(false);
+            }}
+          />
+          <Button
+            variant="ghost"
+            className="mt-3 w-full"
+            onClick={() => setEditing(false)}
+            disabled={false}
+          >
+            Cancel
+          </Button>
+        </Section>
+      ) : (
+        <>
+          <Section
+            title="What Sovereign uses as context"
+            description="These signals help Sovereign understand your tendencies without assuming they are fixed traits."
+            rule={false}
+          >
+            <div className="grid gap-6 sm:grid-cols-2">
+              {baselineSignals.map((s, i) => (
+                <div key={i} className="glass-panel rounded-panel p-4">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {s.source}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{s.value}</p>
+                  {s.interpretation && (
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      {s.interpretation}
                     </p>
-                  </div>
-                  <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
-                    <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
-                      <MapPin className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
-                      <Eyebrow as="span" scale="sm">Place of birth</Eyebrow>
-                    </div>
-                    <p className="mt-1 text-sm text-foreground">{row?.pob || "—"}</p>
-                  </div>
+                  )}
                 </div>
-              </Section>
-
-              {parsed && (
-                <div className="mt-4">
-                  <BaselineDrawer data={parsed} />
-                </div>
+              ))}
+              {baselineSignals.length === 0 && (
+                <p className="text-sm text-muted-foreground">No signals available yet.</p>
               )}
+            </div>
+          </Section>
 
-              <p className="mt-4 text-center text-xs text-muted-foreground/70">
-                Computed {formatD1Date(row?.updated_at)} from NASA/JPL planetary data.
-              </p>
-              <div className="mt-6 flex justify-center gap-2">
-                <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>
-                <Button variant="ghost" onClick={() => router.push("/account")}>Account</Button>
+          <Section
+            title="Explore this in conversation"
+            description="Your Baseline is most useful when examined against your real-life experiences."
+            rule={false}
+          >
+            <Button
+              variant="aurora"
+              className="w-full max-w-md"
+              onClick={() => router.push("/chat")}
+            >
+              Go to Chat
+            </Button>
+          </Section>
+
+          <Section
+            title="Technical details"
+            description="The underlying framework data computed from your birth information."
+            actions={
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                Edit
+              </Button>
+            }
+            rule={false}
+          >
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
+                <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
+                  <Calendar className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+                  <Eyebrow as="span" scale="sm">Date of birth</Eyebrow>
+                </div>
+                <p className="mt-1 text-sm text-foreground">{formatDateOfBirth(row?.dob)}</p>
               </div>
-            </>
+              <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
+                <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
+                  <Clock className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+                  <Eyebrow as="span" scale="sm">Time of birth</Eyebrow>
+                </div>
+                <p className="mt-1 text-sm text-foreground">
+                  {row?.tob || "—"}
+                  {meta?.timePrecision === "approximate" && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">(approximate)</span>
+                  )}
+                </p>
+              </div>
+              <div className="rounded-panel border border-white/[0.07] bg-surface-2/50 px-4 py-3.5 shadow-[inset_0_1px_0_hsla(38,18%,95%,0.06)]">
+                <div className="mb-1 flex items-center gap-1.5 text-muted-foreground/80">
+                  <MapPin className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+                  <Eyebrow as="span" scale="sm">Place of birth</Eyebrow>
+                </div>
+                <p className="mt-1 text-sm text-foreground">{row?.pob || "—"}</p>
+              </div>
+            </div>
+          </Section>
+
+          {parsed && (
+            <div className="mt-4">
+              <BaselineDrawer data={parsed} />
+            </div>
           )}
+
+          <p className="mt-4 text-center text-xs text-muted-foreground/70">
+            Computed {formatD1Date(row?.updated_at)} from NASA/JPL planetary data.
+          </p>
+          <div className="mt-6 flex justify-center gap-2">
+            <Button variant="ghost" onClick={() => router.push("/chat")}>Back to chat</Button>
+            <Button variant="ghost" onClick={() => router.push("/account")}>Account</Button>
+          </div>
+        </>
+      )}
     </PageShell>
   );
 }
