@@ -375,3 +375,25 @@ No prompt, gate, safety, or server-contract change — both are render-only.
 Two other sweep items resolved themselves before this pass and need no work: radius
 unification (`56faa4f` — zero `rounded-md` remain; the scale is `rounded-panel`/`-chip`/
 `-control`/`-full`) and the landing link destinations (`36bda8a`).
+
+---
+
+## Visual-refinement pass — button focus offset + control radius token — 2026-10-10 (this thread; append-only)
+
+Measured-render audit of the live preview (`opennextjs-cloudflare preview` @ 8787) across
+public + authed routes at 390 / 1440: computed radii, type hierarchy, box-shadows,
+background/border colors, focus coverage, document overflow, and WCAG contrast (this model
+can't view images, so every finding is a *measured* DOM/CSS value, not a screenshot read).
+The system was overwhelmingly clean — no arbitrary radii, no hex colours, no focus-coverage
+holes, zero document overflow on every route, all text ≥ AA contrast, and a palette entirely
+inside hue 18–40 (the cool stop removed in the previous pass was the only one). Two genuine
+defects were found and fixed:
+
+| Refinement | File | How verified |
+|---|---|---|
+| The primary `<Button>` painted a pure-white focus seam | `src/components/ui/button.tsx` | `buttonVariants` set `focus-visible:ring-offset-2` with **no** offset colour, so Tailwind's `--tw-ring-offset-color` default (`#fff`) applied. Every *other* control in the app (chat rows, journey, inputs, support form) adds `ring-offset-background`; the primitive was the lone exception. Measured on the rendered focus state: box-shadow was `rgb(253,253,253) 0 0 0 2px, rgb(229,222,210) 0 0 0 4px` — a **bright white band inside the warm ring**. Fixed by adding `focus-visible:ring-offset-background`. Pixel proof (sharp, dsf=2): pure-white pixels around the focused control went **1280 → 0**, and `--tw-ring-offset-color` reads `hsl(30 8% 4.5%)`. |
+| Off-scale 4px radius on the journey text controls | `src/components/journey-canvas.tsx` | `rounded-sm` = `calc(var(--radius) - 4px)` = **4px**, off BRAND.md's 6 / 8 / 12 scale, while the *same component* already used `rounded-chip` (6px) for its input, chips, and list rows. The ten `rounded-sm` outliers snapped to `rounded-chip`. Rendered re-audit: `NON-TOKEN radius: none` on `/chat` and `/self` (the remaining `12px 12px 4px` is the deliberate message-bubble tail). |
+
+Both changes are render-only — no prompt, gate, safety, or server-contract change, so no live
+eval re-capture is required. New source-contract ratchet `src/lib/control-focus-and-radius.test.ts`
+(2/2) pins both so a later refactor cannot reintroduce the white seam or the 4px radius.

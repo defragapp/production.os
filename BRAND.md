@@ -86,9 +86,13 @@ All inside the cream/graphite scale; all honor `prefers-reduced-motion`.
 | `.btn-aurora` | Solid cream (`#fbf7ef → #ece2cf`), deep soft shadow | In-app primary actions (forms, chat send) |
 | `.btn-glass` | Translucent glass, hairline border, no orbit | Secondary actions |
 
-All three carry `:focus-visible { outline: 2px solid hsl(38 30% 88%) }`. Never
-swap `btn-focal` for `btn-aurora` to "make it pop" — the focal button's job is
-to be the one distinctive thing, not the brightest.
+All three carry `:focus-visible { outline: 2px solid hsl(38 30% 88%) }`. The
+`<Button>` primitive (`ui/button.tsx`) layers the same warm treatment as a ring —
+`ring-2 ring-ring ring-offset-2` — and **must** pair it with
+`ring-offset-background`: without that, Tailwind's `ring-offset-2` default
+(`--tw-ring-offset-color: #fff`) paints a pure-white 2px seam inside the warm
+ring. Never swap `btn-focal` for `btn-aurora` to "make it pop" — the focal
+button's job is to be the one distinctive thing, not the brightest.
 
 ## Utility classes (reuse these)
 

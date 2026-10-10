@@ -131,7 +131,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
           type="button"
           onClick={toggleSteps}
           aria-expanded={false}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-chip text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <span aria-hidden="true" className="shrink-0 rounded-full border border-border/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             {isComplete ? "Complete" : INQUIRY_LEVEL_LABELS[journey.inquiryLevel]}
@@ -146,7 +146,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
             type="button"
             onClick={onStartFresh}
             title="Start a fresh journey"
-            className="inline-flex min-w-[2.75rem] shrink-0 items-center justify-center rounded-sm border border-border/60 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-[240ms] hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="inline-flex min-w-[2.75rem] shrink-0 items-center justify-center rounded-chip border border-border/60 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-[240ms] hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             New
             <span className="sr-only"> journey</span>
@@ -164,20 +164,20 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
         {editing ? (
           <form className="flex min-w-0 flex-1 items-center gap-2" onSubmit={(e) => { e.preventDefault(); onRename(draft.trim()); setEditing(false); }}>
             <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); cancelRename(); } }} maxLength={200} placeholder="Name this journey..." aria-label="Journey name" className="min-w-0 flex-1 rounded-chip border border-border bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" />
-            <button type="submit" className="rounded-sm text-xs font-medium text-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Save</button>
-            <button type="button" onClick={cancelRename} className="rounded-sm text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Cancel</button>
+            <button type="submit" className="rounded-chip text-xs font-medium text-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Save</button>
+            <button type="button" onClick={cancelRename} className="rounded-chip text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Cancel</button>
           </form>
         ) : (
-          <button ref={renameTriggerRef} type="button" onClick={() => { setDraft(journey.goal ?? ""); setEditing(true); }} title="Rename journey" className="min-w-0 flex-1 truncate rounded-sm text-left text-sm font-medium text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+          <button ref={renameTriggerRef} type="button" onClick={() => { setDraft(journey.goal ?? ""); setEditing(true); }} title="Rename journey" className="min-w-0 flex-1 truncate rounded-chip text-left text-sm font-medium text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             {journey.goal ?? "Untitled journey"}
           </button>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
-          <button ref={hideRef} type="button" onClick={toggleSteps} aria-expanded aria-controls="journey-steps" className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Hide steps</button>
+          <button ref={hideRef} type="button" onClick={toggleSteps} aria-expanded aria-controls="journey-steps" className="rounded-chip hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Hide steps</button>
           {!isComplete && (
-            <button type="button" onClick={onPauseResume} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">{journey.status === "paused" ? "Resume" : "Pause"}</button>
+            <button type="button" onClick={onPauseResume} className="rounded-chip hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">{journey.status === "paused" ? "Resume" : "Pause"}</button>
           )}
-          <button type="button" onClick={onDismiss} className="rounded-sm hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Dismiss</button>
+          <button type="button" onClick={onDismiss} className="rounded-chip hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Dismiss</button>
         </div>
       </div>
       {/* The end of an arc deserves a sentence, not a confetti cannon. Both
@@ -219,7 +219,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
               <span aria-hidden="true" className={`inline-block h-1.5 w-1.5 rounded-full ${s.status === "done" ? "bg-foreground" : s.status === "current" ? "border border-foreground bg-transparent" : "bg-muted-foreground/30"}`} />
               <span className={s.status === "locked" ? "text-muted-foreground/70" : s.status === "current" ? "font-medium text-foreground" : "text-muted-foreground"}>{s.label}</span>
               {s.status !== "locked" && i > 0 && i <= currentIdx && (
-                <button type="button" onClick={() => onStepBack(s.id)} title="I am not there yet" className="ml-1 rounded-sm text-[11px] text-muted-foreground/70 hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Not there yet?</button>
+                <button type="button" onClick={() => onStepBack(s.id)} title="I am not there yet" className="ml-1 rounded-chip text-[11px] text-muted-foreground/70 hover:text-foreground hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">Not there yet?</button>
               )}
               <span className="sr-only">{s.status === "done" ? " (reached)" : s.status === "current" ? " (current step)" : " (locked)"}</span>
             </li>
@@ -237,7 +237,7 @@ export function JourneyBar({ journey, expanded, onToggleExpanded, onRename, onPa
         <button
           type="button"
           onClick={onShowPast}
-          className="journey-past-trigger mt-2 flex w-full items-center justify-between gap-3 rounded-sm border-t border-border/50 pt-2 text-left transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="journey-past-trigger mt-2 flex w-full items-center justify-between gap-3 rounded-chip border-t border-border/50 pt-2 text-left transition-colors duration-[240ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <span className="text-xs text-muted-foreground">Past journeys</span>
           <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{pastCount} archived</span>
