@@ -86,6 +86,10 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/health" ||
     pathname === "/api/invites/info" ||
     pathname === "/api/support" ||
+    // Browser-safe by design: it returns only the Stripe publishable key (or
+    // null) so /upgrade can decide embedded-vs-hosted. The subscription init
+    // it enables stays auth-gated behind the default-lock below.
+    pathname === "/api/stripe/config" ||
     pathname === "/api/webhooks/stripe"
   ) {
     return noStore(NextResponse.next());

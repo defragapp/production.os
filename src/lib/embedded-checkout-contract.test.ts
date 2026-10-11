@@ -26,6 +26,24 @@ import { readFileSync } from "node:fs";
 const page = readFileSync("src/app/upgrade/page.tsx", "utf8");
 const initRoute = readFileSync("src/app/api/subscribe/init/route.ts", "utf8");
 const webhook = readFileSync("src/app/api/webhooks/stripe/route.ts", "utf8");
+const middleware = readFileSync("src/middleware.ts", "utf8");
+
+describe("edge gating matches each endpoint's sensitivity", () => {
+  it("the publishable-config probe is public (browser-safe) but the subscribe init is not", () => {
+    // /api/stripe/config returns only pk_ values, so signed-out /upgrade can
+    // still decide embedded-vs-hosted; the money init keeps the middleware's
+    // default-lock on /api/* and does its own JWT verification.
+    expect(middleware).toContain('pathname === "/api/stripe/config"');
+    // The public-allowlist block is the region between the "Public API"
+    // marker and its closing `return noStore(...)`; subscribe must appear
+    // nowhere in it.
+    const allowlist = middleware.slice(
+      middleware.indexOf("Public API"),
+      middleware.indexOf("// ── Auth check"),
+    );
+    expect(allowlist).not.toContain("/api/subscribe");
+  });
+});
 
 describe("payment step uses Stripe Elements, not our own inputs", () => {
   it("confirms through the Payment Element with if_required redirects", () => {
