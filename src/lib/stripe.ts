@@ -238,6 +238,141 @@ export async function createPortalSession(env: AppEnv, customerId: string): Prom
 }
 
 /**
+ * POST /v1/customers for an account that has never gone through billing — the
+ * embedded flow needs a real customer id before it can attach a Payment
+ * Element. Mirrors the hosted-Checkout convention of tagging the customer
+ * with our account id so the webhook can resolve it even if the e-mail join
+ * misses. The idempotency key is per account, not per click: two racing
+ * inits converge on one customer instead of spawning duplicates.
+ */
+export async function createStripeCustomer(
+  env: AppEnv,
+  accountId: string,
+  email: string,
+  idempotencyKey: string,
+): Promise<{ id: string }> {
+  const response = await fetch("https://api.stripe.com/v1/customers", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Stripe-Version": STRIPE_API_VERSION,
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: new URLSearchParams({
+      email,
+      "metadata[account_id]": accountId,
+    }).toString(),
+  });
+  if (!response.ok) {
+    const err = await response.json() as { error?: { message?: string } };
+    throw new Error(`Stripe customer failed: ${err.error?.message || response.statusText}`);
+  }
+  return response.json() as Promise<{ id: string }>;
+}
+
+/**
+ * Result of the server-side embedded-checkout init (see
+ * `src/app/api/subscribe/init/route.ts`). `clientSecret` is null when Stripe
+ * reports the subscription is already past the payment step — `active` or
+ * `trialing` means access is (or soon will be) granted by the webhook, and
+ * `requires_action` means the customer must complete 3-D Secure on a hosted
+ * page; neither is something the Payment Element can re-confirm on-site.
+ */
+export interface SubscribeInitResult {
+  subscriptionId: string;
+  status: string;
+  clientSecret: string | null;
+}
+
+/**
+ * POST /v1/subscriptions for the on-site Payment Element flow. Created with
+ * `payment_behavior=default_incomplete`, so the first invoice's PaymentIntent
+ * stays confirmable client-side until payment succeeds; the signature-verified
+ * webhook (`invoice.paid` / `customer.subscription.updated`) remains the only
+ * place `subscription_tier` is written. Failure messages are prefixed
+ * "Stripe subscription failed:" so the route can tell a 409
+ * "customer already has an active subscription" from a transport error.
+ */
+export async function createSubscriptionWithClientSecret(
+  env: AppEnv,
+  customerId: string,
+  accountId: string,
+  interval: "monthly" | "annual",
+  idempotencyKey: string,
+): Promise<SubscribeInitResult> {
+  const price = configuredPrice(env, interval);
+  if (!price) throw new Error("Stripe price is not configured");
+
+  const body = new URLSearchParams();
+  body.set("customer", customerId);
+  body.set("items[0][price]", price);
+  body.set("items[0][quantity]", "1");
+  body.set("payment_behavior", "default_incomplete");
+  // The dahlia API returns a SetupIntent (not a PaymentIntent) when the
+  // subscription needs a payment method attached; expand both so either
+  // shape yields a client secret for the Payment Element. append (not set):
+  // both values ride the same expand[] key in one request.
+  body.append("expand[]", "latest_invoice.payment_intent");
+  body.append("expand[]", "pending_setup_intent");
+  body.set("metadata[account_id]", accountId);
+  body.set("metadata[plan]", "sovereign_plus");
+  body.set("metadata[interval]", interval);
+
+  const response = await fetch("https://api.stripe.com/v1/subscriptions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Stripe-Version": STRIPE_API_VERSION,
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const err = await response.json() as { error?: { message?: string } };
+    throw new Error(`Stripe subscription failed: ${err.error?.message || response.statusText}`);
+  }
+
+  const sub = await response.json() as {
+    id: string;
+    status?: string;
+    latest_invoice?: { payment_intent?: { client_secret?: string | null } | null } | null;
+    pending_setup_intent?: { client_secret?: string | null } | null;
+  };
+  const clientSecret =
+    sub.latest_invoice?.payment_intent?.client_secret ?? sub.pending_setup_intent?.client_secret ?? null;
+  return { subscriptionId: sub.id, status: sub.status || "", clientSecret };
+}
+
+/**
+ * GET /v1/subscriptions/{id} for the retry path of the same flow: when the
+ * account just started an incomplete subscription, the route re-reads it
+ * instead of POSTing a second one (a double-click must not stack
+ * subscriptions). Returns null when the subscription no longer exists or
+ * Stripe is unreachable — the caller then falls back to creating a new one.
+ */
+export async function getSubscription(
+  env: AppEnv,
+  subscriptionId: string,
+): Promise<SubscribeInitResult | null> {
+  const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": STRIPE_API_VERSION },
+  });
+  if (!response.ok) return null;
+  const sub = await response.json() as {
+    id: string;
+    status?: string;
+    latest_invoice?: { payment_intent?: { client_secret?: string | null } | null } | null;
+    pending_setup_intent?: { client_secret?: string | null } | null;
+  };
+  const clientSecret =
+    sub.latest_invoice?.payment_intent?.client_secret ?? sub.pending_setup_intent?.client_secret ?? null;
+  return { subscriptionId: sub.id, status: sub.status || "", clientSecret };
+}
+
+/**
  * Best-effort cancel all active Stripe subscriptions for a customer.
  * Used on account deletion so billing stops without requiring a dashboard step.
  * Swallows failures (local account erasure proceeds regardless).

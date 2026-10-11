@@ -19,8 +19,9 @@ operations runbook in `docs/scaling-plan.md`).
 |---|---|---|
 | Checkout session (server-created) | `src/app/api/checkout/route.ts` | ✅ auth-gated + rate-limited (10/hr/user) |
 | Price allowlist | `configuredPrice()` `src/lib/stripe.ts` | ✅ client can only pick `monthly`/`annual`; **prices come from server env**, never from the request |
-| Stripe-hosted Checkout | `createCheckoutSession()` | ✅ card fields never touch our origin (PCI SAQ-A) |
-| Webhook (signature-verified) | `src/app/api/webhooks/stripe/route.ts` | ✅ WebCrypto HMAC verify + 5-min timestamp window + KV idempotency (7-day dedupe) |
+| Stripe-hosted Checkout | `createCheckoutSession()` | ✅ retained as the fallback when `STRIPE_PUBLISHABLE_KEY` is unset; card fields never touch our origin (PCI SAQ-A) |
+| On-site payment (embedded) | `src/app/api/subscribe/init/route.ts` + `/api/stripe/config` + Payment Element on `/upgrade` | ✅ server creates the `default_incomplete` subscription with allowlisted prices; the browser only confirms via Stripe.js (`redirect: "if_required"`, 3-D Secure handled from the returned status); retries reuse the in-flight subscription (KV stamp + Stripe idempotency) |
+| Webhook (signature-verified) | `src/app/api/webhooks/stripe/route.ts` | ✅ WebCrypto HMAC verify + 5-min timestamp window + KV idempotency (7-day dedupe); subscription events also self-heal the `stripe_customer_id` link the embedded flow needs (no `checkout.session.completed` fires there) |
 | Entitlement write | webhook → `users.subscription_tier` | ✅ set on `checkout.session.completed` + `customer.subscription.*`; cleared to `free` on `deleted` |
 | Self-serve billing / cancel | `src/app/api/billing-portal/route.ts` → Stripe Portal | ✅ "cancel in two clicks," no code to maintain |
 | Cancel-on-delete | `cancelActiveSubscriptions()` | ✅ stops billing when a user erases their account |

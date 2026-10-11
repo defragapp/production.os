@@ -89,7 +89,18 @@ export async function POST(request: NextRequest) {
       const priceId = obj.lines?.data?.[0]?.price?.id;
       const sub = priceToSubscription(env, priceId);
       const finalTier: PlanTier = sub.plan === "free" ? tier : sub.plan;
-      if (customerId) await env.DB.prepare(`UPDATE users SET subscription_tier = ? WHERE stripe_customer_id = ?`).bind(finalTier === "sovereign_plus" ? "sovereign+" : "free", customerId).run();
+      if (customerId) {
+        // The embedded checkout creates the subscription server-side, so no
+        // checkout.session.completed ever fires to tie the customer id to the
+        // account. Close that loop here from the subscription metadata (and
+        // fall back to the existing row) so the portal, receipts, and the
+        // tier write all key off one customer — an idempotent self-heal.
+        if (accountId && accountId !== customerId) {
+          await env.DB.prepare(`UPDATE users SET stripe_customer_id = ? WHERE id = ? AND (stripe_customer_id IS NULL OR stripe_customer_id = ?)`)
+            .bind(customerId, accountId, customerId).run();
+        }
+        await env.DB.prepare(`UPDATE users SET subscription_tier = ? WHERE stripe_customer_id = ?`).bind(finalTier === "sovereign_plus" ? "sovereign+" : "free", customerId).run();
+      }
       break;
     }
     case "customer.subscription.deleted": {

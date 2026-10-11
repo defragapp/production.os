@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, createCheckoutSession, syncStripeTier, verifyStripeSignature, receiptFields, invoiceDate } from "./stripe";
+import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, createCheckoutSession, syncStripeTier, verifyStripeSignature, receiptFields, invoiceDate, createStripeCustomer, createSubscriptionWithClientSecret, getSubscription } from "./stripe";
 import { createHmac } from "node:crypto";
 import type { AppEnv } from "./env";
 
@@ -160,6 +160,111 @@ describe("createCheckoutSession", () => {
     expect(body).toContain("customer_email=user%40example.com");
     expect(body).not.toContain("customer=cus");
     expect(body).toContain("line_items%5B0%5D%5Bprice%5D=price_annual");
+  });
+});
+
+// The embedded checkout's server-side half: every mutation below is one the
+// browser can only *ask* for — the price, customer, and idempotency shape are
+// all decided here. These tests pin that the ask never changes the answer.
+describe("createStripeCustomer", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => { global.fetch = originalFetch; });
+
+  it("posts the email and account metadata with a per-account idempotency key", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: "cus_new" }), { status: 200 }),
+    ) as unknown as typeof fetch;
+    const c = await createStripeCustomer(env, "acct_1", "user@example.com", "cust_acct_1");
+    expect(c.id).toBe("cus_new");
+    const init = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(String(init.headers["Idempotency-Key"])).toBe("cust_acct_1");
+    expect(String(init.body)).toContain("metadata%5Baccount_id%5D=acct_1");
+  });
+
+  it("prefixes failures so the route can tell them apart from transport errors", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: "email invalid" } }), { status: 400 }),
+    ) as unknown as typeof fetch;
+    await expect(createStripeCustomer(env, "a", "b@c.com", "k")).rejects.toThrow(/^Stripe customer failed:/);
+  });
+});
+
+describe("createSubscriptionWithClientSecret", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => { global.fetch = originalFetch; });
+
+  const subJson = (over: Record<string, unknown> = {}) => JSON.stringify({
+    id: "sub_1", status: "incomplete",
+    latest_invoice: { payment_intent: { client_secret: "pi_sk" } },
+    ...over,
+  });
+  function mockSub(json: string, status = 200) {
+    global.fetch = vi.fn().mockResolvedValue(new Response(json, { status })) as unknown as typeof fetch;
+  }
+  const reqOf = () => (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+
+  it("requests default_incomplete with the allowlisted price and both expand paths", async () => {
+    mockSub(subJson());
+    const r = await createSubscriptionWithClientSecret(env, "cus_1", "acct_1", "annual", "idem_sub");
+    expect(r).toEqual({ subscriptionId: "sub_1", status: "incomplete", clientSecret: "pi_sk" });
+    const body = String(reqOf().body);
+    expect(body).toContain("items%5B0%5D%5Bprice%5D=price_annual");
+    expect(body).toContain("payment_behavior=default_incomplete");
+    expect(body).toContain("expand%5B%5D=latest_invoice.payment_intent");
+    expect(body).toContain("expand%5B%5D=pending_setup_intent");
+    expect(body).toContain("metadata%5Baccount_id%5D=acct_1");
+    expect(String(reqOf().headers["Idempotency-Key"])).toBe("idem_sub");
+  });
+
+  it("falls back to the pending SetupIntent secret when the invoice has none", async () => {
+    mockSub(JSON.stringify({
+      id: "sub_2", status: "incomplete",
+      latest_invoice: { payment_intent: null },
+      pending_setup_intent: { client_secret: "seti_sk" },
+    }));
+    const r = await createSubscriptionWithClientSecret(env, "cus_1", "acct_1", "monthly", "k");
+    expect(r.clientSecret).toBe("seti_sk");
+  });
+
+  it("returns a null secret (never an invented one) when the subscription is already active", async () => {
+    mockSub(subJson({ status: "active", latest_invoice: { payment_intent: null } }));
+    const r = await createSubscriptionWithClientSecret(env, "cus_1", "acct_1", "monthly", "k");
+    expect(r.status).toBe("active");
+    expect(r.clientSecret).toBeNull();
+  });
+
+  it("throws before calling Stripe when the interval has no configured price", async () => {
+    mockSub(subJson());
+    await expect(createSubscriptionWithClientSecret(
+      { ...env, STRIPE_PRICE_SOVEREIGN_PLUS_ANNUAL: "" } as unknown as AppEnv,
+      "cus_1", "acct_1", "annual", "k",
+    )).rejects.toThrow(/price is not configured/);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("prefixes Stripe errors with the subscription marker", async () => {
+    mockSub(JSON.stringify({ error: { message: "customer already has a subscription" } }), 400);
+    await expect(createSubscriptionWithClientSecret(env, "cus_1", "acct_1", "monthly", "k"))
+      .rejects.toThrow(/^Stripe subscription failed:/);
+  });
+});
+
+describe("getSubscription", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => { global.fetch = originalFetch; });
+
+  it("reads back status and client secret for the retry path", async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      id: "sub_9", status: "incomplete",
+      latest_invoice: { payment_intent: { client_secret: "pi_reuse" } },
+    }), { status: 200 })) as unknown as typeof fetch;
+    const r = await getSubscription(env, "sub_9");
+    expect(r).toEqual({ subscriptionId: "sub_9", status: "incomplete", clientSecret: "pi_reuse" });
+  });
+
+  it("returns null — not a throw — when the subscription is gone", async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response("{}", { status: 404 })) as unknown as typeof fetch;
+    expect(await getSubscription(env, "sub_gone")).toBeNull();
   });
 });
 
