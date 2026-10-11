@@ -402,8 +402,12 @@ async function handleChat(request: NextRequest) {
         const lastUser = [...messagesToStore].reverse().find((m) => m.role === "user");
         const lastAssistant = messagesToStore[messagesToStore.length - 1];
         if (lastUser && lastAssistant && lastAssistant.role === "assistant") {
-          const turnIndex = messagesToStore.length - 2;
-          waitUntil(embedLatestTurn(env, userId, currentThreadId, lastUser.content, lastAssistant.content, turnIndex));
+          // `turnIndex` is a MESSAGE index (see embedLatestTurn): the user's
+          // message sits at length-2 and its reply at length-1 in an
+          // alternating thread, so the assistant vector is written at +1 and
+          // both sides hydrate instead of the assistant being role-rejected.
+          const userMessageIndex = messagesToStore.length - 2;
+          waitUntil(embedLatestTurn(env, userId, currentThreadId, lastUser.content, lastAssistant.content, userMessageIndex));
         }
       }
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: result.text })}\n\n`));

@@ -189,6 +189,16 @@ export async function embedTurn(
  * the turn the index is aimed at. It is best-effort in the other direction:
  * a swallowed embedding failure leaves that turn unindexed while D1 stays
  * authoritative.
+ *
+ * `turnIndex` is a MESSAGE index, not a turn-pair index: `hydrateMatches`
+ * resolves a vector by `messages[turnIndex]` and then requires the stored
+ * role to equal that message's role (chat-recall.ts). The user message and
+ * its reply are adjacent in an alternating thread, so the caller passes the
+ * user's index and the assistant vector is written at `+1`. Writing both
+ * sides at the SAME index — the previous behavior — made every assistant
+ * vector unhydratable: `messages[userIndex].role` is "user", so the
+ * role-agreement guard dropped the assistant match before it could ever
+ * reach recall or search.
  */
 export async function embedLatestTurn(
   env: AppEnv,
@@ -196,11 +206,11 @@ export async function embedLatestTurn(
   threadId: string,
   userText: string,
   assistantText: string,
-  lastTurnIndex: number,
+  userMessageIndex: number,
 ): Promise<number> {
   const [u, a] = await Promise.all([
-    embedTurn(env, userId, { threadId, turnIndex: lastTurnIndex, role: "user", text: userText }),
-    embedTurn(env, userId, { threadId, turnIndex: lastTurnIndex, role: "assistant", text: assistantText }),
+    embedTurn(env, userId, { threadId, turnIndex: userMessageIndex, role: "user", text: userText }),
+    embedTurn(env, userId, { threadId, turnIndex: userMessageIndex + 1, role: "assistant", text: assistantText }),
   ]);
   return u + a;
 }
