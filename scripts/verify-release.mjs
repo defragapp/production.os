@@ -3095,7 +3095,7 @@ async function gateCompliance(port, booted) {
   try {
     const specs = [
       { route: "/terms", must: ["at least 18", "988", "741741", "1-800-799-7233", "express release of liability", "assumption of risk", "class-action"] },
-      { route: "/privacy", must: ["sovereign-chat-draft", "sovereign-install-dismissed", "sovereign-memory", "challenges.cloudflare.com", "checkout.stripe.com", "do not sell", 'id="security"'] },
+      { route: "/privacy", must: ["sovereign-chat-draft", "sovereign-install-dismissed", "sovereign-memory", "challenges.cloudflare.com", "js.stripe.com", "elements.stripe.com", "checkout.stripe.com", "do not sell", 'id="security"'] },
     ];
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
     const page = await ctx.newPage();
