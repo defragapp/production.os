@@ -756,7 +756,12 @@ function renderReasoningContext(ctx: ReasoningContext, limitations: string[]): s
 
   if (ctx.observations.length) {
     lines.push("OBSERVED (user-stated):");
-    for (const o of ctx.observations.slice(0, 8)) lines.push(`- ${o.content}`);
+    // `scanObservations` keeps the NEWEST 12 in chronological order; render the
+    // newest 8 of those. `.slice(0, 8)` took the OLDEST 8, so on any thread with
+    // more than eight user turns the most recent things the person said silently
+    // vanished from OBSERVED while stale ones stayed — the opposite of what the
+    // relevance selection just below (which reads the newest observation) assumes.
+    for (const o of ctx.observations.slice(-8)) lines.push(`- ${o.content}`);
   }
   if (ctx.baselineSignals.length) {
     lines.push("BASELINE CONTEXT (derived signals — context, not verdict):");
