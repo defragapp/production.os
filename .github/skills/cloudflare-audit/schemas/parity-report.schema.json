@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://defrag.app/schemas/cloudflare-parity-report.schema.json",
+  "title": "Cloudflare parity report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "status",
+    "target",
+    "resourcesReviewed",
+    "sources",
+    "expected",
+    "observed",
+    "collectionErrors",
+    "findings"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["clean", "drift", "incomplete"] },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accountId", "worker", "database"],
+      "properties": {
+        "accountId": { "type": "string", "pattern": "^[a-fA-F0-9]{32}$" },
+        "worker": { "type": "string", "minLength": 1 },
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["binding", "id", "name"],
+          "properties": {
+            "binding": { "type": "string", "minLength": 1 },
+            "id": { "type": "string", "minLength": 1 },
+            "name": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "resourcesReviewed": { "type": "integer", "minimum": 0 },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["config", "schema", "migrationFiles", "migrationLedger"],
+      "properties": {
+        "config": { "type": "string" },
+        "schema": { "type": "string" },
+        "migrationFiles": { "type": "array", "items": { "type": "string" } },
+        "migrationLedger": { "type": "string" }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bindings", "variableNames", "secretNames"],
+      "properties": {
+        "bindings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "name"],
+            "properties": {
+              "type": { "type": "string" },
+              "name": { "type": "string" },
+              "resourceId": { "type": "string" },
+              "resourceName": { "type": "string" }
+            }
+          }
+        },
+        "variableNames": { "type": "array", "items": { "type": "string" } },
+        "secretNames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "required"],
+            "properties": {
+              "name": { "type": "string" },
+              "required": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worker", "database"],
+      "properties": {
+        "worker": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["deploymentId", "createdOn", "versions"],
+              "properties": {
+                "deploymentId": { "type": "string" },
+                "createdOn": { "type": "string" },
+                "versions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["versionId", "percentage", "bindings"],
+                    "properties": {
+                      "versionId": { "type": "string" },
+                      "percentage": { "type": "number" },
+                      "bindings": { "type": "array", "items": { "$ref": "#/$defs/binding" } }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "database": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tables", "indexes"],
+              "properties": {
+                "tables": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["name", "columns"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "columns": { "type": "array", "items": { "type": "string" } }
+                    }
+                  }
+                },
+                "indexes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["name", "table"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "table": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "collectionErrors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resource", "message"],
+        "properties": {
+          "resource": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "name"],
+      "properties": {
+        "type": { "type": "string" },
+        "name": { "type": "string" },
+        "id": { "type": "string" },
+        "database_id": { "type": "string" },
+        "namespace_id": { "type": "string" },
+        "bucket_name": { "type": "string" },
+        "queue_name": { "type": "string" },
+        "script_name": { "type": "string" },
+        "service": { "type": "string" },
+        "environment": { "type": "string" },
+        "class_name": { "type": "string" },
+        "dataset": { "type": "string" },
+        "workflow_name": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "title", "resource", "evidence", "recommendation", "confidence"],
+      "properties": {
+        "id": { "type": "string" },
+        "severity": { "enum": ["critical", "high", "medium", "low"] },
+        "title": { "type": "string" },
+        "resource": { "type": "string" },
+        "evidence": { "type": "string" },
+        "recommendation": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

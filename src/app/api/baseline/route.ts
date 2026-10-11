@@ -11,8 +11,6 @@ import { deriveBaseline } from "@/lib/sovereign-prompt";
 
 export const dynamic = 'force-dynamic';
 
-export const dynamic = 'force-dynamic';
-
 /**
  * Rate limits for Baseline computation.
  *
@@ -56,7 +54,7 @@ export async function GET(request: NextRequest) {
     const derived = deriveBaseline(parsed);
     const signals = buildBaselineSignals(derived);
     return NextResponse.json({ baseline, signals });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ baseline, signals: [] });
   }
 }

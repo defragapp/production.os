@@ -34,6 +34,7 @@ yarn-error.log*
 
 # audit scratch (Playwright harness + screenshots, never committed)
 .audit-tmp/
+/.cloudflare-audit/
 
 # local QA crawl output — rendered from LIVE data by scripts/qa-*.mjs and
 # scripts/e2e/seed-local.sql. `.qa-seed.rendered.sql` embeds real password

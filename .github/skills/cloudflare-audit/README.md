@@ -36,7 +36,7 @@ Use the standard flow below:
 
 1. Discover account + app context
 2. Inventory Workers, D1, KV, Pages, DNS, tokens, and bindings
-3. Compare with repo assumptions and schema state
+3. Run the [read-only parity check](../../../docs/cloudflare-parity.md) to compare deployed Worker bindings, variable/secret names, and D1 schema with repository expectations
 4. Audit for drift, technical debt, stale resources, and unsafe patterns
 5. Rank findings by impact and urgency
 6. Recommend fixes with rollback guidance
@@ -70,3 +70,7 @@ This repository already has a serious product architecture. The main opportuniti
 - read-only AI review automation with approval checkpoints
 
 Use this skill to audit those areas before changing production behavior.
+
+Live checks are explicit and read-only. Never paste credentials into reports,
+prompts, command arguments, or the repository; the parity tool records only
+variable/secret names and resource identifiers.

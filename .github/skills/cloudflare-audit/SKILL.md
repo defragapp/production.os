@@ -83,6 +83,12 @@ Return structured audit results in this format:
 
 ## Useful commands
 
+For deterministic repository-to-production comparison, run
+[`npm run cf:audit:parity -- --live`](../../../docs/cloudflare-parity.md)
+with a read-only Cloudflare API token. The check compares the current deployed
+Worker version bindings, variable/secret names, and D1 schema; it never
+deploys or writes to Cloudflare.
+
 These commands are useful for a discipline-first review:
 
 ```bash

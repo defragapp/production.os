@@ -9,7 +9,6 @@ import { Nav } from "@/components/nav";
 import { Logo } from "@/components/ui/logo";
 import { LoadingScreen } from "@/components/ui/loading";
 import { BaselineDrawer } from "@/components/baseline-drawer";
-import { RichText } from "@/components/rich-text";
 import { ShareCardButton } from "@/components/share-card";
 import { Sigil } from "@/components/sigil";
 import { ACTIVE_SIGIL_KEY, getSigilIntent, sigilSeedFromId, type ActiveSigil } from "@/lib/sigil";
@@ -190,14 +189,71 @@ function StartingPoints({
   );
 }
 
+/**
+ * Renders an assistant message by breaking it into its la-layer components.
+ * It looks for the specific phrases the AI is instructed to use to signal
+ * evidence states, wrapping them in AnatomyFragments.
+ */
+function RenderAssistantMessage({ content }: { content: string }) {
+  const paragraphs = content.split("\n\n").filter(Boolean);
+  
+  return (
+    <div className="space-y-4">
+      {paragraphs.map((p, i) => {
+        let label: "OBS" | "Bsl" | "Int" | "Unk" = "Int"; // Default to Interpretive
+        
+        const lower = p.toLowerCase();
+        if (lower.includes("according to your baseline") || lower.includes("your baseline suggests")) {
+          label = "Bsl";
+        } else if (lower.includes("i can't determine") || lower.includes("it is unknown")) {
+          label = "Unk";
+        } else if (lower.includes("you said") || lower.includes("observed")) {
+          label = "OBS";
+        }
+
+        return (
+          <AnatomyFragment key={i} label={label} content={p} />
+        );
+      })}
+    </div>
+  );
+}
+
 /** The assistant's side of the thread: one clean glass bubble, no avatar. */
 function AssistantTurn({ children }: { children: React.ReactNode }) {
   return (
     <div className="w-full">
-      {/* Sovereign's voice is set in the brand display serif — an answer, not
-          a chat log. The user answers in sans; only one of you is an oracle. */}
       <div className="glass-panel max-w-[92%] rounded-panel rounded-tl-sm px-4 py-3 font-display text-[16px] leading-[1.7] text-foreground sm:max-w-[80%]">
         {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A structured fragment of a Sovereign answer.
+ * It uses a "Rail" pattern to signify the epistemic state of the text
+ * (Observed, Baseline, Interpretive, Unknown) without interrupting the prose.
+ */
+function AnatomyFragment({
+  label,
+  content,
+}: {
+  label: "OBS" | "Bsl" | "Int" | "Unk";
+  content: React.ReactNode;
+}) {
+  const labels: Record<string, string> = {
+    OBS: "Obs",
+    Bsl: "Bsl",
+    Int: "Int",
+    Unk: "Unk",
+  };
+
+  return (
+    <div className="anatomy-rail">
+      <span className="anatomy-label">{labels[label]}</span>
+      <div className="anatomy-content">
+        <p className="whitespace-pre-wrap">{content}</p>
       </div>
     </div>
   );
@@ -1728,7 +1784,7 @@ export function ChatClient() {
                             ) : stoppedEmpty ? (
                               <p className="text-sm text-muted-foreground">Response stopped.</p>
                             ) : (
-                              <RichText text={msg.content} />
+                              <RenderAssistantMessage content={msg.content} />
                             )}
                           </AssistantTurn>
                           {/* The answer's provenance, surfaced in-app. Every genuine

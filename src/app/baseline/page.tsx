@@ -26,7 +26,7 @@ function BaselineContent() {
   const [fromChat, setFromChat] = useState(false);
   const [row, setRow] = useState<Baseline | null>(null);
   const [parsed, setParsed] = useState<BaselineData | null>(null);
-  const [baselineSignals, setBaselineSignals] = useState<any[]>([]);
+  const [baselineSignals, setBaselineSignals] = useState<Array<{ source: string; value: string; interpretation?: string }>>([]);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ function BaselineContent() {
   const loadBaseline = useCallback(async () => {
     const baselineRes = await fetch("/api/baseline");
     if (!baselineRes.ok) return null;
-    const data = await baselineRes.json() as { baseline?: Baseline | null; signals?: any[] };
+    const data = await baselineRes.json() as { baseline?: Baseline | null; signals?: Array<{ source: string; value: string; interpretation?: string }> };
     const baseline = data.baseline ?? null;
     const signals = data.signals ?? [];
 

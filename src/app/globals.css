@@ -710,7 +710,18 @@ a,[role="button"] {
   background-repeat: no-repeat;
 }
 
-/* ── App-surface motion & chrome (chat, auth, composer) ─────────── */
+/* Anatomy Rail — a quiet vertical signal that distinguishes the la-layer
+   of a Sovereign answer. The label is a whisper in the margin, not a
+   header that interrupts the flow. */
+.anatomy-rail {
+  @apply relative pl-6 py-1;
+}
+.anatomy-label {
+  @apply absolute left-0 top-1 w-4 text-right font-mono uppercase tracking-tighter text-[9px] text-muted-foreground/40 select-none;
+}
+.anatomy-content {
+  @apply leading-[1.7];
+}
 
 /* Message entry: a 240ms fade-and-rise on the same ease as the landing
    reveals, so in-app motion reads as one system with the marketing page. */

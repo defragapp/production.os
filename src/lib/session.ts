@@ -36,13 +36,10 @@ export async function verifySession(env: AppEnv, request: NextRequest): Promise<
   const lookup = await readTokenVersion(env, payload.sub);
   // Account gone → the session is dead, regardless of a valid signature.
   if (lookup.status === "missing") return null;
-  // The read itself failed. Treat a signed token as valid for availability
-  // reasons: every authenticated route needs D1 anyway, so failing closed here
-  // would only convert a transient read error into a login-page bounce. The
-  // revocation guarantee holds whenever the account is readable, which is
-  // exactly when any user data could be served. Flip this to `return null` for
-  // strict fail-closed behaviour.
-  if (lookup.status === "error") return { payload, tokenVersion: tokenVersionOf(payload) };
+  // The read itself failed. Treat a signed token as invalid.
+  // Failing closed ensures that a revoked session cannot be used during
+  // a transient D1 outage — security takes precedence over availability.
+  if (lookup.status === "error") return null;
 
   if (lookup.version !== tokenVersionOf(payload)) return null;
   return { payload, tokenVersion: lookup.version };
