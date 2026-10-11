@@ -126,4 +126,18 @@ describe("entitlement stays server-side and webhook-authoritative", () => {
     // handler must be the one to persist stripe_customer_id from metadata.
     expect(webhook).toContain("UPDATE users SET stripe_customer_id = ? WHERE id = ?");
   });
+
+  it("an incomplete (not-yet-paid) subscription never writes an entitlement", () => {
+    // The embedded default_incomplete flow fires customer.subscription.created
+    // with status `incomplete` BEFORE any payment clears. The dispatcher must
+    // gate the tier write on that status so an abandoned checkout can never
+    // grant Sovereign+ — activation stays the job of invoice.paid.
+    expect(webhook).toContain("if (status !== \"incomplete\")");
+    expect(webhook).toContain("tierForSubscriptionEvent(status, sub.plan)");
+    // And the guard must sit before the tier UPDATE in the subscription branch.
+    const guardIdx = webhook.indexOf("if (status !== \"incomplete\")");
+    const writeIdx = webhook.indexOf("SET subscription_tier = ? WHERE stripe_customer_id");
+    expect(guardIdx).toBeGreaterThan(-1);
+    expect(guardIdx).toBeLessThan(writeIdx);
+  });
 });

@@ -156,6 +156,29 @@ export function tierFromSubscriptionStatus(status: string): PlanTier {
   return "free";
 }
 
+/**
+ * Statuses where a subscription has earned (or is authorized to keep) Sovereign+:
+ * it has collected payment (`active`/`trialing`), or it is inside the Smart-Retries
+ * window (`past_due`), where the dunning policy keeps access rather than cutting a
+ * paying customer off mid-retry. `incomplete` — a subscription created before its
+ * first payment cleared, which is how the embedded default_incomplete flow begins —
+ * is deliberately excluded so creating a subscription can never grant access on its
+ * own; only a successful charge does.
+ */
+const ENTITLED_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+/**
+ * Decide the tier a subscription webhook event should write: only a recognized
+ * Sovereign+ price sitting in an entitled status grants the tier, everything else
+ * is free. Kept as a pure, exported helper so the webhook stays a dispatcher and
+ * this entitlement rule is directly unit-testable.
+ */
+export function tierForSubscriptionEvent(status: string, plan: PlanTier): PlanTier {
+  return plan === "sovereign_plus" && ENTITLED_SUBSCRIPTION_STATUSES.has(status)
+    ? "sovereign_plus"
+    : "free";
+}
+
 /** Create a Stripe checkout session for Sovereign+ subscription. */
 export async function createCheckoutSession(
   env: AppEnv,

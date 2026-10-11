@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { priceToSubscription, tierFromSubscriptionStatus, configuredPrice, stripeConfigured, createPortalSession, createCheckoutSession, syncStripeTier, verifyStripeSignature, receiptFields, invoiceDate, createStripeCustomer, createSubscriptionWithClientSecret, getSubscription } from "./stripe";
+import { priceToSubscription, tierFromSubscriptionStatus, tierForSubscriptionEvent, configuredPrice, stripeConfigured, createPortalSession, createCheckoutSession, syncStripeTier, verifyStripeSignature, receiptFields, invoiceDate, createStripeCustomer, createSubscriptionWithClientSecret, getSubscription } from "./stripe";
 import { createHmac } from "node:crypto";
 import type { AppEnv } from "./env";
 
@@ -40,6 +40,33 @@ describe("tierFromSubscriptionStatus", () => {
   it("treats everything else as free", () => {
     expect(tierFromSubscriptionStatus("canceled")).toBe("free");
     expect(tierFromSubscriptionStatus("past_due")).toBe("free");
+  });
+});
+
+// The webhook's entitlement gate. It differs from tierFromSubscriptionStatus in
+// one launch-critical way: it keeps access during the past_due Smart-Retries
+// window (the dunning policy) but refuses to grant on `incomplete` — the status
+// an embedded default_incomplete subscription carries BEFORE any payment clears.
+describe("tierForSubscriptionEvent", () => {
+  it("grants Sovereign+ only for a recognized price in an entitled status", () => {
+    expect(tierForSubscriptionEvent("active", "sovereign_plus")).toBe("sovereign_plus");
+    expect(tierForSubscriptionEvent("trialing", "sovereign_plus")).toBe("sovereign_plus");
+    expect(tierForSubscriptionEvent("past_due", "sovereign_plus")).toBe("sovereign_plus");
+  });
+
+  it("never grants on the never-yet-paid incomplete status — the premature-entitlement gate", () => {
+    expect(tierForSubscriptionEvent("incomplete", "sovereign_plus")).toBe("free");
+  });
+
+  it("revokes on terminal/paused statuses even for a recognized price", () => {
+    expect(tierForSubscriptionEvent("canceled", "sovereign_plus")).toBe("free");
+    expect(tierForSubscriptionEvent("incomplete_expired", "sovereign_plus")).toBe("free");
+    expect(tierForSubscriptionEvent("paused", "sovereign_plus")).toBe("free");
+    expect(tierForSubscriptionEvent("unpaid", "sovereign_plus")).toBe("free");
+  });
+
+  it("never grants for an unrecognized price, whatever the status", () => {
+    expect(tierForSubscriptionEvent("active", "free")).toBe("free");
   });
 });
 

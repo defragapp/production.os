@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyStripeSignature, priceToSubscription, tierFromSubscriptionStatus, receiptFields, SUBSCRIPTION_EVENTS, type InvoiceLineForReceipt, type PlanTier } from "@/lib/stripe";
+import { verifyStripeSignature, priceToSubscription, tierForSubscriptionEvent, receiptFields, SUBSCRIPTION_EVENTS, type InvoiceLineForReceipt } from "@/lib/stripe";
 import { sendTemplate } from "@/lib/email";
 import { getEnv, type AppEnv } from "@/lib/env";
 
@@ -85,10 +85,9 @@ export async function POST(request: NextRequest) {
     case "customer.subscription.paused":
     case "customer.subscription.resumed": {
       if (!SUBSCRIPTION_EVENTS.has(event.type)) break;
-      const tier = tierFromSubscriptionStatus(obj.status || "");
+      const status = obj.status || "";
       const priceId = obj.lines?.data?.[0]?.price?.id;
       const sub = priceToSubscription(env, priceId);
-      const finalTier: PlanTier = sub.plan === "free" ? tier : sub.plan;
       if (customerId) {
         // The embedded checkout creates the subscription server-side, so no
         // checkout.session.completed ever fires to tie the customer id to the
@@ -99,7 +98,17 @@ export async function POST(request: NextRequest) {
           await env.DB.prepare(`UPDATE users SET stripe_customer_id = ? WHERE id = ? AND (stripe_customer_id IS NULL OR stripe_customer_id = ?)`)
             .bind(customerId, accountId, customerId).run();
         }
-        await env.DB.prepare(`UPDATE users SET subscription_tier = ? WHERE stripe_customer_id = ?`).bind(finalTier === "sovereign_plus" ? "sovereign+" : "free", customerId).run();
+        // `incomplete` is a subscription created before its first payment cleared
+        // (the embedded default_incomplete flow). Neither granting nor revoking is
+        // authoritative yet — invoice.paid grants on success, subscription.deleted /
+        // incomplete_expired revokes on failure — so leave the tier untouched until
+        // one of those lands. This is what stops an abandoned checkout from granting
+        // Sovereign+, and stops a just-linked customer id from downgrading a gift-pass
+        // holder whose paid tier is still resolving.
+        if (status !== "incomplete") {
+          const finalTier = tierForSubscriptionEvent(status, sub.plan);
+          await env.DB.prepare(`UPDATE users SET subscription_tier = ? WHERE stripe_customer_id = ?`).bind(finalTier === "sovereign_plus" ? "sovereign+" : "free", customerId).run();
+        }
       }
       break;
     }
