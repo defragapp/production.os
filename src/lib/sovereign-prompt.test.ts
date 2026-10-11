@@ -7,8 +7,12 @@ describe("deriveBaseline", () => {
     const d = deriveBaseline({});
     expect(d.sunSign).toBe("Unknown");
     expect(d.moonSign).toBe("Unknown");
-    expect(d.qualities).toEqual(["Insufficient data for quality derivation"]);
-    expect(d.underusedCapacities).toEqual(["Insufficient data"]);
+    expect(d.qualities).toEqual([
+      "The birth data available didn't surface a distinct standing quality, so lean on what the person tells you directly.",
+    ]);
+    expect(d.underusedCapacities).toEqual([
+      "The birth data available didn't surface a clear underused capacity yet.",
+    ]);
     expect(d.pressureResponse).toContain("Insufficient data");
   });
 

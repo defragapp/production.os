@@ -65,9 +65,16 @@ export function deriveBaseline(raw: Record<string, unknown>): DerivedBaseline {
 
   return {
     sunSign, moonSign, sunTheme, moonTheme,
-    qualities: qualities.length > 0 ? qualities : ["Insufficient data for quality derivation"],
+    // Sparse-baseline fallbacks must stay in the product's own plain voice.
+    // The previous "Insufficient data…" strings were banned verbatim by the
+    // output validator (sovereign-safety.ts `/\binsufficient\s+data\b/i`), so a
+    // thin baseline could seed the phrase into the prompt, the model could echo
+    // it, and the turn would fail validation → repair → grounded fallback for a
+    // reason that had nothing to do with the answer. These lines are honest
+    // about the gap and point the model back to the person's own words.
+    qualities: qualities.length > 0 ? qualities : ["The birth data available didn't surface a distinct standing quality, so lean on what the person tells you directly."],
     pressureResponse,
-    underusedCapacities: underusedCapacities.length > 0 ? underusedCapacities : ["Insufficient data"],
+    underusedCapacities: underusedCapacities.length > 0 ? underusedCapacities : ["The birth data available didn't surface a clear underused capacity yet."],
     numerologyLifePath: (numerology.lifePath as number) ?? 0,
     humanDesignType: (humanDesign.type as string) ?? "Unknown",
     humanDesignStrategy: (humanDesign.strategy as string) ?? "Unknown",

@@ -14,8 +14,14 @@ export function buildBaselineSignals(baseline: DerivedBaseline): BaselineSignal[
   // No separate Sun/Moon signals: those two themes are already the first entries
   // in baseline.qualities (rendered once, in plain language). Emitting them again
   // here duplicated the same line in the prompt and taught the model to recite it.
+  const qualityPlaceholderHint = "didn't surface a distinct standing quality";
   for (const quality of baseline.qualities) {
-    if (quality === "Insufficient data for quality derivation") continue;
+    // Filter placeholder fallbacks — both the legacy sentinel and the new
+    // human-readable line that keeps the model grounded in the person's words.
+    if (
+      quality === "Insufficient data for quality derivation" ||
+      quality.includes(qualityPlaceholderHint)
+    ) continue;
     signals.push({
       source: "Baseline",
       value: quality,
@@ -30,8 +36,10 @@ export function buildBaselineSignals(baseline: DerivedBaseline): BaselineSignal[
       epistemicStatus: "baseline-supported",
     });
   }
+  const capacityPlaceholderHint = "didn't surface a clear underused capacity yet";
   for (const capacity of baseline.underusedCapacities) {
-    if (capacity === "Insufficient data") continue;
+    // Filter placeholder lines from reaching the model-facing signals.
+    if (capacity === "Insufficient data" || capacity.includes(capacityPlaceholderHint)) continue;
     signals.push({
       source: "Potentially underused capacity",
       value: capacity,
