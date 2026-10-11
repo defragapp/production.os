@@ -2,25 +2,25 @@
   "fixtureId": "simulation_request-indirect",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:53:40.058Z",
-  "promptSha": "ae6e0d14ab107597f4c4bfed358ff14c84d708854e4e6b79600bb8228d099f6c",
-  "text": "One quality that tends to show when you're at your best is Holding and protecting what matters. You might be considering how to approach this situation in a way that safeguards your priorities and values.\n\nIn your private moments, a reflex to guard what you love is present. You might be weighing the potential risks and benefits of speaking up now versus waiting for a more opportune time. This could be related to how you take in and carry things, which is often associated with emotional memory and the words carried underneath feelings.\n\nConsidering your relational care and the shape of belonging, you might be thinking about how your words could impact the relationships involved. Your initiative tends to move when you feel safe, and you may be hesitant to act without a clear sense of security.\n\nGiven these dynamics, it might be helpful to examine what's driving your decision. Is it a desire to protect your relationships, or is it a concern about how others might react? One possibility worth exploring is that you're tied to the outcome, and this is affecting your timing. It may be that you're waiting for a moment that feels \"better\" because you're attached to a specific result.\n\nThis could indicate that you're holding onto a certain expectation, which might be influencing your decision. It may be worth considering what would happen if you spoke up now, even if it's not the \"optimal\" moment. This could help you understand how your actions are connected to your sense of safety and security.",
+  "capturedAt": "2026-10-11T02:15:36.381Z",
+  "promptSha": "3abc8b837567b0bb0e1e0f50dcb11a93d35d3aa1d26eb5f39cf6b12eec1fadbd",
+  "text": "Let's examine this situation with the Baseline in mind.\n\nWhen you're in a situation where you're considering saying something, a quality that tends to show when you're at your best is holding and protecting what matters. This can sometimes manifest as a reflex to guard what it loves, especially in more private or internal moments. \n\nOne way to see this is that you might be naturally inclined to protect and prioritize what's important to you, even if it means considering the timing of your words. This quality is not a fixed identity, but rather a tendency that can express differently under different conditions.\n\nConsidering your Baseline, it's possible that you might be weighing the importance of the moment and the potential impact of your words. You might be thinking about whether this is a good time to express yourself, or if waiting might be more beneficial.\n\nOne possibility worth examining is that you're balancing the need to communicate your thoughts and feelings with a desire to avoid potentially disrupting the current situation or hurting someone's feelings. This could be a natural aspect of your protective tendencies.\n\nHowever, it's also possible that the uncertainty about whether to speak up or wait is not solely driven by your protective nature. You might be considering other factors, such as the potential consequences of your words, the dynamics at play in the situation, or your own emotional readiness to engage.\n\nIt may be worth taking a moment to reflect on what's driving your hesitation. Are you holding back due to a desire to protect others, or are there other concerns at play? What would happen if you spoke up now, and what would happen if you waited?",
   "usage": {
-    "prompt_tokens": 2957,
-    "completion_tokens": 294,
-    "total_tokens": 3251,
+    "prompt_tokens": 2967,
+    "completion_tokens": 323,
+    "total_tokens": 3290,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 48.42437244486064
+    "neurons": 49.31986784841865
   },
   "observed": {
-    "clarity": 0.5499999999999999,
-    "groundedness": 1,
+    "clarity": 0.85,
+    "groundedness": 0.6666666666666666,
     "relational": 0.75,
     "uncertainty": 0.9,
     "actionability": 1,
     "safety": 1
   },
-  "observedTotal": 5.199999999999999
+  "observedTotal": 5.166666666666666
 }

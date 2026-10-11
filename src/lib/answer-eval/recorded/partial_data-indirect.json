@@ -2,25 +2,25 @@
   "fixtureId": "partial_data-indirect",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:53:11.504Z",
-  "promptSha": "79962f76f490a27038daf2ffcecf6c961ff0eb844b0e7d47606e3ea3db45467c",
-  "text": "One way to approach this is to recognize that your reflex to guard what it loves can sometimes become a mental process of defending your own interpretation. When this happens, you might wonder if you're protecting your understanding of the situation, rather than the core needs or values it represents.\n\nIt's possible that the missing part of the conflict is not as unknown as it seems. Your Baseline suggests that you hold and protect what matters, which means you care deeply about the underlying issues. You might be more interested in understanding the dynamics than in guessing what the other side might be thinking.\n\nConsider if you could separate the information you have from the story you've made up about the missing part. This distinction can help you identify the gaps in your knowledge and what you can do differently in the future.",
+  "capturedAt": "2026-10-11T02:15:13.407Z",
+  "promptSha": "c2de55c3b545d803067fb39f57e5324663399386ed9f8c569ec8968b061e1432",
+  "text": "One possibility worth examining is that you might be inclined to fill in the missing part with guesses because you tend to hold and protect what matters deeply, and when the other side of the conflict is absent, you might reflexively guard what it loves by creating a narrative that makes sense to you. This could indicate that your inner, more private response is trying to safeguard what feels important to you, even if it means filling in the gaps with assumptions.\n\nHowever, it may be worth considering whether this tendency to fill in the missing part with guesses is connected to your sense of initiative and taking action when you feel safe. If you're moving into action based on your own sense of what's happening, it could be worth exploring whether this is indeed a reflex to protect what it loves, or if it's a way to assert control when you feel uncertain.\n\nTo examine this further, you might ask yourself: What would it take for you to feel more comfortable with not knowing the other side of the conflict? What would you need to feel safe in not having all the information? This could help you understand your own boundaries and what's driving your tendency to fill in the gaps.",
   "usage": {
-    "prompt_tokens": 2973,
-    "completion_tokens": 158,
-    "total_tokens": 3131,
+    "prompt_tokens": 2983,
+    "completion_tokens": 234,
+    "total_tokens": 3217,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 45.091422031633556
+    "neurons": 47.21493236813694
   },
   "observed": {
-    "clarity": 0.7,
-    "groundedness": 0.6666666666666666,
+    "clarity": 0.9999999999999999,
+    "groundedness": 0.8333333333333334,
     "relational": 0.75,
     "uncertainty": 0.9,
     "actionability": 1,
     "safety": 1
   },
-  "observedTotal": 5.016666666666667
+  "observedTotal": 5.4833333333333325
 }

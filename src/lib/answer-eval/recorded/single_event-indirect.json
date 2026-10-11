@@ -2,25 +2,25 @@
   "fixtureId": "single_event-indirect",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:52:23.852Z",
-  "promptSha": "b510aa1febed16daf8e6590525f0835cfe24e478f38cb0850dc274c714280df5",
-  "text": "One possibility worth examining is that the quiet afterward feels loaded because helping has become connected to feeling valuable to you. This connection might cause the quiet to feel like a subtraction of your worth. When you're not needed, it's possible that your attention moves inward, and you become less aware of your own needs. This could make the stillness feel heavy, like a loss of purpose.",
+  "capturedAt": "2026-10-11T02:14:26.287Z",
+  "promptSha": "e00759478153b9cae5c918b7f7e90c4adeed59c79f967ade84451753261db181",
+  "text": "One possibility worth examining is that the quiet feels loaded because you're connecting the effort you put into helping someone with a sense of being needed. It's possible that, during the weekend, you associated being helpful with feeling valuable, and now that it's over, you're experiencing a sense of emptiness or loss of purpose. This might be a reflection of how your sense of self-worth is tied to being needed or useful to others. It may be worth looking at how you've connected helping with your own value.",
   "usage": {
-    "prompt_tokens": 3012,
-    "completion_tokens": 78,
-    "total_tokens": 3090,
+    "prompt_tokens": 3022,
+    "completion_tokens": 105,
+    "total_tokens": 3127,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 43.538541689515114
+    "neurons": 44.38178113847971
   },
   "observed": {
     "clarity": 0.7,
-    "groundedness": 0.5,
+    "groundedness": 0.3333333333333333,
     "relational": 0.75,
     "uncertainty": 0.9,
     "actionability": 0,
     "safety": 1
   },
-  "observedTotal": 3.85
+  "observedTotal": 3.683333333333333
 }

@@ -2,25 +2,25 @@
   "fixtureId": "repeated_pattern-indirect",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:52:45.766Z",
-  "promptSha": "f10b508fbf5f2b57ec6c7a3655f756eed50beac2c5d89f15b1d7e37dc9010436",
-  "text": "Let's examine what's happening here. It may be that your Baseline quality of holding and protecting what matters is creating a dynamic where you're more likely to prioritize your own emotional safety over the needs of others. When people try to get close to you, it might be triggering a reflex to guard what it loves, which could lead to a sense of withdrawal or distance.\n\nOne possibility worth examining is that your initiative to move into action is tied to feeling safe, and when you're unsure of how to navigate a relationship, you might become hesitant or still. This could cause you to miss opportunities for connection or create a sense of disconnection.\n\nIt's also possible that your Baseline is simply not yet developed enough to handle the complexity of relationships, leading to a recurring dynamic of being alone. However, this is not a fixed identity – your Baseline can evolve and grow as you do.\n\nWhat do you think might be happening in these situations, and what would you like to explore further?",
+  "capturedAt": "2026-10-11T02:14:53.932Z",
+  "promptSha": "2bfe9353478bcaded25174af69f530a9a5b5f1fbf32f26d86f6a4e65c3c78755",
+  "text": "This is a Level 1 (Reflection) question, which means we'll explore what's happening from your own perspective. Let's examine your Baseline to identify some qualities and dynamics that might be at play.\n\nOne quality that tends to show when you're at your best is holding and protecting what matters. This quality suggests that you have a strong sense of what's important to you and can be very protective of those things. However, this same quality might also make you more cautious or guarded when it comes to getting close to others. You might be protecting yourself from potential hurt or vulnerability.\n\nAnother quality that shapes your inner, more private response is your reflex to guard what it loves. This means that when you feel strongly attached to someone or something, you might become more defensive or protective. This could lead to misunderstandings or conflicts with others, especially if they perceive your behavior as pushy or aloof.\n\nWhen you move into action, you tend to initiate when you feel safe and still when unsure. This suggests that you're a thoughtful and careful person who likes to consider the potential consequences of your actions before taking the leap. However, this might also mean that you're more likely to wait for others to make the first move or take the initiative in relationships, which could contribute to feelings of being alone.\n\nConsidering these qualities and dynamics, it's possible that you might be unintentionally creating distance in your relationships by being too cautious or guarded. People might perceive your behavior as aloof or unapproachable, which could lead them to pull back or not try to get close to you in the first place.\n\nOne possibility worth examining is that your need for safety and security might be causing you to prioritize protecting yourself over being open and available to others. This could be a natural response to past experiences or a coping mechanism that's been developed over time. However, it might also be worth exploring whether this approach is truly serving you in the long run.\n\nWhat do you think? Does this resonate with you, or are there other aspects of your experiences that you'd like to explore further?",
   "usage": {
-    "prompt_tokens": 3027,
-    "completion_tokens": 200,
-    "total_tokens": 3227,
+    "prompt_tokens": 3037,
+    "completion_tokens": 418,
+    "total_tokens": 3455,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 46.932831012643874
+    "neurons": 52.76651412528008
   },
   "observed": {
-    "clarity": 0.9999999999999999,
+    "clarity": 0.85,
     "groundedness": 0.8333333333333334,
     "relational": 0.75,
     "uncertainty": 0.9,
     "actionability": 1,
     "safety": 1
   },
-  "observedTotal": 5.4833333333333325
+  "observedTotal": 5.333333333333334
 }

@@ -2,25 +2,25 @@
   "fixtureId": "correction_case-indirect",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:53:55.585Z",
-  "promptSha": "104ab2486dd6315967b5b72586345cdae6c11eeb87f5a34f9d4614c3806f6967",
-  "text": "This worry that develops into overgiving may be related to the baseline quality of holding and protecting what matters. When you feel it's your job to protect and take care of others, it's possible that you're putting their needs before your own, potentially as a way to cope with worry.\n\nOne way to examine this further is to look at how your relational care and the shape of belonging influence your actions. When you feel a strong connection to others, are you more likely to overextend yourself in an attempt to maintain that bond, or do you find ways to set boundaries and prioritize your own needs? \n\nWhat does it look like when you're taking care of yourself in these situations? Is there a sense of relief or a feeling of being overwhelmed?",
+  "capturedAt": "2026-10-11T02:15:50.726Z",
+  "promptSha": "300588afee54856f6a57af79fdfe4ed323c6d41af79d8ded50a43b147a5351fe",
+  "text": "It may be that you're experiencing a dynamic where helping has become connected to feeling valuable or needed. When you help, it could be reinforcing a sense that you're essential or important to others, rather than stemming from a genuine concern for their well-being. This might be making you more inclined to offer help, even when it's not necessarily what you want or need.\n\nOne quality that tends to show when you're at your best is holding and protecting what matters. This could be a strong instinct to care for others, but it might also be tied to your own need for validation or importance. \n\nIt's worth examining whether this dynamic is causing you to prioritize others' needs over your own. What would happen if you were to prioritize your own needs and desires, even if it means not being needed by others?",
   "usage": {
-    "prompt_tokens": 2981,
-    "completion_tokens": 152,
-    "total_tokens": 3133,
+    "prompt_tokens": 2991,
+    "completion_tokens": 164,
+    "total_tokens": 3155,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 45.044881417416036
+    "neurons": 45.49620120692998
   },
   "observed": {
-    "clarity": 0.9999999999999999,
-    "groundedness": 0.8333333333333334,
+    "clarity": 0.7,
+    "groundedness": 0.6666666666666666,
     "relational": 0.75,
     "uncertainty": 0.9,
     "actionability": 0,
     "safety": 1
   },
-  "observedTotal": 4.4833333333333325
+  "observedTotal": 4.016666666666667
 }

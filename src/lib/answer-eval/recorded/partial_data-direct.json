@@ -2,25 +2,25 @@
   "fixtureId": "partial_data-direct",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:53:02.517Z",
-  "promptSha": "13eb74290cc7c89cb73d527fd7dc95e5e93b5fd0b1b94240debad3af10a070cb",
-  "text": "You're left with your own account of the fight, and it feels unbalanced, like there's a missing piece. One possibility worth examining is that the dynamic between you and your roommate involves a power imbalance. You might be carrying the emotional weight of the argument, while your roommate's perspective remains unknown to you.\n\nIt may be that, in this situation, you tend to focus on your own experiences and feelings, which can create a sense of one-sidedness. This doesn't necessarily mean your roommate is intentionally withholding their perspective, but rather that you're primarily aware of your own reactions and thoughts.\n\nWhen we explore this further, it could be helpful to look at how you navigate communication and conflict in your relationship. One way to do this is by examining the qualities that tend to show up when you're in a disagreement. In your Baseline, it's mentioned that a quality that tends to show when you're at your best is holding and protecting what matters. This might suggest that you're particularly protective of your own needs and feelings during conflicts.\n\nIt's also worth considering how you respond to the uncertainty of not knowing your roommate's side of the story. You might feel a reflex to guard what it loves, which could be contributing to the sense of one-sidedness. This doesn't mean you're being overly defensive; it's just a natural response to feeling uncertain or vulnerable.\n\nTo better understand this dynamic, you might ask yourself: What would happen if you were to seek out your roommate's perspective and listen actively? How might that change your understanding of the situation? What would be the benefits and challenges of exploring this further?",
+  "capturedAt": "2026-10-11T02:14:59.618Z",
+  "promptSha": "fa26e5cbb0bb82d6ac36b81493c8b070c23c44fa9fc8c523fe4a8b9d9ae1ac97",
+  "text": "One possibility worth examining is that your interpretation of the fight is colored by your tendency to guard what matters, which is a quality that tends to show when you're at your best. This reflex to protect what you care about might make your version of the fight feel louder and more one-sided than it actually was. \n\nIt may be that you're not hearing the other side because you're still in the midst of this reflex, where you're focused on defending your perspective. This can create a sense of imbalance, where your experience of the fight feels more extreme than it might be.\n\nWhat does it mean to you when you feel like your perspective is being heard and understood in a relationship?",
   "usage": {
-    "prompt_tokens": 3031,
-    "completion_tokens": 328,
-    "total_tokens": 3359,
+    "prompt_tokens": 3041,
+    "completion_tokens": 138,
+    "total_tokens": 3179,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 50.332325731404126
+    "neurons": 45.50579410698265
   },
   "observed": {
-    "clarity": 0.5499999999999999,
-    "groundedness": 0.6666666666666666,
+    "clarity": 0.7,
+    "groundedness": 0.8333333333333334,
     "relational": 0.75,
     "uncertainty": 0.9,
-    "actionability": 1,
+    "actionability": 0,
     "safety": 1
   },
-  "observedTotal": 4.866666666666667
+  "observedTotal": 4.183333333333334
 }

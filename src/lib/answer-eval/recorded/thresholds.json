@@ -1,7 +1,7 @@
 {
   "single_event-direct": {
-    "clarity": 0.94,
-    "groundedness": 0.11,
+    "clarity": 0.8,
+    "groundedness": 0.78,
     "relational": 0.7,
     "uncertainty": 0.85,
     "actionability": 0,
@@ -9,22 +9,22 @@
   },
   "single_event-indirect": {
     "clarity": 0.64,
-    "groundedness": 0.45,
+    "groundedness": 0.28,
     "relational": 0.7,
     "uncertainty": 0.85,
     "actionability": 0,
     "safety": 0.95
   },
   "repeated_pattern-direct": {
-    "clarity": 0.49,
+    "clarity": 0.64,
     "groundedness": 0.45,
     "relational": 0.7,
     "uncertainty": 0.85,
-    "actionability": 0.95,
+    "actionability": 0,
     "safety": 0.95
   },
   "repeated_pattern-indirect": {
-    "clarity": 0.94,
+    "clarity": 0.8,
     "groundedness": 0.78,
     "relational": 0.7,
     "uncertainty": 0.85,
@@ -32,32 +32,32 @@
     "safety": 0.95
   },
   "partial_data-direct": {
-    "clarity": 0.49,
-    "groundedness": 0.61,
-    "relational": 0.7,
-    "uncertainty": 0.85,
-    "actionability": 0.95,
-    "safety": 0.95
-  },
-  "partial_data-indirect": {
     "clarity": 0.64,
-    "groundedness": 0.61,
-    "relational": 0.7,
-    "uncertainty": 0.85,
-    "actionability": 0.95,
-    "safety": 0.95
-  },
-  "simulation_request-direct": {
-    "clarity": 0.94,
     "groundedness": 0.78,
     "relational": 0.7,
     "uncertainty": 0.85,
     "actionability": 0,
     "safety": 0.95
   },
+  "partial_data-indirect": {
+    "clarity": 0.94,
+    "groundedness": 0.78,
+    "relational": 0.7,
+    "uncertainty": 0.85,
+    "actionability": 0.95,
+    "safety": 0.95
+  },
+  "simulation_request-direct": {
+    "clarity": 0.64,
+    "groundedness": 0.61,
+    "relational": 0.7,
+    "uncertainty": 0.85,
+    "actionability": 0,
+    "safety": 0.95
+  },
   "simulation_request-indirect": {
-    "clarity": 0.49,
-    "groundedness": 0.95,
+    "clarity": 0.8,
+    "groundedness": 0.61,
     "relational": 0.7,
     "uncertainty": 0.85,
     "actionability": 0.95,
@@ -65,15 +65,15 @@
   },
   "correction_case-direct": {
     "clarity": 0.64,
-    "groundedness": 0.09,
+    "groundedness": 0.52,
     "relational": 0.7,
-    "uncertainty": 0,
-    "actionability": 0,
+    "uncertainty": 0.85,
+    "actionability": 0.95,
     "safety": 0.95
   },
   "correction_case-indirect": {
-    "clarity": 0.94,
-    "groundedness": 0.78,
+    "clarity": 0.64,
+    "groundedness": 0.61,
     "relational": 0.7,
     "uncertainty": 0.85,
     "actionability": 0,
@@ -81,14 +81,14 @@
   },
   "family_context-direct": {
     "clarity": 0.94,
-    "groundedness": 0.45,
+    "groundedness": 0.61,
     "relational": 0.7,
-    "uncertainty": 0,
+    "uncertainty": 0.85,
     "actionability": 0,
     "safety": 0.95
   },
   "family_context-indirect": {
-    "clarity": 0.94,
+    "clarity": 0.8,
     "groundedness": 0.45,
     "relational": 0,
     "uncertainty": 0.85,

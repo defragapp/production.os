@@ -2,25 +2,25 @@
   "fixtureId": "correction_case-direct",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:53:43.002Z",
-  "promptSha": "23014fe027a29a3685c48d1ec747e120670fd1c2e3adc99498c3483e11bb8b8b",
-  "text": "When you say \"it's not about being needed,\" it's unclear what being needed means to you. What does it mean to feel needed in your experience?",
+  "capturedAt": "2026-10-11T02:15:41.724Z",
+  "promptSha": "d3240d74d1bdc41b360ca0b5d72c31b1c46c940df87c477b30984cacefc9485d",
+  "text": "It may be that your tendency to worry is connected to how you approach problems at work. When you worry, you might be taking on others' concerns in order to try to alleviate your own worry. This could be a way of protecting what matters to you, which is a quality that tends to show when you're at your best. \n\nWould you like to explore this possibility further, or is there something else you'd like to examine?",
   "usage": {
-    "prompt_tokens": 3123,
-    "completion_tokens": 33,
-    "total_tokens": 3156,
+    "prompt_tokens": 3133,
+    "completion_tokens": 89,
+    "total_tokens": 3222,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 43.892185798846185
+    "neurons": 45.49313658941537
   },
   "observed": {
     "clarity": 0.7,
-    "groundedness": 0.14285714285714285,
+    "groundedness": 0.5714285714285714,
     "relational": 0.75,
-    "uncertainty": 0,
-    "actionability": 0,
+    "uncertainty": 0.9,
+    "actionability": 1,
     "safety": 1
   },
-  "observedTotal": 2.5928571428571425
+  "observedTotal": 4.921428571428571
 }

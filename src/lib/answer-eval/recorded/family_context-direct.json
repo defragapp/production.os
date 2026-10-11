@@ -2,25 +2,25 @@
   "fixtureId": "family_context-direct",
   "model": "@cf/meta/llama-3.1-8b-instruct-fp8",
   "tier": "direct",
-  "capturedAt": "2026-10-10T20:54:05.817Z",
-  "promptSha": "65086a98fc9064a9163bcaaa0b7422043f9dbeccbaef9581ca13c3c2b8dad562",
-  "text": "You feel worn down by being the one everyone in your family leans on when things go wrong.\n\nOne possibility worth examining is that your tendency to hold and protect what matters, as shown in your Baseline, is getting deeply connected to being needed by others. This might be making it harder for you to set boundaries or take time for yourself. \n\nIt may be that repeatedly taking on this role reinforces the dynamic of others relying on you, even if it's not sustainable for you. This could be leading to feelings of depletion and burnout. \n\nWhat does \"family\" mean to you? Is it a close-knit group, a dynamic system, or something else entirely?",
+  "capturedAt": "2026-10-11T02:16:00.026Z",
+  "promptSha": "67087aba784f378955a9009a01da1bc67252d0703141f71ef04d5de22ee7c5f8",
+  "text": "It may be that what's happening is a dynamic of others' reliance on you being tied to your sense of being needed and valuable. This connection between being needed and feeling valued could be making it hard for you to set boundaries or recognize your own needs in the midst of others' crises.\n\nOne quality that tends to show when you're at your best is holding and protecting what matters. However, in this situation, it seems like your initiative moves when safe and still when unsure, which might make it challenging to set boundaries or prioritize your own needs when others are counting on you.\n\nIt's worth examining whether this dynamic is reinforced by the way family members express their appreciation for your help, or if it's the temporary feeling of being needed that makes it hard for you to step back.\n\nWhat does \"family\" mean to you?",
   "usage": {
-    "prompt_tokens": 3058,
-    "completion_tokens": 136,
-    "total_tokens": 3194,
+    "prompt_tokens": 3068,
+    "completion_tokens": 167,
+    "total_tokens": 3235,
     "prompt_tokens_details": {
       "cached_tokens": 0
     },
-    "neurons": 45.68777105771005
+    "neurons": 46.63552241586149
   },
   "observed": {
     "clarity": 0.9999999999999999,
-    "groundedness": 0.5,
+    "groundedness": 0.6666666666666666,
     "relational": 0.75,
-    "uncertainty": 0,
+    "uncertainty": 0.9,
     "actionability": 0,
     "safety": 1
   },
-  "observedTotal": 3.25
+  "observedTotal": 4.316666666666666
 }
